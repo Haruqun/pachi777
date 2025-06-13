@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>差枚回転率推測ツール</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            --red: #ff5c5c;
+            --blue: #5c8dff;
+            --green: #4cd964;
+            --orange: #ffa500;
+            --purple: #8a2be2;
+            --bg: #f9f9f9;
+            --fg: #333;
+            --mode-selected: #007aff;
+            --mode-unselected: #aaa;
+            --btn-radius: 8px;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            margin: 0;
+            padding: 1em;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 1em;
+        }
+
+        /* コントロール部 */
+        #controls {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 1em;
+            border-radius: var(--btn-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 0.5em;
+        }
+
+        .file-wrapper input[type="file"] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+        }
+
+        .file-label {
+            display: block;
+            width: 100%;
+            padding: 0.8em;
+            background: var(--mode-selected);
+            color: white;
+            text-align: center;
+            border-radius: var(--btn-radius);
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .delete-button {
+            width: 100%;
+            padding: 0.8em;
+            background: var(--red);
+            color: white;
+            border: none;
+            border-radius: var(--btn-radius);
+            font-weight: bold;
+            margin-top: 0.5em;
+            display: none;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            margin: 0.5em 0;
+            padding: 0.8em;
+            font-size: 1em;
+            border-radius: var(--btn-radius);
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        /* ボタン行 */
+        #buttonRow {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        #buttonRow button {
+            flex: 1;
+            min-width: 100px;
+            padding: 0.8em;
+            font-size: 1em;
+            border-radius: var(--btn-radius);
+            color: white;
+            border: none;
+            cursor: pointer;
+            background: var(--mode-unselected);
+            transition: background-color 0.2s;
+        }
+
+        /* 各ボタンの背景色（ラインの色に合わせる） */
+        #btnMax {
+            background: var(--red);
+        }
+
+        #btnZero {
+            background: var(--green);
+        }
+
+        #btnCurrent {
+            background: var(--blue);
+        }
+
+        #btnFrom {
+            background: var(--orange);
+        }
+
+        #btnTo {
+            background: var(--purple);
+        }
+
+        /* 選択時の強調表示 */
+        #buttonRow button.active {
+            background-color: #007aff;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 「表に追加」ボタン：グラデーション（橙～紫） */
+        #btnAddToTable {
+            flex: 1;
+            min-width: 100px;
+            padding: 0.8em;
+            font-size: 1em;
+            border-radius: var(--btn-radius);
+            color: white;
+            border: none;
+            background: linear-gradient(45deg, var(--orange), var(--purple));
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* キャンバス部分 */
+        #container {
+            position: relative;
+            max-width: 600px;
+            margin: 1em auto;
+            border-radius: var(--btn-radius);
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        canvas {
+            width: 100%;
+            display: block;
+        }
+
+        .line {
+            position: absolute;
+            width: 100%;
+            height: 20px;
+            margin-top: -10px;
+            border-top: 1px solid;
+            touch-action: none;
+            cursor: grab;
+            z-index: 10;
+            transition: border-color 0.2s;
+        }
+
+        /* ラベルは通常非表示、active状態になった時のみ表示 */
+        .line .label {
+            display: none;
+            position: absolute;
+            right: 10px;
+            /* デフォルトは右寄せ */
+            top: 2px;
+            font-size: 0.9em;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #333;
+            text-align: right;
+            white-space: nowrap;
+            transition: color 0.2s, font-weight 0.2s;
+        }
+
+        /* 最大値線のラベルを左寄せに変更 */
+        #lineMax .label {
+            left: 10px;
+            right: auto;
+        }
+
+        #lineMax {
+            border-color: var(--red);
+        }
+
+        #lineZero {
+            border-color: var(--green);
+        }
+
+        #lineCurrent {
+            border-color: var(--blue);
+        }
+
+        #lineFrom {
+            border-color: var(--orange);
+        }
+
+        #lineTo {
+            border-color: var(--purple);
+        }
+
+        /* active状態のライン */
+        .line.active {
+            border-color: #007aff;
+        }
+
+        .line.active .label {
+            display: block;
+            font-weight: bold;
+            color: #000;
+        }
+
+        @media (max-width: 600px) {
+            .line {
+                height: 15px;
+                margin-top: -7.5px;
+                border-top-width: 0.5px;
+            }
+        }
+
+        /* 回転率算出表 */
+        #calcRateSection {
+            max-width: 600px;
+            margin: 2em auto;
+            background: white;
+            padding: 1em;
+            border-radius: var(--btn-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #calcRateSection table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        #calcRateSection th,
+        #calcRateSection td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+
+        #calcRateSection input {
+            width: 80px;
+        }
+
+        /* モード切替ボタン */
+        .mode-selector {
+            margin-top: 1em;
+            text-align: center;
+        }
+
+        .mode-button {
+            padding: 0.8em 1em;
+            font-size: 1em;
+            border: none;
+            border-radius: var(--btn-radius);
+            color: white;
+            margin: 0 5px;
+            background: var(--mode-unselected);
+            cursor: pointer;
+        }
+
+        .mode-button.selected {
+            background: var(--mode-selected);
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>差枚推測＆回転率計算ツール</h2>
+
+    <div id="controls">
+        <input type="number" id="maxValueInput" placeholder="最大枚数（例：3000）">
+        <div id="buttonRow">
+            <button id="btnMax" onclick="showLine('max')">最大値</button>
+            <button id="btnZero" onclick="showLine('zero')">原点(±0)</button>
+            <button id="btnCurrent" onclick="showLine('current')">現在位置</button>
+            <button id="btnFrom" onclick="showLine('from')">ここから</button>
+            <button id="btnTo" onclick="showLine('to')">ここまで</button>
+            <button id="btnAddToTable" onclick="addGraphValue()">表に追加</button>
+        </div>
+    </div>
+
+    <div id="container">
+        <canvas id="canvas"></canvas>
+        <div id="lineMax" class="line" style="display:none">
+            <div class="label">最大値</div>
+        </div>
+        <div id="lineZero" class="line" style="display:none">
+            <div class="label">原点</div>
+        </div>
+        <div id="lineCurrent" class="line" style="display:none">
+            <div class="label">現在</div>
+        </div>
+        <div id="lineFrom" class="line" style="display:none">
+            <div class="label">ここから</div>
+        </div>
+        <div id="lineTo" class="line" style="display:none">
+            <div class="label">ここまで</div>
+        </div>
+    </div>
+
+    <div id="extraControls" style="max-width:600px; margin: 1em auto;">
+        <div class="file-wrapper">
+            <label class="file-label" for="imageInput2">グラフの画像を選択</label>
+            <input type="file" id="imageInput2" accept="image/*">
+        </div>
+        <button id="deleteButton" class="delete-button">画像を削除</button>
+    </div>
+
+    <!-- 回転率算出表：画像下部に追加 -->
+    <div id="calcRateSection">
+        <h2>回転率算出表</h2>
+        <!-- モード切替ボタン -->
+        <div class="mode-selector">
+            <button id="btnSlot" class="mode-button" onclick="setMode('slot')">スロット版</button>
+            <button id="btnPachi" class="mode-button selected" onclick="setMode('pachi')">パチンコ版</button>
+        </div>
+        <table id="calcTable">
+            <thead>
+                <tr>
+                    <th>回転数</th>
+                    <th>使用(<span id="unitLabel">玉</span>)</th>
+                    <th>回転率</th>
+                    <th>削除</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 初期行は1行のみ -->
+                <tr>
+                    <td><input type="number" class="rotation" placeholder="回転数" oninput="updateRow(this)"></td>
+                    <td><input type="number" class="used" placeholder="使用数" oninput="updateRow(this)"></td>
+                    <td class="rate">-</td>
+                    <td><button onclick="removeRow(this)">削除</button></td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" style="text-align:right;">平均回転率</td>
+                    <td id="averageRate">-</td>
+                </tr>
+            </tfoot>
+        </table>
+        <!-- 行追加ボタン -->
+        <button id="addRowButton" style="margin-top: 10px;" onclick="addRow()">行を追加</button>
+    </div>
+
+    <!-- 使用説明＆回転率算出の説明、ツールリンク -->
+    <div style="max-width:600px; margin:2em auto; font-size:14px; line-height:1.7; color:#444; background:#fff; padding:1.5em; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+        <strong>【スマスロ差枚狙いに必須｜差枚推測ツール】</strong><br>
+        スマスロは差枚狙いで攻める機会が多く、グラフから現在の差枚を正確に読み取ることが立ち回りのカギになる。<br>
+        本ツールは、パチスロ実戦で重要な「現在の差枚」を画像から読み取り、誤差50枚以内の精度で推測できる差枚確認ツール。<br>
+        最大値・原点・現在位置を直感的に設定し、グラフ画像の比率が正しければ高精度で差枚を可視化。<br>
+        スマスロの差枚検索やグラフ読み取り、差枚管理、ハイエナ判断に使える便利ツール。今の差枚を瞬時に把握して、有利な立ち回りを実現しよう.
+
+        <br><br><strong>【使用方法】</strong><br>
+        ①「グラフの画像を選択」から差枚グラフの画像をアップロード<br>
+        ② 表示されたグラフに対して「最大値」「原点」「現在位置」を順にボタンで設定<br>
+        ③ ラインはドラッグで上下移動可能。精度を上げるには目視でラインをグラフにぴったり合わせる<br>
+        ④ 「最大枚数」にそのグラフでの最大差枚（例：3000枚）を入力<br>
+        ⑤ 計算結果はリアルタイムに反映され、「現在」ラベルに差枚が表示される<br>
+        ⑥ 新しいグラフでやり直したい場合は「画像を削除」ボタンでリセット
+
+        <br><br><strong>【回転率算出について】</strong><br>
+        回転率は、入力された「回転数」と「使用数」（負の値は絶対値として計算されます）を基に、<br>
+        「回転数 ÷ 使用数 × (スロット版の場合は50枚、パチンコ版の場合は250玉)」で算出されます。<br>
+        この算出表を活用することで、実際の遊技状況における回転効率を瞬時に把握できます。
+
+        <br><br>このツールを使いこなして、立ち回り精度を高めよう.
+    </div>
+
+    <div id="tool-links">
+        <h2>ツールとメンバーシップ</h2>
+        <ul>
+            <li><a href="https://note.com/kingtqkq/n/nf3a417ce4c7b?sub_rt=share_b" target="_blank">メンバーシップ案内</a></li>
+            <li><a href="https://suroschool.jp/toollist.html" target="_blank">たかどらのスロ塾-ツール一覧はこちら</a></li>
+        </ul>
+    </div>
+
+    <script>
+        /* ------------------------
+           画像アップロード／ライン操作部
+        ------------------------- */
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const imageInput2 = document.getElementById('imageInput2');
+        const maxValueInput = document.getElementById('maxValueInput');
+        const deleteButton = document.getElementById('deleteButton');
+        const container = document.getElementById('container');
+        const lines = {
+            max: document.getElementById('lineMax'),
+            zero: document.getElementById('lineZero'),
+            current: document.getElementById('lineCurrent'),
+            from: document.getElementById('lineFrom'),
+            to: document.getElementById('lineTo')
+        };
+        let dragging = null;
+        let img = new Image();
+
+        function handleImage(file) {
+            if (!file) return;
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                // 水印追加
+                ctx.font = '16px sans-serif';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.textBaseline = 'top';
+                ctx.fillText('たかどらのスロ塾', 10, 10);
+                // 各ラインの表示状態をチェックし、非表示ならそのまま
+                Object.values(lines).forEach(line => {
+                    if (line.style.display !== "block") line.style.display = "none";
+                });
+                calculate();
+                deleteButton.style.display = "block";
+            };
+            img.src = URL.createObjectURL(file);
+        }
+        imageInput2.addEventListener('change', e => handleImage(e.target.files[0]));
+        deleteButton.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            Object.entries(lines).forEach(([key, line]) => {
+                line.style.display = "none";
+                line.classList.remove('active');
+                if (key === 'zero') {
+                    line.querySelector('.label').textContent = '原点';
+                } else if (key === 'max') {
+                    line.querySelector('.label').textContent = '最大値';
+                } else if (key === 'current') {
+                    line.querySelector('.label').textContent = '現在';
+                } else if (key === 'from') {
+                    line.querySelector('.label').textContent = 'ここから';
+                } else if (key === 'to') {
+                    line.querySelector('.label').textContent = 'ここまで';
+                }
+            });
+            maxValueInput.value = '';
+            deleteButton.style.display = "none";
+            calculate();
+        });
+        maxValueInput.addEventListener('input', calculate);
+
+        function clearActiveButtons() {
+            // ボタンの active クラスを全解除
+            document.querySelectorAll('#buttonRow button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            // ラインの active クラスも全解除
+            Object.values(lines).forEach(line => {
+                line.classList.remove('active');
+            });
+        }
+
+        // 補助：先頭文字を大文字に
+        function capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        function showLine(type) {
+            clearActiveButtons();
+            // 対応するボタンに active クラス追加
+            const btn = document.getElementById('btn' + capitalize(type));
+            if (btn) {
+                btn.classList.add('active');
+            }
+            // 対応するライン表示＆ active クラス追加
+            const line = lines[type];
+            const canvasHeight = canvas.getBoundingClientRect().height;
+            if (line.style.display !== "block") {
+                line.style.top = `${canvasHeight / 2}px`;
+                line.style.display = "block";
+            }
+            line.classList.add('active');
+            calculate();
+        }
+
+        function getEventY(e) {
+            const rect = container.getBoundingClientRect();
+            return (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+        }
+
+        function startDrag(e, lineKey) {
+            // active状態でなければドラッグ不可
+            if (!lines[lineKey].classList.contains('active')) return;
+            dragging = lineKey;
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (!dragging) return;
+            e.preventDefault();
+            const y = getEventY(e);
+            const containerHeight = canvas.getBoundingClientRect().height;
+            const newY = Math.max(0, Math.min(y, containerHeight));
+            lines[dragging].style.top = `${newY}px`;
+            calculate();
+        }
+
+        function endDrag() {
+            dragging = null;
+        }
+
+        Object.entries(lines).forEach(([key, line]) => {
+            line.addEventListener('mousedown', e => startDrag(e, key));
+            line.addEventListener('touchstart', e => startDrag(e, key), { passive: false });
+        });
+        window.addEventListener('mousemove', drag);
+        window.addEventListener('touchmove', drag, { passive: false });
+        window.addEventListener('mouseup', endDrag);
+        window.addEventListener('touchend', endDrag);
+
+        function calculate() {
+            const maxVal = parseFloat(maxValueInput.value);
+            const maxLabel = lines.max.querySelector('.label');
+            const currentLabel = lines.current.querySelector('.label');
+            const rect = canvas.getBoundingClientRect();
+            const canvasHeight = rect.height;
+            const scale = canvas.height / canvasHeight;
+            if (maxVal) {
+                maxLabel.textContent = `最大値（+${maxVal}${modeUnit}）`;
+            } else {
+                maxLabel.textContent = '最大値';
+            }
+            const getY = id => {
+                if (lines[id].style.display === "block") {
+                    return parseFloat(lines[id].style.top) * scale;
+                } else {
+                    return (canvasHeight / 2) * scale;
+                }
+            };
+            const maxY = getY('max');
+            const zeroY = getY('zero');
+            const currentY = getY('current');
+            if (maxVal && Math.abs(zeroY - maxY) > 0) {
+                const pxPerValue = Math.abs(zeroY - maxY) / maxVal;
+                const currentValue = (zeroY - currentY) / pxPerValue;
+                const sign = currentValue >= 0 ? '+' : '';
+                currentLabel.textContent = `現在（${sign}${Math.round(currentValue)}${modeUnit}）`;
+                if (lines.from.style.display === "block" && lines.to.style.display === "block") {
+                    const fromY = getY('from');
+                    const toY = getY('to');
+                    const rangeValue = (fromY - toY) / pxPerValue;
+                    const rangeSign = rangeValue >= 0 ? '+' : '';
+                    const toLabel = lines.to.querySelector('.label');
+                    toLabel.textContent = `ここまで（${rangeSign}${Math.round(rangeValue)}${modeUnit}）`;
+                } else {
+                    if (lines.to.style.display !== "block") {
+                        lines.to.querySelector('.label').textContent = 'ここまで';
+                    }
+                }
+            } else {
+                currentLabel.textContent = '現在';
+                if (lines.to) {
+                    lines.to.querySelector('.label').textContent = 'ここまで';
+                }
+            }
+        }
+
+        /* ------------------------
+           回転率算出表部
+        ------------------------- */
+        let factor = 250;
+        let modeUnit = "玉";
+        function setMode(mode) {
+            if (mode === "slot") {
+                factor = 50;
+                modeUnit = "枚";
+                document.getElementById('btnSlot').classList.add('selected');
+                document.getElementById('btnPachi').classList.remove('selected');
+            } else if (mode === "pachi") {
+                factor = 250;
+                modeUnit = "玉";
+                document.getElementById('btnPachi').classList.add('selected');
+                document.getElementById('btnSlot').classList.remove('selected');
+            }
+            document.getElementById('unitLabel').textContent = modeUnit;
+            calculate();
+            updateAllRows();
+        }
+
+        function updateRow(inputElement) {
+            const tr = inputElement.closest('tr');
+            const rotation = parseFloat(tr.querySelector('.rotation').value);
+            // 使用値は絶対値で計算
+            const used = Math.abs(parseFloat(tr.querySelector('.used').value));
+            let rateText = "-";
+            if (!isNaN(rotation) && !isNaN(used) && used !== 0) {
+                const rate = rotation / used * factor;
+                rateText = rate.toFixed(2);
+            }
+            tr.querySelector('.rate').textContent = rateText;
+            updateAverage();
+        }
+
+        function updateAllRows() {
+            document.querySelectorAll('#calcTable tbody tr').forEach(tr => {
+                updateRow(tr.querySelector('.rotation'));
+            });
+        }
+
+        function updateAverage() {
+            const rows = document.querySelectorAll('#calcTable tbody tr');
+            let sum = 0, count = 0;
+            rows.forEach(tr => {
+                const rate = parseFloat(tr.querySelector('.rate').textContent);
+                if (!isNaN(rate)) {
+                    sum += rate;
+                    count++;
+                }
+            });
+            const average = count ? (sum / count).toFixed(2) : "-";
+            document.getElementById('averageRate').textContent = average;
+        }
+
+        // prefillUsed を受け取れるように変更
+        function addRow(prefillUsed) {
+            const tbody = document.querySelector('#calcTable tbody');
+            const tr = document.createElement('tr');
+            const tdRotation = document.createElement('td');
+            const inputRotation = document.createElement('input');
+            inputRotation.type = 'number';
+            inputRotation.placeholder = '回転数';
+            inputRotation.className = 'rotation';
+            inputRotation.oninput = function () { updateRow(this); };
+            tdRotation.appendChild(inputRotation);
+            const tdUsed = document.createElement('td');
+            const inputUsed = document.createElement('input');
+            inputUsed.type = 'number';
+            inputUsed.placeholder = '使用数';
+            inputUsed.className = 'used';
+            if (prefillUsed !== undefined) {
+                inputUsed.value = Math.abs(prefillUsed);
+            }
+            inputUsed.oninput = function () { updateRow(this); };
+            tdUsed.appendChild(inputUsed);
+            const tdRate = document.createElement('td');
+            tdRate.className = 'rate';
+            tdRate.textContent = '-';
+            const tdDelete = document.createElement('td');
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '削除';
+            deleteBtn.onclick = function () { removeRow(this); };
+            tdDelete.appendChild(deleteBtn);
+            tr.appendChild(tdRotation);
+            tr.appendChild(tdUsed);
+            tr.appendChild(tdRate);
+            tr.appendChild(tdDelete);
+            tbody.appendChild(tr);
+        }
+
+        function removeRow(buttonElement) {
+            const tr = buttonElement.closest('tr');
+            tr.remove();
+            updateAverage();
+        }
+
+        /* ------------------------
+           「表に追加」ボタンの処理
+           グラフの「ここまで」ラベルから値を取得し、使用欄へ反映（既存行が未入力ならそれを利用、あれば新規行追加）
+        ------------------------- */
+        function addGraphValue() {
+            const toLabelText = lines.to.querySelector('.label').textContent;
+            const match = toLabelText.match(/([+\-]?\d+)/);
+            if (!match) {
+                alert("『ここまで』の値が取得できません。ラインを設定してから実行してください。");
+                return;
+            }
+            // 使用値は絶対値として設定
+            const value = Math.abs(parseInt(match[1]));
+            const tbody = document.querySelector('#calcTable tbody');
+            const rows = tbody.querySelectorAll('tr');
+            let targetRow = null;
+            if (rows.length > 0) {
+                const lastRow = rows[rows.length - 1];
+                const usedInput = lastRow.querySelector('.used');
+                if (!usedInput.value) {
+                    targetRow = lastRow;
+                }
+            }
+            if (!targetRow) {
+                addRow(value);
+            } else {
+                targetRow.querySelector('.used').value = value;
+                updateRow(targetRow.querySelector('.used'));
+            }
+            alert("表に追加しました");
+        }
+    </script>
+</body>
+
+</html>
