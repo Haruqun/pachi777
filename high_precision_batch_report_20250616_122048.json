@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-06-16T12:20:48.136037",
+  "input_folder": "graphs",
+  "output_folder": "graphs/cropped_high_precision",
+  "total_files": 2,
+  "successful": 2,
+  "failed": [],
+  "average_quality": 98.74464364644183,
+  "quality_scores": [
+    99.33111732310742,
+    98.15816996977625
+  ]
+}
