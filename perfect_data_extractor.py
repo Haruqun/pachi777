@@ -470,22 +470,32 @@ class PerfectDataExtractor:
             fig, axes = plt.subplots(2, 2, figsize=(16, 12))
             fig.suptitle(f'データ抽出精度検証: {os.path.basename(image_path)}', fontsize=16, fontweight='bold')
             
-            # 1. 元画像 + 0ライン
+            # 1. 元画像 + 境界線（0ライン、±30000ライン）
             axes[0, 0].imshow(img)
-            axes[0, 0].axhline(y=zero_line_y, color='green', linestyle='--', linewidth=3, alpha=0.8, label='検出された0ライン')
-            axes[0, 0].set_title('1. 元画像 + 検出された0ライン')
+            
+            # 境界線のY座標を計算（333px = 30000円）
+            pixels_per_unit = 333 / 30000
+            top_line_y = zero_line_y - (30000 * pixels_per_unit)    # +30000円の位置
+            bottom_line_y = zero_line_y + (30000 * pixels_per_unit) # -30000円の位置
+            
+            # 境界線を描画
+            axes[0, 0].axhline(y=zero_line_y, color='green', linestyle='-', linewidth=2, alpha=0.9, label='0ライン')
+            axes[0, 0].axhline(y=top_line_y, color='red', linestyle='--', linewidth=1.5, alpha=0.7, label='+30,000円')
+            axes[0, 0].axhline(y=bottom_line_y, color='blue', linestyle='--', linewidth=1.5, alpha=0.7, label='-30,000円')
+            
+            axes[0, 0].set_title('1. 元画像 + 境界線（0ライン・±30,000円）')
             axes[0, 0].legend()
             axes[0, 0].axis('off')
             
-            # 2. 元画像 + 抽出データポイント
+            # 2. 元画像 + 抽出データポイント + 境界線
             axes[0, 1].imshow(img)
             if not df.empty:
                 # 抽出されたポイントを重ねる
                 x_coords = df['x_pixel'].values
                 y_coords = []
                 
-                # 実値をピクセル座標に逆変換
-                pixels_per_unit = self.GRAPH_HEIGHT / self.Y_RANGE
+                # 実値をピクセル座標に逆変換（正確な変換比率使用）
+                pixels_per_unit = 333 / 30000
                 for y_value in df['y_value'].values:
                     y_pixel = zero_line_y - (y_value * pixels_per_unit)
                     y_coords.append(y_pixel)
@@ -493,25 +503,36 @@ class PerfectDataExtractor:
                 axes[0, 1].plot(x_coords, y_coords, 'red', linewidth=2, alpha=0.8, label='抽出データライン')
                 axes[0, 1].scatter(x_coords[::20], np.array(y_coords)[::20], color='red', s=10, alpha=0.6)
                 
-            axes[0, 1].axhline(y=zero_line_y, color='green', linestyle='--', linewidth=2, alpha=0.6)
-            axes[0, 1].set_title('2. 元画像 + 抽出データライン')
+            # 境界線を描画（パネル2でも表示）
+            axes[0, 1].axhline(y=zero_line_y, color='green', linestyle='-', linewidth=2, alpha=0.7, label='0ライン')
+            axes[0, 1].axhline(y=top_line_y, color='red', linestyle='--', linewidth=1, alpha=0.5, label='+30,000円')
+            axes[0, 1].axhline(y=bottom_line_y, color='blue', linestyle='--', linewidth=1, alpha=0.5, label='-30,000円')
+            
+            axes[0, 1].set_title('2. 元画像 + 抽出データライン + 境界線')
             axes[0, 1].legend()
             axes[0, 1].axis('off')
             
-            # 3. 抽出データのY値グラフ
+            # 3. 抽出データのY値グラフ + 境界線
             if not df.empty:
                 axes[1, 0].plot(df['x_normalized'], df['y_value'], 'blue', linewidth=2, label='抽出データ')
-                axes[1, 0].axhline(y=0, color='green', linestyle='--', alpha=0.7, label='0ライン')
-                axes[1, 0].set_title('3. 抽出データ（実値）')
+                
+                # 境界線を描画
+                axes[1, 0].axhline(y=0, color='green', linestyle='-', linewidth=2, alpha=0.8, label='0ライン')
+                axes[1, 0].axhline(y=30000, color='red', linestyle='--', linewidth=1.5, alpha=0.7, label='+30,000円')
+                axes[1, 0].axhline(y=-30000, color='blue', linestyle='--', linewidth=1.5, alpha=0.7, label='-30,000円')
+                
+                axes[1, 0].set_title('3. 抽出データ（実値）+ 境界線')
                 axes[1, 0].set_xlabel('時間軸（正規化）')
                 axes[1, 0].set_ylabel('収支（円）')
                 axes[1, 0].grid(True, alpha=0.3)
                 axes[1, 0].legend()
                 
-                # Y軸範囲を設定
+                # Y軸範囲を設定（境界線も見えるように）
                 y_min, y_max = df['y_value'].min(), df['y_value'].max()
                 y_margin = (y_max - y_min) * 0.1
-                axes[1, 0].set_ylim(y_min - y_margin, y_max + y_margin)
+                plot_min = max(-35000, y_min - y_margin)  # -30000より少し下まで
+                plot_max = min(35000, y_max + y_margin)   # +30000より少し上まで
+                axes[1, 0].set_ylim(plot_min, plot_max)
             
             # 4. 統計情報とピクセル分析
             axes[1, 1].axis('off')
@@ -539,7 +560,7 @@ class PerfectDataExtractor:
    """
                 
                 axes[1, 1].text(0.05, 0.95, stats_text, transform=axes[1, 1].transAxes,
-                               fontsize=10, verticalalignment='top', fontfamily='monospace',
+                               fontsize=10, verticalalignment='top', fontfamily=self.font_name,
                                bbox=dict(boxstyle="round,pad=0.5", facecolor="lightblue", alpha=0.8))
             
             plt.tight_layout()
@@ -576,10 +597,31 @@ class PerfectDataExtractor:
             overlay = Image.new('RGBA', img.size, (255, 255, 255, 0))
             draw = ImageDraw.Draw(overlay)
             
+            # 境界線のY座標を計算（333px = 30000円）
+            pixels_per_unit = 333 / 30000
+            top_line_y = zero_line_y - (30000 * pixels_per_unit)    # +30000円の位置
+            bottom_line_y = zero_line_y + (30000 * pixels_per_unit) # -30000円の位置
+            
+            width = img.size[0]
+            
+            # 境界線を描画（破線風）
+            # 0ライン（緑）
+            for x in range(0, width, 10):
+                draw.line([(x, zero_line_y), (min(x+7, width), zero_line_y)], 
+                         fill=(0, 255, 0, 255), width=3)
+            
+            # +30000円ライン（赤）
+            for x in range(0, width, 15):
+                draw.line([(x, int(top_line_y)), (min(x+8, width), int(top_line_y))], 
+                         fill=(255, 0, 0, 180), width=2)
+            
+            # -30000円ライン（青）
+            for x in range(0, width, 15):
+                draw.line([(x, int(bottom_line_y)), (min(x+8, width), int(bottom_line_y))], 
+                         fill=(0, 0, 255, 180), width=2)
+            
             if not df.empty:
-                # 実値をピクセル座標に逆変換
-                pixels_per_unit = self.GRAPH_HEIGHT / self.Y_RANGE
-                
+                # 実値をピクセル座標に逆変換（正確な変換比率使用）
                 points = []
                 for _, row in df.iterrows():
                     x_pixel = int(row['x_pixel'])
@@ -594,12 +636,6 @@ class PerfectDataExtractor:
                 # データポイントを描画（小さな円）
                 for x, y in points[::10]:  # 10点おきに描画
                     draw.ellipse([x-2, y-2, x+2, y+2], fill=(255, 0, 0, 255))
-            
-            # 0ラインを描画（緑の破線風）
-            width = img.size[0]
-            for x in range(0, width, 10):
-                draw.line([(x, zero_line_y), (min(x+5, width), zero_line_y)], 
-                         fill=(0, 255, 0, 200), width=2)
             
             # 画像合成
             result = Image.alpha_composite(img, overlay).convert('RGB')
