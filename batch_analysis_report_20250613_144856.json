@@ -1,0 +1,24 @@
+{
+  "start_time": "2025-06-13T14:48:51.790206",
+  "settings": {
+    "ball_cost": 4,
+    "min_jackpot_rise": 1000
+  },
+  "results": {
+    "IMG_4403.png": {
+      "input_image": "graphs/IMG_4403.png",
+      "timestamp": "20250613_144851",
+      "steps": {
+        "crop": {
+          "status": "success",
+          "output_path": "graphs/cropped_auto/IMG_4403_cropped.png"
+        },
+        "extraction": {
+          "status": "success",
+          "output_path": "graphs/cropped_auto/IMG_4403_data.csv",
+          "info": {
+            "max_value": 3520.0,
+            "zero_line_y": 383,
+            "data_points_count": 634,
+            "value_range": [
+              

@@ -1,234 +1,429 @@
 from PIL import Image
 import numpy as np
 import os
+from typing import Optional, Tuple, List
 
-def hex_to_rgb(hex_color):
+def hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:
     """16進数カラーコードをRGBに変換"""
     hex_color = hex_color.lstrip('#')
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
-def find_graph_by_smart_analysis(image_path, target_color="#f5ece7", show_analysis=False):
+def analyze_color_distribution(image_array: np.ndarray, target_color: str = "#f5ece7") -> dict:
+    """画像の色分布を分析してターゲット色の最適な検出パラメータを決定"""
+    target_rgb = np.array(hex_to_rgb(target_color))
+    height, width = image_array.shape[:2]
+    
+    # 全ピクセルとターゲット色の距離を計算
+    distances = np.sqrt(np.sum((image_array.reshape(-1, 3) - target_rgb) ** 2, axis=1))
+    
+    # 距離のヒストグラムを作成して最適な閾値を決定
+    hist, bins = np.histogram(distances, bins=50, range=(0, 100))
+    
+    # ターゲット色に近いピクセルの割合を分析
+    thresholds = [10, 15, 20, 25, 30]
+    threshold_analysis = {}
+    
+    for threshold in thresholds:
+        matching_pixels = np.sum(distances <= threshold)
+        percentage = (matching_pixels / len(distances)) * 100
+        threshold_analysis[threshold] = {
+            'pixel_count': matching_pixels,
+            'percentage': percentage
+        }
+    
+    # 最適な閾値を選択（1-15%の範囲でマッチするものを優先）
+    optimal_threshold = 20
+    for threshold in thresholds:
+        if 1 <= threshold_analysis[threshold]['percentage'] <= 15:
+            optimal_threshold = threshold
+            break
+    
+    return {
+        'optimal_threshold': optimal_threshold,
+        'analysis': threshold_analysis,
+        'mean_distance': np.mean(distances),
+        'std_distance': np.std(distances)
+    }
+
+def find_graph_by_adaptive_analysis(image_path: str, target_color: str = "#f5ece7", show_analysis: bool = False) -> Optional[Tuple[int, int, int, int]]:
     """
-    スマートな分析でグラフエリアを検出
-    
-    Args:
-        image_path (str): 画像パス
-        target_color (str): グラフ背景色
-        show_analysis (bool): 分析過程を表示するか
-    
-    Returns:
-        tuple: (left, top, right, bottom) 座標
+    適応的分析でグラフエリアを検出（改良版）
     """
     
     img = Image.open(image_path)
     img_array = np.array(img)
     height, width = img_array.shape[:2]
     
-    print(f"スマート分析開始: {width} x {height}")
+    print(f"適応的分析開始: {width} x {height}")
     
-    # 1. 画面を水平方向にスキャンして、グラフエリアらしい行を見つける
-    target_rgb = np.array(hex_to_rgb(target_color))
-    graph_rows = []
-    
-    print("水平スキャンでグラフエリアを検出中...")
-    
-    # 各行について、ターゲット色の密度を計算
-    for y in range(height):
-        row = img_array[y, :, :3]
-        # ターゲット色に近いピクセルの数をカウント
-        distances = np.sqrt(np.sum((row - target_rgb) ** 2, axis=1))
-        target_pixels = np.sum(distances <= 15)  # 厳しい許容範囲
-        
-        # その行の総ピクセル数に対する割合
-        density = target_pixels / width
-        
-        # グラフエリアと思われる行を記録（密度が10%以上）
-        if density > 0.1:
-            graph_rows.append((y, density, target_pixels))
-    
-    if not graph_rows:
-        print("グラフエリアが見つかりませんでした")
-        return None
+    # 色分布を分析して最適なパラメータを決定
+    color_analysis = analyze_color_distribution(img_array, target_color)
+    optimal_threshold = color_analysis['optimal_threshold']
     
     if show_analysis:
-        print(f"グラフ候補行数: {len(graph_rows)}")
-        for y, density, pixels in graph_rows[:10]:  # 上位10行を表示
-            print(f"  行 {y}: 密度 {density:.1%}, ピクセル数 {pixels}")
+        print(f"色分析結果:")
+        print(f"  最適閾値: {optimal_threshold}")
+        print(f"  平均距離: {color_analysis['mean_distance']:.1f}")
+        for threshold, data in color_analysis['analysis'].items():
+            print(f"  閾値{threshold}: {data['percentage']:.1f}% ({data['pixel_count']}ピクセル)")
     
-    # 2. 連続するグラフエリアを見つける
-    # グラフ行をy座標でソート
-    graph_rows.sort(key=lambda x: x[0])
+    target_rgb = np.array(hex_to_rgb(target_color))
     
-    # 最大の連続領域を見つける
-    best_region = None
-    current_region = []
-    max_region_size = 0
+    # 1. 粗い検索：大まかなグラフエリアを特定
+    # 画像を16x16のブロックに分割して分析
+    block_size = min(width // 16, height // 16, 32)
+    graph_blocks = []
     
-    for i, (y, density, pixels) in enumerate(graph_rows):
-        if not current_region or y - current_region[-1][0] <= 5:  # 5ピクセル以内は連続とみなす
-            current_region.append((y, density, pixels))
-        else:
-            # 現在の領域を評価
-            if len(current_region) > max_region_size:
-                max_region_size = len(current_region)
-                best_region = current_region.copy()
-            current_region = [(y, density, pixels)]
+    for y in range(0, height - block_size, block_size):
+        for x in range(0, width - block_size, block_size):
+            block = img_array[y:y+block_size, x:x+block_size, :3]
+            distances = np.sqrt(np.sum((block.reshape(-1, 3) - target_rgb) ** 2, axis=1))
+            matching_pixels = np.sum(distances <= optimal_threshold)
+            density = matching_pixels / (block_size * block_size)
+            
+            if density > 0.05:  # 5%以上
+                graph_blocks.append((x, y, x + block_size, y + block_size, density))
     
-    # 最後の領域もチェック
-    if len(current_region) > max_region_size:
-        best_region = current_region
-    
-    if not best_region:
-        print("連続するグラフ領域が見つかりませんでした")
+    if not graph_blocks:
+        print("粗い検索でグラフエリアが見つかりませんでした")
         return None
     
-    # 3. 上下境界を決定
-    top = best_region[0][0]
-    bottom = best_region[-1][0]
+    # 2. ブロックから連続領域を構築
+    graph_blocks.sort(key=lambda x: x[4], reverse=True)  # 密度の高い順にソート
     
-    # 境界を少し拡張
-    padding = 20
+    if show_analysis:
+        print(f"グラフブロック数: {len(graph_blocks)}")
+        print("上位ブロック:")
+        for i, (x, y, x2, y2, density) in enumerate(graph_blocks[:5]):
+            print(f"  {i+1}. ({x},{y}) 密度: {density:.1%}")
+    
+    # 最も密度の高いブロック群から境界を推定
+    min_x = min(block[0] for block in graph_blocks[:len(graph_blocks)//2])
+    max_x = max(block[2] for block in graph_blocks[:len(graph_blocks)//2])
+    min_y = min(block[1] for block in graph_blocks[:len(graph_blocks)//2])
+    max_y = max(block[3] for block in graph_blocks[:len(graph_blocks)//2])
+    
+    # 3. 精密検索：境界を詳細に調整
+    search_margin = 50
+    search_left = max(0, min_x - search_margin)
+    search_right = min(width, max_x + search_margin)
+    search_top = max(0, min_y - search_margin)
+    search_bottom = min(height, max_y + search_margin)
+    
+    # 行ごとの分析で上下境界を精密化
+    row_densities = []
+    for y in range(search_top, search_bottom):
+        row = img_array[y, search_left:search_right, :3]
+        distances = np.sqrt(np.sum((row - target_rgb) ** 2, axis=1))
+        matching_pixels = np.sum(distances <= optimal_threshold)
+        density = matching_pixels / (search_right - search_left)
+        row_densities.append((y, density))
+    
+    # 密度が閾値以上の行を抽出
+    dense_rows = [(y, density) for y, density in row_densities if density > 0.03]
+    
+    if dense_rows:
+        top = min(row[0] for row in dense_rows)
+        bottom = max(row[0] for row in dense_rows)
+    else:
+        top, bottom = search_top, search_bottom
+    
+    # 列ごとの分析で左右境界を精密化
+    col_densities = []
+    for x in range(search_left, search_right):
+        col = img_array[top:bottom, x, :3]
+        distances = np.sqrt(np.sum((col - target_rgb) ** 2, axis=1))
+        matching_pixels = np.sum(distances <= optimal_threshold)
+        density = matching_pixels / (bottom - top)
+        col_densities.append((x, density))
+    
+    # 密度が閾値以上の列を抽出
+    dense_cols = [(x, density) for x, density in col_densities if density > 0.02]
+    
+    if dense_cols:
+        left = min(col[0] for col in dense_cols)
+        right = max(col[0] for col in dense_cols)
+    else:
+        left, right = search_left, search_right
+    
+    # 4. 最終調整とパディング
+    padding = 10
+    left = max(0, left - padding)
+    right = min(width - 1, right + padding)
     top = max(0, top - padding)
     bottom = min(height - 1, bottom + padding)
     
-    print(f"検出された縦範囲: {top} - {bottom} (高さ: {bottom - top})")
+    # 結果の妥当性チェック（パチンコアプリ専用）
+    area = (right - left) * (bottom - top)
+    image_area = width * height
+    area_ratio = area / image_area
+    width_ratio = (right - left) / width
     
-    # 4. 左右境界を決定（より詳細な分析）
-    # 検出された縦範囲内で、列ごとにターゲット色の密度を分析
-    graph_cols = []
+    # パチンコアプリのグラフエリア特性
+    # - 横幅: 90%以上使用することが多い
+    # - 高さ: 20-40%程度
+    # - 面積: 15-40%程度
     
-    print("垂直スキャンで左右境界を検出中...")
+    if area_ratio < 0.05:
+        print(f"警告: 検出エリアが小さすぎます ({area_ratio:.1%})")
+        print("レイアウト分析にフォールバック")
+        return find_graph_by_smart_layout_analysis(image_path)
+    elif area_ratio > 0.7:
+        print(f"警告: 検出エリアが大きすぎます ({area_ratio:.1%})")
+        print("レイアウト分析にフォールバック") 
+        return find_graph_by_smart_layout_analysis(image_path)
+    elif width_ratio < 0.5:
+        print(f"警告: 検出幅が狭すぎます ({width_ratio:.1%})")
+        print("レイアウト分析にフォールバック")
+        return find_graph_by_smart_layout_analysis(image_path)
     
-    for x in range(width):
-        col = img_array[top:bottom, x, :3]
-        distances = np.sqrt(np.sum((col - target_rgb) ** 2, axis=1))
-        target_pixels = np.sum(distances <= 15)
-        density = target_pixels / (bottom - top)
-        
-        if density > 0.05:  # 5%以上
-            graph_cols.append((x, density, target_pixels))
-    
-    if not graph_cols:
-        # フォールバック: 縦範囲内で左右の余白を推定
-        print("列分析が失敗。余白推定にフォールバック...")
-        left = int(width * 0.05)
-        right = int(width * 0.95)
-    else:
-        # 左右境界を決定
-        graph_cols.sort(key=lambda x: x[0])
-        left = graph_cols[0][0]
-        right = graph_cols[-1][0]
-        
-        # 境界を少し拡張
-        left = max(0, left - 20)
-        right = min(width - 1, right + 20)
-    
-    print(f"検出された横範囲: {left} - {right} (幅: {right - left})")
-    print(f"最終領域サイズ: {right - left} x {bottom - top}")
+    print(f"適応的分析結果: {left}, {top}, {right}, {bottom}")
+    print(f"サイズ: {right - left} x {bottom - top}")
     print(f"画面比率: {(right-left)/width:.1%} x {(bottom-top)/height:.1%}")
     
     return (left, top, right, bottom)
 
-def find_graph_by_layout_analysis(image_path):
+def find_graph_by_smart_layout_analysis(image_path: str) -> Tuple[int, int, int, int]:
     """
-    レイアウト分析でグラフエリアを推定（改良版）
+    スマートなレイアウト分析（パチンコアプリ専用最適化）
     """
     
     img = Image.open(image_path)
     width, height = img.size
     
-    print(f"レイアウト分析: {width} x {height}")
+    print(f"スマートレイアウト分析: {width} x {height}")
     
-    # パチンコアプリの一般的なレイアウト分析
-    # 上部: タイトル、ボタン等 (約35-40%)
-    # 中部: グラフエリア (約25-35%) 
-    # 下部: データ、ボタン等 (約25-35%)
+    # パチンコアプリの実際のレイアウトパターンに基づく調整
+    # 上部: 日付タブ、機種名、ボタン (約35%)
+    # 中部: オレンジバー + グラフエリア (約35%)  
+    # 下部: データ、ボタン (約30%)
     
-    if height > 2000:  # 高解像度
-        # より正確な範囲を設定
-        left = int(width * 0.07)    # 7%マージン
-        right = int(width * 0.93)   # 7%マージン
-        top = int(height * 0.28)    # 28%位置から
-        bottom = int(height * 0.59) # 59%位置まで（約31%の高さ）
-    else:
-        left = int(width * 0.08)
-        right = int(width * 0.92)
-        top = int(height * 0.30)
-        bottom = int(height * 0.65)
+    # 左右のマージンは狭め（グラフが横幅をほぼフルに使用）
+    left_margin = 0.06   # 6%
+    right_margin = 0.01  # 1%
     
-    print(f"レイアウト推定領域: {left}, {top}, {right}, {bottom}")
+    # 縦方向はオレンジバーの下からグラフが始まる
+    if height > 2400:  # 高解像度（2556など）
+        top_margin = 0.35    # 35% - オレンジバーの下
+        bottom_margin = 0.42  # 42% - データ表示の上
+    else:  # 標準解像度
+        top_margin = 0.32
+        bottom_margin = 0.40
+    
+    left = int(width * left_margin)
+    right = int(width * (1 - right_margin))
+    top = int(height * top_margin)
+    bottom = int(height * (1 - bottom_margin))
+    
+    print(f"パチンコアプリ最適化レイアウト")
+    print(f"推定領域: {left}, {top}, {right}, {bottom}")
     print(f"推定サイズ: {right-left} x {bottom-top}")
     print(f"画面比率: {(right-left)/width:.1%} x {(bottom-top)/height:.1%}")
     
     return (left, top, right, bottom)
 
-def find_graph_by_color_boundary(image_path, target_color="#f5ece7"):
+def find_graph_by_orange_bar_detection(image_path: str) -> Optional[Tuple[int, int, int, int]]:
     """
-    色境界を使ってグラフエリアを検出
+    オレンジバーを検出してグラフエリアを特定（パチンコアプリ専用）
     """
     
     img = Image.open(image_path)
     img_array = np.array(img)
     height, width = img_array.shape[:2]
     
-    target_rgb = np.array(hex_to_rgb(target_color))
+    print(f"オレンジバー検出分析: {width} x {height}")
     
-    print("色境界検出を実行中...")
+    # オレンジ色の範囲を定義（RGB値で直接検出）
+    # パチンコアプリのオレンジバー: 濃いオレンジ系
+    orange_ranges = [
+        # 標準的なオレンジ
+        ([200, 80, 0], [255, 150, 80]),
+        # 明るいオレンジ
+        ([220, 100, 20], [255, 180, 100]),
+        # 濃いオレンジ
+        ([180, 60, 0], [240, 120, 60])
+    ]
     
-    # まず大まかな領域を特定
-    layout_bounds = find_graph_by_layout_analysis(image_path)
-    layout_left, layout_top, layout_right, layout_bottom = layout_bounds
+    best_orange_rows = []
+    best_score = 0
     
-    # レイアウト推定領域内で詳細な色分析
-    region = img_array[layout_top:layout_bottom, layout_left:layout_right, :3]
-    region_height, region_width = region.shape[:2]
+    # 各オレンジ範囲で検出を試行
+    for lower_rgb, upper_rgb in orange_ranges:
+        lower = np.array(lower_rgb)
+        upper = np.array(upper_rgb)
+        
+        # 各行でオレンジ色のピクセルをカウント
+        orange_rows = []
+        for y in range(height):
+            row = img_array[y, :, :3]
+            # 各ピクセルがオレンジ範囲内かチェック
+            in_range = np.all((row >= lower) & (row <= upper), axis=1)
+            orange_pixel_count = np.sum(in_range)
+            
+            # 行の30%以上がオレンジ色ならオレンジバー候補
+            if orange_pixel_count > width * 0.3:
+                orange_rows.append((y, orange_pixel_count))
+        
+        # この範囲での検出スコアを計算
+        if orange_rows:
+            total_score = sum(count for _, count in orange_rows)
+            if total_score > best_score:
+                best_score = total_score
+                best_orange_rows = orange_rows
     
-    # 各ピクセルがターゲット色に近いかチェック
-    distances = np.sqrt(np.sum((region - target_rgb) ** 2, axis=2))
-    mask = distances <= 20  # 許容範囲
+    if not best_orange_rows:
+        print("オレンジバーが検出されませんでした")
+        return None
     
-    if not np.any(mask):
-        print("色境界検出失敗、レイアウト分析結果を使用")
-        return layout_bounds
+    # オレンジバーの位置を特定
+    orange_y_positions = [y for y, _ in best_orange_rows]
+    orange_top = min(orange_y_positions)
+    orange_bottom = max(orange_y_positions)
+    orange_height = orange_bottom - orange_top
     
-    # マスクから実際の境界を計算
-    y_coords, x_coords = np.where(mask)
+    print(f"オレンジバー検出: Y={orange_top}-{orange_bottom} (高さ: {orange_height})")
+    print(f"検出された行数: {len(best_orange_rows)}")
     
-    if len(y_coords) == 0:
-        return layout_bounds
+    # グラフエリアはオレンジバーの直下に位置
+    graph_top = orange_bottom + 10  # 少し余裕を持たせる
     
-    # 相対座標から絶対座標に変換
-    abs_left = layout_left + np.min(x_coords)
-    abs_right = layout_left + np.max(x_coords)
-    abs_top = layout_top + np.min(y_coords)
-    abs_bottom = layout_top + np.max(y_coords)
+    # グラフの高さを推定（画面の20-30%程度）
+    estimated_graph_height = int(height * 0.28)
+    graph_bottom = min(height - 100, graph_top + estimated_graph_height)  # 下部に余裕
     
-    # パディングを追加
-    padding = 15
-    abs_left = max(0, abs_left - padding)
-    abs_right = min(width - 1, abs_right + padding)
-    abs_top = max(0, abs_top - padding)
-    abs_bottom = min(height - 1, abs_bottom + padding)
+    # 左右は画面幅の大部分を使用
+    graph_left = int(width * 0.04)   # 4%マージン
+    graph_right = int(width * 0.98)  # 2%マージン
     
-    print(f"色境界検出結果: {abs_left}, {abs_top}, {abs_right}, {abs_bottom}")
-    print(f"サイズ: {abs_right - abs_left} x {abs_bottom - abs_top}")
+    # 検出結果の妥当性チェック
+    if graph_bottom <= graph_top:
+        print("グラフエリアの高さが無効です")
+        return None
     
-    return (abs_left, abs_top, abs_right, abs_bottom)
+    print(f"オレンジバー基準グラフエリア: {graph_left}, {graph_top}, {graph_right}, {graph_bottom}")
+    print(f"グラフサイズ: {graph_right - graph_left} x {graph_bottom - graph_top}")
+    
+    return (graph_left, graph_top, graph_right, graph_bottom)
 
-def crop_graph_multi_method(image_path, output_path=None, target_color="#f5ece7"):
+def find_graph_by_edge_detection(image_path: str) -> Optional[Tuple[int, int, int, int]]:
     """
-    複数の手法を組み合わせてグラフを切り抜く
+    シンプルなエッジ検出（cv2不使用版）
     """
     
-    print(f"--- 複数手法でのグラフ切り抜き: {os.path.basename(image_path)} ---")
+    img = Image.open(image_path)
+    img_array = np.array(img)
+    height, width = img_array.shape[:2]
+    
+    print("シンプルエッジ検出を実行中...")
+    
+    # グレースケール変換（手動）
+    gray = np.dot(img_array[...,:3], [0.2989, 0.5870, 0.1140])
+    
+    # 簡単なエッジ検出（Sobelフィルタの近似）
+    # 垂直エッジ
+    sobel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+    # 水平エッジ  
+    sobel_y = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
+    
+    # パディングして畳み込み演算
+    padded = np.pad(gray, 1, mode='edge')
+    edges_x = np.zeros_like(gray)
+    edges_y = np.zeros_like(gray)
+    
+    for i in range(height):
+        for j in range(width):
+            region = padded[i:i+3, j:j+3]
+            edges_x[i, j] = np.sum(region * sobel_x)
+            edges_y[i, j] = np.sum(region * sobel_y)
+    
+    # エッジ強度を計算
+    edge_magnitude = np.sqrt(edges_x**2 + edges_y**2)
+    
+    # 閾値処理
+    threshold = np.percentile(edge_magnitude, 90)  # 上位10%をエッジとする
+    edges = edge_magnitude > threshold
+    
+    # エッジが集中している領域を探す
+    # ブロック単位で分析
+    block_size = 32
+    max_edge_density = 0
+    best_region = None
+    
+    for y in range(0, height - block_size, block_size // 2):
+        for x in range(0, width - block_size, block_size // 2):
+            block = edges[y:y+block_size, x:x+block_size]
+            edge_density = np.sum(block) / (block_size * block_size)
+            
+            if edge_density > max_edge_density:
+                max_edge_density = edge_density
+                best_region = (x, y, x + block_size, y + block_size)
+    
+    if best_region is None or max_edge_density < 0.1:
+        print("エッジ検出: 有効な領域が見つかりませんでした")
+        return None
+    
+    # 検出された領域を拡張
+    left, top, right, bottom = best_region
+    padding = 50
+    left = max(0, left - padding)
+    right = min(width, right + padding)
+    top = max(0, top - padding)  
+    bottom = min(height, bottom + padding)
+    
+    print(f"エッジ検出結果: {left}, {top}, {right}, {bottom}")
+    return (left, top, right, bottom)
+    """
+    エッジ検出を使用してグラフ境界を特定
+    """
+    
+    img = Image.open(image_path)
+    img_array = np.array(img)
+    
+    # グレースケール変換
+    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    
+    # ガウシアンブラーを適用
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    
+    # Cannyエッジ検出
+    edges = cv2.Canny(blurred, 30, 100)
+    
+    # 輪郭を検出
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    if not contours:
+        return None
+    
+    # 最大の輪郭を選択
+    largest_contour = max(contours, key=cv2.contourArea)
+    
+    # バウンディングボックスを取得
+    x, y, w, h = cv2.boundingRect(largest_contour)
+    
+    # 結果の妥当性チェック
+    area = w * h
+    image_area = img.size[0] * img.size[1]
+    
+    if area / image_area < 0.1:  # 10%未満の場合は無効
+        return None
+    
+    return (x, y, x + w, y + h)
+
+def crop_graph_enhanced(image_path: str, output_path: Optional[str] = None, target_color: str = "#f5ece7") -> Optional[Image.Image]:
+    """
+    拡張されたグラフ切り抜き機能
+    """
+    
+    print(f"--- 拡張グラフ切り抜き: {os.path.basename(image_path)} ---")
     
     img = Image.open(image_path)
     print(f"元画像サイズ: {img.size[0]} x {img.size[1]}")
     
     methods = [
-        ("スマート分析", find_graph_by_smart_analysis),
-        ("色境界検出", find_graph_by_color_boundary),
-        ("レイアウト分析", find_graph_by_layout_analysis)
+        ("オレンジバー検出", find_graph_by_orange_bar_detection),
+        ("適応的分析", lambda path: find_graph_by_adaptive_analysis(path, target_color, show_analysis=True)),
+        ("スマートレイアウト", find_graph_by_smart_layout_analysis),
+        ("エッジ検出", find_graph_by_edge_detection)
     ]
     
     results = []
@@ -236,18 +431,48 @@ def crop_graph_multi_method(image_path, output_path=None, target_color="#f5ece7"
     for method_name, method_func in methods:
         print(f"\n=== {method_name} ===")
         try:
-            if method_name == "スマート分析":
-                bounds = method_func(image_path, target_color, show_analysis=True)
-            elif method_name == "色境界検出":
-                bounds = method_func(image_path, target_color)
-            else:
-                bounds = method_func(image_path)
+            bounds = method_func(image_path)
             
             if bounds:
                 left, top, right, bottom = bounds
                 area = (right - left) * (bottom - top)
-                results.append((method_name, bounds, area))
-                print(f"{method_name}結果: {bounds}, 面積: {area}")
+                
+                # 結果の品質評価（パチンコアプリ専用）
+                width_ratio = (right - left) / img.size[0]
+                height_ratio = (bottom - top) / img.size[1]
+                area_ratio = area / (img.size[0] * img.size[1])
+                quality_score = 0
+                
+                # パチンコアプリのグラフに最適化した評価基準
+                # 横幅: 85-95%が理想的（グラフは横幅をほぼフルに使用）
+                if 0.85 <= width_ratio <= 0.98:
+                    quality_score += 40
+                elif 0.75 <= width_ratio <= 0.85:
+                    quality_score += 30
+                elif 0.60 <= width_ratio <= 0.75:
+                    quality_score += 20
+                
+                # 高さ: 20-35%が理想的（グラフエリアは画面の約1/4-1/3）
+                if 0.20 <= height_ratio <= 0.35:
+                    quality_score += 40
+                elif 0.15 <= height_ratio <= 0.45:
+                    quality_score += 30
+                elif 0.10 <= height_ratio <= 0.55:
+                    quality_score += 20
+                
+                # 面積比率: 15-35%が理想的
+                if 0.15 <= area_ratio <= 0.35:
+                    quality_score += 20
+                elif 0.10 <= area_ratio <= 0.45:
+                    quality_score += 15
+                
+                # 特別ボーナス: 適応的分析で色検出が成功した場合
+                if method_name == "適応的分析" and area_ratio >= 0.15:
+                    quality_score += 25  # 色検出成功ボーナス
+                
+                results.append((method_name, bounds, area, quality_score))
+                print(f"{method_name}結果: {bounds}")
+                print(f"  面積: {area}, 品質スコア: {quality_score}")
             else:
                 print(f"{method_name}: 検出失敗")
         except Exception as e:
@@ -257,21 +482,15 @@ def crop_graph_multi_method(image_path, output_path=None, target_color="#f5ece7"
         print("全ての手法で検出に失敗しました")
         return None
     
-    # 最も適切な結果を選択（面積が中程度のもの）
-    results.sort(key=lambda x: x[2])  # 面積でソート
+    # 品質スコアが最も高い結果を選択
+    results.sort(key=lambda x: x[3], reverse=True)
     
     print(f"\n=== 結果比較 ===")
-    for i, (name, bounds, area) in enumerate(results):
-        print(f"{i+1}. {name}: 面積 {area}")
+    for i, (name, bounds, area, score) in enumerate(results):
+        print(f"{i+1}. {name}: 品質スコア {score}, 面積 {area}")
     
-    # 中央値の結果を選択（極端すぎず、小さすぎない）
-    if len(results) >= 2:
-        chosen = results[len(results)//2]  # 中央値
-    else:
-        chosen = results[0]
-    
-    chosen_name, chosen_bounds, chosen_area = chosen
-    print(f"\n選択された手法: {chosen_name}")
+    chosen_name, chosen_bounds, chosen_area, chosen_score = results[0]
+    print(f"\n選択された手法: {chosen_name} (スコア: {chosen_score})")
     print(f"最終的な切り抜き範囲: {chosen_bounds}")
     
     # 切り抜き実行
@@ -284,147 +503,137 @@ def crop_graph_multi_method(image_path, output_path=None, target_color="#f5ece7"
     
     return cropped_img
 
-# 使用例
+def batch_process_images(input_folder: str = "graphs", output_folder: str = "graphs/cropped_enhanced"):
+    """
+    フォルダ内の全画像を一括処理
+    """
+    
+    if not os.path.exists(input_folder):
+        print(f"❌ フォルダが見つかりません: {input_folder}")
+        return
+    
+    # 対応画像形式
+    supported_formats = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp')
+    files = [f for f in os.listdir(input_folder) 
+             if f.lower().endswith(supported_formats)]
+    
+    if not files:
+        print(f"❌ {input_folder}に画像ファイルが見つかりません")
+        return
+    
+    os.makedirs(output_folder, exist_ok=True)
+    
+    print(f"🚀 {len(files)}個の画像を処理開始...")
+    print(f"📁 出力フォルダ: {output_folder}")
+    
+    successful = 0
+    failed = []
+    
+    for i, file in enumerate(files, 1):
+        input_path = os.path.join(input_folder, file)
+        filename_without_ext = os.path.splitext(file)[0]
+        output_path = os.path.join(output_folder, f"{filename_without_ext}_cropped.png")
+        
+        print(f"\n[{i}/{len(files)}] 処理中: {file}")
+        print("-" * 50)
+        
+        try:
+            result = crop_graph_enhanced(input_path, output_path)
+            if result:
+                successful += 1
+                print(f"✅ 完了: {file}")
+            else:
+                failed.append(file)
+                print(f"❌ 失敗: {file}")
+        except Exception as e:
+            failed.append(file)
+            print(f"❌ エラー: {file} - {e}")
+    
+    print(f"\n🎉 処理完了！")
+    print(f"✅ 成功: {successful}/{len(files)}個")
+    if failed:
+        print(f"❌ 失敗: {len(failed)}個")
+        for f in failed:
+            print(f"  - {f}")
+    
+    print(f"📁 結果フォルダ: {output_folder}")
+
+# 使用例とメインプログラム
 if __name__ == "__main__":
     
+    print("🎯 改良版グラフ切り抜きツール")
+    print("=" * 50)
+    
     if os.path.exists("graphs"):
-        print("=== graphsフォルダ内の画像一覧 ===")
         files = [f for f in os.listdir("graphs") 
-                if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif'))]
+                if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))]
         
         if files:
-            for i, file in enumerate(files, 1):
-                print(f"{i}. {file}")
-            
+            print(f"📁 {len(files)}個の画像ファイルを発見")
             print("\n選択してください:")
             print("1. 🚀 全画像を自動処理（推奨）")
-            print("2. 📷 番号で画像を選択")
-            print("3. 📝 ファイル名で画像を指定")
-            print("4. 🔧 手法を指定して処理")
+            print("2. 📷 単一画像を処理")
+            print("3. 🔧 詳細設定で処理")
             
-            choice = input("番号を入力 (1-4): ").strip()
+            choice = input("\n番号を入力 (1-3): ").strip()
             
             if choice == "1":
-                # 全画像を自動処理（最も簡単）
-                print(f"\n🚀 {len(files)}個の画像を自動処理開始...")
-                output_folder = "graphs/cropped_auto"
-                os.makedirs(output_folder, exist_ok=True)
-                
-                successful = 0
-                for i, file in enumerate(files, 1):
-                    input_path = os.path.join("graphs", file)
-                    filename_without_ext = os.path.splitext(file)[0]
-                    output_path = os.path.join(output_folder, f"{filename_without_ext}_cropped.png")
-                    
-                    print(f"\n[{i}/{len(files)}] 処理中: {file}")
-                    try:
-                        crop_graph_multi_method(input_path, output_path)
-                        successful += 1
-                        print(f"✅ 完了")
-                    except Exception as e:
-                        print(f"❌ エラー: {e}")
-                
-                print(f"\n🎉 処理完了！ {successful}/{len(files)}個成功")
-                print(f"📁 出力フォルダ: {output_folder}")
+                # 全画像を自動処理
+                batch_process_images()
                 
             elif choice == "2":
-                # 番号で選択（簡単）
+                # 単一画像を処理
+                print("\n利用可能な画像:")
+                for i, file in enumerate(files, 1):
+                    print(f"{i}. {file}")
+                
                 try:
-                    file_num = int(input("画像番号を入力: ").strip())
+                    file_num = int(input("\n画像番号を入力: ").strip())
                     if 1 <= file_num <= len(files):
                         selected_file = files[file_num - 1]
-                        print(f"\n📷 選択: {selected_file}")
-                        
                         input_path = os.path.join("graphs", selected_file)
-                        output_folder = "graphs/cropped_auto"
+                        
+                        output_folder = "graphs/cropped_single"
                         os.makedirs(output_folder, exist_ok=True)
                         filename_without_ext = os.path.splitext(selected_file)[0]
                         output_path = os.path.join(output_folder, f"{filename_without_ext}_cropped.png")
                         
-                        crop_graph_multi_method(input_path, output_path)
+                        crop_graph_enhanced(input_path, output_path)
                     else:
                         print("❌ 無効な番号です")
                 except ValueError:
                     print("❌ 数字を入力してください")
                     
             elif choice == "3":
-                # ファイル名で指定（従来の方法）
-                filename = input("ファイル名を入力: ").strip()
-                if filename in files:
-                    print(f"\n📝 選択: {filename}")
-                    input_path = os.path.join("graphs", filename)
-                    output_folder = "graphs/cropped_auto"
-                    os.makedirs(output_folder, exist_ok=True)
-                    filename_without_ext = os.path.splitext(filename)[0]
-                    output_path = os.path.join(output_folder, f"{filename_without_ext}_cropped.png")
-                    
-                    crop_graph_multi_method(input_path, output_path)
-                else:
-                    print("❌ ファイルが見つかりません")
-                    print("利用可能なファイル:", ", ".join(files))
-                    
-            elif choice == "4":
-                # 手法を指定（上級者向け）
-                print("\n🔧 手法を選択:")
-                print("1. 複数手法（自動選択）")
-                print("2. スマート分析のみ")
-                print("3. レイアウト分析のみ")
-                print("4. 色境界検出のみ")
+                # 詳細設定
+                print("\n🔧 詳細設定")
                 
-                method_choice = input("手法番号を入力 (1-4): ").strip()
+                # ターゲット色の設定
+                print("グラフ背景色を指定してください:")
+                print("1. デフォルト (#f5ece7)")
+                print("2. カスタム色を指定")
                 
-                try:
-                    file_num = int(input("画像番号を入力: ").strip())
-                    if 1 <= file_num <= len(files):
-                        selected_file = files[file_num - 1]
-                        input_path = os.path.join("graphs", selected_file)
-                        
-                        if method_choice == "1":
-                            output_folder = "graphs/cropped_multi"
-                            os.makedirs(output_folder, exist_ok=True)
-                            filename_without_ext = os.path.splitext(selected_file)[0]
-                            output_path = os.path.join(output_folder, f"{filename_without_ext}_multi.png")
-                            crop_graph_multi_method(input_path, output_path)
-                            
-                        elif method_choice == "2":
-                            bounds = find_graph_by_smart_analysis(input_path, show_analysis=True)
-                            if bounds:
-                                img = Image.open(input_path)
-                                cropped = img.crop(bounds)
-                                output_folder = "graphs/cropped_smart"
-                                os.makedirs(output_folder, exist_ok=True)
-                                filename_without_ext = os.path.splitext(selected_file)[0]
-                                output_path = os.path.join(output_folder, f"{filename_without_ext}_smart.png")
-                                cropped.save(output_path)
-                                print(f"✅ スマート分析完了: {output_path}")
-                                
-                        elif method_choice == "3":
-                            bounds = find_graph_by_layout_analysis(input_path)
-                            img = Image.open(input_path)
-                            cropped = img.crop(bounds)
-                            output_folder = "graphs/cropped_layout"
-                            os.makedirs(output_folder, exist_ok=True)
-                            filename_without_ext = os.path.splitext(selected_file)[0]
-                            output_path = os.path.join(output_folder, f"{filename_without_ext}_layout.png")
-                            cropped.save(output_path)
-                            print(f"✅ レイアウト分析完了: {output_path}")
-                            
-                        elif method_choice == "4":
-                            bounds = find_graph_by_color_boundary(input_path)
-                            img = Image.open(input_path)
-                            cropped = img.crop(bounds)
-                            output_folder = "graphs/cropped_color"
-                            os.makedirs(output_folder, exist_ok=True)
-                            filename_without_ext = os.path.splitext(selected_file)[0]
-                            output_path = os.path.join(output_folder, f"{filename_without_ext}_color.png")
-                            cropped.save(output_path)
-                            print(f"✅ 色境界検出完了: {output_path}")
-                        else:
-                            print("❌ 無効な手法番号です")
+                color_choice = input("選択 (1-2): ").strip()
+                target_color = "#f5ece7"
+                
+                if color_choice == "2":
+                    custom_color = input("16進数カラーコード (例: #ffffff): ").strip()
+                    if custom_color.startswith('#') and len(custom_color) == 7:
+                        target_color = custom_color
                     else:
-                        print("❌ 無効な画像番号です")
-                except ValueError:
-                    print("❌ 数字を入力してください")
+                        print("無効な色コードです。デフォルトを使用します。")
+                
+                # 出力フォルダの設定
+                output_folder = input("出力フォルダ名 (デフォルト: graphs/cropped_custom): ").strip()
+                if not output_folder:
+                    output_folder = "graphs/cropped_custom"
+                
+                print(f"設定:")
+                print(f"  ターゲット色: {target_color}")
+                print(f"  出力フォルダ: {output_folder}")
+                
+                # 処理実行
+                batch_process_images("graphs", output_folder)
             else:
                 print("❌ 無効な選択です")
         else:
@@ -433,4 +642,4 @@ if __name__ == "__main__":
         print("❌ graphsフォルダが見つかりません")
         print("📁 フォルダを作成して画像を配置してください")
     
-    print("\n✨ 処理完了！")
+    print("\n✨ プログラム終了")

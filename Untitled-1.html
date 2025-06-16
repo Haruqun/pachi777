@@ -7,63 +7,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root {
-            --red: #ff4757;
-            --blue: #3742fa;
-            --green: #2ed573;
-            --orange: #ffa502;
-            --purple: #a55eea;
-            --bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --fg: #2f3542;
-            --mode-selected: #5352ed;
-            --mode-unselected: #a4b0be;
-            --btn-radius: 12px;
-            --shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-            --hover-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-            --card-bg: rgba(255, 255, 255, 0.95);
-            --backdrop-blur: blur(20px);
-        }
-
-        * {
-            box-sizing: border-box;
+            --red: #ff5c5c;
+            --blue: #5c8dff;
+            --green: #4cd964;
+            --orange: #ffa500;
+            --purple: #8a2be2;
+            --bg: #f9f9f9;
+            --fg: #333;
+            --mode-selected: #007aff;
+            --mode-unselected: #aaa;
+            --btn-radius: 8px;
         }
 
         body {
-            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Helvetica Neue', sans-serif;
             background: var(--bg);
             color: var(--fg);
             margin: 0;
-            padding: 2em 1em;
-            min-height: 100vh;
-            line-height: 1.6;
+            padding: 1em;
         }
 
         h2 {
             text-align: center;
-            margin-bottom: 1.5em;
-            color: white;
-            font-size: 2.2em;
-            font-weight: 700;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            letter-spacing: -0.5px;
+            margin-bottom: 1em;
         }
 
         /* コントロール部 */
         #controls {
-            max-width: 700px;
+            max-width: 600px;
             margin: auto;
-            background: var(--card-bg);
-            backdrop-filter: var(--backdrop-blur);
-            -webkit-backdrop-filter: var(--backdrop-blur);
-            padding: 2em;
+            background: white;
+            padding: 1em;
             border-radius: var(--btn-radius);
-            box-shadow: var(--shadow);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        #controls:hover {
-            box-shadow: var(--hover-shadow);
-            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .file-wrapper {
@@ -71,7 +47,7 @@
             overflow: hidden;
             display: inline-block;
             width: 100%;
-            margin-bottom: 1em;
+            margin-bottom: 0.5em;
         }
 
         .file-wrapper input[type="file"] {
@@ -80,188 +56,112 @@
             left: 0;
             top: 0;
             opacity: 0;
-            cursor: pointer;
         }
 
         .file-label {
             display: block;
             width: 100%;
-            padding: 1.2em;
-            background: linear-gradient(135deg, var(--mode-selected), #3c40c6);
+            padding: 0.8em;
+            background: var(--mode-selected);
             color: white;
             text-align: center;
             border-radius: var(--btn-radius);
-            font-weight: 600;
+            font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(83, 82, 237, 0.3);
-            border: none;
-            font-size: 1.05em;
-        }
-
-        .file-label:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(83, 82, 237, 0.4);
-            background: linear-gradient(135deg, #3c40c6, var(--mode-selected));
         }
 
         .delete-button {
             width: 100%;
-            padding: 1em;
-            background: linear-gradient(135deg, var(--red), #ff3838);
+            padding: 0.8em;
+            background: var(--red);
             color: white;
             border: none;
             border-radius: var(--btn-radius);
-            font-weight: 600;
-            margin-top: 1em;
+            font-weight: bold;
+            margin-top: 0.5em;
             display: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
-        }
-
-        .delete-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(255, 71, 87, 0.4);
         }
 
         input[type="number"] {
             width: 100%;
-            margin: 1em 0;
-            padding: 1.2em;
-            font-size: 1.05em;
+            margin: 0.5em 0;
+            padding: 0.8em;
+            font-size: 1em;
             border-radius: var(--btn-radius);
-            border: 2px solid rgba(0, 0, 0, 0.1);
+            border: 1px solid #ccc;
             box-sizing: border-box;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-            font-family: inherit;
-        }
-
-        input[type="number"]:focus {
-            outline: none;
-            border-color: var(--mode-selected);
-            box-shadow: 0 0 0 3px rgba(83, 82, 237, 0.1);
-            background: white;
         }
 
         /* ボタン行 */
         #buttonRow {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 12px;
-            margin-top: 1.5em;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
         }
 
         #buttonRow button {
-            padding: 1em 1.2em;
+            flex: 1;
+            min-width: 100px;
+            padding: 0.8em;
             font-size: 1em;
             border-radius: var(--btn-radius);
             color: white;
             border: none;
             cursor: pointer;
             background: var(--mode-unselected);
-            transition: all 0.3s ease;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        #buttonRow button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        #buttonRow button:hover::before {
-            left: 100%;
-        }
-
-        #buttonRow button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.2s;
         }
 
         /* 各ボタンの背景色（ラインの色に合わせる） */
         #btnMax {
-            background: linear-gradient(135deg, var(--red), #ff6b7a);
-            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+            background: var(--red);
         }
 
         #btnZero {
-            background: linear-gradient(135deg, var(--green), #55a3ff);
-            box-shadow: 0 4px 15px rgba(46, 213, 115, 0.3);
+            background: var(--green);
         }
 
         #btnCurrent {
-            background: linear-gradient(135deg, var(--blue), #4834d4);
-            box-shadow: 0 4px 15px rgba(55, 66, 250, 0.3);
+            background: var(--blue);
         }
 
         #btnFrom {
-            background: linear-gradient(135deg, var(--orange), #ff6348);
-            box-shadow: 0 4px 15px rgba(255, 165, 2, 0.3);
+            background: var(--orange);
         }
 
         #btnTo {
-            background: linear-gradient(135deg, var(--purple), #c44569);
-            box-shadow: 0 4px 15px rgba(165, 94, 234, 0.3);
+            background: var(--purple);
         }
 
         /* 選択時の強調表示 */
         #buttonRow button.active {
-            background: linear-gradient(135deg, #007aff, #0056b3) !important;
-            box-shadow: 0 0 20px rgba(0, 122, 255, 0.5), 0 8px 25px rgba(0, 0, 0, 0.3) !important;
-            transform: translateY(-3px) scale(1.05);
+            background-color: #007aff;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
         }
 
         /* 「表に追加」ボタン：グラデーション（橙～紫） */
         #btnAddToTable {
-            padding: 1em 1.2em;
-            font-size: 1.05em;
+            flex: 1;
+            min-width: 100px;
+            padding: 0.8em;
+            font-size: 1em;
             border-radius: var(--btn-radius);
             color: white;
             border: none;
-            background: linear-gradient(135deg, var(--orange), var(--purple));
+            background: linear-gradient(45deg, var(--orange), var(--purple));
             cursor: pointer;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            grid-column: 1 / -1;
-            margin-top: 0.5em;
-        }
-
-        #btnAddToTable:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         /* キャンバス部分 */
         #container {
             position: relative;
-            max-width: 700px;
-            margin: 2em auto;
+            max-width: 600px;
+            margin: 1em auto;
             border-radius: var(--btn-radius);
             overflow: hidden;
-            box-shadow: var(--shadow);
-            background: var(--card-bg);
-            backdrop-filter: var(--backdrop-blur);
-            -webkit-backdrop-filter: var(--backdrop-blur);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        #container:hover {
-            box-shadow: var(--hover-shadow);
-            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         }
 
         canvas {
@@ -272,50 +172,36 @@
         .line {
             position: absolute;
             width: 100%;
-            height: 24px;
-            margin-top: -12px;
-            border-top: 3px solid;
+            height: 20px;
+            margin-top: -10px;
+            border-top: 1px solid;
             touch-action: none;
             cursor: grab;
             z-index: 10;
-            transition: all 0.3s ease;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-        }
-
-        .line:hover {
-            border-top-width: 4px;
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-        }
-
-        .line:active {
-            cursor: grabbing;
+            transition: border-color 0.2s;
         }
 
         /* ラベルは通常非表示、active状態になった時のみ表示 */
         .line .label {
             display: none;
             position: absolute;
-            right: 15px;
-            top: 4px;
-            font-size: 0.95em;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 6px 12px;
-            border-radius: 20px;
+            right: 10px;
+            /* デフォルトは右寄せ */
+            top: 2px;
+            font-size: 0.9em;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
             color: #333;
             text-align: right;
             white-space: nowrap;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            font-weight: 600;
+            transition: color 0.2s, font-weight 0.2s;
         }
 
         /* 最大値線のラベルを左寄せに変更 */
         #lineMax .label {
-            left: 15px;
+            left: 10px;
             right: auto;
-            text-align: left;
         }
 
         #lineMax {
@@ -341,270 +227,68 @@
         /* active状態のライン */
         .line.active {
             border-color: #007aff;
-            border-top-width: 4px;
-            filter: drop-shadow(0 4px 12px rgba(0, 122, 255, 0.4));
         }
 
         .line.active .label {
             display: block;
-            font-weight: 700;
+            font-weight: bold;
             color: #000;
-            background: rgba(255, 255, 255, 0.98);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
         }
 
         @media (max-width: 600px) {
             .line {
-                height: 20px;
-                margin-top: -10px;
-                border-top-width: 2px;
-            }
-
-            .line:hover {
-                border-top-width: 3px;
-            }
-
-            .line.active {
-                border-top-width: 3px;
+                height: 15px;
+                margin-top: -7.5px;
+                border-top-width: 0.5px;
             }
         }
 
         /* 回転率算出表 */
         #calcRateSection {
-            max-width: 700px;
+            max-width: 600px;
             margin: 2em auto;
-            background: var(--card-bg);
-            backdrop-filter: var(--backdrop-blur);
-            -webkit-backdrop-filter: var(--backdrop-blur);
-            padding: 2em;
+            background: white;
+            padding: 1em;
             border-radius: var(--btn-radius);
-            box-shadow: var(--shadow);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        #calcRateSection:hover {
-            box-shadow: var(--hover-shadow);
-            transform: translateY(-2px);
-        }
-
-        #calcRateSection h2 {
-            color: var(--fg);
-            text-shadow: none;
-            margin-bottom: 1em;
-            font-size: 1.8em;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         #calcRateSection table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 1.5em;
-            border-radius: var(--btn-radius);
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-top: 10px;
         }
 
         #calcRateSection th,
         #calcRateSection td {
-            border: none;
-            padding: 15px 12px;
+            border: 1px solid #ccc;
+            padding: 8px;
             text-align: center;
-            background: white;
-            transition: all 0.3s ease;
-        }
-
-        #calcRateSection th {
-            background: linear-gradient(135deg, var(--mode-selected), #3c40c6);
-            color: white;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        #calcRateSection tr:nth-child(even) td {
-            background: rgba(83, 82, 237, 0.05);
-        }
-
-        #calcRateSection tr:hover td {
-            background: rgba(83, 82, 237, 0.1);
-            transform: scale(1.02);
         }
 
         #calcRateSection input {
-            width: 90px;
-            padding: 8px 12px;
-            border: 2px solid rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.9);
-            transition: all 0.3s ease;
-        }
-
-        #calcRateSection input:focus {
-            border-color: var(--mode-selected);
-            box-shadow: 0 0 0 3px rgba(83, 82, 237, 0.1);
-            background: white;
-        }
-
-        #calcRateSection button {
-            padding: 8px 16px;
-            background: linear-gradient(135deg, var(--red), #ff6b7a);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-        }
-
-        #calcRateSection button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+            width: 80px;
         }
 
         /* モード切替ボタン */
         .mode-selector {
-            margin-top: 1.5em;
+            margin-top: 1em;
             text-align: center;
         }
 
         .mode-button {
-            padding: 12px 24px;
+            padding: 0.8em 1em;
             font-size: 1em;
-            border: 2px solid var(--mode-unselected);
-            border-radius: 25px;
-            color: var(--mode-unselected);
-            margin: 0 8px;
-            background: transparent;
+            border: none;
+            border-radius: var(--btn-radius);
+            color: white;
+            margin: 0 5px;
+            background: var(--mode-unselected);
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        .mode-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .mode-button.selected {
-            background: linear-gradient(135deg, var(--mode-selected), #3c40c6);
-            color: white;
-            border-color: var(--mode-selected);
-            box-shadow: 0 4px 15px rgba(83, 82, 237, 0.3);
-        }
-
-        /* 行追加ボタン */
-        #addRowButton {
-            margin-top: 1.5em;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, var(--green), #55a3ff);
-            color: white;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            box-shadow: 0 4px 15px rgba(46, 213, 115, 0.3);
-        }
-
-        #addRowButton:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(46, 213, 115, 0.4);
-        }
-
-        #extraControls {
-            max-width: 700px;
-            margin: 2em auto;
-            background: var(--card-bg);
-            backdrop-filter: var(--backdrop-blur);
-            -webkit-backdrop-filter: var(--backdrop-blur);
-            padding: 2em;
-            border-radius: var(--btn-radius);
-            box-shadow: var(--shadow);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        #extraControls:hover {
-            box-shadow: var(--hover-shadow);
-            transform: translateY(-2px);
-        }
-
-        /* 説明テキストのスタイリング */
-        .description-section {
-            max-width: 700px;
-            margin: 2em auto;
-            font-size: 15px;
-            line-height: 1.8;
-            color: var(--fg);
-            background: var(--card-bg);
-            backdrop-filter: var(--backdrop-blur);
-            -webkit-backdrop-filter: var(--backdrop-blur);
-            padding: 2.5em;
-            border-radius: var(--btn-radius);
-            box-shadow: var(--shadow);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .description-section:hover {
-            box-shadow: var(--hover-shadow);
-            transform: translateY(-2px);
-        }
-
-        .description-section strong {
-            color: var(--mode-selected);
-            font-weight: 700;
-        }
-
-        /* ツールリンクセクション */
-        #tool-links {
-            max-width: 700px;
-            margin: 2em auto;
-            background: var(--card-bg);
-            backdrop-filter: var(--backdrop-blur);
-            -webkit-backdrop-filter: var(--backdrop-blur);
-            padding: 2em;
-            border-radius: var(--btn-radius);
-            box-shadow: var(--shadow);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        #tool-links:hover {
-            box-shadow: var(--hover-shadow);
-            transform: translateY(-2px);
-        }
-
-        #tool-links h2 {
-            color: var(--fg);
-            text-shadow: none;
-            font-size: 1.6em;
-            margin-bottom: 1em;
-        }
-
-        #tool-links ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        #tool-links li {
-            margin-bottom: 0.8em;
-        }
-
-        #tool-links a {
-            color: var(--mode-selected);
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            padding: 0.5em 0;
-            display: inline-block;
-        }
-
-        #tool-links a:hover {
-            color: #3c40c6;
-            transform: translateX(5px);
+            background: var(--mode-selected);
         }
     </style>
 </head>
@@ -690,7 +374,7 @@
     </div>
 
     <!-- 使用説明＆回転率算出の説明、ツールリンク -->
-    <div class="description-section">
+    <div style="max-width:600px; margin:2em auto; font-size:14px; line-height:1.7; color:#444; background:#fff; padding:1.5em; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
         <strong>【スマスロ差枚狙いに必須｜差枚推測ツール】</strong><br>
         スマスロは差枚狙いで攻める機会が多く、グラフから現在の差枚を正確に読み取ることが立ち回りのカギになる。<br>
         本ツールは、パチスロ実戦で重要な「現在の差枚」を画像から読み取り、誤差50枚以内の精度で推測できる差枚確認ツール。<br>
