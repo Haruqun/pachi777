@@ -1,0 +1,266 @@
+{
+  "timestamp": "2025-06-16T14:04:00.560159",
+  "total_files": 17,
+  "successful": 0,
+  "failed": 17,
+  "failed_files": [
+    "IMG_4403",
+    "IMG_8949",
+    "S__78209136",
+    "S__78209130",
+    "S__78209132",
+    "S__78209168",
+    "S__78209156",
+    "S__78209160",
+    "S__78209174",
+    "S__78209162",
+    "S__78209166",
+    "S__78209158",
+    "S__78209170",
+    "S__78209164",
+    "S__78209088",
+    "S__78209128",
+    "S__78209138"
+  ],
+  "success_rate": 0.0,
+  "results": {
+    "IMG_4403": {
+      "source_image": "graphs/IMG_4403.png",
+      "timestamp": "2025-06-16T14:04:00.556529",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "IMG_8949": {
+      "source_image": "graphs/IMG_8949.png",
+      "timestamp": "2025-06-16T14:04:00.557932",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209136": {
+      "source_image": "graphs/S__78209136.jpg",
+      "timestamp": "2025-06-16T14:04:00.558090",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209130": {
+      "source_image": "graphs/S__78209130.jpg",
+      "timestamp": "2025-06-16T14:04:00.558242",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209132": {
+      "source_image": "graphs/S__78209132.jpg",
+      "timestamp": "2025-06-16T14:04:00.558368",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209168": {
+      "source_image": "graphs/S__78209168.jpg",
+      "timestamp": "2025-06-16T14:04:00.558493",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209156": {
+      "source_image": "graphs/S__78209156.jpg",
+      "timestamp": "2025-06-16T14:04:00.558629",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209160": {
+      "source_image": "graphs/S__78209160.jpg",
+      "timestamp": "2025-06-16T14:04:00.558814",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209174": {
+      "source_image": "graphs/S__78209174.jpg",
+      "timestamp": "2025-06-16T14:04:00.559071",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209162": {
+      "source_image": "graphs/S__78209162.jpg",
+      "timestamp": "2025-06-16T14:04:00.559244",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209166": {
+      "source_image": "graphs/S__78209166.jpg",
+      "timestamp": "2025-06-16T14:04:00.559371",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209158": {
+      "source_image": "graphs/S__78209158.jpg",
+      "timestamp": "2025-06-16T14:04:00.559492",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209170": {
+      "source_image": "graphs/S__78209170.jpg",
+      "timestamp": "2025-06-16T14:04:00.559605",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209164": {
+      "source_image": "graphs/S__78209164.jpg",
+      "timestamp": "2025-06-16T14:04:00.559717",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209088": {
+      "source_image": "graphs/S__78209088.jpg",
+      "timestamp": "2025-06-16T14:04:00.559827",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209128": {
+      "source_image": "graphs/S__78209128.jpg",
+      "timestamp": "2025-06-16T14:04:00.559946",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    },
+    "S__78209138": {
+      "source_image": "graphs/S__78209138.jpg",
+      "timestamp": "2025-06-16T14:04:00.560055",
+      "cropping_success": false,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": null,
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "全体処理エラー: 'PerfectGraphCropper' object has no attribute 'crop_graph_smart'"
+      ]
+    }
+  }
+}

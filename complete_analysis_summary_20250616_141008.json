@@ -1,0 +1,349 @@
+{
+  "timestamp": "2025-06-16T14:10:08.880541",
+  "total_files": 17,
+  "successful": 17,
+  "failed": 0,
+  "failed_files": [],
+  "success_rate": 100.0,
+  "results": {
+    "IMG_4403": {
+      "source_image": "graphs/IMG_4403.png",
+      "timestamp": "2025-06-16T14:08:41.946752",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": true,
+      "cropped_image": "graphs/cropped_auto/IMG_4403_cropped.png",
+      "graph_data": 2509,
+      "final_difference_from_graph": -13991,
+      "statistics": {
+        "累計スタート": 4318,
+        "スタート": 350,
+        "大当たり回数": 21,
+        "初当たり回数": 7,
+        "大当たり確率_分母": 205,
+        "最高出玉": 10940,
+        "最終差玉": 3520,
+        "実際の確率分母": 205,
+        "連チャン率": 2.0
+      },
+      "errors": [],
+      "final_difference_verified": false,
+      "final_difference_best": -13991
+    },
+    "IMG_8949": {
+      "source_image": "graphs/IMG_8949.png",
+      "timestamp": "2025-06-16T14:09:04.349437",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": false,
+      "cropped_image": "graphs/cropped_auto/IMG_8949_cropped.png",
+      "graph_data": 2481,
+      "final_difference_from_graph": 17568,
+      "statistics": {},
+      "errors": [
+        "統計情報抽出失敗"
+      ],
+      "final_difference_best": 17568,
+      "final_difference_verified": false
+    },
+    "S__78209136": {
+      "source_image": "graphs/S__78209136.jpg",
+      "timestamp": "2025-06-16T14:09:14.348840",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": true,
+      "cropped_image": "graphs/cropped_auto/S__78209136_cropped.png",
+      "graph_data": 898,
+      "final_difference_from_graph": -8919,
+      "statistics": {
+        "累計スタート": null,
+        "スタート": 3940,
+        "大当たり回数": 20,
+        "初当たり回数": 6,
+        "大当たり確率_分母": null,
+        "最高出玉": 14150,
+        "最終差玉": 3820,
+        "連チャン率": 2.33
+      },
+      "errors": [],
+      "final_difference_verified": false,
+      "final_difference_best": -8919
+    },
+    "S__78209130": {
+      "source_image": "graphs/S__78209130.jpg",
+      "timestamp": "2025-06-16T14:09:27.534763",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": true,
+      "cropped_image": "graphs/cropped_auto/S__78209130_cropped.png",
+      "graph_data": 843,
+      "final_difference_from_graph": -2379,
+      "statistics": {
+        "累計スタート": null,
+        "スタート": 4120,
+        "大当たり回数": 21,
+        "初当たり回数": 8,
+        "大当たり確率_分母": null,
+        "最高出玉": null,
+        "最終差玉": 9060,
+        "連チャン率": 1.62
+      },
+      "errors": [],
+      "final_difference_verified": false,
+      "final_difference_best": -2379
+    },
+    "S__78209132": {
+      "source_image": "graphs/S__78209132.jpg",
+      "timestamp": "2025-06-16T14:09:31.190606",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": false,
+      "cropped_image": "graphs/cropped_auto/S__78209132_cropped.png",
+      "graph_data": 1159,
+      "final_difference_from_graph": 21441,
+      "statistics": {},
+      "errors": [
+        "統計情報抽出失敗"
+      ],
+      "final_difference_best": 21441,
+      "final_difference_verified": false
+    },
+    "S__78209168": {
+      "source_image": "graphs/S__78209168.jpg",
+      "timestamp": "2025-06-16T14:09:35.011980",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": false,
+      "cropped_image": "graphs/cropped_auto/S__78209168_cropped.png",
+      "graph_data": 1650,
+      "final_difference_from_graph": -30000,
+      "statistics": {},
+      "errors": [
+        "統計情報抽出失敗"
+      ],
+      "final_difference_best": -30000,
+      "final_difference_verified": false
+    },
+    "S__78209156": {
+      "source_image": "graphs/S__78209156.jpg",
+      "timestamp": "2025-06-16T14:09:37.871435",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": false,
+      "cropped_image": "graphs/cropped_auto/S__78209156_cropped.png",
+      "graph_data": 1269,
+      "final_difference_from_graph": 16937,
+      "statistics": {},
+      "errors": [
+        "統計情報抽出失敗"
+      ],
+      "final_difference_best": 16937,
+      "final_difference_verified": false
+    },
+    "S__78209160": {
+      "source_image": "graphs/S__78209160.jpg",
+      "timestamp": "2025-06-16T14:09:43.814737",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": true,
+      "cropped_image": "graphs/cropped_auto/S__78209160_cropped.png",
+      "graph_data": 526,
+      "final_difference_from_graph": 3895,
+      "statistics": {
+        "累計スタート": null,
+        "スタート": 3989,
+        "大当たり回数": 30,
+        "初当たり回数": 6,
+        "大当たり確率_分母": null,
+        "最高出玉": 22060,
+        "最終差玉": null,
+        "連チャン率": 4.0
+      },
+      "errors": [],
+      "final_difference_best": 3895,
+      "final_difference_verified": false
+    },
+    "S__78209174": {
+      "source_image": "graphs/S__78209174.jpg",
+      "timestamp": "2025-06-16T14:09:46.366817",
+      "cropping_success": true,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": "graphs/cropped_auto/S__78209174_cropped.png",
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "グラフデータ抽出失敗",
+        "統計情報抽出失敗"
+      ],
+      "final_difference_best": null,
+      "final_difference_verified": false
+    },
+    "S__78209162": {
+      "source_image": "graphs/S__78209162.jpg",
+      "timestamp": "2025-06-16T14:09:46.837100",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": false,
+      "cropped_image": "graphs/cropped_auto/S__78209162_cropped.png",
+      "graph_data": 2254,
+      "final_difference_from_graph": -17772,
+      "statistics": {},
+      "errors": [
+        "統計情報抽出失敗"
+      ],
+      "final_difference_best": -17772,
+      "final_difference_verified": false
+    },
+    "S__78209166": {
+      "source_image": "graphs/S__78209166.jpg",
+      "timestamp": "2025-06-16T14:09:49.491281",
+      "cropping_success": true,
+      "graph_extraction_success": false,
+      "stats_extraction_success": false,
+      "cropped_image": "graphs/cropped_auto/S__78209166_cropped.png",
+      "graph_data": null,
+      "final_difference_from_graph": null,
+      "statistics": {},
+      "errors": [
+        "グラフデータ抽出失敗",
+        "統計情報抽出失敗"
+      ],
+      "final_difference_best": null,
+      "final_difference_verified": false
+    },
+    "S__78209158": {
+      "source_image": "graphs/S__78209158.jpg",
+      "timestamp": "2025-06-16T14:09:49.937657",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": true,
+      "cropped_image": "graphs/cropped_auto/S__78209158_cropped.png",
+      "graph_data": 833,
+      "final_difference_from_graph": -12417,
+      "statistics": {
+        "累計スタート": null,
+        "スタート": 3886,
+        "大当たり回数": 18,
+        "初当たり回数": null,
+        "大当たり確率_分母": null,
+        "最高出玉": 11560,
+        "最終差玉": 0
+      },
+      "errors": [],
+      "final_difference_verified": false,
+      "final_difference_best": -12417
+    },
+    "S__78209170": {
+      "source_image": "graphs/S__78209170.jpg",
+      "timestamp": "2025-06-16T14:09:52.742035",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": false,
+      "cropped_image": "graphs/cropped_auto/S__78209170_cropped.png",
+      "graph_data": 1650,
+      "final_difference_from_graph": -30000,
+      "statistics": {},
+      "errors": [
+        "統計情報抽出失敗"
+      ],
+      "final_difference_best": -30000,
+      "final_difference_verified": false
+    },
+    "S__78209164": {
+      "source_image": "graphs/S__78209164.jpg",
+      "timestamp": "2025-06-16T14:09:57.359298",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": true,
+      "cropped_image": "graphs/cropped_auto/S__78209164_cropped.png",
+      "graph_data": 786,
+      "final_difference_from_graph": 13964,
+      "statistics": {
+        "累計スタート": null,
+        "スタート": 5372,
+        "大当たり回数": 47,
+        "初当たり回数": 8,
+        "大当たり確率_分母": null,
+        "最高出玉": 24220,
+        "最終差玉": null,
+        "連チャン率": 4.88
+      },
+      "errors": [],
+      "final_difference_best": 13964,
+      "final_difference_verified": false
+    },
+    "S__78209088": {
+      "source_image": "graphs/S__78209088.jpg",
+      "timestamp": "2025-06-16T14:10:01.219179",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": true,
+      "cropped_image": "graphs/cropped_auto/S__78209088_cropped.png",
+      "graph_data": 987,
+      "final_difference_from_graph": -63,
+      "statistics": {
+        "累計スタート": 4233,
+        "スタート": 117,
+        "大当たり回数": 27,
+        "初当たり回数": 9,
+        "大当たり確率_分母": 156,
+        "最高出玉": 12470,
+        "最終差玉": null,
+        "実際の確率分母": 156,
+        "連チャン率": 2.0
+      },
+      "errors": [],
+      "final_difference_best": -63,
+      "final_difference_verified": false
+    },
+    "S__78209128": {
+      "source_image": "graphs/S__78209128.jpg",
+      "timestamp": "2025-06-16T14:10:04.983231",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": true,
+      "cropped_image": "graphs/cropped_auto/S__78209128_cropped.png",
+      "graph_data": 991,
+      "final_difference_from_graph": 4865,
+      "statistics": {
+        "累計スタート": 4423,
+        "スタート": null,
+        "大当たり回数": 30,
+        "初当たり回数": 10,
+        "大当たり確率_分母": null,
+        "最高出玉": 21350,
+        "最終差玉": null,
+        "実際の確率分母": 147,
+        "連チャン率": 2.0
+      },
+      "errors": [],
+      "final_difference_best": 4865,
+      "final_difference_verified": false
+    },
+    "S__78209138": {
+      "source_image": "graphs/S__78209138.jpg",
+      "timestamp": "2025-06-16T14:10:07.079959",
+      "cropping_success": true,
+      "graph_extraction_success": true,
+      "stats_extraction_success": true,
+      "cropped_image": "graphs/cropped_auto/S__78209138_cropped.png",
+      "graph_data": 1265,
+      "final_difference_from_graph": 13081,
+      "statistics": {
+        "累計スタート": null,
+        "スタート": 4567,
+        "大当たり回数": 37,
+        "初当たり回数": 10,
+        "大当たり確率_分母": null,
+        "最高出玉": 24430,
+        "最終差玉": null,
+        "連チャン率": 2.7
+      },
+      "errors": [],
+      "final_difference_best": 13081,
+      "final_difference_verified": false
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "source_image": "graphs/S__78209088.jpg",
+  "timestamp": "2025-06-16T14:27:38.439152",
+  "cropping_success": true,
+  "graph_extraction_success": true,
+  "stats_extraction_success": true,
+  "cropped_image": "graphs/cropped_auto/S__78209088_cropped.png",
+  "graph_data": 30492,
+  "final_difference_from_graph": -19648,
+  "statistics": {
+    "累計スタート": 4233,
+    "スタート": 117,
+    "大当たり回数": 27,
+    "初当たり回数": 9,
+    "大当たり確率_分母": 156,
+    "最高出玉": 12470,
+    "最終差玉": null,
+    "実際の確率分母": 156,
+    "連チャン率": 2.0
+  },
+  "errors": [],
+  "final_difference_best": -19648,
+  "final_difference_verified": false
+}

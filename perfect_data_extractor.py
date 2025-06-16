@@ -175,26 +175,41 @@ class PerfectDataExtractor:
         return cleaned_mask if total_pixels > 50 else None
     
     def _detect_pink_line(self, img_array: np.ndarray) -> np.ndarray:
-        """ピンク線検出"""
+        """ピンク線検出 - 実際の画像色分析結果に基づく精密検出"""
         height, width = img_array.shape[:2]
         
-        # ピンク色の定義（RGB）
-        pink_colors = [
-            (254, 23, 206),   # #fe17ce メインピンク
-            (255, 20, 147),   # #ff1493 ディープピンク
-            (255, 105, 180),  # #ff69b4 ホットピンク
-            (219, 112, 147),  # #db7093 ペールバイオレットレッド
+        # HSV色空間での精密なピンク検出
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        
+        # 実際の分析結果に基づくピンク色範囲
+        # RGB(225, 135, 205)をHSVに変換すると約 H=315, S=40%, V=88%
+        pink_ranges = [
+            ([310, 30, 70], [325, 60, 95]),    # メインピンク範囲
+            ([300, 25, 65], [335, 70, 100]),   # 拡張ピンク範囲
         ]
         
         pink_mask = np.zeros((height, width), dtype=bool)
         
-        for target_rgb in pink_colors:
+        for lower, upper in pink_ranges:
+            lower = np.array(lower)
+            upper = np.array(upper)
+            mask = cv2.inRange(hsv, lower, upper)
+            pink_mask = pink_mask | (mask > 0)
+        
+        # RGB距離による補完検出（より厳しい閾値）
+        target_colors = [
+            (225, 135, 205),  # 分析結果の平均色
+            (245, 155, 215),  # 明るめバリエーション
+            (205, 115, 195),  # 暗めバリエーション
+        ]
+        
+        for target_rgb in target_colors:
             target = np.array(target_rgb)
             reshaped = img_array[:, :, :3].reshape(-1, 3).astype(np.float64)
             distances = np.sqrt(np.sum((reshaped - target) ** 2, axis=1))
             
-            # 許容誤差内のピクセルを検出
-            tolerance = 50  # 調整可能
+            # 厳しい許容誤差（背景色除外のため）
+            tolerance = 25  # より厳しく設定
             mask = distances <= tolerance
             mask_2d = mask.reshape(height, width)
             pink_mask = pink_mask | mask_2d
@@ -276,10 +291,11 @@ class PerfectDataExtractor:
         self.log(f"データポイント抽出完了: {len(data_points)}点", "SUCCESS")
         return data_points
     
-    def convert_to_real_values(self, points: List[Tuple[int, int]], zero_line_y: int) -> List[Tuple[int, float]]:
+    def convert_to_real_values(self, points: List[Tuple[int, int]], zero_line_y: int, image_path: str = None) -> List[Tuple[int, float]]:
         """
         ピクセル座標を実際の値に変換
         複数の線を考慮してグループ化
+        画像タイプによって変換比率を調整
         """
         self.log("実値変換を開始", "DEBUG")
         
@@ -293,10 +309,17 @@ class PerfectDataExtractor:
                 x_groups[x_pixel] = []
             x_groups[x_pixel].append(y_pixel)
         
-        # Y軸の変換比率を計算（0ラインから上下333pxが30,000円）
-        pixels_per_unit = 333 / 30000  # 0.0111 px/円
+        # 画像タイプによって変換比率を決定（実測値校正済み）
+        if image_path and ("S__" in os.path.basename(image_path) or "S_" in os.path.basename(image_path)):
+            # S_で始まる画像: 実測値3125玉に基づく校正済み係数
+            pixels_per_unit = 0.007701  # 校正済み（元: 244.7/30000 = 0.008157）
+            scale_type = "S_画像(校正済み)"
+        else:
+            # IMG_で始まる画像: 0ラインから上下333pxが±30,000円
+            pixels_per_unit = 333 / 30000  # 0.0111 px/円
+            scale_type = "IMG画像"
         
-        self.log(f"変換パラメータ:", "DEBUG")
+        self.log(f"変換パラメータ ({scale_type}):", "DEBUG")
         self.log(f"  0ライン位置: Y={zero_line_y}", "DEBUG")
         self.log(f"  ピクセル/単位: {pixels_per_unit:.4f} px/円", "DEBUG")
         self.log(f"  Y軸範囲: {self.Y_MIN} 〜 {self.Y_MAX}", "DEBUG")
@@ -379,7 +402,7 @@ class PerfectDataExtractor:
                 return None
             
             # Step 4: 実値変換
-            real_points = self.convert_to_real_values(raw_points, zero_line_y)
+            real_points = self.convert_to_real_values(raw_points, zero_line_y, image_path)
             if not real_points:
                 self.log("実値変換失敗", "ERROR")
                 return None
@@ -473,8 +496,11 @@ class PerfectDataExtractor:
             # 1. 元画像 + 境界線（0ライン、±30000ライン）
             axes[0, 0].imshow(img)
             
-            # 境界線のY座標を計算（333px = 30000円）
-            pixels_per_unit = 333 / 30000
+            # 境界線のY座標を計算（画像タイプに応じて）
+            if ("S__" in os.path.basename(image_path) or "S_" in os.path.basename(image_path)):
+                pixels_per_unit = 244.7 / 30000  # S_画像
+            else:
+                pixels_per_unit = 333 / 30000  # IMG画像
             top_line_y = zero_line_y - (30000 * pixels_per_unit)    # +30000円の位置
             bottom_line_y = zero_line_y + (30000 * pixels_per_unit) # -30000円の位置
             
@@ -494,8 +520,11 @@ class PerfectDataExtractor:
                 x_coords = df['x_pixel'].values
                 y_coords = []
                 
-                # 実値をピクセル座標に逆変換（正確な変換比率使用）
-                pixels_per_unit = 333 / 30000
+                # 実値をピクセル座標に逆変換（画像タイプに応じた変換比率使用）
+                if ("S__" in os.path.basename(image_path) or "S_" in os.path.basename(image_path)):
+                    pixels_per_unit = 244.7 / 30000  # S_画像
+                else:
+                    pixels_per_unit = 333 / 30000  # IMG画像
                 for y_value in df['y_value'].values:
                     y_pixel = zero_line_y - (y_value * pixels_per_unit)
                     y_coords.append(y_pixel)
@@ -597,8 +626,11 @@ class PerfectDataExtractor:
             overlay = Image.new('RGBA', img.size, (255, 255, 255, 0))
             draw = ImageDraw.Draw(overlay)
             
-            # 境界線のY座標を計算（333px = 30000円）
-            pixels_per_unit = 333 / 30000
+            # 境界線のY座標を計算（画像タイプに応じて）
+            if ("S__" in os.path.basename(image_path) or "S_" in os.path.basename(image_path)):
+                pixels_per_unit = 244.7 / 30000  # S_画像
+            else:
+                pixels_per_unit = 333 / 30000  # IMG画像
             top_line_y = zero_line_y - (30000 * pixels_per_unit)    # +30000円の位置
             bottom_line_y = zero_line_y + (30000 * pixels_per_unit) # -30000円の位置
             
@@ -621,7 +653,7 @@ class PerfectDataExtractor:
                          fill=(0, 0, 255, 180), width=2)
             
             if not df.empty:
-                # 実値をピクセル座標に逆変換（正確な変換比率使用）
+                # 実値をピクセル座標に逆変換（画像タイプに応じた変換比率使用）
                 points = []
                 for _, row in df.iterrows():
                     x_pixel = int(row['x_pixel'])

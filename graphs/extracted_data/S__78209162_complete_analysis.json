@@ -1,0 +1,16 @@
+{
+  "source_image": "graphs/S__78209162.jpg",
+  "timestamp": "2025-06-16T14:27:22.509576",
+  "cropping_success": true,
+  "graph_extraction_success": true,
+  "stats_extraction_success": false,
+  "cropped_image": "graphs/cropped_auto/S__78209162_cropped.png",
+  "graph_data": 28531,
+  "final_difference_from_graph": -19320,
+  "statistics": {},
+  "errors": [
+    "統計情報抽出失敗"
+  ],
+  "final_difference_best": -19320,
+  "final_difference_verified": false
+}
