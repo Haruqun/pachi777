@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-06-16T12:49:39.028012",
+  "input_folder": "graphs/cropped_perfect",
+  "output_folder": "graphs/extracted_data",
+  "total_files": 2,
+  "successful": 2,
+  "failed": [],
+  "statistics": [
+    {
+      "filename": "IMG_8949_perfect.png",
+      "points": 545,
+      "y_min": -1430.3638644918444,
+      "y_max": 17766.62484316186,
+      "y_mean": 10515.211860992484,
+      "y_std": 4948.979471784822
+    },
+    {
+      "filename": "IMG_4403_perfect.png",
+      "points": 799,
+      "y_min": -14002.509410288583,
+      "y_max": 2860.727728983689,
+      "y_mean": -4017.569012708797,
+      "y_std": 4097.729483730582
+    }
+  ]
+}
