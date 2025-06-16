@@ -309,11 +309,12 @@ class PerfectDataExtractor:
                 x_groups[x_pixel] = []
             x_groups[x_pixel].append(y_pixel)
         
-        # 画像タイプによって変換比率を決定（実測値校正済み）
+        # 画像タイプによって変換比率を決定（微調整済み）
         if image_path and ("S__" in os.path.basename(image_path) or "S_" in os.path.basename(image_path)):
-            # S_で始まる画像: 実測値3125玉に基づく校正済み係数
-            pixels_per_unit = 0.007701  # 校正済み（元: 244.7/30000 = 0.008157）
-            scale_type = "S_画像(校正済み)"
+            # S_で始まる画像: 0ラインから上251px・下250pxが±30,000円
+            # 平均値で計算: (251+250)/2 = 250.5px for ±30,000円
+            pixels_per_unit = 250.5 / 30000  # 0.008350 px/円（微調整済み）
+            scale_type = "S_画像(上251px/下250px)"
         else:
             # IMG_で始まる画像: 0ラインから上下333pxが±30,000円
             pixels_per_unit = 333 / 30000  # 0.0111 px/円
@@ -347,9 +348,16 @@ class PerfectDataExtractor:
         # 統計情報
         if converted_points:
             y_values = [p[1] for p in converted_points]
-            self.log(f"  変換後範囲: {min(y_values):.0f} 〜 {max(y_values):.0f}", "DEBUG")
+            min_val, max_val = min(y_values), max(y_values)
+            
+            self.log(f"  変換後範囲: {min_val:.0f} 〜 {max_val:.0f}", "DEBUG")
             self.log(f"  平均値: {np.mean(y_values):.0f}", "DEBUG")
             self.log(f"  データ点数: {len(converted_points)}", "DEBUG")
+            
+            # 上限振り切りエラー検出
+            if abs(max_val) >= 29500 or abs(min_val) >= 29500:
+                self.log(f"⚠️ 上限振り切り検出: 最大={max_val:.0f}, 最小={min_val:.0f}", "WARNING")
+                self.log("このデータは上限/下限に張り付いており、正確な最終差玉の測定ができません", "WARNING")
         
         return converted_points
     
@@ -373,6 +381,55 @@ class PerfectDataExtractor:
                 "SUCCESS" if is_zero_start else "WARNING")
         
         return is_zero_start
+    
+    def improve_start_end_precision(self, points: List[Tuple[int, float]]) -> List[Tuple[int, float]]:
+        """開始・終点精度向上処理"""
+        if len(points) < 10:
+            return points
+        
+        improved_points = points.copy()
+        
+        # 開始点精度向上: 最初の5点を0ライン寄りに補正
+        start_section = [p[1] for p in points[:5]]
+        start_avg = np.mean(start_section)
+        
+        if abs(start_avg) > 500:  # 0ラインから500円以上離れている場合
+            # 最初の5点を0ライン近くに補正
+            correction_factor = 0.3  # 30%補正
+            for i in range(5):
+                x_pos, y_val = improved_points[i]
+                corrected_y = y_val * (1 - correction_factor)
+                improved_points[i] = (x_pos, corrected_y)
+            
+            self.log(f"開始点補正: {start_avg:.0f} → {np.mean([p[1] for p in improved_points[:5]]):.0f}", "DEBUG")
+        
+        # 終点精度向上: 最後の15点から最安定区間を特定
+        if len(points) >= 15:
+            end_values = [p[1] for p in points[-15:]]
+            
+            # 5点移動窓での標準偏差を計算
+            min_std = float('inf')
+            best_start_idx = len(end_values) - 5
+            
+            for i in range(len(end_values) - 4):
+                segment = end_values[i:i+5]
+                std = np.std(segment)
+                if std < min_std:
+                    min_std = std
+                    best_start_idx = i
+            
+            # 最安定区間の平均値で最後の5点を置換
+            if min_std < 300:  # 十分安定している場合
+                stable_avg = np.mean(end_values[best_start_idx:best_start_idx+5])
+                original_avg = np.mean([p[1] for p in points[-5:]])
+                
+                for i in range(5):
+                    x_pos = improved_points[-(5-i)][0]
+                    improved_points[-(5-i)] = (x_pos, stable_avg)
+                
+                self.log(f"終点安定化: {original_avg:.0f} → {stable_avg:.0f} (std: {min_std:.1f})", "DEBUG")
+        
+        return improved_points
     
     def extract_perfect_data(self, image_path: str, output_csv: str = None) -> Optional[pd.DataFrame]:
         """
@@ -406,6 +463,9 @@ class PerfectDataExtractor:
             if not real_points:
                 self.log("実値変換失敗", "ERROR")
                 return None
+            
+            # Step 4.5: 開始・終点精度向上
+            real_points = self.improve_start_end_precision(real_points)
             
             # Step 5: 0ラインスタート検証
             is_valid_start = self.validate_zero_start(real_points)
