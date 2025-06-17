@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-完全版グラフデータ抽出ツール
-- 最終調整された境界（X: 36-620）でグラフラインをトレース
+グラフデータ抽出ツール
+- 確定した境界内でグラフラインをトレース
 - ピクセル座標から実際の値へ変換
 - CSV形式でデータ出力
-- すべての画像を一括処理
 """
 
 import os
@@ -20,15 +19,12 @@ import matplotlib.font_manager as fm
 class GraphDataExtractor:
     """グラフデータ抽出システム"""
     
-    def __init__(self):
-        # 最終調整された境界値を直接設定
-        self.boundaries = {
-            "start_x": 36,
-            "end_x": 620,
-            "top_y": 29,
-            "zero_y": 274,
-            "bottom_y": 520
-        }
+    def __init__(self, config_path="graph_boundaries_final_config.json"):
+        # 設定ファイルを読み込み
+        with open(config_path, "r") as f:
+            self.config = json.load(f)
+        
+        self.boundaries = self.config["boundaries"]
         self.debug_mode = True
         
     def log(self, message, level="INFO"):
@@ -290,9 +286,8 @@ class GraphDataExtractor:
 
 def main():
     """メイン処理"""
-    print("🎯 完全版グラフデータ抽出ツール")
-    print("📊 最終調整された境界でグラフラインをトレースしてデータを抽出します")
-    print(f"📏 境界: X: 36-620, Y: 29-520")
+    print("🎯 グラフデータ抽出ツール")
+    print("📊 グラフラインをトレースしてデータを抽出します")
     
     # 入出力フォルダ設定
     input_folder = "graphs/optimal_v2"
@@ -304,20 +299,16 @@ def main():
     # 抽出器を初期化
     extractor = GraphDataExtractor()
     
-    # すべての画像ファイルを取得
-    all_files = [f for f in os.listdir(input_folder) if f.lower().endswith('.png')]
-    print(f"\n📁 検出された画像: {len(all_files)}枚")
+    # テスト画像を処理
+    test_files = ["S__78209130_optimal.png", "S__78209132_optimal.png", "S__78209174_optimal.png"]
     
-    # 結果を記録
-    all_results = []
-    
-    for i, file in enumerate(all_files, 1):
+    for file in test_files:
         input_path = os.path.join(input_folder, file)
         if not os.path.exists(input_path):
             continue
         
         print(f"\n{'='*60}")
-        print(f"[{i}/{len(all_files)}] 処理中: {file}")
+        print(f"処理中: {file}")
         
         # データ抽出
         result = extractor.extract_graph_data(input_path)
@@ -337,9 +328,6 @@ def main():
         plot_path = os.path.join(output_folder, f"{base_name}_plot.png")
         extractor.create_graph_plot(result, plot_path)
         
-        # 結果を記録
-        all_results.append(result)
-        
         # 結果サマリー
         if result["data"]:
             values = [d["value"] for d in result["data"]]
@@ -347,40 +335,6 @@ def main():
             print(f"  最大値: {max(values):.0f}")
             print(f"  最小値: {min(values):.0f}")
             print(f"  最終値: {values[-1]:.0f}")
-    
-    # 全体のサマリーレポート作成
-    print(f"\n\n{'='*60}")
-    print("📊 全体サマリー")
-    print(f"処理画像数: {len(all_results)}")
-    
-    # 統計情報
-    total_points = sum(r["points"] for r in all_results)
-    print(f"総データポイント数: {total_points}")
-    
-    # 色別統計
-    color_counts = {}
-    for r in all_results:
-        color = r["color_type"]
-        color_counts[color] = color_counts.get(color, 0) + 1
-    
-    print("\n色別内訳:")
-    for color, count in color_counts.items():
-        print(f"  {color}: {count}枚")
-    
-    # レポートファイル保存
-    import datetime
-    report_filename = f"perfect_extraction_report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    with open(report_filename, 'w', encoding='utf-8') as f:
-        json.dump({
-            "extraction_date": datetime.datetime.now().isoformat(),
-            "boundaries": extractor.boundaries,
-            "total_images": len(all_results),
-            "total_points": total_points,
-            "color_distribution": color_counts,
-            "results": all_results
-        }, f, ensure_ascii=False, indent=2)
-    
-    print(f"\n✅ レポートを保存: {report_filename}")
 
 if __name__ == "__main__":
     main()
