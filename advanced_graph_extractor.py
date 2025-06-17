@@ -59,18 +59,18 @@ class AdvancedGraphExtractor:
         img_hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
         img_lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
         
-        # グラフ領域内でサンプリング
+        # グラフ領域全体でサンプリング（より広範囲で検出）
         roi_hsv = img_hsv[
-            self.boundaries["zero_y"]-50:self.boundaries["zero_y"]+50,
+            self.boundaries["top_y"]:self.boundaries["bottom_y"],
             self.boundaries["start_x"]:self.boundaries["end_x"]
         ]
         
-        # 色範囲の定義（HSV）
+        # より精密な色範囲の定義（HSV）- ピンク検出を強化
         color_ranges = {
-            "pink": [(140, 30, 30), (170, 255, 255)],
-            "purple": [(120, 30, 30), (150, 255, 255)],
-            "blue": [(90, 30, 30), (120, 255, 255)],
-            "cyan": [(80, 30, 30), (100, 255, 255)]
+            "pink": [(150, 40, 80), (170, 255, 255)],  # より厳密なピンク範囲
+            "purple": [(120, 40, 80), (150, 255, 255)],
+            "blue": [(90, 40, 80), (120, 255, 255)],
+            "cyan": [(80, 40, 80), (100, 255, 255)]
         }
         
         color_counts = {}
@@ -338,7 +338,14 @@ class AdvancedGraphExtractor:
     def y_to_value(self, y: float) -> float:
         """Y座標を差枚数に変換（浮動小数点精度）"""
         height = float(self.boundaries["bottom_y"] - self.boundaries["top_y"])
-        value = 30000.0 - (y - float(self.boundaries["top_y"])) * 60000.0 / height
+        # Y座標の微調整
+        # 最大値付近（上部）は1ピクセル下に調整
+        # 最小値付近（下部）は1ピクセル上に調整
+        if y < self.boundaries["zero_y"]:  # ゼロラインより上（プラス領域）
+            adjusted_y = y + 1.0  # 1ピクセル下に
+        else:  # ゼロラインより下（マイナス領域）
+            adjusted_y = y - 1.0  # 1ピクセル上に
+        value = 30000.0 - (adjusted_y - float(self.boundaries["top_y"])) * 60000.0 / height
         return np.clip(value, -30000.0, 30000.0)
     
     def extract_graph_data(self, image_path: str) -> Dict:
