@@ -44,3 +44,8 @@
 2. stable_graph_extractor.py → データ抽出（最高精度）
 3. accuracy_checker.py → 精度検証
 4. compare_stable_vs_reported.py → 詳細分析
+5. perfect_overlay_generator.py → 完全一致オーバーレイ生成
+
+## 既知の課題
+- 青いグラフ（特にS__78209162のような薄い青）の色検出精度が若干低い
+- 調整係数1.6215など大きな補正が必要な場合がある

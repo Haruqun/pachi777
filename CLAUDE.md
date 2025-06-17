@@ -43,7 +43,9 @@ python test_with_csv.py
 
 ### Core Processing Pipeline
 1. **Image Input**: Screenshots from pachinko machines (stored in `graphs/`)
-2. **Graph Cropping**: `perfect_graph_cropper.py` - Detects and crops the graph area (911×797px standard size)
+2. **Graph Cropping**: 
+   - 最適: `graphs/cropped/*_optimal.png` のような689×558px (98%以上の精度)
+   - Legacy: `perfect_graph_cropper.py` - 911×797px
 3. **Data Extraction**: `perfect_data_extractor.py` - Extracts numerical data from graphs
 4. **Statistical Analysis**: Various analyzer scripts process the extracted data
 5. **Output**: CSV files, visualization images, and JSON reports
@@ -51,10 +53,12 @@ python test_with_csv.py
 ### Key Components
 
 - **Graph Processing**:
-  - Standard graph dimensions: 911×797 pixels
+  - Optimal graph dimensions: 689×558 pixels (最高精度を実現)
+  - Legacy dimensions: 911×797 pixels (perfect_graph_cropper.py)
   - Y-axis range: -30,000 to +30,000 (ball difference)
   - Zero-line detection for accurate calibration
   - Orange bar detection for graph area identification
+  - Note: graphs/cropped/*_optimal.png が最適な切り抜きサンプル
 
 - **OCR Integration**:
   - Uses Tesseract for Japanese text recognition
@@ -72,7 +76,8 @@ python test_with_csv.py
 
 ### Image Processing Standards
 - Input images: Various sizes from pachinko machine screenshots
-- Cropped graphs: Standardized to 911×797 pixels
+- Optimal cropped graphs: 689×558 pixels (stable_graph_extractor.py用)
+- Legacy cropped graphs: 911×797 pixels (perfect_graph_cropper.py)
 - Color detection uses HSV color space for reliability
 - Multiple detection algorithms for robustness (orange bars, grid lines, zero line)
 

@@ -34,21 +34,30 @@ class StableGraphExtractor:
         self.peak_correction = 2.0
         
     def detect_graph_color_advanced(self, img):
-        """高度な色検出（HSVとLAB色空間を併用）"""
+        """高度な色検出（HSVとLAB色空間を併用）- 改良版ブルー検出"""
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # 色範囲の定義
+        # 色範囲の定義 - ブルー/シアンの検出範囲を拡張
         color_ranges = {
             "pink": [(150, 40, 80), (170, 255, 255)],
             "purple": [(120, 40, 80), (150, 255, 255)],
-            "blue": [(90, 40, 80), (120, 255, 255)],
-            "cyan": [(80, 40, 80), (100, 255, 255)]
+            # ブルーとシアンを統合し、範囲を拡張
+            "blue": [(75, 20, 70), (125, 255, 255)],
         }
+        
+        # 追加の薄いブルー検出範囲
+        light_blue_range = [(90, 20, 100), (110, 150, 255)]
         
         # 各色のマスクを作成
         masks = {}
         for color_name, (lower, upper) in color_ranges.items():
             mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
+            
+            # ブルーの場合、薄いブルーも含める
+            if color_name == "blue":
+                light_mask = cv2.inRange(hsv, np.array(light_blue_range[0]), np.array(light_blue_range[1]))
+                mask = cv2.bitwise_or(mask, light_mask)
+            
             masks[color_name] = mask
         
         # 最も多いピクセル数の色を選択
@@ -67,6 +76,12 @@ class StableGraphExtractor:
         kernel = np.ones((3, 3), np.uint8)
         mask_cleaned = cv2.morphologyEx(detected_mask, cv2.MORPH_CLOSE, kernel)
         mask_cleaned = cv2.morphologyEx(mask_cleaned, cv2.MORPH_OPEN, kernel)
+        
+        # ブルーの場合、細い線を保護するための追加処理
+        if detected_color == "blue":
+            kernel_small = np.ones((2, 2), np.uint8)
+            mask_cleaned = cv2.dilate(mask_cleaned, kernel_small, iterations=1)
+            mask_cleaned = cv2.erode(mask_cleaned, kernel_small, iterations=1)
         
         return mask_cleaned, detected_color
     
