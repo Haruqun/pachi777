@@ -149,7 +149,8 @@ class PerfectDataExtractor:
     
     def detect_graph_line(self, image_path: str) -> Optional[np.ndarray]:
         """
-        グラフライン（ピンク/ブルー）を検出
+        グラフライン（複数色対応）を検出
+        ピンク、青、緑、赤、紫、オレンジの線を検出
         """
         self.log("グラフライン検出を開始", "DEBUG")
         
@@ -157,14 +158,19 @@ class PerfectDataExtractor:
         img_array = np.array(img)
         height, width = img_array.shape[:2]
         
-        # ピンク線検出
+        # 各色の検出
         pink_mask = self._detect_pink_line(img_array)
-        
-        # ブルー線検出
         blue_mask = self._detect_blue_line(img_array)
+        green_mask = self._detect_green_line(img_array)
+        red_mask = self._detect_red_line(img_array)
+        purple_mask = self._detect_purple_line(img_array)
+        orange_mask = self._detect_orange_line(img_array)
         
         # 統合マスク
-        combined_mask = np.logical_or(pink_mask, blue_mask)
+        combined_mask = np.logical_or.reduce([
+            pink_mask, blue_mask, green_mask, 
+            red_mask, purple_mask, orange_mask
+        ])
         
         # ノイズ除去
         cleaned_mask = self._clean_line_mask(combined_mask)
@@ -209,7 +215,7 @@ class PerfectDataExtractor:
             distances = np.sqrt(np.sum((reshaped - target) ** 2, axis=1))
             
             # 厳しい許容誤差（背景色除外のため）
-            tolerance = 25  # より厳しく設定
+            tolerance = 30  # バランスを考慮した設定
             mask = distances <= tolerance
             mask_2d = mask.reshape(height, width)
             pink_mask = pink_mask | mask_2d
@@ -237,27 +243,173 @@ class PerfectDataExtractor:
             distances = np.sqrt(np.sum((reshaped - target) ** 2, axis=1))
             
             # 許容誤差内のピクセルを検出
-            tolerance = 50  # 調整可能
+            tolerance = 45  # 適度に緊緩
             mask = distances <= tolerance
             mask_2d = mask.reshape(height, width)
             blue_mask = blue_mask | mask_2d
         
         return blue_mask
     
+    def _detect_green_line(self, img_array: np.ndarray) -> np.ndarray:
+        """緑線検出"""
+        height, width = img_array.shape[:2]
+        
+        # 緑色の定義（RGB）
+        green_colors = [
+            (0, 255, 0),      # 純緑
+            (50, 205, 50),    # ライムグリーン
+            (0, 200, 0),      # 濃い緑
+            (144, 238, 144),  # ライトグリーン
+            (34, 139, 34),    # フォレストグリーン
+        ]
+        
+        green_mask = np.zeros((height, width), dtype=bool)
+        
+        for target_rgb in green_colors:
+            target = np.array(target_rgb)
+            reshaped = img_array[:, :, :3].reshape(-1, 3).astype(np.float64)
+            distances = np.sqrt(np.sum((reshaped - target) ** 2, axis=1))
+            
+            tolerance = 40  # 緑は適度に
+            mask = distances <= tolerance
+            mask_2d = mask.reshape(height, width)
+            green_mask = green_mask | mask_2d
+        
+        return green_mask
+    
+    def _detect_red_line(self, img_array: np.ndarray) -> np.ndarray:
+        """赤線検出"""
+        height, width = img_array.shape[:2]
+        
+        # 赤色の定義（RGB）
+        red_colors = [
+            (255, 0, 0),      # 純赤
+            (220, 20, 60),    # クリムゾン
+            (255, 69, 0),     # レッドオレンジ
+            (178, 34, 34),    # ファイアブリック
+            (255, 99, 71),    # トマト
+        ]
+        
+        red_mask = np.zeros((height, width), dtype=bool)
+        
+        for target_rgb in red_colors:
+            target = np.array(target_rgb)
+            reshaped = img_array[:, :, :3].reshape(-1, 3).astype(np.float64)
+            distances = np.sqrt(np.sum((reshaped - target) ** 2, axis=1))
+            
+            tolerance = 35  # 赤は比較的厳しく
+            mask = distances <= tolerance
+            mask_2d = mask.reshape(height, width)
+            red_mask = red_mask | mask_2d
+        
+        return red_mask
+    
+    def _detect_purple_line(self, img_array: np.ndarray) -> np.ndarray:
+        """紫線検出"""
+        height, width = img_array.shape[:2]
+        
+        # 紫色の定義（RGB）
+        purple_colors = [
+            (128, 0, 128),    # 紫
+            (147, 112, 219),  # ミディアムパープル
+            (138, 43, 226),   # ブルーバイオレット
+            (186, 85, 211),   # ミディアムオーキッド
+            (218, 112, 214),  # オーキッド
+        ]
+        
+        purple_mask = np.zeros((height, width), dtype=bool)
+        
+        for target_rgb in purple_colors:
+            target = np.array(target_rgb)
+            reshaped = img_array[:, :, :3].reshape(-1, 3).astype(np.float64)
+            distances = np.sqrt(np.sum((reshaped - target) ** 2, axis=1))
+            
+            tolerance = 40  # 紫も適度に
+            mask = distances <= tolerance
+            mask_2d = mask.reshape(height, width)
+            purple_mask = purple_mask | mask_2d
+        
+        return purple_mask
+    
+    def _detect_orange_line(self, img_array: np.ndarray) -> np.ndarray:
+        """オレンジ線検出（グラフ線用）"""
+        height, width = img_array.shape[:2]
+        
+        # オレンジ色の定義（RGB） - UIのオレンジバーとは異なる色合い
+        orange_colors = [
+            (255, 165, 0),    # オレンジ
+            (255, 140, 0),    # ダークオレンジ
+            (255, 127, 80),   # コーラル
+            (255, 99, 71),    # トマト
+            (255, 215, 0),    # ゴールド
+        ]
+        
+        orange_mask = np.zeros((height, width), dtype=bool)
+        
+        for target_rgb in orange_colors:
+            target = np.array(target_rgb)
+            reshaped = img_array[:, :, :3].reshape(-1, 3).astype(np.float64)
+            distances = np.sqrt(np.sum((reshaped - target) ** 2, axis=1))
+            
+            tolerance = 30  # オレンジは厳しめでも適度に
+            mask = distances <= tolerance
+            mask_2d = mask.reshape(height, width)
+            orange_mask = orange_mask | mask_2d
+        
+        return orange_mask
+    
     def _clean_line_mask(self, mask: np.ndarray) -> np.ndarray:
-        """マスクのクリーニング"""
-        # モルフォロジー演算でノイズ除去
-        kernel = np.ones((2, 2), np.uint8)
+        """マスクのクリーニング - 線状要素のみを抽出"""
+        mask_uint8 = mask.astype(np.uint8) * 255
         
-        # オープニング（小さなノイズ除去）
-        mask_uint8 = mask.astype(np.uint8)
-        cleaned = cv2.morphologyEx(mask_uint8, cv2.MORPH_OPEN, kernel)
+        # 1. 小さなノイズ除去
+        kernel_small = np.ones((2, 2), np.uint8)
+        cleaned = cv2.morphologyEx(mask_uint8, cv2.MORPH_OPEN, kernel_small)
         
-        # クロージング（線の連続性確保）
-        kernel2 = np.ones((3, 3), np.uint8)
-        cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_CLOSE, kernel2)
+        # 2. 線の連続性確保
+        kernel_line = np.ones((3, 3), np.uint8)
+        cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_CLOSE, kernel_line)
         
-        return cleaned.astype(bool)
+        # 3. エロージョンで線を細くする（thinningの代替）
+        kernel_thin = np.ones((2, 2), np.uint8)
+        cleaned = cv2.erode(cleaned, kernel_thin, iterations=1)
+        
+        # 4. 大きな塊状のノイズ除去
+        contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        height, width = mask.shape
+        filtered_mask = np.zeros((height, width), dtype=np.uint8)
+        
+        for contour in contours:
+            # 輪郭の形状分析
+            area = cv2.contourArea(contour)
+            perimeter = cv2.arcLength(contour, True)
+            
+            # 線状の判定条件
+            if area > 0 and perimeter > 0:
+                # アスペクト比と面積で線状要素を判定
+                rect = cv2.boundingRect(contour)
+                aspect_ratio = max(rect[2], rect[3]) / min(rect[2], rect[3])
+                
+                # 線状要素の条件：より柔軟に
+                # 1. 面積が適度（大きすぎる塊のみ除外）
+                # 2. アスペクト比または面積で判定
+                # 3. 周囲長が十分ある
+                if (area < 10000 and  # より大きな塊まで許可
+                    (aspect_ratio > 2 or area < 500) and  # より柔軟な条件
+                    perimeter > 5):  # より短い線も許可
+                    cv2.drawContours(filtered_mask, [contour], -1, 255, -1)
+        
+        # 5. 線の連続性強化
+        # より強いクロージングで線を接続
+        kernel_close = np.ones((3, 3), np.uint8)
+        filtered_mask = cv2.morphologyEx(filtered_mask, cv2.MORPH_CLOSE, kernel_close)
+        
+        # さらに細かいギャップを埋める
+        kernel_dilate = np.ones((2, 2), np.uint8)
+        filtered_mask = cv2.dilate(filtered_mask, kernel_dilate, iterations=1)
+        filtered_mask = cv2.erode(filtered_mask, kernel_dilate, iterations=1)
+        
+        return filtered_mask.astype(bool)
     
     def extract_data_points_precise(self, mask: np.ndarray) -> List[Tuple[int, int]]:
         """
@@ -358,6 +510,12 @@ class PerfectDataExtractor:
             if abs(max_val) >= 29500 or abs(min_val) >= 29500:
                 self.log(f"⚠️ 上限振り切り検出: 最大={max_val:.0f}, 最小={min_val:.0f}", "WARNING")
                 self.log("このデータは上限/下限に張り付いており、正確な最終差玉の測定ができません", "WARNING")
+            
+            # 30,000円を超える値の検出でエラー
+            if abs(max_val) > 30000 or abs(min_val) > 30000:
+                error_msg = f"❌ エラー: グラフの値が±30,000円の範囲を超えています (最大={max_val:.0f}, 最小={min_val:.0f})"
+                self.log(error_msg, "ERROR")
+                raise ValueError(error_msg)
         
         return converted_points
     
