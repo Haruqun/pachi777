@@ -126,54 +126,66 @@ class AdvancedGraphExtractor:
         return best_color, best_mask, color_properties
     
     def extract_line_advanced(self, img_array: np.ndarray, mask: np.ndarray, color_props: Dict) -> List[Tuple[float, float]]:
-        """高度なライン抽出（エッジ強調とサブピクセル精度）"""
+        """高度なライン抽出（ピーク検出重視）"""
         points = []
-        
-        # エッジ検出でグラフラインを強調
-        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-        edges = cv2.Canny(gray, 30, 100)
-        
-        # マスクとエッジの組み合わせ
-        combined_mask = cv2.bitwise_and(mask, edges)
         
         # X座標ごとにスキャン
         for x in range(self.boundaries["start_x"], self.boundaries["end_x"]):
             # グラフ領域内でマスクをチェック
             column_mask = mask[self.boundaries["top_y"]:self.boundaries["bottom_y"], x]
-            column_edge = combined_mask[self.boundaries["top_y"]:self.boundaries["bottom_y"], x]
             
-            # エッジ情報を優先的に使用
-            if np.any(column_edge > 0):
-                y_indices = np.where(column_edge > 0)[0]
-            else:
-                y_indices = np.where(column_mask > 0)[0]
+            # マスクされたピクセルの重み付き中心を計算
+            y_indices = np.where(column_mask > 0)[0]
             
             if len(y_indices) > 0:
-                # 連続した領域をグループ化
-                groups = []
-                current_group = [y_indices[0]]
+                # 元画像から強度値を取得
+                column_img = img_array[self.boundaries["top_y"]:self.boundaries["bottom_y"], x]
                 
-                for i in range(1, len(y_indices)):
-                    if y_indices[i] - y_indices[i-1] <= 3:
-                        current_group.append(y_indices[i])
+                # ピンクラインの強度を計算（RGB値の合計）
+                intensities = []
+                for y_idx in y_indices:
+                    if y_idx < len(column_img):
+                        pixel = column_img[y_idx]
+                        # ピンクラインの特徴：R > G, R > B
+                        if len(pixel) >= 3:
+                            r, g, b = pixel[0], pixel[1], pixel[2]
+                            intensity = float(r) - 0.5 * float(g) - 0.5 * float(b)  # ピンク強調
+                            intensities.append(intensity)
+                        else:
+                            intensities.append(0.0)
                     else:
-                        groups.append(current_group)
-                        current_group = [y_indices[i]]
-                groups.append(current_group)
+                        intensities.append(0.0)
                 
-                # 最大のグループを選択
-                largest_group = max(groups, key=len)
-                
-                # サブピクセル精度で位置を計算
-                if len(largest_group) > 1:
-                    # ガウシアンフィッティングでサブピクセル位置を推定
-                    y_subpixel = self._gaussian_subpixel_peak(column_mask, largest_group)
-                else:
-                    y_subpixel = float(largest_group[0])
-                
-                # 実際のY座標に変換
-                y_actual = float(self.boundaries["top_y"]) + y_subpixel
-                points.append((float(x), y_actual))
+                if intensities and max(intensities) > 0:
+                    # 最大強度の位置を重み付き平均で精密に計算
+                    max_intensity = max(intensities)
+                    threshold = max_intensity * 0.7  # 最大強度の70%以上
+                    
+                    weighted_sum = 0.0
+                    weight_sum = 0.0
+                    
+                    for i, intensity in enumerate(intensities):
+                        if intensity >= threshold:
+                            weight = intensity ** 2  # 二乗で重み付け
+                            weighted_sum += y_indices[i] * weight
+                            weight_sum += weight
+                    
+                    if weight_sum > 0:
+                        y_subpixel = weighted_sum / weight_sum
+                        
+                        # ピーク位置の微調整
+                        if len(intensities) > 2:
+                            peak_idx = intensities.index(max_intensity)
+                            if 0 < peak_idx < len(intensities) - 1:
+                                # 3点パラボラフィッティングで真のピーク位置を推定
+                                y1, y2, y3 = intensities[peak_idx-1], intensities[peak_idx], intensities[peak_idx+1]
+                                if y1 != y3:  # 分母が0でない場合
+                                    offset = 0.5 * (y1 - y3) / (y1 - 2*y2 + y3)
+                                    y_subpixel = y_indices[peak_idx] + offset
+                        
+                        # 実際のY座標に変換
+                        y_actual = float(self.boundaries["top_y"]) + y_subpixel
+                        points.append((float(x), y_actual))
         
         return points
     
@@ -210,44 +222,49 @@ class AdvancedGraphExtractor:
         return peak_pos
     
     def adaptive_smoothing(self, points: List[Tuple[float, float]], color_type: str) -> List[Tuple[float, float]]:
-        """適応的スムージング（グラフパターンに応じた処理）"""
+        """適応的スムージング（ピーク保護重視）"""
         if len(points) < 5:
             return points
         
         x_vals = np.array([p[0] for p in points])
         y_vals = np.array([p[1] for p in points])
         
-        # グラフの特性を分析
-        y_diff = np.diff(y_vals)
-        volatility = np.std(y_diff)
+        # ピークとボトムを検出して保護
+        peaks = self._detect_peaks(y_vals)
+        bottoms = self._detect_peaks(-y_vals)  # 反転してボトムを検出
         
-        # ボラティリティに基づいてスムージング強度を調整
-        if volatility > 5:  # 変動が大きい場合
-            # より保守的なスムージング
-            window_size = min(7, len(y_vals) // 6)
-        else:  # 変動が小さい場合
-            # より積極的なスムージング
-            window_size = min(15, len(y_vals) // 4)
+        # 重要点（ピーク・ボトム）のインデックス
+        important_indices = set(peaks) | set(bottoms)
         
-        if window_size % 2 == 0:
-            window_size += 1
+        # 軽微なスムージングのみ適用（ピーク保護）
+        y_smooth = y_vals.copy()
         
-        # 多段階スムージング
-        # 1. 外れ値除去（ロバスト推定）
-        y_cleaned = self._robust_outlier_removal(y_vals)
+        # 重要点以外のみ軽くスムージング
+        for i in range(2, len(y_vals) - 2):
+            if i not in important_indices:
+                # 5点移動平均（重み付き）
+                weights = [0.1, 0.2, 0.4, 0.2, 0.1]
+                window = y_vals[i-2:i+3]
+                y_smooth[i] = np.average(window, weights=weights)
         
-        # 2. 色タイプに応じた処理
-        if color_type == "pink":
-            # ピンクグラフは通常変動が大きいので、より慎重に
-            y_smooth = self._conservative_smooth(x_vals, y_cleaned)
-        else:
-            # 青系グラフは比較的安定しているので、より積極的に
-            y_smooth = self._aggressive_smooth(x_vals, y_cleaned)
+        # エッジ部分はそのまま保持
+        y_smooth[0] = y_vals[0]
+        y_smooth[1] = y_vals[1]
+        y_smooth[-2] = y_vals[-2]
+        y_smooth[-1] = y_vals[-1]
         
-        # 3. エッジ保護
-        y_final = self._protect_edges(y_cleaned, y_smooth, edge_ratio=0.15)
-        
-        return list(zip(x_vals, y_final))
+        return list(zip(x_vals, y_smooth))
+    
+    def _detect_peaks(self, y_vals: np.ndarray, min_distance: int = 5) -> List[int]:
+        """ピーク検出"""
+        peaks = []
+        for i in range(1, len(y_vals) - 1):
+            # 局所最大値を検出
+            if y_vals[i] > y_vals[i-1] and y_vals[i] > y_vals[i+1]:
+                # 前のピークとの距離をチェック
+                if not peaks or i - peaks[-1] >= min_distance:
+                    peaks.append(i)
+        return peaks
     
     def _robust_outlier_removal(self, y_vals: np.ndarray) -> np.ndarray:
         """ロバストな外れ値除去"""
