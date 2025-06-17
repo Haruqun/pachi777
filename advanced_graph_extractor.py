@@ -352,16 +352,30 @@ class AdvancedGraphExtractor:
         
         return y_final
     
-    def y_to_value(self, y: float) -> float:
-        """Y座標を差枚数に変換（浮動小数点精度）"""
+    def y_to_value(self, y: float, is_peak: bool = False) -> float:
+        """Y座標を差枚数に変換（線の太さを考慮）
+        
+        Args:
+            y: Y座標
+            is_peak: True=最大値（線の上端を読む）、False=通常
+        """
+        # 更新された境界値を使用
         height = float(self.boundaries["bottom_y"] - self.boundaries["top_y"])
-        # Y座標の微調整
-        # 最大値付近（上部）は1ピクセル下に調整
-        # 最小値付近（下部）は1ピクセル上に調整
-        if y < self.boundaries["zero_y"]:  # ゼロラインより上（プラス領域）
-            adjusted_y = y + 1.0  # 1ピクセル下に
-        else:  # ゼロラインより下（マイナス領域）
-            adjusted_y = y - 1.0  # 1ピクセル上に
+        
+        # 2ピクセル調整（線の太さを考慮）
+        # 最大値は線の上端（2px上 = y値を小さく）
+        # 最小値は線の下端（2px下 = y値を大きく）
+        if is_peak:
+            # ピーク検出時の特別な処理
+            value_at_y = 30000.0 - (y - float(self.boundaries["top_y"])) * 60000.0 / height
+            if value_at_y > 0:  # プラス領域の最大値
+                adjusted_y = y - 2.0  # 2px上（Y座標を小さく）
+            else:  # マイナス領域の最小値
+                adjusted_y = y + 2.0  # 2px下（Y座標を大きく）
+        else:
+            # 通常の処理
+            adjusted_y = y
+        
         value = 30000.0 - (adjusted_y - float(self.boundaries["top_y"])) * 60000.0 / height
         return np.clip(value, -30000.0, 30000.0)
     
@@ -393,17 +407,38 @@ class AdvancedGraphExtractor:
             smooth_points = self.adaptive_smoothing(raw_points, color_type)
             self.log(f"スムージング後の点数: {len(smooth_points)}", "INFO")
             
-            # データ変換
+            # データ変換（最大値・最小値を特定）
             data = []
+            values_for_peak = []
+            
+            # まず全データを一度変換して最大値・最小値の位置を特定
             for x, y in smooth_points:
+                value = self.y_to_value(y, is_peak=False)
+                values_for_peak.append(value)
+            
+            # 最大値と最小値のインデックスを見つける
+            if values_for_peak:
+                max_idx = np.argmax(values_for_peak)
+                min_idx = np.argmin(values_for_peak)
+            else:
+                max_idx = min_idx = -1
+            
+            # 実際のデータ変換（最大値・最小値は2px調整）
+            for i, (x, y) in enumerate(smooth_points):
                 rotation = (x - float(self.boundaries["start_x"])) * max_rotation / \
                           float(self.boundaries["end_x"] - self.boundaries["start_x"])
-                value = self.y_to_value(y)
+                
+                # 最大値または最小値の場合は特別な処理
+                is_peak = (i == max_idx or i == min_idx)
+                value = self.y_to_value(y, is_peak=is_peak)
+                
                 data.append({
                     "rotation": rotation,
                     "value": value,
                     "x": x,
-                    "y": y
+                    "y": y,
+                    "is_max": i == max_idx,
+                    "is_min": i == min_idx
                 })
             
             # データ品質チェック
@@ -466,8 +501,8 @@ class AdvancedGraphExtractor:
         df.to_csv(output_path, index=False, float_format='%.2f')
         self.log(f"CSVファイルを保存: {output_path}", "SUCCESS")
     
-    def create_visualization(self, image_path: str, result: Dict, output_path: str):
-        """抽出結果を可視化"""
+    def create_visualization(self, image_path: str, result: Dict, output_path: str, create_overlay: bool = True):
+        """抽出結果を可視化（オーバーレイ画像も作成）"""
         if "error" in result:
             return
         
@@ -486,47 +521,142 @@ class AdvancedGraphExtractor:
         draw.line(
             [(self.boundaries["start_x"], self.boundaries["zero_y"]),
              (self.boundaries["end_x"], self.boundaries["zero_y"])],
-            fill=(0, 255, 0), width=1
+            fill=(0, 255, 0), width=2
         )
         
         # 抽出したポイントを描画
         if result["data"]:
             # 浮動小数点座標を整数に変換
             points = [(int(round(d["x"])), int(round(d["y"]))) for d in result["data"]]
+            
+            # 最大値と最小値のインデックスを取得
+            max_idx = next((i for i, d in enumerate(result["data"]) if d.get("is_max")), -1)
+            min_idx = next((i for i, d in enumerate(result["data"]) if d.get("is_min")), -1)
+            
             if len(points) > 1:
+                # メインライン
                 draw.line(points, fill=(0, 0, 255), width=3)
+            
+            # 最大値点を強調
+            if 0 <= max_idx < len(points):
+                max_point = points[max_idx]
+                max_value = result["data"][max_idx]["value"]
+                # 大きな黄色い円
+                draw.ellipse(
+                    [(max_point[0]-10, max_point[1]-10),
+                     (max_point[0]+10, max_point[1]+10)],
+                    fill=(255, 255, 0), outline=(255, 0, 0), width=2
+                )
+                # 最大値ラベル
+                draw.text((max_point[0]+15, max_point[1]-15), 
+                         f"MAX: {max_value:.0f}", 
+                         fill=(255, 0, 0))
+                # 垂直線
+                draw.line(
+                    [(max_point[0], self.boundaries["top_y"]),
+                     (max_point[0], self.boundaries["bottom_y"])],
+                    fill=(255, 255, 0), width=1
+                )
+            
+            # 最小値点を強調
+            if 0 <= min_idx < len(points):
+                min_point = points[min_idx]
+                min_value = result["data"][min_idx]["value"]
+                # 青い円
+                draw.ellipse(
+                    [(min_point[0]-8, min_point[1]-8),
+                     (min_point[0]+8, min_point[1]+8)],
+                    fill=(0, 0, 255), outline=(0, 0, 128), width=2
+                )
+                # 最小値ラベル
+                draw.text((min_point[0]+10, min_point[1]+10), 
+                         f"MIN: {min_value:.0f}", 
+                         fill=(0, 0, 128))
             
             # 始点と終点を強調
             if points:
-                # 始点
+                # 始点（緑）
                 draw.ellipse(
-                    [(points[0][0]-5, points[0][1]-5),
-                     (points[0][0]+5, points[0][1]+5)],
-                    fill=(0, 255, 0), outline=(0, 0, 0)
+                    [(points[0][0]-6, points[0][1]-6),
+                     (points[0][0]+6, points[0][1]+6)],
+                    fill=(0, 255, 0), outline=(0, 128, 0), width=2
                 )
-                # 終点
+                # 終点（赤）
                 draw.ellipse(
-                    [(points[-1][0]-5, points[-1][1]-5),
-                     (points[-1][0]+5, points[-1][1]+5)],
-                    fill=(255, 0, 0), outline=(0, 0, 0)
+                    [(points[-1][0]-6, points[-1][1]-6),
+                     (points[-1][0]+6, points[-1][1]+6)],
+                    fill=(255, 0, 0), outline=(128, 0, 0), width=2
                 )
+                
+                # 最終値のラベル
+                final_value = result["data"][-1]["value"]
+                draw.text((points[-1][0]-80, points[-1][1]+15), 
+                         f"FINAL: {final_value:.0f}", 
+                         fill=(128, 0, 0))
         
-        # 情報表示
+        # 情報表示（背景付き）
+        info_x = img.width - 400
         info_y = 20
-        draw.text((img.width-350, info_y), f"Points: {result.get('points', 0)}", fill=(0, 0, 0))
-        info_y += 20
-        draw.text((img.width-350, info_y), f"Color: {result.get('color_type', 'N/A')}", fill=(0, 0, 0))
-        info_y += 20
-        draw.text((img.width-350, info_y), f"Method: Advanced", fill=(0, 0, 255))
+        # 半透明の白背景
+        info_bg = [(info_x-10, info_y-5), (img.width-10, info_y+120)]
+        draw.rectangle(info_bg, fill=(255, 255, 255, 200))
+        
+        draw.text((info_x, info_y), f"Points: {result.get('points', 0)}", fill=(0, 0, 0))
+        info_y += 25
+        draw.text((info_x, info_y), f"Color: {result.get('color_type', 'N/A')}", fill=(128, 0, 128))
+        info_y += 25
+        draw.text((info_x, info_y), f"Method: Advanced (2px calibrated)", fill=(0, 0, 255))
+        
+        # 最大値と最終値の情報
+        if "data" in result and result["data"]:
+            values = [d["value"] for d in result["data"]]
+            max_val = max(values)
+            final_val = values[-1]
+            info_y += 25
+            draw.text((info_x, info_y), f"Max: {max_val:.0f} | Final: {final_val:.0f}", fill=(255, 0, 0))
         
         if "quality" in result:
-            info_y += 20
+            info_y += 25
             quality_color = (0, 128, 0) if result["quality"]["is_valid"] else (255, 0, 0)
-            draw.text((img.width-350, info_y), f"Quality: {result['quality']['message']}", fill=quality_color)
+            draw.text((info_x, info_y), f"Quality: {result['quality']['message']}", fill=quality_color)
         
         # 保存
         img.save(output_path)
         self.log(f"可視化画像を保存: {output_path}", "SUCCESS")
+        
+        # オーバーレイ画像も作成
+        if create_overlay:
+            overlay_path = output_path.replace("_visualization.png", "_overlay.png")
+            self.create_detailed_overlay(image_path, result, overlay_path)
+    
+    def create_detailed_overlay(self, image_path: str, result: Dict, output_path: str):
+        """詳細なオーバーレイ画像を作成"""
+        # 元画像を読み込み
+        img = Image.open(image_path)
+        # アルファチャンネルを追加
+        img = img.convert("RGBA")
+        overlay = Image.new("RGBA", img.size, (255, 255, 255, 0))
+        draw = ImageDraw.Draw(overlay)
+        
+        if result["data"]:
+            points = [(int(round(d["x"])), int(round(d["y"]))) for d in result["data"]]
+            
+            # 半透明の抽出ライン
+            if len(points) > 1:
+                for i in range(len(points) - 1):
+                    draw.line([points[i], points[i+1]], fill=(0, 0, 255, 180), width=4)
+            
+            # データポイントを小さな円で表示
+            for i, point in enumerate(points[::5]):  # 5点ごとに表示
+                draw.ellipse(
+                    [(point[0]-2, point[1]-2), (point[0]+2, point[1]+2)],
+                    fill=(0, 255, 255, 200)
+                )
+        
+        # 合成
+        img = Image.alpha_composite(img, overlay)
+        img.save(output_path)
+        self.log(f"オーバーレイ画像を保存: {output_path}", "SUCCESS")
 
 def main():
     """メイン処理"""

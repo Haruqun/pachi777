@@ -2,23 +2,23 @@
   "boundaries": {
     "start_x": 36,
     "end_x": 620,
-    "top_y": 29,
+    "top_y": 27,
     "zero_y": 274,
-    "bottom_y": 520
+    "bottom_y": 522
   },
   "graph_size": {
     "width": 584,
-    "height": 491
+    "height": 495
   },
   "scale": {
     "x_pixels_per_unit": "TBD",
-    "y_pixels_per_unit": 0.008183333333333334,
-    "y_units_per_pixel": 122.19959266802444
+    "y_pixels_per_unit": 0.00825,
+    "y_units_per_pixel": 121.21212121212122
   },
   "coordinate_conversion": {
-    "y_to_value": "value = 30000 - (y - 29) * 60000 / 491",
+    "y_to_value": "value = 30000 - (y - 27) * 60000 / 495",
     "x_to_rotation": "rotation = (x - 36) * max_rotation / 584",
-    "value_to_y": "y = 29 + (30000 - value) * 491 / 60000",
+    "value_to_y": "y = 27 + (30000 - value) * 495 / 60000",
     "rotation_to_x": "x = 36 + rotation * 584 / max_rotation"
   }
 }
