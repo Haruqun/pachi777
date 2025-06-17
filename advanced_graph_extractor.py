@@ -41,8 +41,8 @@ class AdvancedGraphExtractor:
         return {
             "start_x": 36,
             "end_x": 620,
-            "top_y": 29,
-            "bottom_y": 520,
+            "top_y": 26,
+            "bottom_y": 523,
             "zero_y": 274
         }
     
@@ -555,7 +555,7 @@ class AdvancedGraphExtractor:
                 draw.line(
                     [(max_point[0], self.boundaries["top_y"]),
                      (max_point[0], self.boundaries["bottom_y"])],
-                    fill=(255, 255, 0), width=1
+                    fill=(255, 255, 0), width=2
                 )
             
             # 最小値点を強調
@@ -572,6 +572,12 @@ class AdvancedGraphExtractor:
                 draw.text((min_point[0]+10, min_point[1]+10), 
                          f"MIN: {min_value:.0f}", 
                          fill=(0, 0, 128))
+                # 垂直線
+                draw.line(
+                    [(min_point[0], self.boundaries["top_y"]),
+                     (min_point[0], self.boundaries["bottom_y"])],
+                    fill=(0, 100, 255), width=2
+                )
             
             # 始点と終点を強調
             if points:
@@ -593,6 +599,12 @@ class AdvancedGraphExtractor:
                 draw.text((points[-1][0]-80, points[-1][1]+15), 
                          f"FINAL: {final_value:.0f}", 
                          fill=(128, 0, 0))
+                # 最終値の垂直線
+                draw.line(
+                    [(points[-1][0], self.boundaries["top_y"]),
+                     (points[-1][0], self.boundaries["bottom_y"])],
+                    fill=(255, 100, 100), width=2
+                )
         
         # 情報表示（背景付き）
         info_x = img.width - 400
