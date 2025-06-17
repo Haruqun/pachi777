@@ -1,0 +1,151 @@
+{
+  "timestamp": "2025-06-17 17:38:18",
+  "total_processed": 14,
+  "pipeline_settings": {
+    "standard_width": 911,
+    "standard_height": 797,
+    "y_range": "-30000 to 30000"
+  },
+  "results": [
+    {
+      "file_name": "S__78209088",
+      "min_value": -7944.25087108014,
+      "max_value": 2404.1811846689898,
+      "final_value": 2404.1811846689898,
+      "mean_value": -2752.3729424486364,
+      "start_value": -522.6480836236934,
+      "data_points": 435,
+      "zero_line_y": 287
+    },
+    {
+      "file_name": "S__78209128",
+      "min_value": -186509.43396226416,
+      "max_value": -138113.20754716982,
+      "final_value": -147452.83018867925,
+      "mean_value": -160480.82775410835,
+      "start_value": -164150.94339622642,
+      "data_points": 434,
+      "zero_line_y": 106
+    },
+    {
+      "file_name": "S__78209130",
+      "min_value": -7944.25087108014,
+      "max_value": 7108.0139372822305,
+      "final_value": -5435.540069686412,
+      "mean_value": -2173.6085918451713,
+      "start_value": -627.1777003484322,
+      "data_points": 413,
+      "zero_line_y": 287
+    },
+    {
+      "file_name": "S__78209136",
+      "min_value": -13473.684210526317,
+      "max_value": 2526.315789473684,
+      "final_value": -9789.473684210527,
+      "mean_value": -5156.687590535973,
+      "start_value": -842.1052631578948,
+      "data_points": 436,
+      "zero_line_y": 285
+    },
+    {
+      "file_name": "S__78209138",
+      "min_value": -3658.536585365854,
+      "max_value": 16933.797909407665,
+      "final_value": 16724.73867595819,
+      "mean_value": 5563.713290194129,
+      "start_value": -522.6480836236934,
+      "data_points": 420,
+      "zero_line_y": 287
+    },
+    {
+      "file_name": "S__78209156",
+      "min_value": -1473.6842105263158,
+      "max_value": 20421.052631578947,
+      "final_value": 19578.947368421053,
+      "mean_value": 9286.225639665916,
+      "start_value": -842.1052631578948,
+      "data_points": 397,
+      "zero_line_y": 285
+    },
+    {
+      "file_name": "S__78209158",
+      "min_value": -72857.14285714286,
+      "max_value": -60952.380952380954,
+      "final_value": -71428.57142857143,
+      "mean_value": -70732.36889692587,
+      "start_value": -68571.42857142858,
+      "data_points": 316,
+      "zero_line_y": 63
+    },
+    {
+      "file_name": "S__78209160",
+      "min_value": -12961.672473867597,
+      "max_value": 5540.0696864111505,
+      "final_value": 2508.7108013937286,
+      "mean_value": -4462.866538777747,
+      "start_value": -418.11846689895475,
+      "data_points": 534,
+      "zero_line_y": 287
+    },
+    {
+      "file_name": "S__78209162",
+      "min_value": -173333.33333333334,
+      "max_value": -171666.6666666667,
+      "final_value": -173333.33333333334,
+      "mean_value": -173316.07211354046,
+      "start_value": -173333.33333333334,
+      "data_points": 869,
+      "zero_line_y": 18
+    },
+    {
+      "file_name": "S__78209164",
+      "min_value": -177652.1739130435,
+      "max_value": 0.0,
+      "final_value": 0.0,
+      "mean_value": -64018.7121629059,
+      "start_value": 0.0,
+      "data_points": 869,
+      "zero_line_y": 115
+    },
+    {
+      "file_name": "S__78209166",
+      "min_value": -67826.08695652174,
+      "max_value": -58260.86956521739,
+      "final_value": -66086.95652173914,
+      "mean_value": -65342.91431690012,
+      "start_value": -66086.95652173914,
+      "data_points": 239,
+      "zero_line_y": 69
+    },
+    {
+      "file_name": "S__78209168",
+      "min_value": -8315.78947368421,
+      "max_value": -3263.157894736842,
+      "final_value": -8315.78947368421,
+      "mean_value": -5824.561403508772,
+      "start_value": -3263.157894736842,
+      "data_points": 9,
+      "zero_line_y": 285
+    },
+    {
+      "file_name": "S__78209170",
+      "min_value": -5894.736842105263,
+      "max_value": -315.7894736842105,
+      "final_value": -631.578947368421,
+      "mean_value": -2178.137651821862,
+      "start_value": -5894.736842105263,
+      "data_points": 13,
+      "zero_line_y": 285
+    },
+    {
+      "file_name": "S__78209174",
+      "min_value": -78387.09677419355,
+      "max_value": -66290.32258064515,
+      "final_value": -76935.48387096774,
+      "mean_value": -76314.23628777855,
+      "start_value": -74032.25806451612,
+      "data_points": 317,
+      "zero_line_y": 62
+    }
+  ]
+}
