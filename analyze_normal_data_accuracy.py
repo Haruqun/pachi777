@@ -26,8 +26,8 @@ def analyze_normal_data_accuracy():
     
     # 異常値を除外
     normal_df = valid_df[
-        (valid_df['実際の最終差玉'].abs() >= 1000) &  # 1000玉以上の変動があるもの
-        (valid_df['最終差玉誤差'].abs() < 500)        # 誤差500玉未満
+        (valid_df['実際の最終差玉'].abs() >= 100) &  # 1000玉以上の変動があるもの
+        (valid_df['最終差玉誤差'].abs() < 200)        # 誤差500玉未満
     ]
     
     print(f"\n異常値除外後: {len(normal_df)}件")
