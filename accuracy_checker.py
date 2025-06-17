@@ -13,7 +13,7 @@ from typing import Dict, List, Tuple
 class AccuracyChecker:
     """精度検証クラス"""
     
-    def __init__(self, results_file="results.txt", extracted_data_dir="graphs/improved_extracted_data"):
+    def __init__(self, results_file="results.txt", extracted_data_dir="graphs/unified_extracted_data"):
         self.results_file = results_file
         self.extracted_data_dir = extracted_data_dir
         self.results_data = self.load_results()
