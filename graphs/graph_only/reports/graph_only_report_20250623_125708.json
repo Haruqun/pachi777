@@ -1,0 +1,159 @@
+{
+  "timestamp": "2025-06-23 12:57:08",
+  "total_processed": 9,
+  "results": [
+    {
+      "file_name": "S__78209088",
+      "boundaries": {
+        "top": 1484,
+        "bottom": 1591,
+        "left": 18,
+        "right": 837,
+        "width": 819,
+        "height": 107
+      },
+      "graph_color": "blue_orange",
+      "min_value": -27906.976744186046,
+      "max_value": -27209.302325581393,
+      "final_value": -27209.302325581393,
+      "mean_value": -27823.494335122243,
+      "data_points": 819
+    },
+    {
+      "file_name": "S__78209138",
+      "boundaries": {
+        "top": 1469,
+        "bottom": 1591,
+        "left": 18,
+        "right": 837,
+        "width": 819,
+        "height": 122
+      },
+      "graph_color": "blue_orange",
+      "min_value": -28163.26530612245,
+      "max_value": -27551.020408163262,
+      "final_value": -27551.020408163262,
+      "mean_value": -28087.01502579053,
+      "data_points": 819
+    },
+    {
+      "file_name": "S__78209156",
+      "boundaries": {
+        "top": 712,
+        "bottom": 932,
+        "left": 71,
+        "right": 798,
+        "width": 727,
+        "height": 220
+      },
+      "graph_color": "pink",
+      "min_value": -29659.09090909091,
+      "max_value": 5909.090909090909,
+      "final_value": 4090.909090909091,
+      "mean_value": -15839.09090909091,
+      "data_points": 250
+    },
+    {
+      "file_name": "S__78209158",
+      "boundaries": {
+        "top": 1484,
+        "bottom": 1591,
+        "left": 18,
+        "right": 837,
+        "width": 819,
+        "height": 107
+      },
+      "graph_color": "blue_orange",
+      "min_value": -27906.976744186046,
+      "max_value": -27209.302325581393,
+      "final_value": -27209.302325581393,
+      "mean_value": -27814.975721952465,
+      "data_points": 819
+    },
+    {
+      "file_name": "S__78209162",
+      "boundaries": {
+        "top": 785,
+        "bottom": 1017,
+        "left": 71,
+        "right": 798,
+        "width": 727,
+        "height": 232
+      },
+      "graph_color": "blue_orange",
+      "min_value": -29677.41935483871,
+      "max_value": -20645.16129032258,
+      "final_value": -29677.41935483871,
+      "mean_value": -26015.759665107118,
+      "data_points": 131
+    },
+    {
+      "file_name": "S__78209166",
+      "boundaries": {
+        "top": 740,
+        "bottom": 1591,
+        "left": 0,
+        "right": 869,
+        "width": 869,
+        "height": 851
+      },
+      "graph_color": "blue_orange",
+      "min_value": -29736.070381231668,
+      "max_value": -29648.093841642225,
+      "final_value": -29648.093841642225,
+      "mean_value": -29714.304033692275,
+      "data_points": 869
+    },
+    {
+      "file_name": "S__78209168",
+      "boundaries": {
+        "top": 785,
+        "bottom": 1591,
+        "left": 0,
+        "right": 869,
+        "width": 869,
+        "height": 806
+      },
+      "graph_color": "blue_orange",
+      "min_value": -29721.362229102167,
+      "max_value": -29628.482972136226,
+      "final_value": -29628.482972136226,
+      "mean_value": -29682.885206653682,
+      "data_points": 869
+    },
+    {
+      "file_name": "S__78209170",
+      "boundaries": {
+        "top": 785,
+        "bottom": 1591,
+        "left": 0,
+        "right": 869,
+        "width": 869,
+        "height": 806
+      },
+      "graph_color": "blue_orange",
+      "min_value": -29721.362229102167,
+      "max_value": -29628.482972136226,
+      "final_value": -29628.482972136226,
+      "mean_value": -29682.885206653682,
+      "data_points": 869
+    },
+    {
+      "file_name": "S__78209174",
+      "boundaries": {
+        "top": 733,
+        "bottom": 1591,
+        "left": 0,
+        "right": 869,
+        "width": 869,
+        "height": 858
+      },
+      "graph_color": "blue_orange",
+      "min_value": -29738.372093023256,
+      "max_value": -29651.162790697672,
+      "final_value": -29651.162790697672,
+      "mean_value": -29709.46958546311,
+      "data_points": 869
+    }
+  ]
+}
