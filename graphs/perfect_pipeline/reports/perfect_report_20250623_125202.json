@@ -1,0 +1,575 @@
+{
+  "timestamp": "2025-06-23 12:52:02",
+  "total_processed": 21,
+  "crop_accuracies": [
+    {
+      "file": "S__78209088",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209128",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209130",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209136",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209138",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209156",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209158",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209160",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209162",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209164",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209166",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209168",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209170",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78209174",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78848008",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78848010",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78848012",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78848014",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78848016",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78848018",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    },
+    {
+      "file": "S__78848020",
+      "width_acc": 95.38968166849617,
+      "height_acc": 100.0
+    }
+  ],
+  "results": [
+    {
+      "file_name": "S__78209088",
+      "crop_info": {
+        "orange_bar_y": 501,
+        "zero_line_in_area": 339,
+        "zero_line_absolute": 850,
+        "graph_top": 457,
+        "graph_bottom": 1254,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "pink",
+      "min_value": 502.092050209205,
+      "max_value": 6715.481171548117,
+      "final_value": 6715.481171548117,
+      "mean_value": 3621.5553311210506,
+      "data_points": 435
+    },
+    {
+      "file_name": "S__78209128",
+      "crop_info": {
+        "orange_bar_y": 514,
+        "zero_line_in_area": 339,
+        "zero_line_absolute": 863,
+        "graph_top": 470,
+        "graph_bottom": 1267,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "pink",
+      "min_value": 0.0,
+      "max_value": 10794.979079497907,
+      "final_value": 8661.087866108786,
+      "mean_value": 5777.5292597805765,
+      "data_points": 434
+    },
+    {
+      "file_name": "S__78209130",
+      "crop_info": {
+        "orange_bar_y": 607,
+        "zero_line_in_area": 339,
+        "zero_line_absolute": 956,
+        "graph_top": 563,
+        "graph_bottom": 1360,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "pink",
+      "min_value": 502.092050209205,
+      "max_value": 9539.748953974895,
+      "final_value": 2008.36820083682,
+      "mean_value": 3969.3233509274924,
+      "data_points": 413
+    },
+    {
+      "file_name": "S__78209136",
+      "crop_info": {
+        "orange_bar_y": 545,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 893,
+        "graph_top": 500,
+        "graph_bottom": 1297,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "pink",
+      "min_value": -3949.8432601880877,
+      "max_value": 6903.765690376569,
+      "final_value": -658.307210031348,
+      "mean_value": 2219.4412419140704,
+      "data_points": 436
+    },
+    {
+      "file_name": "S__78209138",
+      "crop_info": {
+        "orange_bar_y": 408,
+        "zero_line_in_area": 339,
+        "zero_line_absolute": 757,
+        "graph_top": 364,
+        "graph_bottom": 1161,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "pink",
+      "min_value": 3075.313807531381,
+      "max_value": 15439.330543933054,
+      "final_value": 15313.807531380753,
+      "mean_value": 8613.867304243875,
+      "data_points": 420
+    },
+    {
+      "file_name": "S__78209156",
+      "crop_info": {
+        "orange_bar_y": 665,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 1013,
+        "graph_top": 620,
+        "graph_bottom": 1417,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "pink",
+      "min_value": 4518.828451882845,
+      "max_value": 17573.221757322175,
+      "final_value": 17071.12970711297,
+      "mean_value": 10934.572051895491,
+      "data_points": 397
+    },
+    {
+      "file_name": "S__78209158",
+      "crop_info": {
+        "orange_bar_y": 479,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 827,
+        "graph_top": 434,
+        "graph_bottom": 1231,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "pink",
+      "min_value": -7241.379310344828,
+      "max_value": 6527.1966527196655,
+      "final_value": -7241.379310344828,
+      "mean_value": 676.9587900650586,
+      "data_points": 397
+    },
+    {
+      "file_name": "S__78209160",
+      "crop_info": {
+        "orange_bar_y": 638,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 986,
+        "graph_top": 593,
+        "graph_bottom": 1390,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": -3761.7554858934172,
+      "max_value": 8598.326359832636,
+      "final_value": 6778.242677824268,
+      "mean_value": 2493.377004233618,
+      "data_points": 534
+    },
+    {
+      "file_name": "S__78209162",
+      "crop_info": {
+        "orange_bar_y": 738,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 1086,
+        "graph_top": 693,
+        "graph_bottom": 1490,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": -29905.956112852666,
+      "max_value": -29905.956112852666,
+      "final_value": -29905.956112852666,
+      "mean_value": -29905.956112852666,
+      "data_points": 869
+    },
+    {
+      "file_name": "S__78209164",
+      "crop_info": {
+        "orange_bar_y": 647,
+        "zero_line_in_area": 339,
+        "zero_line_absolute": 996,
+        "graph_top": 603,
+        "graph_bottom": 1400,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": 3640.1673640167364,
+      "max_value": 15753.138075313807,
+      "final_value": 13242.677824267783,
+      "mean_value": 11249.274654124547,
+      "data_points": 411
+    },
+    {
+      "file_name": "S__78209166",
+      "crop_info": {
+        "orange_bar_y": 693,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 1041,
+        "graph_top": 648,
+        "graph_bottom": 1445,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "pink",
+      "min_value": -188.08777429467085,
+      "max_value": 5523.012552301255,
+      "final_value": 5083.6820083682005,
+      "mean_value": 4025.5146798426345,
+      "data_points": 68
+    },
+    {
+      "file_name": "S__78209168",
+      "crop_info": {
+        "orange_bar_y": 738,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 1086,
+        "graph_top": 693,
+        "graph_bottom": 1490,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": -29905.956112852666,
+      "max_value": -29905.956112852666,
+      "final_value": -29905.956112852666,
+      "mean_value": -29905.956112852666,
+      "data_points": 869
+    },
+    {
+      "file_name": "S__78209170",
+      "crop_info": {
+        "orange_bar_y": 738,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 1086,
+        "graph_top": 693,
+        "graph_bottom": 1490,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": -29905.956112852666,
+      "max_value": -29905.956112852666,
+      "final_value": -29905.956112852666,
+      "mean_value": -29905.956112852666,
+      "data_points": 869
+    },
+    {
+      "file_name": "S__78209174",
+      "crop_info": {
+        "orange_bar_y": 685,
+        "zero_line_in_area": 339,
+        "zero_line_absolute": 1034,
+        "graph_top": 641,
+        "graph_bottom": 1438,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "pink",
+      "min_value": 251.0460251046025,
+      "max_value": 12803.347280334729,
+      "final_value": 12803.347280334729,
+      "mean_value": 4959.523376387121,
+      "data_points": 46
+    },
+    {
+      "file_name": "S__78848008",
+      "crop_info": {
+        "orange_bar_y": 657,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 1005,
+        "graph_top": 612,
+        "graph_bottom": 1409,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": -6771.159874608151,
+      "max_value": 5083.6820083682005,
+      "final_value": 753.1380753138076,
+      "mean_value": -346.4541940634499,
+      "data_points": 563
+    },
+    {
+      "file_name": "S__78848010",
+      "crop_info": {
+        "orange_bar_y": 654,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 1002,
+        "graph_top": 609,
+        "graph_bottom": 1406,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": 3451.8828451882846,
+      "max_value": 9163.179916317991,
+      "final_value": 7154.811715481172,
+      "mean_value": 5692.391135905781,
+      "data_points": 405
+    },
+    {
+      "file_name": "S__78848012",
+      "crop_info": {
+        "orange_bar_y": 651,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 999,
+        "graph_top": 606,
+        "graph_bottom": 1403,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": 2008.36820083682,
+      "max_value": 14748.953974895398,
+      "final_value": 12740.585774058578,
+      "mean_value": 8364.811481732546,
+      "data_points": 537
+    },
+    {
+      "file_name": "S__78848014",
+      "crop_info": {
+        "orange_bar_y": 650,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 998,
+        "graph_top": 605,
+        "graph_bottom": 1402,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": -12978.056426332289,
+      "max_value": 5020.92050209205,
+      "final_value": -12037.617554858934,
+      "mean_value": -4420.965596308667,
+      "data_points": 426
+    },
+    {
+      "file_name": "S__78848016",
+      "crop_info": {
+        "orange_bar_y": 648,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 996,
+        "graph_top": 603,
+        "graph_bottom": 1400,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": 313.8075313807531,
+      "max_value": 5334.728033472803,
+      "final_value": 2008.36820083682,
+      "mean_value": 2864.293558663629,
+      "data_points": 461
+    },
+    {
+      "file_name": "S__78848018",
+      "crop_info": {
+        "orange_bar_y": 620,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 968,
+        "graph_top": 575,
+        "graph_bottom": 1372,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": 1506.2761506276152,
+      "max_value": 9728.033472803347,
+      "final_value": 5397.489539748954,
+      "mean_value": 5068.442269246315,
+      "data_points": 383
+    },
+    {
+      "file_name": "S__78848020",
+      "crop_info": {
+        "orange_bar_y": 654,
+        "zero_line_in_area": 338,
+        "zero_line_absolute": 1002,
+        "graph_top": 609,
+        "graph_bottom": 1406,
+        "graph_left": 0,
+        "graph_right": 869,
+        "actual_width": 869,
+        "actual_height": 797,
+        "width_accuracy": 95.38968166849617,
+        "height_accuracy": 100.0
+      },
+      "graph_color": "blue",
+      "min_value": 1317.991631799163,
+      "max_value": 13368.200836820084,
+      "final_value": 11924.686192468618,
+      "mean_value": 6773.96348421453,
+      "data_points": 484
+    }
+  ]
+}

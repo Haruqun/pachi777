@@ -1,0 +1,8 @@
+Image,Machine_Type,Reported_Final,Extracted_Final,Final_Accuracy_%,Adjustment_Factor,Status,Notes
+S__78209158,e Re：ゼロから始める異世,-19100,-19608,97.3,0.974,OK,Minor underestimation
+S__78209160,e Re：ゼロから始める異世,3010,2339,77.7,1.287,CRITICAL,Significant underestimation
+S__78209162,e Re：ゼロから始める異世,1700,1048,61.7,1.622,CRITICAL,Major underestimation
+S__78209164,e Re：ゼロから始める異世,15450,15242,98.7,1.014,OK,Very accurate
+S__78209168,e Re：ゼロから始める異世,-24750,-24578,99.3,1.007,OK,Excellent accuracy
+S__78209170,e Re：ゼロから始める異世,195,-1016,-521.1,-0.192,CRITICAL,Sign error - fundamental reading failure
+S__78209174,e Re：ゼロから始める異世,8000,7782,97.3,1.028,OK,Minor underestimation
