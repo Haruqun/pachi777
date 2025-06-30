@@ -207,30 +207,71 @@ class WebCompatibleAnalyzer:
                 'min_value': 0,
                 'min_index': 0,
                 'first_hit_index': -1,
+                'first_hit_value': 0,
                 'final_value': 0
             }
         
         # 最大値・最小値
         max_val = max(values)
-        max_idx = values.index(max_val)
         min_val = min(values)
+        current_val = values[-1]
+        
+        # 最初の数点は無視して、安定した部分から最高値を探す
+        if len(values) > 10:
+            stable_values = values[5:]  # 最初の5点を除外
+            max_val = max(stable_values)
+            # 最高値が負の場合は0に最も近い値を探す
+            if max_val < 0:
+                # グラフが一度もプラスにならない場合は最大値を0とする
+                max_val = 0
+                max_idx = 0  # インデックスも0に設定
+            else:
+                max_idx = values.index(max_val)
+        else:
+            max_idx = values.index(max_val)
+            if max_val < 0:
+                max_val = 0
+                max_idx = 0
+        
         min_idx = values.index(min_val)
         
-        # グラフが常に負の場合の処理
-        if max_val < 0:
-            max_val = 0
-            max_idx = 0
-        
-        # 初当たり検出
+        # 初当たり検出（production版と同じロジック）
         first_hit_idx = -1
-        min_payout = 100
-        for i in range(1, min(len(values)-2, 150)):
+        first_hit_val = 0
+        min_payout = 100  # 最低払い出し玉数を100に変更
+        
+        # 方法1: シンプルな増加検出
+        for i in range(1, min(len(values)-2, 150)):  # 最大150点まで探索
             current_increase = values[i+1] - values[i]
+            
+            # 100玉以上の増加を検出
             if current_increase > min_payout:
+                # 次の点も上昇または維持していることを確認
                 if values[i+2] >= values[i+1] - 50:
-                    if values[i] < 2000:
+                    # 重要：初当たりは必ずマイナス値でなければならない
+                    if values[i] < 0:  # マイナス値のみを初当たりとして検出
                         first_hit_idx = i
+                        first_hit_val = values[i]
                         break
+        
+        # 方法2: 通常パターン（減少→上昇）の検出
+        if first_hit_idx == -1:
+            window_size = 5
+            for i in range(window_size, len(values)-1):
+                # 過去の傾向を計算
+                past_window = values[max(0, i-window_size):i]
+                if len(past_window) >= 2:
+                    avg_slope = (past_window[-1] - past_window[0]) / len(past_window)
+                    
+                    # 現在の変化
+                    current_change = values[i+1] - values[i]
+                    
+                    # 下降傾向から急上昇への転換を検出
+                    if avg_slope < -20 and current_change > min_payout:
+                        if values[i] < 0:  # マイナス値のみ
+                            first_hit_idx = i
+                            first_hit_val = values[i]
+                            break
         
         return {
             'max_value': int(max_val),
@@ -238,46 +279,115 @@ class WebCompatibleAnalyzer:
             'min_value': int(min_val),
             'min_index': min_idx,
             'first_hit_index': first_hit_idx,
-            'final_value': int(values[-1]) if values else 0
+            'first_hit_value': int(first_hit_val),
+            'final_value': int(current_val)
         }
     
     def create_analysis_image(self, cropped_img, values, analysis, output_path):
-        """解析結果の可視化画像作成"""
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), gridspec_kw={'height_ratios': [3, 2]})
+        """解析結果の可視化画像作成（グリッドライン付き）"""
+        height, width = cropped_img.shape[:2]
         
-        # グラフ画像表示
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12), gridspec_kw={'height_ratios': [3, 2]})
+        
+        # グラフ画像表示（グリッドライン付き）
         ax1.imshow(cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB))
-        ax1.set_title('グラフ画像', fontsize=16)
-        ax1.axis('off')
+        ax1.set_title('グラフ画像（解析グリッド付き）', fontsize=16)
+        
+        # グリッドラインを描画
+        # 0ライン
+        ax1.axhline(y=self.zero_y, color='red', linewidth=3, alpha=0.8, label='0ライン')
+        
+        # ±30,000ライン（1px上調整）
+        plus_30k_y = self.zero_y - (30000 / self.scale) - 1
+        minus_30k_y = self.zero_y + (30000 / self.scale) - 1
+        if 0 <= plus_30k_y <= height:
+            ax1.axhline(y=plus_30k_y, color='#E74C3C', linewidth=2.5, 
+                       label='+30,000', alpha=0.85, linestyle='--')
+        if 0 <= minus_30k_y <= height:
+            ax1.axhline(y=minus_30k_y, color='#E74C3C', linewidth=2.5, 
+                       label='-30,000', alpha=0.85, linestyle='--')
+        
+        # 補助グリッドライン
+        grid_values = [25000, 20000, 15000, 10000, 5000]
+        for value in grid_values:
+            plus_y = self.zero_y - (value / self.scale)
+            minus_y = self.zero_y + (value / self.scale)
+            
+            # グリッドライン個別調整（production版と同じ）
+            if value == 20000:
+                plus_adjustment = -1  # +20000ラインは2px上方向に調整
+                minus_adjustment = 1  # -20000ラインは2px下方向に調整
+            else:
+                plus_adjustment = 0
+                minus_adjustment = 0
+            plus_y += plus_adjustment
+            minus_y += minus_adjustment
+            
+            alpha = 0.6 if value >= 20000 else 0.3
+            linewidth = 2 if value >= 20000 else 1
+            
+            if 0 <= plus_y <= height:
+                ax1.axhline(y=plus_y, color='#3498DB', linewidth=linewidth, 
+                          alpha=alpha, linestyle=':')
+            
+            if 0 <= minus_y <= height:
+                ax1.axhline(y=minus_y, color='#3498DB', linewidth=linewidth, 
+                          alpha=alpha, linestyle=':')
+        
+        ax1.set_xlim(0, width)
+        ax1.set_ylim(height, 0)
+        ax1.grid(False)
         
         # データプロット
         x_points = list(range(len(values)))
-        ax2.plot(x_points, values, color='blue', linewidth=2, label='玉数推移')
-        ax2.axhline(y=0, color='black', linestyle='-', alpha=0.3)
-        ax2.grid(True, alpha=0.3)
+        ax2.plot(x_points, values, color='#F39C12', linewidth=3, label='玉数推移', alpha=0.9)
+        ax2.axhline(y=0, color='red', linestyle='-', linewidth=2, alpha=0.8)
+        
+        # グリッドライン（データプロット側）
+        for value in [30000, 20000, 10000, -10000, -20000, -30000]:
+            ax2.axhline(y=value, color='gray', linestyle=':', linewidth=1, alpha=0.5)
+        
+        ax2.grid(True, alpha=0.3, which='both')
         
         # 重要ポイントのマーク
         if analysis['max_value'] > 0:
-            ax2.plot(analysis['max_index'], analysis['max_value'], 'ro', markersize=10)
+            ax2.plot(analysis['max_index'], analysis['max_value'], 'ro', markersize=12)
             ax2.annotate(f'最高値: {analysis["max_value"]:,}玉', 
                         xy=(analysis['max_index'], analysis['max_value']),
                         xytext=(10, 10), textcoords='offset points',
-                        bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.7))
+                        bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.8),
+                        fontsize=11, fontweight='bold')
         
         if analysis['first_hit_index'] >= 0:
-            ax2.plot(analysis['first_hit_index'], values[analysis['first_hit_index']], 'go', markersize=10)
-            ax2.annotate(f'初当たり', 
-                        xy=(analysis['first_hit_index'], values[analysis['first_hit_index']]),
-                        xytext=(10, -20), textcoords='offset points',
-                        bbox=dict(boxstyle='round,pad=0.5', fc='lightgreen', alpha=0.7))
+            ax2.plot(analysis['first_hit_index'], analysis['first_hit_value'], 'go', markersize=12)
+            ax2.annotate(f'初当たり: {analysis["first_hit_value"]:,}玉', 
+                        xy=(analysis['first_hit_index'], analysis['first_hit_value']),
+                        xytext=(10, -30), textcoords='offset points',
+                        bbox=dict(boxstyle='round,pad=0.5', fc='lightgreen', alpha=0.8),
+                        fontsize=11, fontweight='bold')
         
-        ax2.set_xlabel('回転数', fontsize=12)
+        # 最終値マーク
+        final_idx = len(values) - 1
+        ax2.plot(final_idx, analysis['final_value'], 'ko', markersize=8)
+        ax2.annotate(f'最終: {analysis["final_value"]:,}玉', 
+                    xy=(final_idx, analysis['final_value']),
+                    xytext=(-80, 10), textcoords='offset points',
+                    bbox=dict(boxstyle='round,pad=0.5', fc='lightblue', alpha=0.8),
+                    fontsize=10)
+        
+        ax2.set_xlabel('回転数 (スピン)', fontsize=12)
         ax2.set_ylabel('差玉数', fontsize=12)
-        ax2.set_title('抽出データ', fontsize=16)
-        ax2.legend()
+        ax2.set_title('抽出データ分析', fontsize=16)
+        ax2.legend(loc='best', fontsize=11)
+        
+        # Y軸の範囲を適切に設定
+        y_margin = 5000
+        y_min = min(min(values), -30000) - y_margin
+        y_max = max(max(values), 30000) + y_margin
+        ax2.set_ylim(y_min, y_max)
         
         plt.tight_layout()
-        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white')
         plt.close()
     
     def process_single_image(self, image_path, output_dir):
