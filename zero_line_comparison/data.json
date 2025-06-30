@@ -1,0 +1,86 @@
+{
+  "test_name": "ゼロライン検出＆スケールテスト比較",
+  "timestamp": "2025-06-23T14:33:02.546119",
+  "image_sets": [
+    {
+      "name": "S__78209168_graph_only",
+      "original": "graphs/manual_crop/cropped/S__78209168_graph_only.png",
+      "results": [
+        {
+          "label": "検出結果",
+          "path": "zero_detection_results/S__78209168_graph_only_detection.png",
+          "data": {
+            "method": "advanced_detection",
+            "zero_line": 260
+          },
+          "web_path": "images/S__78209168_graph_only_0_検出結果.png"
+        }
+      ],
+      "original_web": "images/S__78209168_graph_only_original.png"
+    },
+    {
+      "name": "S__78209160_graph_only",
+      "original": "graphs/manual_crop/cropped/S__78209160_graph_only.png",
+      "results": [
+        {
+          "label": "検出結果",
+          "path": "zero_detection_results/S__78209160_graph_only_detection.png",
+          "data": {
+            "method": "advanced_detection",
+            "zero_line": 260
+          },
+          "web_path": "images/S__78209160_graph_only_0_検出結果.png"
+        }
+      ],
+      "original_web": "images/S__78209160_graph_only_original.png"
+    },
+    {
+      "name": "S__78848020_graph_only",
+      "original": "graphs/manual_crop/cropped/S__78848020_graph_only.png",
+      "results": [
+        {
+          "label": "検出結果",
+          "path": "zero_detection_results/S__78848020_graph_only_detection.png",
+          "data": {
+            "method": "advanced_detection",
+            "zero_line": 260
+          },
+          "web_path": "images/S__78848020_graph_only_0_検出結果.png"
+        }
+      ],
+      "original_web": "images/S__78848020_graph_only_original.png"
+    },
+    {
+      "name": "S__78209166_graph_only",
+      "original": "graphs/manual_crop/cropped/S__78209166_graph_only.png",
+      "results": [
+        {
+          "label": "検出結果",
+          "path": "zero_detection_results/S__78209166_graph_only_detection.png",
+          "data": {
+            "method": "advanced_detection",
+            "zero_line": 260
+          },
+          "web_path": "images/S__78209166_graph_only_0_検出結果.png"
+        }
+      ],
+      "original_web": "images/S__78209166_graph_only_original.png"
+    },
+    {
+      "name": "S__78209174_graph_only",
+      "original": "graphs/manual_crop/cropped/S__78209174_graph_only.png",
+      "results": [
+        {
+          "label": "検出結果",
+          "path": "zero_detection_results/S__78209174_graph_only_detection.png",
+          "data": {
+            "method": "advanced_detection",
+            "zero_line": 260
+          },
+          "web_path": "images/S__78209174_graph_only_0_検出結果.png"
+        }
+      ],
+      "original_web": "images/S__78209174_graph_only_original.png"
+    }
+  ]
+}

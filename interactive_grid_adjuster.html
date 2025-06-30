@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インタラクティブグリッド調整ツール</title>
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .controls {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-size: 12px;
+            color: #ccc;
+        }
+        
+        input, select, button {
+            padding: 8px 12px;
+            border: 1px solid #555;
+            background: #333;
+            color: #fff;
+            border-radius: 5px;
+        }
+        
+        button {
+            background: #4CAF50;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            border: 2px solid #444;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .info-panel {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .grid-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .drag-drop {
+            border: 2px dashed #555;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+        
+        .drag-drop.dragover {
+            border-color: #4CAF50;
+            background: #2a4a2a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>インタラクティブグリッド調整ツール</h1>
+        
+        <div class="drag-drop" id="dropZone">
+            <p>画像ファイルをここにドラッグ&ドロップ、または</p>
+            <input type="file" id="imageInput" accept="image/*" style="margin: 10px;">
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>ゼロライン Y座標</label>
+                <input type="number" id="zeroY" value="250" min="0" max="500">
+            </div>
+            
+            <div class="control-group">
+                <label>+30,000ライン Y座標</label>
+                <input type="number" id="target30k" value="15" min="0" max="500">
+            </div>
+            
+            <div class="control-group">
+                <label>グリッド線幅</label>
+                <input type="number" id="lineWidth" value="2.5" min="0.5" max="10" step="0.5">
+            </div>
+            
+            <div class="control-group">
+                <label>グリッド色</label>
+                <input type="color" id="gridColor" value="#FF1493">
+            </div>
+            
+            <div class="control-group">
+                <label>表示する線</label>
+                <select id="gridLines">
+                    <option value="zero_30k">ゼロライン + 30k</option>
+                    <option value="zero_only">ゼロラインのみ</option>
+                    <option value="all_major">主要ライン全て</option>
+                </select>
+            </div>
+            
+            <button onclick="updateGrid()">グリッド更新</button>
+            <button onclick="downloadImage()">画像保存</button>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+        
+        <div class="info-panel">
+            <h3>グリッド情報</h3>
+            <div class="grid-info" id="gridInfo"></div>
+            <p><strong>操作方法:</strong> 画像上をクリックしてY座標を指定できます</p>
+        </div>
+    </div>
+
+    <script>
+        let canvas, ctx, originalImage, currentScale = 124.0;
+        let zeroY = 250, target30k = 15;
+        
+        window.onload = function() {
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            
+            setupEventListeners();
+        };
+        
+        function setupEventListeners() {
+            const imageInput = document.getElementById('imageInput');
+            const dropZone = document.getElementById('dropZone');
+            
+            imageInput.addEventListener('change', handleImageSelect);
+            
+            // ドラッグ&ドロップ
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+            
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    loadImage(files[0]);
+                }
+            });
+            
+            // キャンバスクリック
+            canvas.addEventListener('click', handleCanvasClick);
+            
+            // コントロール更新
+            document.getElementById('zeroY').addEventListener('input', updateFromControls);
+            document.getElementById('target30k').addEventListener('input', updateFromControls);
+        }
+        
+        function handleImageSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                loadImage(file);
+            }
+        }
+        
+        function loadImage(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    originalImage = img;
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    drawImageWithGrid();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function handleCanvasClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            
+            // 最も近いグリッド線を判定
+            const distanceToZero = Math.abs(y - zeroY);
+            const distanceTo30k = Math.abs(y - target30k);
+            
+            if (distanceToZero < distanceTo30k) {
+                // ゼロライン調整
+                zeroY = Math.round(y);
+                document.getElementById('zeroY').value = zeroY;
+            } else {
+                // 30kライン調整
+                target30k = Math.round(y);
+                document.getElementById('target30k').value = target30k;
+            }
+            
+            updateGrid();
+        }
+        
+        function updateFromControls() {
+            zeroY = parseInt(document.getElementById('zeroY').value);
+            target30k = parseInt(document.getElementById('target30k').value);
+            updateGrid();
+        }
+        
+        function updateGrid() {
+            if (!originalImage) return;
+            
+            // スケール計算
+            const distance = zeroY - target30k;
+            currentScale = 30000 / distance;
+            
+            drawImageWithGrid();
+            updateGridInfo();
+        }
+        
+        function drawImageWithGrid() {
+            if (!originalImage) return;
+            
+            // 画像を描画
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(originalImage, 0, 0);
+            
+            const lineWidth = parseFloat(document.getElementById('lineWidth').value);
+            const gridColor = document.getElementById('gridColor').value;
+            const gridType = document.getElementById('gridLines').value;
+            
+            // グリッド線を描画
+            ctx.lineWidth = lineWidth;
+            
+            if (gridType === 'zero_only') {
+                // ゼロラインのみ
+                drawLine(zeroY, 'black', 3);
+            } else if (gridType === 'zero_30k') {
+                // ゼロライン + 30k
+                drawLine(zeroY, 'black', 3);
+                drawLine(target30k, gridColor, lineWidth);
+                
+                // ラベル
+                drawLabel(target30k, '+30,000', gridColor);
+            } else if (gridType === 'all_major') {
+                // 主要ライン全て
+                drawLine(zeroY, 'black', 3);
+                
+                const values = [30000, 25000, 20000, 15000, 10000, 5000];
+                values.forEach(value => {
+                    const yPos = zeroY - (value / currentScale);
+                    if (yPos >= 0 && yPos <= canvas.height) {
+                        const alpha = value >= 20000 ? 0.9 : 0.7;
+                        const color = value >= 20000 ? gridColor : '#FF69B4';
+                        drawLine(yPos, color, lineWidth, alpha);
+                        
+                        if (value % 10000 === 0) {
+                            drawLabel(yPos, `+${value.toLocaleString()}`, color);
+                        }
+                    }
+                    
+                    // マイナス側
+                    const yNeg = zeroY + (value / currentScale);
+                    if (yNeg >= 0 && yNeg <= canvas.height) {
+                        const alpha = value >= 20000 ? 0.9 : 0.7;
+                        const color = value >= 20000 ? gridColor : '#FF69B4';
+                        drawLine(yNeg, color, lineWidth, alpha);
+                        
+                        if (value % 10000 === 0) {
+                            drawLabel(yNeg, `-${value.toLocaleString()}`, color);
+                        }
+                    }
+                });
+            }
+            
+            // 縦グリッド線（薄い）
+            ctx.strokeStyle = 'rgba(128, 128, 128, 0.3)';
+            ctx.lineWidth = 0.5;
+            for (let x = 100; x < canvas.width; x += 100) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+        }
+        
+        function drawLine(y, color, width, alpha = 1.0) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.globalAlpha = alpha;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+            ctx.restore();
+        }
+        
+        function drawLabel(y, text, color) {
+            ctx.save();
+            ctx.fillStyle = 'white';
+            ctx.fillRect(10, y - 12, ctx.measureText(text).width + 10, 20);
+            ctx.fillStyle = color;
+            ctx.font = 'bold 12px monospace';
+            ctx.fillText(text, 15, y + 3);
+            ctx.restore();
+        }
+        
+        function updateGridInfo() {
+            const info = document.getElementById('gridInfo');
+            const distance = zeroY - target30k;
+            
+            info.innerHTML = `
+                <div><strong>ゼロライン:</strong> Y=${zeroY}</div>
+                <div><strong>+30,000ライン:</strong> Y=${target30k}</div>
+                <div><strong>距離:</strong> ${distance}px</div>
+                <div><strong>スケール:</strong> 1px = ${currentScale.toFixed(1)}</div>
+                <div><strong>表示範囲上部:</strong> +${Math.round(zeroY * currentScale).toLocaleString()}</div>
+                <div><strong>表示範囲下部:</strong> ${Math.round((zeroY - canvas.height) * currentScale).toLocaleString()}</div>
+            `;
+        }
+        
+        function downloadImage() {
+            if (!originalImage) {
+                alert('画像が読み込まれていません');
+                return;
+            }
+            
+            const link = document.createElement('a');
+            link.download = `grid_adjusted_${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        // デフォルト画像の読み込み（テスト用）
+        function loadDefaultImage() {
+            const img = new Image();
+            img.onload = function() {
+                originalImage = img;
+                canvas.width = img.width;
+                canvas.height = img.height;
+                drawImageWithGrid();
+                updateGridInfo();
+            };
+            img.src = 'graphs/manual_crop/cropped/S__78209138_graph_only.png';
+        }
+        
+        // ページ読み込み時にデフォルト画像を試行
+        setTimeout(() => {
+            if (!originalImage) {
+                loadDefaultImage();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

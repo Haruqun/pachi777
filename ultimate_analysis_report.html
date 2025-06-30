@@ -1,0 +1,2926 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 Ultimate パチンコ分析レポート</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', 'Hiragino Sans', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+        }
+        
+        .background-animation::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.1; }
+            50% { transform: scale(1.1); opacity: 0.2; }
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header {
+            text-align: center;
+            background: linear-gradient(135deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            background-size: 400% 400%;
+            animation: gradientShift 6s ease infinite;
+            padding: 60px 40px;
+            border-radius: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .header h1 {
+            font-size: 3.5em;
+            font-weight: 900;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .header .subtitle {
+            font-size: 1.4em;
+            font-weight: 300;
+            opacity: 0.9;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .stats-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 25px 70px rgba(0,0,0,0.3);
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        .stat-card:hover::before {
+            left: 100%;
+        }
+        
+        .stat-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ffd700, #ffed4a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.8;
+            font-weight: 300;
+        }
+        
+        .analysis-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 2.5em;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 40px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(800px, 1fr));
+            gap: 40px;
+        }
+        
+        .analysis-card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.2);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.4s ease;
+            position: relative;
+        }
+        
+        .analysis-card:hover {
+            transform: translateY(-15px);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+        }
+        
+        .card-header {
+            padding: 25px;
+            font-weight: 700;
+            font-size: 1.3em;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .success-card .card-header {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+        }
+        
+        .card-content {
+            padding: 30px;
+        }
+        
+        .image-container {
+            position: relative;
+            margin-bottom: 25px;
+        }
+        
+        .analysis-image {
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+        }
+        
+        .analysis-image:hover {
+            transform: scale(1.02);
+        }
+        
+        .image-overlay {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        
+        .image-comparison-container {
+            position: relative;
+            margin-bottom: 25px;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        .image-viewer {
+            position: relative;
+            width: 100%;
+            min-height: 400px;
+            overflow: hidden;
+            border-radius: 15px;
+            background: rgba(0,0,0,0.2);
+        }
+        
+        .image-slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .image-slide.active {
+            opacity: 1;
+        }
+        
+        .image-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #fff;
+            text-align: center;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 20px;
+        }
+        
+        .slide-image {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+        }
+        
+        .slide-image:hover {
+            transform: scale(1.02);
+        }
+        
+        .original-slide {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        }
+        
+        .analysis-slide {
+            background: linear-gradient(135deg, rgba(64, 224, 208, 0.1), rgba(64, 224, 208, 0.05));
+        }
+        
+        .image-controls {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 25px;
+        }
+        
+        .control-btn {
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .control-btn.active {
+            background: rgba(64, 224, 208, 0.8);
+            color: #000;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .keyboard-hint {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+        
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 25px;
+        }
+        
+        .data-panel {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            position: relative;
+        }
+        
+        .panel-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .graph-panel {
+            border-left: 4px solid #4ecdc4;
+        }
+        
+        .ocr-panel {
+            border-left: 4px solid #ffd93d;
+        }
+        
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .data-item:last-child {
+            border-bottom: none;
+        }
+        
+        .data-label {
+            font-weight: 500;
+            opacity: 0.8;
+        }
+        
+        .data-value {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        .positive { color: #4ecdc4; }
+        .negative { color: #ff6b6b; }
+        .neutral { color: #ffd93d; }
+        
+        .summary-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 25px;
+            padding: 40px;
+            margin-top: 50px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .result-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .result-card:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateY(-5px);
+        }
+        
+        .result-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .result-name {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        .result-machine {
+            font-size: 0.9em;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        
+        .result-value {
+            font-size: 1.4em;
+            font-weight: 700;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding: 40px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #ffd93d);
+            z-index: 1000;
+            transition: width 0.3s ease;
+        }
+    </style>
+    <script>
+        // スクロールインジケーター
+        window.addEventListener('scroll', () => {
+            const scrolled = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+            document.querySelector('.scroll-indicator').style.width = scrolled + '%';
+        });
+        
+        // 画像スライド切り替え機能
+        let currentSlides = {};
+        
+        function switchSlide(viewerId, slideIndex) {
+            const viewer = document.getElementById(`viewer-${viewerId}`);
+            const slides = viewer.querySelectorAll('.image-slide');
+            const buttons = viewer.querySelectorAll('.control-btn');
+            
+            // 現在のスライドを非アクティブに
+            slides.forEach(slide => slide.classList.remove('active'));
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // 新しいスライドをアクティブに
+            slides[slideIndex].classList.add('active');
+            buttons[slideIndex].classList.add('active');
+            
+            currentSlides[viewerId] = slideIndex;
+        }
+        
+        // キーボード操作
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                const viewers = document.querySelectorAll('.image-comparison-container');
+                viewers.forEach((viewer, index) => {
+                    const viewerId = viewer.id.split('-')[1];
+                    const currentSlide = currentSlides[viewerId] || 0;
+                    let newSlide;
+                    
+                    if (e.key === 'ArrowLeft') {
+                        newSlide = currentSlide === 0 ? 1 : 0;
+                    } else {
+                        newSlide = currentSlide === 1 ? 0 : 1;
+                    }
+                    
+                    switchSlide(viewerId, newSlide);
+                });
+                e.preventDefault();
+            }
+        });
+        
+        // タッチ/スワイプ機能
+        document.addEventListener('DOMContentLoaded', () => {
+            const viewers = document.querySelectorAll('.image-viewer');
+            
+            viewers.forEach((viewer, index) => {
+                let startX = 0;
+                let endX = 0;
+                
+                viewer.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                });
+                
+                viewer.addEventListener('touchend', (e) => {
+                    endX = e.changedTouches[0].clientX;
+                    const diff = startX - endX;
+                    
+                    if (Math.abs(diff) > 50) { // 50px以上のスワイプで切り替え
+                        const viewerId = viewer.closest('.image-comparison-container').id.split('-')[1];
+                        const currentSlide = currentSlides[viewerId] || 0;
+                        let newSlide;
+                        
+                        if (diff > 0) { // 左スワイプ
+                            newSlide = currentSlide === 1 ? 0 : 1;
+                        } else { // 右スワイプ
+                            newSlide = currentSlide === 0 ? 1 : 0;
+                        }
+                        
+                        switchSlide(viewerId, newSlide);
+                    }
+                });
+                
+                // マウスでのドラッグ
+                let mouseStartX = 0;
+                let mouseEndX = 0;
+                let isDragging = false;
+                
+                viewer.addEventListener('mousedown', (e) => {
+                    mouseStartX = e.clientX;
+                    isDragging = true;
+                });
+                
+                viewer.addEventListener('mouseup', (e) => {
+                    if (!isDragging) return;
+                    mouseEndX = e.clientX;
+                    const diff = mouseStartX - mouseEndX;
+                    
+                    if (Math.abs(diff) > 50) {
+                        const viewerId = viewer.closest('.image-comparison-container').id.split('-')[1];
+                        const currentSlide = currentSlides[viewerId] || 0;
+                        let newSlide;
+                        
+                        if (diff > 0) { // 左ドラッグ
+                            newSlide = currentSlide === 1 ? 0 : 1;
+                        } else { // 右ドラッグ
+                            newSlide = currentSlide === 0 ? 1 : 0;
+                        }
+                        
+                        switchSlide(viewerId, newSlide);
+                    }
+                    isDragging = false;
+                });
+                
+                viewer.addEventListener('mouseleave', () => {
+                    isDragging = false;
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="scroll-indicator"></div>
+    <div class="background-animation"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>📊 パチンコグラフ分析レポート</h1>
+            <div class="subtitle">
+                画像からのデータ抽出精度検証結果<br>
+                作成日時: 2025年06月23日 15:52:10
+            </div>
+        </div>
+        
+        <div class="stats-dashboard">
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value">27</div>
+                <div class="stat-label">総分析画像数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-value">27</div>
+                <div class="stat-label">データ抽出成功</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-value">100.0%</div>
+                <div class="stat-label">成功率</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value">-636</div>
+                <div class="stat-label">平均最終差玉</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-value">14</div>
+                <div class="stat-label">勝ちゲーム</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📉</div>
+                <div class="stat-value">13</div>
+                <div class="stat-label">負けゲーム</div>
+            </div>
+        </div>
+        
+        <div class="analysis-section">
+            <h2 class="section-title">📸 画像別分析結果 - 元画像と抽出結果の比較</h2>
+            <div class="analysis-grid">
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#1: S__78209168
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-0">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209168.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209168.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: magenta • データ点数: 229
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(0, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(0, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+5,244</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-25,244</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-25,244</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">30,488</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">ホール</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#2: S__78209160
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-1">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209160.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209160.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: cyan • データ点数: 192
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(1, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(1, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+6,951</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-15,122</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+3,049</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">22,073</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">スタート</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1713</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#3: S__78848020
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-2">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78848020.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78848020.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: cyan • データ点数: 175
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(2, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(2, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+15,976</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-7,561</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+13,171</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">23,537</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">ンゲリオン</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#4: S__78209166
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-3">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209166.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209166.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: magenta • データ点数: 217
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(3, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(3, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+854</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-11,220</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-7,683</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">12,073</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">データ</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#5: S__78209174
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-4">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209174.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209174.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: magenta • データ点数: 279
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(4, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(4, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+18,659</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-10,854</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+7,805</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">29,512</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">マイページ</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/12</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#6: S__78209088
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-5">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209088.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209088.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: pink • データ点数: 217
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(5, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(5, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+2,683</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-9,268</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+2,683</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">11,951</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">スタート</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1715</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#7: S__78716957
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-6">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78716957.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78716957.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: red • データ点数: 243
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(6, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(6, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+732</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-12,805</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-11,829</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">13,537</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">ンゲリオン</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#8: S__78209164
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-7">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209164.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209164.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: cyan • データ点数: 169
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(7, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(7, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+20,854</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-3,049</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+15,854</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">23,902</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">スタート</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#9: S__78209170
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-8">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209170.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209170.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: magenta • データ点数: 287
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(8, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(8, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+122</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-16,220</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-732</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">16,341</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">ホール</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#10: S__78209162
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-9">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209162.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209162.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: cyan • データ点数: 202
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(9, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(9, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+12,317</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-3,415</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+1,463</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">15,732</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">ホール</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#11: S__78716960
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-10">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78716960.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78716960.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: red • データ点数: 212
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(10, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(10, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+11,707</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-5,366</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+3,780</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">17,073</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">スタート</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#12: S__78209156
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-11">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209156.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209156.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: pink • データ点数: 195
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(11, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(11, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+24,024</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-1,463</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+22,805</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">25,488</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">マイページ</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#13: S__78209128
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-12">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209128.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209128.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: pink • データ点数: 216
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(12, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(12, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+10,732</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-10,366</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+6,585</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">21,098</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">スタート</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1714</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#14: S__78716972
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-13">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78716972.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78716972.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: green • データ点数: 178
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(13, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(13, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+854</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-9,512</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-9,512</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">10,366</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">ゴードン</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#15: S__78848016
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-14">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78848016.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78848016.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: cyan • データ点数: 165
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(14, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(14, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+366</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-9,512</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-6,098</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">9,878</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">ンゲリオン</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#16: S__78209158
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-15">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209158.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209158.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: pink • データ点数: 198
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(15, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(15, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+2,561</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-19,756</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-19,512</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">22,317</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">スタート</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#17: S__78848010
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-16">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78848010.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78848010.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: cyan • データ点数: 159
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(16, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(16, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+7,805</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-3,415</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+3,415</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">11,220</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">データ</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#18: S__78848018
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-17">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78848018.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78848018.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: cyan • データ点数: 152
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(17, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(17, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+8,780</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-7,195</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+366</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">15,976</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">ンゲリオン</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#19: S__78716974
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-18">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78716974.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78716974.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: green • データ点数: 155
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(18, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(18, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+2,073</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-15,000</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-7,073</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">17,073</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">マイページ</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#20: S__78848012
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-19">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78848012.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78848012.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: cyan • データ点数: 194
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(19, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(19, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+18,780</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-6,341</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+14,756</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">25,122</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">スタート</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#21: S__78209136
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-20">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209136.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209136.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: pink • データ点数: 218
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(20, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(20, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+3,171</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-15,366</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-11,220</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">18,537</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">スタート</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1719</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#22: S__78848008
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-21">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78848008.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78848008.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: cyan • データ点数: 207
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(21, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(21, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+-976</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-18,902</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-8,659</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">17,927</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">ピーアークビピー</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1113</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#23: S__78716970
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-22">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78716970.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78716970.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: green • データ点数: 156
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(22, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(22, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+10,366</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-10,976</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+10,366</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">21,341</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">ゴードン</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1715</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#24: S__78848014
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-23">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78848014.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78848014.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: cyan • データ点数: 163
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(23, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(23, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+-610</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-26,951</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-25,610</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">26,341</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">データ</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1133</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#25: S__78209138
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-24">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209138.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209138.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: pink • データ点数: 209
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(24, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(24, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+19,878</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-4,268</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value positive">+19,390</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">24,146</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">スタート</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1112</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#26: S__78716962
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-25">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78716962.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78716962.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: red • データ点数: 225
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(25, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(25, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+732</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-19,878</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-3,049</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">20,610</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">スタート</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/18</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-card success-card">
+                    <div class="card-header">
+                        📋 画像#27: S__78209130
+                    </div>
+                    <div class="card-content">
+                        <div class="image-comparison-container" id="viewer-26">
+                            <div class="image-viewer">
+                                <div class="keyboard-hint">← → キー または スワイプで切替</div>
+                                
+                                <div class="image-slide original-slide active" data-slide="0">
+                                    <div class="image-title">📷 お客様の元画像</div>
+                                    <img src="graphs/original/S__78209130.jpg" alt="お客様の元画像" class="slide-image">
+                                </div>
+                                
+                                <div class="image-slide analysis-slide" data-slide="1">
+                                    <div class="image-title">📈 AI分析結果 (精度検証)</div>
+                                    <img src="final_analysis_v2_S__78209130.png" alt="AI分析結果" class="slide-image">
+                                    <div class="image-overlay">
+                                        検出色: pink • データ点数: 205
+                                    </div>
+                                </div>
+                                
+                                <div class="image-controls">
+                                    <button class="control-btn active" onclick="switchSlide(26, 0)">📷 元画像</button>
+                                    <button class="control-btn" onclick="switchSlide(26, 1)">📈 分析結果</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="data-grid">
+                            <div class="data-panel graph-panel">
+                                <div class="panel-title">
+                                    📈 データ抽出結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">最大値:</span>
+                                    <span class="data-value positive">+8,415</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最小値:</span>
+                                    <span class="data-value negative">-9,390</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">最終差玉:</span>
+                                    <span class="data-value negative">-6,463</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">変動幅:</span>
+                                    <span class="data-value neutral">17,805</span>
+                                </div>
+
+                            </div>
+                            
+                            <div class="data-panel ocr-panel">
+                                <div class="panel-title">
+                                    🔍 画面情報解析結果
+                                </div>
+
+                                <div class="data-item">
+                                    <span class="data-label">機種名:</span>
+                                    <span class="data-value">スタート</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">確率:</span>
+                                    <span class="data-value">1</span>
+                                </div>
+                                <div class="data-item">
+                                    <span class="data-label">日時:</span>
+                                    <span class="data-value">6/13</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <div class="summary-section">
+            <h2 class="section-title">💰 各ゲームの最終収支一覧</h2>
+            <div class="results-grid">
+
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209168</div>
+                        <div class="result-machine">ホール</div>
+                    </div>
+                    <div class="result-value negative">-25,244</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209160</div>
+                        <div class="result-machine">スタート</div>
+                    </div>
+                    <div class="result-value positive">+3,049</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78848020</div>
+                        <div class="result-machine">ンゲリオン</div>
+                    </div>
+                    <div class="result-value positive">+13,171</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209166</div>
+                        <div class="result-machine">データ</div>
+                    </div>
+                    <div class="result-value negative">-7,683</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209174</div>
+                        <div class="result-machine">マイページ</div>
+                    </div>
+                    <div class="result-value positive">+7,805</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209088</div>
+                        <div class="result-machine">スタート</div>
+                    </div>
+                    <div class="result-value positive">+2,683</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78716957</div>
+                        <div class="result-machine">ンゲリオン</div>
+                    </div>
+                    <div class="result-value negative">-11,829</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209164</div>
+                        <div class="result-machine">スタート</div>
+                    </div>
+                    <div class="result-value positive">+15,854</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209170</div>
+                        <div class="result-machine">ホール</div>
+                    </div>
+                    <div class="result-value negative">-732</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209162</div>
+                        <div class="result-machine">ホール</div>
+                    </div>
+                    <div class="result-value positive">+1,463</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78716960</div>
+                        <div class="result-machine">スタート</div>
+                    </div>
+                    <div class="result-value positive">+3,780</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209156</div>
+                        <div class="result-machine">マイページ</div>
+                    </div>
+                    <div class="result-value positive">+22,805</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209128</div>
+                        <div class="result-machine">スタート</div>
+                    </div>
+                    <div class="result-value positive">+6,585</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78716972</div>
+                        <div class="result-machine">ゴードン</div>
+                    </div>
+                    <div class="result-value negative">-9,512</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78848016</div>
+                        <div class="result-machine">ンゲリオン</div>
+                    </div>
+                    <div class="result-value negative">-6,098</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209158</div>
+                        <div class="result-machine">スタート</div>
+                    </div>
+                    <div class="result-value negative">-19,512</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78848010</div>
+                        <div class="result-machine">データ</div>
+                    </div>
+                    <div class="result-value positive">+3,415</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78848018</div>
+                        <div class="result-machine">ンゲリオン</div>
+                    </div>
+                    <div class="result-value positive">+366</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78716974</div>
+                        <div class="result-machine">マイページ</div>
+                    </div>
+                    <div class="result-value negative">-7,073</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78848012</div>
+                        <div class="result-machine">スタート</div>
+                    </div>
+                    <div class="result-value positive">+14,756</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209136</div>
+                        <div class="result-machine">スタート</div>
+                    </div>
+                    <div class="result-value negative">-11,220</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78848008</div>
+                        <div class="result-machine">ピーアークビピー</div>
+                    </div>
+                    <div class="result-value negative">-8,659</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78716970</div>
+                        <div class="result-machine">ゴードン</div>
+                    </div>
+                    <div class="result-value positive">+10,366</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78848014</div>
+                        <div class="result-machine">データ</div>
+                    </div>
+                    <div class="result-value negative">-25,610</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209138</div>
+                        <div class="result-machine">スタート</div>
+                    </div>
+                    <div class="result-value positive">+19,390</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78716962</div>
+                        <div class="result-machine">スタート</div>
+                    </div>
+                    <div class="result-value negative">-3,049</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-name">S__78209130</div>
+                        <div class="result-machine">スタート</div>
+                    </div>
+                    <div class="result-value negative">-6,463</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 40px;">
+                <h3 style="font-size: 1.5em; margin-bottom: 20px;">🎨 検出色分布</h3>
+                <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 25px; text-align: center;">
+                        <div style="font-weight: 600; font-size: 1.2em;">cyan</div>
+                        <div style="font-size: 0.9em; opacity: 0.8;">10回検出</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 25px; text-align: center;">
+                        <div style="font-weight: 600; font-size: 1.2em;">pink</div>
+                        <div style="font-size: 0.9em; opacity: 0.8;">7回検出</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 25px; text-align: center;">
+                        <div style="font-weight: 600; font-size: 1.2em;">magenta</div>
+                        <div style="font-size: 0.9em; opacity: 0.8;">4回検出</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 25px; text-align: center;">
+                        <div style="font-weight: 600; font-size: 1.2em;">red</div>
+                        <div style="font-size: 0.9em; opacity: 0.8;">3回検出</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 25px; text-align: center;">
+                        <div style="font-weight: 600; font-size: 1.2em;">green</div>
+                        <div style="font-size: 0.9em; opacity: 0.8;">3回検出</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <h3 style="font-size: 1.8em; margin-bottom: 20px;">📊 パチンコグラフ分析サービス</h3>
+            <p style="font-size: 1.1em; opacity: 0.8; margin-bottom: 15px;">
+                AI技術による高精度なグラフデータ抽出レポート
+            </p>
+            <div style="display: flex; justify-content: center; gap: 30px; margin-top: 25px; flex-wrap: wrap;">
+                <div>📊 抽出成功率: 100.0%</div>
+                <div>🎨 多色グラフ対応: 10色</div>
+                <div>🔍 画面情報解析: 日本語対応</div>
+                <div>📈 精密グリッド: 1px単位</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

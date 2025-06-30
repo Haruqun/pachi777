@@ -1,0 +1,656 @@
+{
+  "analysis_date": "2025-06-23T15:37:06.879705",
+  "total_images": 27,
+  "successful_extractions": 11,
+  "ocr_detections": 27,
+  "results": [
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209168_graph_only.png",
+      "original_path": "graphs/original/S__78209168.jpg",
+      "output_path": "integrated_analysis_S__78209168.png",
+      "detected_zero": 250,
+      "data_points_count": 186,
+      "ocr_data": {
+        "raw_text": "20:59                          all 5G ED\nSITE:                      Ad       u     ーー\n楽園立川\n6/13      6/12      6/11      6/10       >>\n\neRe: CODSMOSRH... [Petar\n大当り一覧 HEB\n1146番台 / 【4】パチ\n4  30,000                             7\n2\n-30,000        最大値 : 5700\n<<前の台     全体を見る      次の台>>\nft       ⑥       Q       7a       て\nホールTOP        設置機種         台番検索        マイリスト        ジャンプ\nOQ            site777jp            (の\nく         >        画       an)\n",
+        "parsed_data": {
+          "machine_model": "ホール",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": null,
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 4979.757085020243,
+        "min_value": -25020.242914979757,
+        "current_value": -24655.870445344128,
+        "data_range": 30000.0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209160_graph_only.png",
+      "original_path": "graphs/original/S__78209160.jpg",
+      "output_path": "integrated_analysis_S__78209160.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "20:53                          all 5G 2\n楽園立川\n6/13       6/12       6/11       6/10       >>\neRe: ゼロから始める異世.…  [ebeesl\n大当り一覧 、 出玉推移一覧\n1105番台 / 【4】パチ\n4  30,000                              7\nZz\n‘a\n』\nanR       に1\n-30.000\n最大値 : 7080\n<<前の台      全体を見る      次の台>>\n累計スタート     3989 スタート       430\n大当り回数      30回 大当り確率     17132\n初当り回数       6回 最高出玉      22060\nデータ更新日時 : 2025/06/13 20:39\nKa マイメモリーに追加\n合       i)       Q       ay       て\nホールTOP        設置機種         台番検索        マイリスト        ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "スタート",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1713",
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78848020_graph_only.png",
+      "original_path": "graphs/original/S__78848020.jpg",
+      "output_path": "integrated_analysis_S__78848020.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "楽園アメ横店\n6/18        6/17        6/16        6/15         >>\nP新世紀エヴァンゲリオン1.…  VeeMeegy\n大当り一覧 、 出玉推移一覧\n1090番台 / 【4】パチ\n4   30,000                                    »\n2\nる                                             g\nAza                                             ゴ\n|           /\nIJ                     °\n-30.000\n最大値 : 16080\n<<前の台       全体を見る       次の台>>\n累計スタート          5315 スタート              202\n大当り回数           35回 大当り確率         1/151\n初当り回数           10回 最高出玉           23460\nデータ更新日時 : 2025/06/18 23:55\nma a/v Ti    '—sa-hn\nft         @⑥         Q         =a         て\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "ンゲリオン",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209166_graph_only.png",
+      "original_path": "graphs/original/S__78209166.jpg",
+      "output_path": "integrated_analysis_S__78209166.png",
+      "detected_zero": 250,
+      "data_points_count": 201,
+      "ocr_data": {
+        "raw_text": "20:57                                      sl 5G GP\nSEVEN                                            ;                   —\n楽園立川\nWEEE    大当り履歴    出玉詳細    連日データ\n6/13           6/12           6/11           6/10            >>\nP大海物語5 MTE2           横軸:稼動\n大当り一覧      出玉推移一覧\n2239番台 / 【4】 パチ\n4    30,000                                                  2\n2\n-30,000        最大値 : 1360\n<<前の台         全体を見る          次の台>>\nft            ⑥            Q            =a            て\nホールTOP        設置機種         台番検索        マイリスト         ジャンプ\n己                    site777jp                     の\nく    >    画    mM\n",
+        "parsed_data": {
+          "machine_model": "データ",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": null,
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 850.2024291497976,
+        "min_value": -11295.546558704453,
+        "current_value": -7773.27935222672,
+        "data_range": 12145.748987854251
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209174_graph_only.png",
+      "original_path": "graphs/original/S__78209174.jpg",
+      "output_path": "integrated_analysis_S__78209174.png",
+      "detected_zero": 250,
+      "data_points_count": 238,
+      "ocr_data": {
+        "raw_text": "21:01                          oll 5G Gx)\n0                   マイページ   HE ABE   メニュー\n楽園立川\n出玉推移      大当り履歴      出玉詳細      連日データ\n6713       6/12       6/11        6/10        >>\ne Re : ゼロから始める異世.…\n大当り一覧 。 出玉推移一覧\n4   30.000                                  7\n-30.000      Kid : 19080\n<<前の台       全体を見る       次の台>>\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\nOQ              site777jp              (の\n<           >         画         aa\n",
+        "parsed_data": {
+          "machine_model": "マイページ",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": null,
+          "play_time": null,
+          "date_time": "6/12"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 19068.825910931173,
+        "min_value": -10931.174089068825,
+        "current_value": 7651.821862348178,
+        "data_range": 30000.0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209088_graph_only.png",
+      "original_path": "graphs/original/S__78209088.jpg",
+      "output_path": "integrated_analysis_S__78209088.png",
+      "detected_zero": 250,
+      "data_points_count": 217,
+      "ocr_data": {
+        "raw_text": "20:11                          all 5G G&D\nMas ey        INA) Wee        呈下許組\n6/13      6/12      6/11      6/10       >>\nP大海物語5 MTE2       [seh ey\n大当り一覧 、 出玉推移一覧\n70番台 / 【4】パチ\n4  30,000                           »\nは                                  Fa\n1           ,\nos\nき\n=\n-30,000\n最大値 : 340\n<<前の台     全体を見る     次の台>>\n果計スタート     4233 スタート       117\n大当り回数      27回 大当り確率     17156\n初当り回数       9回 最高出玉      12470\nデータ更新日時 : 2025/06/13 20:10\n合       i)       Q       72       て\nホールTOP   設置機種    台番検索   マイリスト    ジャンプ\n=           site777.jp           (の\nく        >        (h       an\n",
+        "parsed_data": {
+          "machine_model": "スタート",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1715",
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 2672.064777327935,
+        "min_value": -9230.76923076923,
+        "current_value": 2672.064777327935,
+        "data_range": 11902.834008097165
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78716957_graph_only.png",
+      "original_path": "graphs/original/S__78716957.jpg",
+      "output_path": "integrated_analysis_S__78716957.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "11:17                            all 4G G&\n楽園立川\n6/18      6/17      6/16      6/15       >>\nP新世紀エヴァンゲリオン1.… 選曲池抽\n大当り一覧   出玉推移一覧\n2158番台 / 【4】パチ\n4  30,000                           »\n5                                  a\n(           )\nに1\n-30.000    最大値: 170\n<<前の台     全体を見る     次の台>>\n果計スタート     3871 スタート      125\n大当り回数       19回 大当り確率     1/203\n初当り回数       8回 最高出玉      9290\nデータ更新日時 : 2025/06/18 11:09\n回 マイメモリーに追加\n言 マイリストに追加\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "ンゲリオン",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209164_graph_only.png",
+      "original_path": "graphs/original/S__78209164.jpg",
+      "output_path": "integrated_analysis_S__78209164.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "20:56                          all 5G ED\n楽園立川\n6/13       6/12       6/11        6/10        >>\neRe: ゼロから始める異世.…  [ebeesy\n大当り一覧    出玉推移一覧\n1146番台 / 【4】パチ\n4   30,000                                  >\nx     N                 へ               コ\nco\nら\n3S\n730.000         最大値 21020\n<<前の台       全体を見る       次の台>>\n果計スタート             5372 スタート                  555\n大当り回数          47回 大当り確率         1/114\n初当り回数           8回 最高出玉          24220\nデータ更新日時 : 2025/06/13 20:39\nWW マイメエリーにに公加\n合        i)        Q        7a        て\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "スタート",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209170_graph_only.png",
+      "original_path": "graphs/original/S__78209170.jpg",
+      "output_path": "integrated_analysis_S__78209170.png",
+      "detected_zero": 250,
+      "data_points_count": 250,
+      "ocr_data": {
+        "raw_text": "20:59                          sl 5G BD\nSITE:              Ad    u   ーー\n楽園立川\n6/13    6/12    6/11    6/10    >>\ne Re : ゼロから始める上異世.  [ernberil\n\n大当り一覧 WEB\n1105番台 / 【4】パチ\n4 30,000             7\n2\n-30,000   Ke 300\n<<前の台   全体を見る    次の台>>\nft    ⑥    Q    7a    て\nホールTOP        設置機種         台番検索        にとリルレるに        ジャンプ\nOQ       site777jp        (の\nく      >     画     an)\n",
+        "parsed_data": {
+          "machine_model": "ホール",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": null,
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": -121.4574898785425,
+        "min_value": -16032.388663967611,
+        "current_value": -1214.574898785425,
+        "data_range": 15910.931174089068
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209162_graph_only.png",
+      "original_path": "graphs/original/S__78209162.jpg",
+      "output_path": "integrated_analysis_S__78209162.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "20:55                          all 5G 192)\n楽園立川\n6/13        6/12        6/11         6/10         >>\ne Re : ゼロから始める異世.…\n大当り一覧 。 出玉推移一臣\n|   30,000                                       7\n|       |            |                   -\n-30.000        最大値: 12700\n<<前の台       全体を見る        次の台>>\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\nOQ                site777jp                (の\nく            .           画          an\n",
+        "parsed_data": {
+          "machine_model": "ホール",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": null,
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78716960_graph_only.png",
+      "original_path": "graphs/original/S__78716960.jpg",
+      "output_path": "integrated_analysis_S__78716960.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "11:18                            sl 4G G&D\n楽園立川\n6/18      6/17     6/16      6/15      >>\nP大海物語5 MTE2        横軸:稼動\n大当り一覧   出玉推移一覧\n2235番台 / 【4】パチ\n4  30,000                          7\n5                                a\n1                                )\nに1\nき\n-30.000    Ka : 12190\n<<前の台     全体を見る     次の台>>\n果計スタート     4348 スタート       157\n大当り回数      28回 大当り確率     1/155\n初当り回数       11回 最高出玉      17100\nデータ更新日時 : 2025/06/18 11:09\nWa マイメモリーに追加\n合      i)      Q      7a      て\nホールTOP        設置機種         台番検索        マイリスト        ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "スタート",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209156_graph_only.png",
+      "original_path": "graphs/original/S__78209156.jpg",
+      "output_path": "integrated_analysis_S__78209156.png",
+      "detected_zero": 250,
+      "data_points_count": 195,
+      "ocr_data": {
+        "raw_text": "20:47                          sl 5G 人竹\nマイページ  岡覧履歴   ニュー\n楽園立川\n6/13    6/12    6/11    6/10    >>\nP大海物語5 MTE2        横軸:稼動\n大当り一覧  出玉推移一覧\n2239番台 / 【4】 パチ\n4 30,000             2\nとコ\n-30.000   最大値 : 24560\n<<前の台   全体を見る    次の台>>\nft    ⑥    Q    =a    て\nホールTOP        設置機種         台番検索        マイリスト         ジャンプ\n=       site777.jp        (の\n<      >     oh om\n",
+        "parsed_data": {
+          "machine_model": "マイページ",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": null,
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 23927.125506072873,
+        "min_value": -1457.48987854251,
+        "current_value": 22712.55060728745,
+        "data_range": 25384.615384615383
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209128_graph_only.png",
+      "original_path": "graphs/original/S__78209128.jpg",
+      "output_path": "integrated_analysis_S__78209128.png",
+      "detected_zero": 250,
+      "data_points_count": 216,
+      "ocr_data": {
+        "raw_text": "20:28                          sl 5G GED\n出玉推移     大当り履歴     出玉詳細\n6/13       6/12       6/11        6/10        >>\nP大海物語5 MTE2        [sen ey\n大当り一覧    出玉推移一覧\n81番台 / 【4】パチ\n4   30,000                                  »\nぁ                                          a\n1           )\n=—_—        最大値 : 11430\n<<前の台       全体を見る       次の台>>\n果計スタート        4423 スタート           145\n大当り回数          30回 大当り確率         17147\n初当り回数          10回 最高出玉          21350\nデータ更新日時 : 2025/06/13 20:10\n問 マイメモリーに追加\ni マイリストに追加\n遊技広場に投稿\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "スタート",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1714",
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 10688.25910931174,
+        "min_value": -10323.886639676113,
+        "current_value": 6558.704453441295,
+        "data_range": 21012.145748987852
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78716972_graph_only.png",
+      "original_path": "graphs/original/S__78716972.jpg",
+      "output_path": "integrated_analysis_S__78716972.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "ゴードン永山2\n6/18        6/17        6/16        6/15         >>\nP新世紀エヴァンゲリオン 1... TEE eel\n大当り一覧    出玉推移一覧\n1059番台 / 【4】パチ\n4   30,000                                     7\n$                                             a\n‘\n8\na\n-30,000\n最大値 : 960\n<<前の台       全体を見る       次の台>>\n果計スタート        4115 スタート          897\n大当り回数           20回 大当り確率         1/205\n初当り回数            7回 最高出玉           9970\nデータ更新日時 : 2025/06/18 11:08\nWN マイマエローリート戸〕n\n合         i)         Q         7a         て\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "ゴードン",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78848016_graph_only.png",
+      "original_path": "graphs/original/S__78848016.jpg",
+      "output_path": "integrated_analysis_S__78848016.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "5:02                            all 4G @®\n楽園アメ横店\n6/18       6/17      6/16      6/15       >>\nP新世紀エヴァンゲリオン1.… 最良\n大当り一覧   出玉推移一覧\n1091番台 / 【4】パチ\n4  30,000                              7\n2\nる                                     |\n(                                     )\n-30,000\n最大値 : 680\n<<前の台      全体を見る      次の台>>\n果計スタート     4267 スタート       710\n大当り回数      19回 大当り確率     1/224\n初当り回数       4回 最高出玉      10030\nデータ更新日時 : 2025/06/18 23:55\nWW マイマメエロリローー人把加\n合       i)       Q       7a       て\nホールTOP        設置機種         台番検索        VTUAR        ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "ンゲリオン",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209158_graph_only.png",
+      "original_path": "graphs/original/S__78209158.jpg",
+      "output_path": "integrated_analysis_S__78209158.png",
+      "detected_zero": 250,
+      "data_points_count": 198,
+      "ocr_data": {
+        "raw_text": "20:50                          all 5G Ge\npC\n6/13      6/12      6/11      6/10       >>\ne Re HOMSMOSRH.. [eG\n大当り一覧   出玉推移一覧\n1147番台 / [4] パチ\n4  30.000                             »\n3                                   a\n1           ,\nco\ns\n3S\n-30,000\n30.0     最大値 3540\n<<前の台     全体を見る      次の台>>\n果計スタート      3886 スタート       464\n大当り回数      18回 大当り確率     1/215\n初当り回数       4回 最高出玉      11560\nデータ更新日時 : 2025/06/13 20:39\n合       i)       Q       7a       て\nホールTOP        設置機種         台番検索        マイリスト        ジャンプ\n=            site777jp            の\nく         >        画       mM\n",
+        "parsed_data": {
+          "machine_model": "スタート",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 2550.6072874493925,
+        "min_value": -19676.113360323885,
+        "current_value": -19433.1983805668,
+        "data_range": 22226.720647773276
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78848010_graph_only.png",
+      "original_path": "graphs/original/S__78848010.jpg",
+      "output_path": "integrated_analysis_S__78848010.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "4:59                            all 4G &\n楽園立川\n出玉推移      大当り履歴      出玉詳細      連日データ\n6/18         6/17         6/16         6/15          >>\ne大海物語5スペシャルELTA4 «= Feeney\n大当り一覧 。 出玉推移一覧\n2304番台 / 【4】パチ\n4   30,000                                          »\n2\nる                                                    g\n(              )\n』\nJ\n-30.000\n最大値 : 8140\n<<前の台        全体を見る        次の台>>\n累計スタート       4409 スタート          119\n大当り回数         28回 大当り確率        1/157\n初当り回数         10回 最高出玉         8410\nデータ更新日時 : 2025/06/18 23:33\nma a/v Ti  —sa-+hn\n合          i)          Q          7a          て\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "データ",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78848018_graph_only.png",
+      "original_path": "graphs/original/S__78848018.jpg",
+      "output_path": "integrated_analysis_S__78848018.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "楽園アメ横店\n6/18        6/17        6/16        6/15         >>\nP新世紀エヴァンゲリオン1.…  [eEUBeey\n大当り一覧 。 出玉推移一覧\n1096番台 / [4] NF\n4   30,000                                     »\n2\nる                                             |\n(              )\n|\n/\nj         /                         8\n-30.000\n最大値 : 9060\n<<前の台       全体を見る       次の台>>\n果計スタート             3371 スタート                 295\n大当り回数           21回 大当り確率         1/160\n初当り回数            6回 最高出玉           16310\nデータ更新日時 : 2025/06/18 23:55\n回 マイメモリーに追加\n合         i)         Q         7a         て\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "ンゲリオン",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78716974_graph_only.png",
+      "original_path": "graphs/original/S__78716974.jpg",
+      "output_path": "integrated_analysis_S__78716974.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "11:32                            sl 4G Ga\nSEVEN                                                          —\nマイページ     閲覧履歴     メニュー\nゴードン永山 2\n出玉推移      大当り履歴      出玉詳細      連日データ\n6/18          6/17          6/16          6/15           >>\nP新世紀エヴァンゲリオン1.…  eEneegy\n大当り一覧 。 出玉推移一覧\n1067番台 / 【4】パチ\n4   30,000                                          »\n5                                                        a\n1           )\n-30,000\n最大値 2360\n<<前の台         全体を見る         次の台>>\n累計スタート       3438 スタート          197\n大当り回数         17回 大当り確率       1/202\n初当り回数         3回 最高出玉        17160\nデータ更新日時 : 2025/06/18 11:08\n合           i)           Q           7a           て\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "マイページ",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78848012_graph_only.png",
+      "original_path": "graphs/original/S__78848012.jpg",
+      "output_path": "integrated_analysis_S__78848012.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "4:59                           all 5G ©\n楽園立川\n6/18       6/17       6/16       6/15        >>\neRe: GVODSMOSRH...  [eibeegl\n大当り一覧    出玉推移一覧\n1104番台 / 【4】 パチ\n4   30,000                                  »\nとコ\n                           ~~)\n-30,000\n最大値 19020\n<<前の台       全体を見る       次の台>>\n累計スタート        3950 スタート          288\n大当り回数          38回 大当り確率         1/103\n初当り回数          13回 最高出玉          25130\nデータ更新日時 : 2025/06/18 23:33\nma ラインマーーロローーリーバ戸hn\n合        i)        Q        7a        て\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "スタート",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209136_graph_only.png",
+      "original_path": "graphs/original/S__78209136.jpg",
+      "output_path": "integrated_analysis_S__78209136.png",
+      "detected_zero": 250,
+      "data_points_count": 218,
+      "ocr_data": {
+        "raw_text": "20:36                          sl 5G Ge\n6/13      6/12      6/11      6/10       >>\nP大海物語5 MTE2        [is aD\n大当り一覧 、 出玉推移一覧\n98番台 / 【4】パチ\n4  30,000                           »\nとコ\nる                                  |\n(                                  )\n-30.000\n最大値 : 3820\n<<前の台     全体を見る     次の台>>\n累計スタート     3940 スタート       116\n大当り回数      20回 大当り確率     17197\n初当り回数       6回 最高出玉      14150\nデータ更新日時 : 2025/06/13 20:10\n了 マイメモリーに追加      |\n言 マイリストに追加        |\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "スタート",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1719",
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 3157.894736842105,
+        "min_value": -15303.643724696356,
+        "current_value": -11174.08906882591,
+        "data_range": 18461.53846153846
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78848008_graph_only.png",
+      "original_path": "graphs/original/S__78848008.jpg",
+      "output_path": "integrated_analysis_S__78848008.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "4:57                            all 4G ©\nピーアークビピーくんガーデン\n6/18     6/17     6/16     6/15     >>\nPにゃんこ大戦争 多様性の.… ruberay\n大当り一覧  出玉推移一覧\n239番台 / 【4】パチ\n4  30,000                      »\nとコ\n|\n/     8\nmw!\n-30,000\n<<前の台    全体を見る    次の台>>\n累計スタート     3489 スタート       351\n大当り回数      26回 大当り確率     11134\n初当り回数       12回 最高出玉      16500\nデータ更新日時 : 2025/06/18 22:40\n合     i)     Q     7a     て\nホールTOP        設置機種         台番検索        VTUAR        ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "ピーアークビピー",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1113",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78716970_graph_only.png",
+      "original_path": "graphs/original/S__78716970.jpg",
+      "output_path": "integrated_analysis_S__78716970.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "ゴードン永山2\n出玉推移      大当り履歴      出玉詳細      連日データ\n6/18         6/17         6/16         6/15          >>\nP新世紀エヴァンゲリオン 1... Teel\n大当り一覧     出玉推移一覧\n1060番台 / 【4】パチ\n\n4   30,000                                          »\n$                                                    a\n(           )\n\n8\n\na\n\n-30,000\n;             最大値: 10570\n\n<<前の台        全体を見る        次の台>>\n果計スタート        4376 スタート           178\n大当り回数         29回 大当り確率        17150\n初当り回数                    7回 最高出玉                  21300\n\nデータ更新日時 : 2025/06/18 11:08\nWN マイマエローリート戸〕n\n合          i)          Q          7a          て\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "ゴードン",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1715",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78848014_graph_only.png",
+      "original_path": "graphs/original/S__78848014.jpg",
+      "output_path": "integrated_analysis_S__78848014.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "楽園立川\n出玉推移      大当り履歴      出玉詳細      連日データ\n6/18        6/17        6/16        6/15         >>\ne大海物語5スペシャルELTA4 «= Weare\n大当り一覧    出玉推移一覧\n2354番台 / 【4】パチ\n4   30,000                                       »\n$                                                a\n‘\nトー』\nき\nom                     る\nNON\n-30,000\n<<前の台       全体を見る        次の台>>\n果計スタート        4018 スタート          364\n大当り回数            12回 大当り確率          11334\n初当り回数             6回 最高出玉            6630\nデータ更新日時 : 2025/06/18 23:33\nWN マイマエローリート戸〕n\n合          i)          Q          7a         て\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\nsite777.jp\nea\n",
+        "parsed_data": {
+          "machine_model": "データ",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1133",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209138_graph_only.png",
+      "original_path": "graphs/original/S__78209138.jpg",
+      "output_path": "integrated_analysis_S__78209138.png",
+      "detected_zero": 250,
+      "data_points_count": 209,
+      "ocr_data": {
+        "raw_text": "20:37                          sl 5G GD\n6/13       6/12       6/11        6/10        >>\nP大海物語5 MTE2        je: RY\n大当り一覧    出玉推移一覧\n97番台 / 【4】パチ\n4   30,000                                  7\nぁ\n1           )\no\ns\n3S\n-30,000\n;           Kia : 20340\n<<前の台       全体を見る       次の台>>\n累計スタート        4567 スタート           156\n大当り回数          37回 大当り確率         11123\n初当り回数          10回 最高出玉          24430\nデータ更新日時 : 2025/06/13 20:10\nKa マイメモリーに追加\n合        @        Q        7a        て\nホールTOP     設置機種      台番検索     マイリスト      ジャンプ\n=              site777jp              の\nく                     a         aa\n",
+        "parsed_data": {
+          "machine_model": "スタート",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1112",
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 19797.570850202428,
+        "min_value": -4251.012145748988,
+        "current_value": 19311.74089068826,
+        "data_range": 24048.582995951416
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78716962_graph_only.png",
+      "original_path": "graphs/original/S__78716962.jpg",
+      "output_path": "integrated_analysis_S__78716962.png",
+      "detected_zero": 250,
+      "data_points_count": 0,
+      "ocr_data": {
+        "raw_text": "11:19                            sl 4G G&D\n6/18      6/17      6/16      6/15       >>\nP大海物語5 MTE2        |横軸:稼動\n大当り一覧   出玉推移一覧\n2239番台 / 【4】パチ\n4  30,000                           7\n$                                  a\n1           )\noso\nら\n3\n730.000        最大値 1290\n<<前の台     全体を見る     次の台>>\n累計スタート     4263 スタート       368\n大当り回数      25回 大当り確率     1/170\n初当り回数       7回 最高出玉      20340\nデータ更新日時 : 2025/06/18 11:09\nKa マイメモリーに追加\n誌 マイリストに追加\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "スタート",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/18"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 0,
+        "min_value": 0,
+        "current_value": 0,
+        "data_range": 0
+      }
+    },
+    {
+      "image_path": "graphs/manual_crop/cropped/S__78209130_graph_only.png",
+      "original_path": "graphs/original/S__78209130.jpg",
+      "output_path": "integrated_analysis_S__78209130.png",
+      "detected_zero": 250,
+      "data_points_count": 205,
+      "ocr_data": {
+        "raw_text": "20:31                          sl 5G 財天\n6/13      6/12      6/11      6/10       >>\nP大海物語5 MTE2        |横軸:稼動\n大当り一覧   出玉推移一覧\n100番台 / 【4】パチ\n4  30,000                           »\n$                                  a\n8\nに4\n3\n-30,000\n最大値 : 9060\n<<前の台     全体を見る     次の台>>\n累計スタート     4120 スタート       564\n大当り回数      21回 大当り確率     1/196\n初当り回数       8回 最高出玉      15430\nデータ更新日時 : 2025/06/13 20:10\nKa マイメモリーに追加\n誌 マイリストに追加\nsite777.jp\n",
+        "parsed_data": {
+          "machine_model": "スタート",
+          "total_spins": null,
+          "big_bonus": null,
+          "probability": "1",
+          "play_time": null,
+          "date_time": "6/13"
+        }
+      },
+      "graph_statistics": {
+        "max_value": 8380.566801619432,
+        "min_value": -9352.226720647774,
+        "current_value": -6437.246963562753,
+        "data_range": 17732.793522267206
+      }
+    }
+  ]
+}

@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>包括的グラフ分析レポート</title>
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            background: linear-gradient(45deg, #4a90e2, #6bb6ff);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .summary-card h3 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+        
+        .summary-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 30px;
+        }
+        
+        .analysis-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .analysis-header {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            padding: 15px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .analysis-content {
+            padding: 20px;
+        }
+        
+        .analysis-image {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            background: rgba(255,255,255,0.08);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #ccc;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .detection-info {
+            background: rgba(255,193,7,0.2);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #FFC107;
+        }
+        
+        .data-quality {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .quality-excellent { background: #4CAF50; }
+        .quality-good { background: #FF9800; }
+        .quality-poor { background: #F44336; }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>包括的グラフ分析レポート</h1>
+            <p>生成日時: 2025年06月23日 15:28:22</p>
+        </div>
+        
+        <div class="summary">
+            <div class="summary-card">
+                <h3>分析画像数</h3>
+                <div class="value">27</div>
+            </div>
+            <div class="summary-card">
+                <h3>データ抽出成功</h3>
+                <div class="value">11</div>
+            </div>
+            <div class="summary-card">
+                <h3>平均最終差玉</h3>
+                <div class="value">-1,079</div>
+            </div>
+            <div class="summary-card">
+                <h3>最高最終差玉</h3>
+                <div class="value">+22,889</div>
+            </div>
+            <div class="summary-card">
+                <h3>最低最終差玉</h3>
+                <div class="value">-24,847</div>
+            </div>
+            <div class="summary-card">
+                <h3>使用スケール</h3>
+                <div class="value">122.4</div>
+            </div>
+        </div>
+        
+        <div class="analysis-grid">
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #1: S__78209168_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209168_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209168.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+5,018</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">-25,214</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">-24,847</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">30,233</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=28</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=458</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-good">
+                        データ品質: 良好 (186ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #2: S__78209160_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209160_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209160.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #3: S__78848020_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78848020_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78848020.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #4: S__78209166_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209166_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209166.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+857</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">-11,383</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">-7,834</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">12,240</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=306</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=244</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-excellent">
+                        データ品質: 優秀 (201ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #5: S__78209174_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209174_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209174.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+19,217</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">-11,016</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+7,711</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">30,233</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=412</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=268</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-excellent">
+                        データ品質: 優秀 (238ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #6: S__78209088_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209088_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209088.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+2,693</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">-9,302</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+2,693</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">11,995</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=432</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=256</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-excellent">
+                        データ品質: 優秀 (217ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #7: S__78716957_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78716957_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78716957.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #8: S__78209164_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209164_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209164.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #9: S__78209170_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209170_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209170.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+-122</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">-16,157</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">-1,224</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">16,034</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=518</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=444</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-excellent">
+                        データ品質: 優秀 (250ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #10: S__78209162_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209162_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209162.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #11: S__78716960_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78716960_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78716960.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #12: S__78209156_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209156_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209156.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+24,113</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">-1,469</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+22,889</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">25,582</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=326</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=6</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-good">
+                        データ品質: 良好 (195ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #13: S__78209128_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209128_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209128.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+10,771</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">-10,404</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+6,610</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">21,175</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=332</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=114</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-excellent">
+                        データ品質: 優秀 (216ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #14: S__78716972_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78716972_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78716972.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #15: S__78848016_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78848016_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78848016.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #16: S__78209158_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209158_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209158.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+2,570</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">-19,829</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">-19,584</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">22,399</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=82</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=394</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-good">
+                        データ品質: 良好 (198ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #17: S__78848010_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78848010_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78848010.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #18: S__78848018_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78848018_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78848018.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #19: S__78716974_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78716974_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78716974.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #20: S__78848012_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78848012_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78848012.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #21: S__78209136_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209136_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209136.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+3,182</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">-15,422</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">-11,261</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">18,605</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=172</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=418</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-excellent">
+                        データ品質: 優秀 (218ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #22: S__78848008_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78848008_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78848008.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #23: S__78716970_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78716970_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78716970.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #24: S__78848014_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78848014_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78848014.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #25: S__78209138_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209138_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209138.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+19,951</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">-4,284</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+19,462</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">24,235</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=412</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=38</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-excellent">
+                        データ品質: 優秀 (209ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #26: S__78716962_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78716962_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78716962.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">+0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-poor">
+                        データ品質: 要改善 (0ポイント)
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #27: S__78209130_graph_only
+                </div>
+                <div class="analysis-content">
+                    <img src="analysis_overlay_S__78209130_graph_only.png" alt="分析結果" class="analysis-image">
+                    
+                    <div style="margin: 15px 0;">
+                        <h4 style="margin: 5px 0; color: #ccc;">元画像:</h4>
+                        <img src="graphs/original/S__78209130.jpg" alt="元画像" style="width: 100%; border-radius: 5px; margin-bottom: 10px;">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 
+                        (設定値からの差: 0px)
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">最大値</div>
+                            <div class="stat-value">+8,446</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値</div>
+                            <div class="stat-value">-9,425</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最終差玉</div>
+                            <div class="stat-value">-6,487</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">データ範囲</div>
+                            <div class="stat-value">17,870</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最大値位置</div>
+                            <div class="stat-value">X=108</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最小値位置</div>
+                            <div class="stat-value">X=322</div>
+                        </div>
+                    </div>
+                    
+                    <div class="data-quality quality-excellent">
+                        データ品質: 優秀 (205ポイント)
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <div class="footer">
+            <p>このレポートは包括的グラフ分析ツールによって自動生成されました</p>
+            <p>分析スケール: 1px = 122.4 | 基準ゼロライン: Y=250</p>
+            
+            <h3 style="margin-top: 20px; color: #4CAF50;">最終差玉データ一覧</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin-top: 15px;">
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; font-family: monospace;">
+                    <strong>S__78209168_graph_only:</strong> -24,847
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; font-family: monospace;">
+                    <strong>S__78209166_graph_only:</strong> -7,834
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; font-family: monospace;">
+                    <strong>S__78209174_graph_only:</strong> +7,711
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; font-family: monospace;">
+                    <strong>S__78209088_graph_only:</strong> +2,693
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; font-family: monospace;">
+                    <strong>S__78209170_graph_only:</strong> -1,224
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; font-family: monospace;">
+                    <strong>S__78209156_graph_only:</strong> +22,889
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; font-family: monospace;">
+                    <strong>S__78209128_graph_only:</strong> +6,610
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; font-family: monospace;">
+                    <strong>S__78209158_graph_only:</strong> -19,584
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; font-family: monospace;">
+                    <strong>S__78209136_graph_only:</strong> -11,261
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; font-family: monospace;">
+                    <strong>S__78209138_graph_only:</strong> +19,462
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; font-family: monospace;">
+                    <strong>S__78209130_graph_only:</strong> -6,487
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

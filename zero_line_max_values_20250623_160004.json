@@ -1,0 +1,170 @@
+{
+  "timestamp": "2025-06-23T16:00:04.116329",
+  "total_images": 27,
+  "successful_extractions": 17,
+  "success_rate": 62.96296296296296,
+  "results": [
+    {
+      "file_name": "S__78209136",
+      "max_value": 52,
+      "ocr_text": "52\n",
+      "image_path": "graphs/original/S__78209136.jpg"
+    },
+    {
+      "file_name": "S__78716974",
+      "max_value": 6,
+      "ocr_text": "6\n",
+      "image_path": "graphs/original/S__78716974.jpg"
+    },
+    {
+      "file_name": "S__78716960",
+      "max_value": 152,
+      "ocr_text": "00152\n",
+      "image_path": "graphs/original/S__78716960.jpg"
+    },
+    {
+      "file_name": "S__78848008",
+      "max_value": null,
+      "ocr_text": "",
+      "image_path": "graphs/original/S__78848008.jpg"
+    },
+    {
+      "file_name": "S__78848020",
+      "max_value": 7,
+      "ocr_text": "7\n",
+      "image_path": "graphs/original/S__78848020.jpg"
+    },
+    {
+      "file_name": "S__78716962",
+      "max_value": 1615,
+      "ocr_text": "1615\n",
+      "image_path": "graphs/original/S__78716962.jpg"
+    },
+    {
+      "file_name": "S__78209130",
+      "max_value": null,
+      "ocr_text": "",
+      "image_path": "graphs/original/S__78209130.jpg"
+    },
+    {
+      "file_name": "S__78716972",
+      "max_value": 1661,
+      "ocr_text": "1661\n",
+      "image_path": "graphs/original/S__78716972.jpg"
+    },
+    {
+      "file_name": "S__78848018",
+      "max_value": null,
+      "ocr_text": "",
+      "image_path": "graphs/original/S__78848018.jpg"
+    },
+    {
+      "file_name": "S__78716970",
+      "max_value": 16615,
+      "ocr_text": "16615\n",
+      "image_path": "graphs/original/S__78716970.jpg"
+    },
+    {
+      "file_name": "S__78209168",
+      "max_value": null,
+      "ocr_text": "",
+      "image_path": "graphs/original/S__78209168.jpg"
+    },
+    {
+      "file_name": "S__78209156",
+      "max_value": null,
+      "ocr_text": "",
+      "image_path": "graphs/original/S__78209156.jpg"
+    },
+    {
+      "file_name": "S__78209160",
+      "max_value": 66,
+      "ocr_text": "66\n",
+      "image_path": "graphs/original/S__78209160.jpg"
+    },
+    {
+      "file_name": "S__78209174",
+      "max_value": 7,
+      "ocr_text": "7\n",
+      "image_path": "graphs/original/S__78209174.jpg"
+    },
+    {
+      "file_name": "S__78209162",
+      "max_value": null,
+      "ocr_text": "",
+      "image_path": "graphs/original/S__78209162.jpg"
+    },
+    {
+      "file_name": "S__78209166",
+      "max_value": null,
+      "ocr_text": "",
+      "image_path": "graphs/original/S__78209166.jpg"
+    },
+    {
+      "file_name": "S__78209158",
+      "max_value": 4,
+      "ocr_text": "4\n",
+      "image_path": "graphs/original/S__78209158.jpg"
+    },
+    {
+      "file_name": "S__78209170",
+      "max_value": null,
+      "ocr_text": "",
+      "image_path": "graphs/original/S__78209170.jpg"
+    },
+    {
+      "file_name": "S__78209164",
+      "max_value": 6110,
+      "ocr_text": "6110\n",
+      "image_path": "graphs/original/S__78209164.jpg"
+    },
+    {
+      "file_name": "S__78848014",
+      "max_value": 41615,
+      "ocr_text": "41615\n",
+      "image_path": "graphs/original/S__78848014.jpg"
+    },
+    {
+      "file_name": "S__78209088",
+      "max_value": 52,
+      "ocr_text": "52\n",
+      "image_path": "graphs/original/S__78209088.jpg"
+    },
+    {
+      "file_name": "S__78209128",
+      "max_value": 2,
+      "ocr_text": "2\n",
+      "image_path": "graphs/original/S__78209128.jpg"
+    },
+    {
+      "file_name": "S__78716957",
+      "max_value": null,
+      "ocr_text": "",
+      "image_path": "graphs/original/S__78716957.jpg"
+    },
+    {
+      "file_name": "S__78848016",
+      "max_value": 1615,
+      "ocr_text": "1615\n",
+      "image_path": "graphs/original/S__78848016.jpg"
+    },
+    {
+      "file_name": "S__78848012",
+      "max_value": 5,
+      "ocr_text": "5\n",
+      "image_path": "graphs/original/S__78848012.jpg"
+    },
+    {
+      "file_name": "S__78209138",
+      "max_value": 4,
+      "ocr_text": "4\n",
+      "image_path": "graphs/original/S__78209138.jpg"
+    },
+    {
+      "file_name": "S__78848010",
+      "max_value": null,
+      "ocr_text": "",
+      "image_path": "graphs/original/S__78848010.jpg"
+    }
+  ]
+}

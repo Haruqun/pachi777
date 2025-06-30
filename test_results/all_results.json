@@ -1,0 +1,26 @@
+{
+  "tests": [
+    {
+      "id": "test_1",
+      "name": "精密スケール検出 - S__78209138_graph_only.png",
+      "timestamp": "2025-06-23T14:24:21.513654",
+      "data": {
+        "zero_line": 260,
+        "scale": 120.2510460251046,
+        "scale_from_top": 120.0,
+        "scale_from_bottom": 120.5020920502092,
+        "accuracy": 0,
+        "images": [
+          "test_1/scale_test_115_S__78209138_graph_only.png",
+          "test_1/scale_test_118_S__78209138_graph_only.png",
+          "test_1/scale_test_120_S__78209138_graph_only.png"
+        ]
+      }
+    }
+  ],
+  "current_best": {
+    "zero_line": 260,
+    "scale": 120,
+    "accuracy": 0
+  }
+}

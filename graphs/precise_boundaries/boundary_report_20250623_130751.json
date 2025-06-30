@@ -1,0 +1,126 @@
+{
+  "timestamp": "2025-06-23 13:07:51",
+  "total_processed": 5,
+  "results": [
+    {
+      "file_name": "S__78209088",
+      "image_size": [
+        869,
+        1884
+      ],
+      "zero_line": {
+        "y_position": 1494,
+        "score": 0.8734227583021763
+      },
+      "boundaries": {
+        "left": 70,
+        "right": 799,
+        "top": 849,
+        "bottom": 1587,
+        "zero_line": 1494,
+        "width": 729,
+        "height": 738
+      },
+      "cropped_size": [
+        729,
+        738
+      ]
+    },
+    {
+      "file_name": "S__78209128",
+      "image_size": [
+        869,
+        1884
+      ],
+      "zero_line": {
+        "y_position": 1503,
+        "score": 0.6525839157435822
+      },
+      "boundaries": {
+        "left": 174,
+        "right": 694,
+        "top": 862,
+        "bottom": 1603,
+        "zero_line": 1503,
+        "width": 520,
+        "height": 741
+      },
+      "cropped_size": [
+        520,
+        741
+      ]
+    },
+    {
+      "file_name": "S__78209130",
+      "image_size": [
+        869,
+        1884
+      ],
+      "zero_line": {
+        "y_position": 956,
+        "score": 0.48582738637050443
+      },
+      "boundaries": {
+        "left": 131,
+        "right": 709,
+        "top": 571,
+        "bottom": 957,
+        "zero_line": 956,
+        "width": 578,
+        "height": 386
+      },
+      "cropped_size": [
+        578,
+        386
+      ]
+    },
+    {
+      "file_name": "S__78209136",
+      "image_size": [
+        869,
+        1884
+      ],
+      "zero_line": {
+        "y_position": 893,
+        "score": 0.4946896106920975
+      },
+      "boundaries": {
+        "left": 131,
+        "right": 709,
+        "top": 565,
+        "bottom": 894,
+        "zero_line": 893,
+        "width": 578,
+        "height": 329
+      },
+      "cropped_size": [
+        578,
+        329
+      ]
+    },
+    {
+      "file_name": "S__78209138",
+      "image_size": [
+        869,
+        1884
+      ],
+      "zero_line": {
+        "y_position": 1494,
+        "score": 0.8734227583021763
+      },
+      "boundaries": {
+        "left": 70,
+        "right": 799,
+        "top": 756,
+        "bottom": 1587,
+        "zero_line": 1494,
+        "width": 729,
+        "height": 831
+      },
+      "cropped_size": [
+        729,
+        831
+      ]
+    }
+  ]
+}

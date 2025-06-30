@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>パチンコグラフ分析ツール - 完全自動検出版</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --red: #ff5c5c;
+      --blue: #5c8dff;
+      --green: #4cd964;
+      --orange: #ffa500;
+      --purple: #8a2be2;
+      --bg: #f9f9f9;
+      --fg: #333;
+      --mode-selected: #007aff;
+      --mode-unselected: #aaa;
+      --btn-radius: 8px;
+    }
+    body {
+      font-family: 'Helvetica Neue', 'Hiragino Sans', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 1em;
+    }
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 1em;
+    }
+    /* コントロール部 */
+    #controls {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 1em;
+      border-radius: var(--btn-radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .file-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+      margin-bottom: 0.5em;
+    }
+    .file-wrapper input[type="file"] {
+      font-size: 100px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+    }
+    .file-label {
+      display: block;
+      width: 100%;
+      padding: 0.8em;
+      background: var(--mode-selected);
+      color: white;
+      text-align: center;
+      border-radius: var(--btn-radius);
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .delete-button {
+      width: 100%;
+      padding: 0.8em;
+      background: var(--red);
+      color: white;
+      border: none;
+      border-radius: var(--btn-radius);
+      font-weight: bold;
+      margin-top: 0.5em;
+      display: none;
+    }
+    /* ボタン行 */
+    #buttonRow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    #buttonRow button {
+      flex: 1;
+      min-width: 100px;
+      padding: 0.8em;
+      font-size: 1em;
+      border-radius: var(--btn-radius);
+      color: white;
+      border: none;
+      cursor: pointer;
+      background: var(--mode-unselected);
+      transition: background-color 0.2s;
+    }
+    /* 各ボタンの背景色 */
+    #btnAutoAll { background: linear-gradient(135deg, var(--orange), var(--purple)); }
+    #btnMax { background: var(--red); }
+    #btnMin { background: var(--blue); }
+    #btnZero { background: var(--green); }
+    #btnCurrent { background: var(--purple); }
+    #btnAutoDetect { background: var(--orange); }
+    
+    /* 処理中インジケーター */
+    .processing {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: var(--mode-selected);
+      font-weight: bold;
+    }
+    .processing.active {
+      display: block;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(0,0,0,.3);
+      border-radius: 50%;
+      border-top-color: var(--mode-selected);
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* キャンバス部分 */
+    #container {
+      position: relative;
+      max-width: 800px;
+      margin: 1em auto;
+      border-radius: var(--btn-radius);
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      background: white;
+    }
+    canvas {
+      width: 100%;
+      display: block;
+    }
+    .line {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      background: currentColor;
+      touch-action: none;
+      cursor: grab;
+      z-index: 10;
+      transition: opacity 0.2s;
+    }
+    .line:hover {
+      opacity: 0.8;
+    }
+    /* ラベル */
+    .line .label {
+      position: absolute;
+      right: 10px;
+      top: -20px;
+      font-size: 0.9em;
+      background: rgba(255,255,255,0.9);
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: inherit;
+      font-weight: bold;
+      white-space: nowrap;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    #lineMax { color: var(--red); }
+    #lineMin { color: var(--blue); }
+    #lineZero { color: var(--green); }
+    #lineCurrent { color: var(--purple); }
+    /* 結果表示部 */
+    #results {
+      max-width: 800px;
+      margin: 2em auto;
+      background: white;
+      padding: 1.5em;
+      border-radius: var(--btn-radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-top: 1em;
+    }
+    .result-item {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 6px;
+      text-align: center;
+    }
+    .result-label {
+      font-size: 0.9em;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    .result-value {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: var(--mode-selected);
+    }
+    /* 検出情報 */
+    #detectionInfo {
+      max-width: 800px;
+      margin: 2em auto;
+      background: #e8f5e9;
+      padding: 1em;
+      border-radius: var(--btn-radius);
+      border: 1px solid #4caf50;
+      display: none;
+    }
+    .detection-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .detection-method {
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .detection-method strong {
+      color: #4caf50;
+    }
+    /* スケール調整 */
+    #scaleAdjust {
+      max-width: 800px;
+      margin: 1em auto;
+      background: white;
+      padding: 1em;
+      border-radius: var(--btn-radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .scale-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .scale-input {
+      width: 100px;
+      padding: 0.5em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    /* 自動検出ステータス */
+    .auto-status {
+      background: #f0f7ff;
+      border: 1px solid #2196f3;
+      border-radius: 4px;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 0.9em;
+    }
+    .auto-status.success {
+      background: #e8f5e9;
+      border-color: #4caf50;
+    }
+    .auto-status.error {
+      background: #ffebee;
+      border-color: #f44336;
+    }
+    /* グリッド表示 */
+    .grid-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      opacity: 0.3;
+    }
+    /* 説明文 */
+    .info-box {
+      max-width: 800px;
+      margin: 2em auto;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #444;
+      background: #fff;
+      padding: 1.5em;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    /* レスポンシブ */
+    @media (max-width: 600px) {
+      .result-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      #buttonRow button {
+        min-width: 80px;
+        font-size: 0.9em;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎰 パチンコグラフ分析ツール - 完全自動検出版</h1>
+
+  <div id="controls">
+    <div class="file-wrapper">
+      <label class="file-label" for="imageInput">グラフ画像を選択</label>
+      <input type="file" id="imageInput" accept="image/*">
+    </div>
+    <button id="deleteButton" class="delete-button">画像を削除</button>
+    
+    <div class="processing" id="processingIndicator">
+      <div class="spinner"></div>
+      <span>処理中...</span>
+    </div>
+    
+    <div id="buttonRow">
+      <button id="btnAutoAll" onclick="autoDetectAll()">🚀 完全自動検出</button>
+      <button id="btnAutoDetect" onclick="autoDetect()">ゼロライン検出</button>
+      <button id="btnZero" onclick="showLine('zero')">ゼロライン</button>
+      <button id="btnMax" onclick="showLine('max')">最大値</button>
+      <button id="btnMin" onclick="showLine('min')">最小値</button>
+      <button id="btnCurrent" onclick="showLine('current')">現在位置</button>
+    </div>
+    
+    <div class="auto-status" id="autoStatus" style="display:none;"></div>
+  </div>
+
+  <div id="scaleAdjust">
+    <h3>スケール設定</h3>
+    <div class="scale-controls">
+      <label>1ピクセル = </label>
+      <input type="number" class="scale-input" id="scaleInput" value="120" step="0.1">
+      <span>の値</span>
+      <button onclick="updateScale()">更新</button>
+      <button onclick="showGrid()">グリッド表示</button>
+    </div>
+  </div>
+
+  <div id="container">
+    <canvas id="canvas"></canvas>
+    <div id="gridOverlay" class="grid-overlay" style="display:none;"></div>
+    <div id="lineZero" class="line" style="display:none"><div class="label">ゼロライン</div></div>
+    <div id="lineMax" class="line" style="display:none"><div class="label">最大値</div></div>
+    <div id="lineMin" class="line" style="display:none"><div class="label">最小値</div></div>
+    <div id="lineCurrent" class="line" style="display:none"><div class="label">現在</div></div>
+  </div>
+
+  <div id="results">
+    <h2>分析結果</h2>
+    <div class="result-grid">
+      <div class="result-item">
+        <div class="result-label">最大値</div>
+        <div class="result-value" id="resultMax">-</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">最小値</div>
+        <div class="result-value" id="resultMin">-</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">現在値</div>
+        <div class="result-value" id="resultCurrent">-</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">変動幅</div>
+        <div class="result-value" id="resultRange">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="detectionInfo">
+    <h3>🔍 自動検出結果</h3>
+    <div class="detection-grid" id="detectionGrid">
+      <!-- 検出結果が動的に挿入される -->
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>【使い方】</strong><br>
+    1. 「グラフ画像を選択」からパチンコのグラフ画像をアップロード<br>
+    2. 「🚀 完全自動検出」ボタンで全ての値を自動検出！<br>
+    3. 必要に応じて各ラインをドラッグで微調整<br>
+    4. スケール設定で1ピクセルあたりの値を調整（デフォルト: 120）<br>
+    5. 分析結果がリアルタイムで表示される<br><br>
+    
+    <strong>【完全自動検出について】</strong><br>
+    画像をアップロードすると以下を自動で検出します：<br>
+    ✅ ゼロライン（Y≈250）<br>
+    ✅ 最大値（グラフの最高点）<br>
+    ✅ 最小値（グラフの最低点）<br>
+    ✅ 現在位置（グラフの終点）<br><br>
+    
+    高精度な画像処理により、手動調整なしで即座に分析可能！
+  </div>
+
+  <script>
+    // グローバル変数
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const imageInput = document.getElementById('imageInput');
+    const deleteButton = document.getElementById('deleteButton');
+    const container = document.getElementById('container');
+    const scaleInput = document.getElementById('scaleInput');
+    const processingIndicator = document.getElementById('processingIndicator');
+    const autoStatus = document.getElementById('autoStatus');
+    
+    const lines = {
+      zero: document.getElementById('lineZero'),
+      max: document.getElementById('lineMax'),
+      min: document.getElementById('lineMin'),
+      current: document.getElementById('lineCurrent')
+    };
+    
+    let img = new Image();
+    let dragging = null;
+    let scale = 120; // 1ピクセルあたりの値
+    let imageLoaded = false;
+    let autoDetectionResult = null;
+
+    // 画像処理
+    function handleImage(file) {
+      if (!file) return;
+      
+      showProcessing(true);
+      
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        // 初期化
+        Object.values(lines).forEach(line => {
+          line.style.display = "none";
+        });
+        
+        imageLoaded = true;
+        deleteButton.style.display = "block";
+        document.getElementById('detectionInfo').style.display = "none";
+        autoStatus.style.display = "none";
+        
+        // 自動で完全検出を実行
+        setTimeout(() => autoDetectAll(), 100);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    }
+    
+    imageInput.addEventListener('change', e => handleImage(e.target.files[0]));
+    
+    // 処理中表示
+    function showProcessing(show) {
+      if (show) {
+        processingIndicator.classList.add('active');
+      } else {
+        processingIndicator.classList.remove('active');
+      }
+    }
+    
+    // ステータス表示
+    function showStatus(message, type = 'info') {
+      autoStatus.className = 'auto-status ' + type;
+      autoStatus.textContent = message;
+      autoStatus.style.display = 'block';
+    }
+    
+    // 画像削除
+    deleteButton.addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      Object.values(lines).forEach(line => {
+        line.style.display = "none";
+      });
+      imageLoaded = false;
+      deleteButton.style.display = "none";
+      document.getElementById('detectionInfo').style.display = "none";
+      autoStatus.style.display = "none";
+      updateResults();
+    });
+
+    // 完全自動検出
+    async function autoDetectAll() {
+      if (!imageLoaded) {
+        alert('先に画像をアップロードしてください');
+        return;
+      }
+      
+      showProcessing(true);
+      showStatus('自動検出を開始しています...', 'info');
+      
+      try {
+        // 1. ゼロライン検出
+        await autoDetect();
+        
+        // 2. グラフデータ抽出
+        const graphData = await extractGraphData();
+        
+        if (graphData) {
+          const canvasRect = canvas.getBoundingClientRect();
+          const canvasScale = canvas.height / canvasRect.height;
+          
+          // 3. 最大値設定
+          if (graphData.maxY !== null) {
+            const maxDisplayY = graphData.maxY / canvasScale;
+            lines.max.style.top = `${maxDisplayY}px`;
+            lines.max.style.display = "block";
+          }
+          
+          // 4. 最小値設定
+          if (graphData.minY !== null) {
+            const minDisplayY = graphData.minY / canvasScale;
+            lines.min.style.top = `${minDisplayY}px`;
+            lines.min.style.display = "block";
+          }
+          
+          // 5. 現在位置設定
+          if (graphData.currentY !== null) {
+            const currentDisplayY = graphData.currentY / canvasScale;
+            lines.current.style.top = `${currentDisplayY}px`;
+            lines.current.style.display = "block";
+          }
+          
+          updateResults();
+          showStatus('✅ 完全自動検出が完了しました！', 'success');
+        }
+      } catch (error) {
+        showStatus('❌ 自動検出中にエラーが発生しました', 'error');
+        console.error(error);
+      } finally {
+        showProcessing(false);
+      }
+    }
+    
+    // グラフデータ抽出
+    async function extractGraphData() {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const { width, height, data } = imageData;
+      
+      // グラフの色を検出（ピンク、オレンジ、赤など）
+      const graphPoints = [];
+      
+      for (let x = 0; x < width; x++) {
+        let graphY = null;
+        
+        // 各列で最もグラフらしい点を探す
+        for (let y = 0; y < height; y++) {
+          const idx = (y * width + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          
+          // HSV変換
+          const hsv = rgbToHsv(r, g, b);
+          
+          // グラフの色判定（ピンク、オレンジ、赤系）
+          if (isGraphColor(hsv)) {
+            graphY = y;
+            break; // 最初に見つかった点を採用
+          }
+        }
+        
+        if (graphY !== null) {
+          graphPoints.push({ x, y: graphY });
+        }
+      }
+      
+      if (graphPoints.length < 10) {
+        console.warn('グラフデータが少なすぎます');
+        return null;
+      }
+      
+      // 最大値、最小値、現在値を計算
+      let maxY = graphPoints[0].y;
+      let minY = graphPoints[0].y;
+      let currentY = null;
+      
+      graphPoints.forEach(point => {
+        if (point.y < maxY) maxY = point.y; // Y座標は上が小さい
+        if (point.y > minY) minY = point.y;
+      });
+      
+      // 現在値は右端のグラフ点
+      const rightPoints = graphPoints.filter(p => p.x > width * 0.9);
+      if (rightPoints.length > 0) {
+        currentY = rightPoints[rightPoints.length - 1].y;
+      }
+      
+      return { maxY, minY, currentY, points: graphPoints };
+    }
+    
+    // RGB to HSV変換
+    function rgbToHsv(r, g, b) {
+      r /= 255;
+      g /= 255;
+      b /= 255;
+      
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const diff = max - min;
+      
+      let h = 0;
+      let s = max === 0 ? 0 : diff / max;
+      let v = max;
+      
+      if (diff !== 0) {
+        switch (max) {
+          case r:
+            h = ((g - b) / diff + (g < b ? 6 : 0)) / 6;
+            break;
+          case g:
+            h = ((b - r) / diff + 2) / 6;
+            break;
+          case b:
+            h = ((r - g) / diff + 4) / 6;
+            break;
+        }
+      }
+      
+      return { h: h * 360, s: s * 100, v: v * 100 };
+    }
+    
+    // グラフの色判定
+    function isGraphColor(hsv) {
+      // ピンク系 (300-360, 0-30)
+      if ((hsv.h >= 300 || hsv.h <= 30) && hsv.s > 30 && hsv.v > 50) {
+        return true;
+      }
+      // オレンジ系 (10-40)
+      if (hsv.h >= 10 && hsv.h <= 40 && hsv.s > 50 && hsv.v > 50) {
+        return true;
+      }
+      // 赤系 (0-10, 350-360)
+      if ((hsv.h <= 10 || hsv.h >= 350) && hsv.s > 50 && hsv.v > 40) {
+        return true;
+      }
+      return false;
+    }
+
+    // ライン表示切り替え
+    function showLine(type) {
+      if (!imageLoaded) {
+        alert('先に画像をアップロードしてください');
+        return;
+      }
+      
+      const line = lines[type];
+      const canvasRect = canvas.getBoundingClientRect();
+      
+      if (line.style.display !== "block") {
+        // 初期位置設定
+        let initialY = canvasRect.height / 2;
+        
+        if (type === 'zero' && autoDetectionResult) {
+          // 自動検出結果がある場合は使用
+          initialY = autoDetectionResult.y / (canvas.height / canvasRect.height);
+        } else if (type === 'max') {
+          initialY = canvasRect.height * 0.2;
+        } else if (type === 'min') {
+          initialY = canvasRect.height * 0.8;
+        }
+        
+        line.style.top = `${initialY}px`;
+        line.style.display = "block";
+      }
+      
+      updateResults();
+    }
+
+    // 自動検出（ゼロラインのみ）
+    async function autoDetect() {
+      if (!imageLoaded) {
+        alert('先に画像をアップロードしてください');
+        return;
+      }
+      
+      // Canvas から画像データを取得
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // 複数の検出手法を実行
+      const results = {
+        thickGrayLine: detectThickGrayLine(imageData),
+        horizontalLines: detectHorizontalLines(imageData),
+        edgeBased: detectEdgeBased(imageData),
+        intensityGradient: detectIntensityGradient(imageData)
+      };
+      
+      // 結果を統合
+      const validResults = Object.entries(results)
+        .filter(([_, r]) => r && r.y !== null)
+        .map(([method, r]) => ({ method, ...r }));
+      
+      if (validResults.length > 0) {
+        // 信頼度で重み付け平均
+        const weightedSum = validResults.reduce((sum, r) => sum + r.y * r.confidence, 0);
+        const totalConfidence = validResults.reduce((sum, r) => sum + r.confidence, 0);
+        const finalY = Math.round(weightedSum / totalConfidence);
+        
+        autoDetectionResult = {
+          y: finalY,
+          confidence: totalConfidence / validResults.length,
+          methods: results
+        };
+        
+        // ゼロラインを表示
+        const canvasRect = canvas.getBoundingClientRect();
+        const displayY = finalY / (canvas.height / canvasRect.height);
+        lines.zero.style.top = `${displayY}px`;
+        lines.zero.style.display = "block";
+        
+        // 検出情報を表示
+        showDetectionInfo(results);
+        updateResults();
+      } else {
+        alert('自動検出に失敗しました。手動で設定してください。');
+      }
+    }
+
+    // 検出手法1: 太いグレーの線を検出
+    function detectThickGrayLine(imageData) {
+      const { width, height, data } = imageData;
+      const centerY = Math.floor(height / 2);
+      const searchRange = 100;
+      
+      let bestY = null;
+      let bestScore = 0;
+      
+      for (let y = centerY - searchRange; y < centerY + searchRange; y++) {
+        if (y < 0 || y >= height) continue;
+        
+        let grayCount = 0;
+        for (let x = 0; x < width; x++) {
+          const idx = (y * width + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          
+          // グレー判定
+          if (Math.abs(r - g) < 20 && Math.abs(g - b) < 20 && r > 60 && r < 120) {
+            grayCount++;
+          }
+        }
+        
+        const score = grayCount / width;
+        if (score > bestScore && score > 0.8) {
+          bestScore = score;
+          bestY = y;
+        }
+      }
+      
+      return bestY !== null ? { y: bestY, confidence: bestScore } : null;
+    }
+
+    // 検出手法2: 水平線検出
+    function detectHorizontalLines(imageData) {
+      const { width, height } = imageData;
+      const edges = detectEdges(imageData);
+      
+      const centerY = Math.floor(height / 2);
+      const searchRange = 100;
+      
+      let bestY = null;
+      let bestScore = 0;
+      
+      for (let y = centerY - searchRange; y < centerY + searchRange; y++) {
+        if (y < 0 || y >= height) continue;
+        
+        let edgeCount = 0;
+        for (let x = 0; x < width; x++) {
+          const idx = y * width + x;
+          if (edges[idx] > 128) {
+            edgeCount++;
+          }
+        }
+        
+        const score = edgeCount / width;
+        if (score > bestScore && score > 0.6) {
+          bestScore = score;
+          bestY = y;
+        }
+      }
+      
+      return bestY !== null ? { y: bestY, confidence: bestScore * 0.7 } : null;
+    }
+
+    // 検出手法3: エッジベース検出
+    function detectEdgeBased(imageData) {
+      const { height } = imageData;
+      const edges = detectEdges(imageData);
+      const profile = computeHorizontalProfile(edges, imageData.width);
+      
+      const centerY = Math.floor(height / 2);
+      const searchRange = 100;
+      
+      let maxVal = 0;
+      let maxY = centerY;
+      
+      for (let y = centerY - searchRange; y < centerY + searchRange; y++) {
+        if (y < 0 || y >= height) continue;
+        if (profile[y] > maxVal) {
+          maxVal = profile[y];
+          maxY = y;
+        }
+      }
+      
+      const confidence = Math.min(maxVal / 255, 1) * 0.6;
+      return { y: maxY, confidence };
+    }
+
+    // 検出手法4: 輝度勾配
+    function detectIntensityGradient(imageData) {
+      const { width, height, data } = imageData;
+      const profile = new Array(height).fill(0);
+      
+      // 垂直方向の平均輝度
+      for (let y = 0; y < height; y++) {
+        let sum = 0;
+        for (let x = 0; x < width; x++) {
+          const idx = (y * width + x) * 4;
+          sum += (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+        }
+        profile[y] = sum / width;
+      }
+      
+      // 勾配計算
+      const gradient = new Array(height - 1);
+      for (let y = 0; y < height - 1; y++) {
+        gradient[y] = Math.abs(profile[y + 1] - profile[y]);
+      }
+      
+      const centerY = Math.floor(height / 2);
+      const searchRange = 100;
+      
+      let maxGrad = 0;
+      let maxY = centerY;
+      
+      for (let y = centerY - searchRange; y < centerY + searchRange; y++) {
+        if (y < 0 || y >= gradient.length) continue;
+        if (gradient[y] > maxGrad) {
+          maxGrad = gradient[y];
+          maxY = y;
+        }
+      }
+      
+      const confidence = Math.min(maxGrad / 50, 1) * 0.5;
+      return { y: maxY, confidence };
+    }
+
+    // エッジ検出（簡易Sobel）
+    function detectEdges(imageData) {
+      const { width, height, data } = imageData;
+      const edges = new Uint8Array(width * height);
+      
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const idx = (y * width + x) * 4;
+          const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+          
+          // 垂直方向のSobel
+          const idx_top = ((y - 1) * width + x) * 4;
+          const idx_bottom = ((y + 1) * width + x) * 4;
+          const gray_top = (data[idx_top] + data[idx_top + 1] + data[idx_top + 2]) / 3;
+          const gray_bottom = (data[idx_bottom] + data[idx_bottom + 1] + data[idx_bottom + 2]) / 3;
+          
+          const edge = Math.abs(gray_bottom - gray_top);
+          edges[y * width + x] = Math.min(edge * 2, 255);
+        }
+      }
+      
+      return edges;
+    }
+
+    // 水平プロファイル計算
+    function computeHorizontalProfile(edges, width) {
+      const height = edges.length / width;
+      const profile = new Array(height).fill(0);
+      
+      for (let y = 0; y < height; y++) {
+        let sum = 0;
+        for (let x = 0; x < width; x++) {
+          sum += edges[y * width + x];
+        }
+        profile[y] = sum / width;
+      }
+      
+      return profile;
+    }
+
+    // 検出情報表示
+    function showDetectionInfo(results) {
+      const infoDiv = document.getElementById('detectionInfo');
+      const gridDiv = document.getElementById('detectionGrid');
+      
+      gridDiv.innerHTML = '';
+      
+      const methodNames = {
+        thickGrayLine: '太いグレー線検出',
+        horizontalLines: '水平線検出',
+        edgeBased: 'エッジベース検出',
+        intensityGradient: '輝度勾配分析'
+      };
+      
+      Object.entries(results).forEach(([method, result]) => {
+        if (result && result.y !== null) {
+          const div = document.createElement('div');
+          div.className = 'detection-method';
+          div.innerHTML = `
+            <strong>${methodNames[method]}</strong><br>
+            Y座標: ${result.y}<br>
+            信頼度: ${(result.confidence * 100).toFixed(1)}%
+          `;
+          gridDiv.appendChild(div);
+        }
+      });
+      
+      infoDiv.style.display = 'block';
+    }
+
+    // ドラッグ操作
+    function getEventY(e) {
+      const rect = container.getBoundingClientRect();
+      return (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    }
+
+    function startDrag(e, lineKey) {
+      dragging = lineKey;
+      e.preventDefault();
+    }
+
+    function drag(e) {
+      if (!dragging) return;
+      e.preventDefault();
+      
+      const y = getEventY(e);
+      const containerHeight = canvas.getBoundingClientRect().height;
+      const newY = Math.max(0, Math.min(y, containerHeight));
+      lines[dragging].style.top = `${newY}px`;
+      updateResults();
+    }
+
+    function endDrag() {
+      dragging = null;
+    }
+
+    // ドラッグイベント設定
+    Object.entries(lines).forEach(([key, line]) => {
+      line.addEventListener('mousedown', e => startDrag(e, key));
+      line.addEventListener('touchstart', e => startDrag(e, key), { passive: false });
+    });
+    
+    window.addEventListener('mousemove', drag);
+    window.addEventListener('touchmove', drag, { passive: false });
+    window.addEventListener('mouseup', endDrag);
+    window.addEventListener('touchend', endDrag);
+
+    // スケール更新
+    function updateScale() {
+      scale = parseFloat(scaleInput.value) || 120;
+      updateResults();
+    }
+
+    // グリッド表示
+    function showGrid() {
+      const gridOverlay = document.getElementById('gridOverlay');
+      if (gridOverlay.style.display === 'none') {
+        drawGrid();
+        gridOverlay.style.display = 'block';
+      } else {
+        gridOverlay.style.display = 'none';
+      }
+    }
+
+    function drawGrid() {
+      const gridOverlay = document.getElementById('gridOverlay');
+      gridOverlay.innerHTML = '';
+      
+      if (!lines.zero.style.display || lines.zero.style.display === 'none') return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const canvasScale = canvas.height / rect.height;
+      const zeroY = parseFloat(lines.zero.style.top);
+      
+      // 10000単位のグリッド線
+      const gridInterval = 10000 / scale; // ピクセル単位
+      
+      for (let i = -10; i <= 10; i++) {
+        if (i === 0) continue;
+        
+        const y = zeroY - (i * gridInterval / canvasScale);
+        if (y < 0 || y > rect.height) continue;
+        
+        const gridLine = document.createElement('div');
+        gridLine.style.position = 'absolute';
+        gridLine.style.top = `${y}px`;
+        gridLine.style.left = '0';
+        gridLine.style.right = '0';
+        gridLine.style.height = '1px';
+        gridLine.style.background = i % 3 === 0 ? '#666' : '#ccc';
+        
+        const label = document.createElement('div');
+        label.style.position = 'absolute';
+        label.style.right = '5px';
+        label.style.top = '-10px';
+        label.style.fontSize = '12px';
+        label.style.color = '#666';
+        label.textContent = `${i * 10000}`;
+        
+        gridLine.appendChild(label);
+        gridOverlay.appendChild(gridLine);
+      }
+    }
+
+    // 結果更新
+    function updateResults() {
+      const rect = canvas.getBoundingClientRect();
+      const canvasScale = canvas.height / rect.height;
+      
+      const getY = id => {
+        if (lines[id].style.display === "block") {
+          return parseFloat(lines[id].style.top) * canvasScale;
+        }
+        return null;
+      };
+      
+      const zeroY = getY('zero');
+      const maxY = getY('max');
+      const minY = getY('min');
+      const currentY = getY('current');
+      
+      let maxValue = '-';
+      let minValue = '-';
+      let currentValue = '-';
+      let rangeValue = '-';
+      
+      if (zeroY !== null) {
+        if (maxY !== null) {
+          maxValue = Math.round((zeroY - maxY) * scale);
+          lines.max.querySelector('.label').textContent = `最大値 (+${maxValue})`;
+        }
+        
+        if (minY !== null) {
+          minValue = Math.round((zeroY - minY) * scale);
+          lines.min.querySelector('.label').textContent = `最小値 (${minValue})`;
+        }
+        
+        if (currentY !== null) {
+          currentValue = Math.round((zeroY - currentY) * scale);
+          const sign = currentValue >= 0 ? '+' : '';
+          lines.current.querySelector('.label').textContent = `現在 (${sign}${currentValue})`;
+        }
+        
+        if (maxY !== null && minY !== null) {
+          rangeValue = Math.abs(maxValue - minValue);
+        }
+      }
+      
+      document.getElementById('resultMax').textContent = maxValue !== '-' ? `+${maxValue}` : '-';
+      document.getElementById('resultMin').textContent = minValue !== '-' ? `${minValue}` : '-';
+      document.getElementById('resultCurrent').textContent = currentValue !== '-' ? 
+        (currentValue >= 0 ? `+${currentValue}` : `${currentValue}`) : '-';
+      document.getElementById('resultRange').textContent = rangeValue !== '-' ? rangeValue : '-';
+    }
+  </script>
+
+</body>
+</html>

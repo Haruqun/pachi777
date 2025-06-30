@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>統合分析レポート - グラフ分析 + OCRデータ</title>
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #0f3460, #16537e);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            background: linear-gradient(45deg, #e74c3c, #f39c12, #2ecc71);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+        }
+        
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .summary-card {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .summary-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .summary-card h3 {
+            margin: 0 0 15px 0;
+            color: #4CAF50;
+            font-size: 1.1em;
+        }
+        
+        .summary-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(800px, 1fr));
+            gap: 40px;
+        }
+        
+        .analysis-item {
+            background: rgba(255,255,255,0.08);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .analysis-item:hover {
+            transform: translateY(-10px);
+        }
+        
+        .analysis-header {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            padding: 20px;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+        
+        .analysis-content {
+            padding: 25px;
+        }
+        
+        .analysis-image {
+            width: 100%;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        
+        .data-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .graph-stats {
+            background: rgba(46, 204, 113, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 6px solid #2ecc71;
+        }
+        
+        .ocr-data {
+            background: rgba(52, 152, 219, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 6px solid #3498db;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .stat-label {
+            font-weight: bold;
+            color: #2ecc71;
+        }
+        
+        .stat-value {
+            color: #ecf0f1;
+            font-weight: bold;
+        }
+        
+        .ocr-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .ocr-label {
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        .ocr-value {
+            color: #ecf0f1;
+            font-weight: bold;
+        }
+        
+        .detection-info {
+            background: rgba(241, 196, 15, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 6px solid #f1c40f;
+        }
+        
+        .final-results {
+            background: rgba(155, 89, 182, 0.2);
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 40px;
+            border-left: 6px solid #9b59b6;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .result-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .result-name {
+            font-weight: bold;
+        }
+        
+        .result-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .positive { color: #2ecc71; }
+        .negative { color: #e74c3c; }
+        
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 30px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 15px;
+            color: #bdc3c7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎰 統合分析レポート 🎰</h1>
+            <h2>グラフ分析 + OCRデータ統合</h2>
+            <p>生成日時: 2025年06月23日 15:37:06</p>
+        </div>
+        
+        <div class="summary">
+            <div class="summary-card">
+                <h3>総分析画像数</h3>
+                <div class="value">27</div>
+            </div>
+            <div class="summary-card">
+                <h3>データ抽出成功</h3>
+                <div class="value">11</div>
+            </div>
+            <div class="summary-card">
+                <h3>平均最終差玉</h3>
+                <div class="value">-1,071</div>
+            </div>
+            <div class="summary-card">
+                <h3>OCR機種検出</h3>
+                <div class="value">27</div>
+            </div>
+            <div class="summary-card">
+                <h3>勝ちゲーム</h3>
+                <div class="value">5</div>
+            </div>
+            <div class="summary-card">
+                <h3>負けゲーム</h3>
+                <div class="value">6</div>
+            </div>
+        </div>
+        
+        <div class="analysis-grid">
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #1: S__78209168
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209168.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209168.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 186 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <div class="stat-item">
+                                <span class="stat-label">最大値:</span>
+                                <span class="stat-value">+4,980</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最小値:</span>
+                                <span class="stat-value">-25,020</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最終差玉:</span>
+                                <span class="stat-value negative">-24,656</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">変動幅:</span>
+                                <span class="stat-value">30,000</span>
+                            </div>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">ホール</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #2: S__78209160
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209160.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209160.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">スタート</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1713</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #3: S__78848020
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78848020.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78848020.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">ンゲリオン</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #4: S__78209166
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209166.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209166.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 201 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <div class="stat-item">
+                                <span class="stat-label">最大値:</span>
+                                <span class="stat-value">+850</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最小値:</span>
+                                <span class="stat-value">-11,296</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最終差玉:</span>
+                                <span class="stat-value negative">-7,773</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">変動幅:</span>
+                                <span class="stat-value">12,146</span>
+                            </div>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">データ</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #5: S__78209174
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209174.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209174.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 238 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <div class="stat-item">
+                                <span class="stat-label">最大値:</span>
+                                <span class="stat-value">+19,069</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最小値:</span>
+                                <span class="stat-value">-10,931</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最終差玉:</span>
+                                <span class="stat-value positive">+7,652</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">変動幅:</span>
+                                <span class="stat-value">30,000</span>
+                            </div>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">マイページ</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/12</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #6: S__78209088
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209088.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209088.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 217 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <div class="stat-item">
+                                <span class="stat-label">最大値:</span>
+                                <span class="stat-value">+2,672</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最小値:</span>
+                                <span class="stat-value">-9,231</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最終差玉:</span>
+                                <span class="stat-value positive">+2,672</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">変動幅:</span>
+                                <span class="stat-value">11,903</span>
+                            </div>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">スタート</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1715</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #7: S__78716957
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78716957.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78716957.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">ンゲリオン</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #8: S__78209164
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209164.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209164.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">スタート</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #9: S__78209170
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209170.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209170.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 250 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <div class="stat-item">
+                                <span class="stat-label">最大値:</span>
+                                <span class="stat-value">+-121</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最小値:</span>
+                                <span class="stat-value">-16,032</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最終差玉:</span>
+                                <span class="stat-value negative">-1,215</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">変動幅:</span>
+                                <span class="stat-value">15,911</span>
+                            </div>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">ホール</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #10: S__78209162
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209162.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209162.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">ホール</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #11: S__78716960
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78716960.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78716960.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">スタート</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #12: S__78209156
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209156.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209156.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 195 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <div class="stat-item">
+                                <span class="stat-label">最大値:</span>
+                                <span class="stat-value">+23,927</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最小値:</span>
+                                <span class="stat-value">-1,457</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最終差玉:</span>
+                                <span class="stat-value positive">+22,713</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">変動幅:</span>
+                                <span class="stat-value">25,385</span>
+                            </div>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">マイページ</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #13: S__78209128
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209128.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209128.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 216 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <div class="stat-item">
+                                <span class="stat-label">最大値:</span>
+                                <span class="stat-value">+10,688</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最小値:</span>
+                                <span class="stat-value">-10,324</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最終差玉:</span>
+                                <span class="stat-value positive">+6,559</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">変動幅:</span>
+                                <span class="stat-value">21,012</span>
+                            </div>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">スタート</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1714</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #14: S__78716972
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78716972.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78716972.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">ゴードン</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #15: S__78848016
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78848016.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78848016.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">ンゲリオン</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #16: S__78209158
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209158.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209158.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 198 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <div class="stat-item">
+                                <span class="stat-label">最大値:</span>
+                                <span class="stat-value">+2,551</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最小値:</span>
+                                <span class="stat-value">-19,676</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最終差玉:</span>
+                                <span class="stat-value negative">-19,433</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">変動幅:</span>
+                                <span class="stat-value">22,227</span>
+                            </div>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">スタート</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #17: S__78848010
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78848010.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78848010.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">データ</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #18: S__78848018
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78848018.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78848018.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">ンゲリオン</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #19: S__78716974
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78716974.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78716974.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">マイページ</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #20: S__78848012
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78848012.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78848012.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">スタート</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #21: S__78209136
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209136.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209136.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 218 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <div class="stat-item">
+                                <span class="stat-label">最大値:</span>
+                                <span class="stat-value">+3,158</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最小値:</span>
+                                <span class="stat-value">-15,304</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最終差玉:</span>
+                                <span class="stat-value negative">-11,174</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">変動幅:</span>
+                                <span class="stat-value">18,462</span>
+                            </div>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">スタート</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1719</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #22: S__78848008
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78848008.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78848008.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">ピーアークビピー</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1113</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #23: S__78716970
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78716970.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78716970.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">ゴードン</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1715</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #24: S__78848014
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78848014.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78848014.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">データ</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1133</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #25: S__78209138
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209138.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209138.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 209 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <div class="stat-item">
+                                <span class="stat-label">最大値:</span>
+                                <span class="stat-value">+19,798</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最小値:</span>
+                                <span class="stat-value">-4,251</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最終差玉:</span>
+                                <span class="stat-value positive">+19,312</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">変動幅:</span>
+                                <span class="stat-value">24,049</span>
+                            </div>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">スタート</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1112</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #26: S__78716962
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78716962.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78716962.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 0 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <p style="color: #e74c3c;">データ抽出に失敗しました</p>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">スタート</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-item">
+                <div class="analysis-header">
+                    #27: S__78209130
+                </div>
+                <div class="analysis-content">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📷 元画像:</h4>
+                        <img src="graphs/original/S__78209130.jpg" alt="元画像" style="width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin: 5px 0; color: #ecf0f1;">📊 分析結果:</h4>
+                        <img src="integrated_analysis_S__78209130.png" alt="統合分析結果" class="analysis-image">
+                    </div>
+                    
+                    <div class="detection-info">
+                        <strong>検出情報:</strong> ゼロライン Y=250 | 
+                        データポイント数: 205 | 
+                        OCR成功
+                    </div>
+                    
+                    <div class="data-section">
+                        <div class="graph-stats">
+                            <h4>📊 グラフ分析結果</h4>
+
+                            <div class="stat-item">
+                                <span class="stat-label">最大値:</span>
+                                <span class="stat-value">+8,381</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最小値:</span>
+                                <span class="stat-value">-9,352</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">最終差玉:</span>
+                                <span class="stat-value negative">-6,437</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">変動幅:</span>
+                                <span class="stat-value">17,733</span>
+                            </div>
+
+                        </div>
+                        
+                        <div class="ocr-data">
+                            <h4>📝 OCR抽出データ</h4>
+
+                            <div class="ocr-item">
+                                <span class="ocr-label">機種名:</span>
+                                <span class="ocr-value">スタート</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">確率:</span>
+                                <span class="ocr-value">1</span>
+                            </div>
+                            <div class="ocr-item">
+                                <span class="ocr-label">日時:</span>
+                                <span class="ocr-value">6/13</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <div class="final-results">
+            <h3>🎯 最終差玉まとめ</h3>
+            <div class="results-grid">
+
+                <div class="result-item">
+                    <div>
+                        <div class="result-name">S__78209168</div>
+                        <div style="font-size: 0.8em; color: #bdc3c7;">ホール</div>
+                    </div>
+                    <div class="result-value negative">-24,656</div>
+                </div>
+                <div class="result-item">
+                    <div>
+                        <div class="result-name">S__78209166</div>
+                        <div style="font-size: 0.8em; color: #bdc3c7;">データ</div>
+                    </div>
+                    <div class="result-value negative">-7,773</div>
+                </div>
+                <div class="result-item">
+                    <div>
+                        <div class="result-name">S__78209174</div>
+                        <div style="font-size: 0.8em; color: #bdc3c7;">マイページ</div>
+                    </div>
+                    <div class="result-value positive">+7,652</div>
+                </div>
+                <div class="result-item">
+                    <div>
+                        <div class="result-name">S__78209088</div>
+                        <div style="font-size: 0.8em; color: #bdc3c7;">スタート</div>
+                    </div>
+                    <div class="result-value positive">+2,672</div>
+                </div>
+                <div class="result-item">
+                    <div>
+                        <div class="result-name">S__78209170</div>
+                        <div style="font-size: 0.8em; color: #bdc3c7;">ホール</div>
+                    </div>
+                    <div class="result-value negative">-1,215</div>
+                </div>
+                <div class="result-item">
+                    <div>
+                        <div class="result-name">S__78209156</div>
+                        <div style="font-size: 0.8em; color: #bdc3c7;">マイページ</div>
+                    </div>
+                    <div class="result-value positive">+22,713</div>
+                </div>
+                <div class="result-item">
+                    <div>
+                        <div class="result-name">S__78209128</div>
+                        <div style="font-size: 0.8em; color: #bdc3c7;">スタート</div>
+                    </div>
+                    <div class="result-value positive">+6,559</div>
+                </div>
+                <div class="result-item">
+                    <div>
+                        <div class="result-name">S__78209158</div>
+                        <div style="font-size: 0.8em; color: #bdc3c7;">スタート</div>
+                    </div>
+                    <div class="result-value negative">-19,433</div>
+                </div>
+                <div class="result-item">
+                    <div>
+                        <div class="result-name">S__78209136</div>
+                        <div style="font-size: 0.8em; color: #bdc3c7;">スタート</div>
+                    </div>
+                    <div class="result-value negative">-11,174</div>
+                </div>
+                <div class="result-item">
+                    <div>
+                        <div class="result-name">S__78209138</div>
+                        <div style="font-size: 0.8em; color: #bdc3c7;">スタート</div>
+                    </div>
+                    <div class="result-value positive">+19,312</div>
+                </div>
+                <div class="result-item">
+                    <div>
+                        <div class="result-name">S__78209130</div>
+                        <div style="font-size: 0.8em; color: #bdc3c7;">スタート</div>
+                    </div>
+                    <div class="result-value negative">-6,437</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🤖 統合分析システムによって自動生成されました</p>
+            <p>グラフ分析スケール: 1px = 121.4574898785425 | OCR言語: 日本語+英語</p>
+            <p>成功率: グラフ分析 11/27 (40.7%) | 
+               OCR検出 27/27 
+               (100.0%)</p>
+        </div>
+    </div>
+</body>
+</html>

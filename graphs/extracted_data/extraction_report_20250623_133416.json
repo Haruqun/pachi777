@@ -1,0 +1,64 @@
+{
+  "timestamp": "2025-06-23T13:34:16.414729",
+  "total_images": 5,
+  "results": [
+    {
+      "image": "S__78209088_graph_only",
+      "size": [
+        597,
+        500
+      ],
+      "zero_line": 250,
+      "colors_detected": [],
+      "data_points": {}
+    },
+    {
+      "image": "S__78209128_graph_only",
+      "size": [
+        597,
+        500
+      ],
+      "zero_line": 250,
+      "colors_detected": [
+        "pink"
+      ],
+      "data_points": {
+        "pink": 434
+      }
+    },
+    {
+      "image": "S__78209130_graph_only",
+      "size": [
+        597,
+        500
+      ],
+      "zero_line": 250,
+      "colors_detected": [],
+      "data_points": {}
+    },
+    {
+      "image": "S__78209136_graph_only",
+      "size": [
+        597,
+        500
+      ],
+      "zero_line": 250,
+      "colors_detected": [],
+      "data_points": {}
+    },
+    {
+      "image": "S__78209138_graph_only",
+      "size": [
+        597,
+        500
+      ],
+      "zero_line": 250,
+      "colors_detected": [
+        "pink"
+      ],
+      "data_points": {
+        "pink": 420
+      }
+    }
+  ]
+}

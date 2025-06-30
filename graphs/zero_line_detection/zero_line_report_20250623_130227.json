@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-06-23 13:02:27",
+  "total_processed": 5,
+  "results": [
+    {
+      "file_name": "S__78209088",
+      "image_size": [
+        869,
+        1884
+      ],
+      "detected_zero_line": {
+        "y_position": 1494,
+        "score": 0.8734227583021763,
+        "score_components": {
+          "darkness": 0.7303301780482307,
+          "uniformity": 0.9542010689505931,
+          "edge_strength": 

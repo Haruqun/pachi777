@@ -1,0 +1,55 @@
+{
+  "timestamp": "2025-06-23T14:08:35.955974",
+  "total_images": 27,
+  "processed": 2,
+  "results": [
+    {
+      "image": "S__78209128_graph_only",
+      "analysis": {
+        "pink": {
+          "max": {
+            "x": 332,
+            "y": 158,
+            "value": 13200.0
+          },
+          "min": {
+            "x": 111,
+            "y": 329,
+            "value": -7320.0
+          },
+          "final": {
+            "x": 433,
+            "y": 196,
+            "value": 8640.0
+          },
+          "zero_line": 242
+        }
+      },
+      "output_path": "graphs/analysis_overlay/S__78209128_graph_only_analysis.png"
+    },
+    {
+      "image": "S__78209138_graph_only",
+      "analysis": {
+        "pink": {
+          "max": {
+            "x": 411,
+            "y": 84,
+            "value": 22080.0
+          },
+          "min": {
+            "x": 38,
+            "y": 281,
+            "value": -1560.0
+          },
+          "final": {
+            "x": 419,
+            "y": 88,
+            "value": 21600.0
+          },
+          "zero_line": 242
+        }
+      },
+      "output_path": "graphs/analysis_overlay/S__78209138_graph_only_analysis.png"
+    }
+  ]
+}

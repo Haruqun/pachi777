@@ -1,0 +1,169 @@
+{
+  "timestamp": "2025-06-23T15:54:31.104516",
+  "total_images": 27,
+  "successful_extractions": 27,
+  "results": [
+    {
+      "file_name": "S__78209136",
+      "max_value": 24367,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78209136.jpg"
+    },
+    {
+      "file_name": "S__78716974",
+      "max_value": 14571,
+      "detected_color": "magenta",
+      "image_path": "graphs/original/S__78716974.jpg"
+    },
+    {
+      "file_name": "S__78716960",
+      "max_value": 14693,
+      "detected_color": "pink",
+      "image_path": "graphs/original/S__78716960.jpg"
+    },
+    {
+      "file_name": "S__78848008",
+      "max_value": 24122,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78848008.jpg"
+    },
+    {
+      "file_name": "S__78848020",
+      "max_value": 24367,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78848020.jpg"
+    },
+    {
+      "file_name": "S__78716962",
+      "max_value": 14571,
+      "detected_color": "magenta",
+      "image_path": "graphs/original/S__78716962.jpg"
+    },
+    {
+      "file_name": "S__78209130",
+      "max_value": 24367,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78209130.jpg"
+    },
+    {
+      "file_name": "S__78716972",
+      "max_value": 14571,
+      "detected_color": "magenta",
+      "image_path": "graphs/original/S__78716972.jpg"
+    },
+    {
+      "file_name": "S__78848018",
+      "max_value": 24367,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78848018.jpg"
+    },
+    {
+      "file_name": "S__78716970",
+      "max_value": 14571,
+      "detected_color": "magenta",
+      "image_path": "graphs/original/S__78716970.jpg"
+    },
+    {
+      "file_name": "S__78209168",
+      "max_value": 24367,
+      "detected_color": "green",
+      "image_path": "graphs/original/S__78209168.jpg"
+    },
+    {
+      "file_name": "S__78209156",
+      "max_value": 24122,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78209156.jpg"
+    },
+    {
+      "file_name": "S__78209160",
+      "max_value": 24489,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78209160.jpg"
+    },
+    {
+      "file_name": "S__78209174",
+      "max_value": 24489,
+      "detected_color": "green",
+      "image_path": "graphs/original/S__78209174.jpg"
+    },
+    {
+      "file_name": "S__78209162",
+      "max_value": 24489,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78209162.jpg"
+    },
+    {
+      "file_name": "S__78209166",
+      "max_value": 24367,
+      "detected_color": "green",
+      "image_path": "graphs/original/S__78209166.jpg"
+    },
+    {
+      "file_name": "S__78209158",
+      "max_value": 24367,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78209158.jpg"
+    },
+    {
+      "file_name": "S__78209170",
+      "max_value": 24367,
+      "detected_color": "green",
+      "image_path": "graphs/original/S__78209170.jpg"
+    },
+    {
+      "file_name": "S__78209164",
+      "max_value": 24489,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78209164.jpg"
+    },
+    {
+      "file_name": "S__78848014",
+      "max_value": 24244,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78848014.jpg"
+    },
+    {
+      "file_name": "S__78209088",
+      "max_value": 24489,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78209088.jpg"
+    },
+    {
+      "file_name": "S__78209128",
+      "max_value": 24489,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78209128.jpg"
+    },
+    {
+      "file_name": "S__78716957",
+      "max_value": 14571,
+      "detected_color": "magenta",
+      "image_path": "graphs/original/S__78716957.jpg"
+    },
+    {
+      "file_name": "S__78848016",
+      "max_value": 24367,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78848016.jpg"
+    },
+    {
+      "file_name": "S__78848012",
+      "max_value": 24122,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78848012.jpg"
+    },
+    {
+      "file_name": "S__78209138",
+      "max_value": 24367,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78209138.jpg"
+    },
+    {
+      "file_name": "S__78848010",
+      "max_value": 24122,
+      "detected_color": "red",
+      "image_path": "graphs/original/S__78848010.jpg"
+    }
+  ]
+}

@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCRデータ抽出レポート</title>
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            background: linear-gradient(45deg, #e74c3c, #f39c12);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .ocr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+        }
+        
+        .ocr-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .ocr-header {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+            padding: 15px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .ocr-content {
+            padding: 20px;
+        }
+        
+        .original-image {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .parsed-data {
+            background: rgba(46, 204, 113, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2ecc71;
+        }
+        
+        .text-regions {
+            background: rgba(52, 152, 219, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .region-text {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+        }
+        
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .data-label {
+            font-weight: bold;
+            color: #2ecc71;
+        }
+        
+        .data-value {
+            color: #ecf0f1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>OCRデータ抽出レポート</h1>
+            <p>生成日時: 2025年06月23日 15:31:09</p>
+        </div>
+        
+        <div class="summary">
+            <div class="summary-card">
+                <h3>処理画像数</h3>
+                <div style="font-size: 2em; font-weight: bold;">27</div>
+            </div>
+            <div class="summary-card">
+                <h3>機種名検出数</h3>
+                <div style="font-size: 2em; font-weight: bold;">27</div>
+            </div>
+            <div class="summary-card">
+                <h3>統計データ検出数</h3>
+                <div style="font-size: 2em; font-weight: bold;">0</div>
+            </div>
+        </div>
+        
+        <div class="ocr-grid">
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #1: S__78209136
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209136.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">ンーント</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/13</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:36
+6/13           6/12
+PX}</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">6/11
+BMS MTE2
+大当り一覧| 』</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">sl 5G 由
+6/10          >>
+bent
+中下推移一覧</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">リー ンーントにン3                    Vio
+データ更新日時 :
+|
+|
+mares
+site7</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">昌和HH ーー                に4
+2025/06/13 20:10
+リーに追加
+ストに追加
+77.jp
+ed</div>
+                        <h5>center:</h5>
+                        <div class="region-text">Ee
+98番台 / 【4】 パチ
+)
+)
+最大値 : 3820
+台     全体を見る     次
+ト     3940 スタート
+20回 大当り確率</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #2: S__78716974
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78716974.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">マイページ</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/17</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">11:32
+6718         6/17</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">マイページ
+ゴードン永山 2
+当り履歴      出玉詳
+6/16</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">it         連日データ
+6/15          >></div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート              3438
+大当り回数                 17回
+初当り回数                  3回
+データ更新日時 :
+ft    i)     <
+ホールTOP       設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート                     197
+大当り確率           1/202
+最高出玉                  17160
+2025/06/18 11:08
+検索        マイリスト        ジャンプ
+77Jjp
+SD</div>
+                        <h5>center:</h5>
+                        <div class="region-text">+紀エヴァンゲリオン1 .…  ti
+AMD | eee
+1067番台 [4] パチ
+)
+最大値:2380
+台     全体を見る     Re</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #3: S__78716960
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78716960.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">スタート</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1155</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/18</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">11:18
+6/18         6/17
+Px:</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">6/16
+Aiea MTE2</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/15          >></div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート       4348
+大当り回数        28回
+初当り回数      11回
+データ更新日時 :
+|      Ka マイメモ
+ft       i)       <
+ホールTOP   設置機種    ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート               157
+大当り確率           1155
+最高出玉             17100
+2025/06/18 11:09
+リーに追加
+検索     マイリスト      ジャンプ
+77jp
+a</div>
+                        <h5>center:</h5>
+                        <div class="region-text">|大当り一覧 | | eae
+223588 / 【4】 パチ
+)
+最大値 : 12190
+台     全体を見る     次</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #4: S__78848008
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78848008.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">ゲークビピー</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1713</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/18</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">4:57
+6/18         6/17</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">ゲークビピーくんガ
+6/16</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">all 4G ©
+a
+6/15          >>
+町 .*¥</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート              3489
+大当り回数                 26回
+初当り回数                 12回
+データ更新日時 :
+1            ema ーーー sir
+合    i )     C
+ホールTOP        設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート                           351
+大当り確率              17134
+最高出玉                16500
+2025/06/18 22:40
+bi pe settee
+検索        マイリスト         ジャンプ
+77Jjp
+ーーシクシクnn</div>
+                        <h5>center:</h5>
+                        <div class="region-text">239番台 / 【4】 パチ
+)
+)
+台    全体を見る    Re</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #5: S__78848020
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78848020.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">スタート</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/17</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">5:03
+6718         6/17</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">楽園アメ横店
+6716</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/15          >>
+, J</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート              5315
+大当り回数                 35回
+初当り回数                 10回
+データ更新日時 :
+|           ma ーーラン
+合     i)     <
+ホールTOP       設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート                           202
+大当り確率              1/151
+最高出玉                23460
+2025/06/18 23:55
+11    t—*4-hn
+検索         マイリスト          ジャンプ
+77Jp
+ーーシクシクnm</div>
+                        <h5>center:</h5>
+                        <div class="region-text">=し上プアンプブフオン |...  ‘Ma
+|    es |
+|大当り一覧 | HEH
+10908 4/ [4] パチ
+)
+)
+最大値 16080
+台     全体を見る     次|</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #6: S__78716962
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78716962.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">データ</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1170</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/18</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">11:19
+6/18         6/17
+P大:</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">当り履歴        出玉詳
+6/16
+生物語5 MTE2</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/15          >>
+Fete)</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">PREIAN ZI           L009
+大当り回数          25回
+初当り回数           7回
+データ更新日時 :
+Ka マイメモ
+\
+|        ョma
+|      a マイリ
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">NF I                      ソロは
+大当り確率              1170
+最高出玉                  20340
+2025/06/18 11:09
+リーに追加             |
+ストに追加             |
+77Jjp
+Se</div>
+                        <h5>center:</h5>
+                        <div class="region-text">Ln me | ae
+|   —    ES
+pase 覧  出玉推
+2239番台 / 【4】 パチ
+)
+最大値 : 1290
+台    全体を見る    次</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #7: S__78209130
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209130.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">データ</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/13</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:31
+6/13           6/12
+P大:</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">当り履歴        出玉詳
+6/11
+Bie 5 MTE2</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">sl 5G &
+6/10          >>
+Fete)</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">PREIAN ZI       TIL
+大当り回数        21回
+初当り回数         8回
+データ更新日時 :
+Ka マイメモ
+\
+|       ョma
+|      a マイリ
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">NF I                      ソロリオ
+大当り確率              1/196
+最高出玉                  15430
+2025/06/13 20:10
+リーに追加             |
+ストに追加             |
+77Jjp
+Se</div>
+                        <h5>center:</h5>
+                        <div class="region-text">ュー
+pase 覧  HE
+100番台 [4] パチ
+)
+最大値 : 9060
+台   全体を見る   次(</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #8: S__78716972
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78716972.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">ゴードン</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/18</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">11:30
+6/18         6/17</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">ゴードン永山2
+6716</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/15         >>
+,</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート               4115
+大当り回数                 20回
+初当り回数                  7回
+データ更新日時 :
+|            MW マイマエ
+合     i)     <
+ホールTOP       設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート                  897
+大当り確率              1/205
+最高出玉                   9970
+2025/06/18 11:08
+11 —t-sehn
+検索         マイリスト         ジャンプ
+77jp
+a</div>
+                        <h5>center:</h5>
+                        <div class="region-text">=O SK AF JAY 1 aes   le
+|大当り一覧 | Are
+1059番台 [4] パチ
+)
+最大値:960
+台     全体を見る     次(</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #9: S__78848018
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78848018.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">ンゲリオン</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/18</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">5:03
+6/18            6/17
+P新世紀エ</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">当り履歴    出玉詳
+6/16
+ヴァンゲリオン1 .…</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/15          >>
+Hse BREA</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート              3371
+大当り回数                 21回
+初当り回数                 6回
+データ更新日時 :
+Ka マイメモ
+ft     i)     <
+ホールTOP        設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート                           295
+大当り確率              1/160
+最高出玉                  16310
+2025/06/18 23:55
+リーに追加
+検索         マイリスト         ジャンプ
+77jp
+Se</div>
+                        <h5>center:</h5>
+                        <div class="region-text">トー
+| 大当り一覧| 出玉失
+_ eee SEE
+1096番台 / 【4】 パチ
+)
+最大値 : 9060
+台     全体を見る     Re</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #10: S__78716970
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78716970.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">ゴードン</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1715</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/18</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">11:30
+6/18         6/17</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">ゴードン永山2
+6716</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">taal 連日データ
+6/15         >>
+,</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート              4376
+大当り回数                 29回
+初当り回数                  7回
+データ更新日時 :
+|            MW マイマエ
+合     i)     <
+ホールTOP       設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート               178
+大当り確率           17150
+最高出玉             21300
+2025/06/18 11:08
+11 —t-sehn
+検索     マイリスト      ジャンプ
+77jp
+a</div>
+                        <h5>center:</h5>
+                        <div class="region-text">=O SK AF JAY 1 aes   le
+|大当り一覧 | Are
+1060番台 / [4] パチ
+)
+| 最大値:10570
+台     全体を見る     次(</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #11: S__78209168
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209168.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">マイページ</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:59
+elaa             elag</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">@
+|_ |
+マイページ
+楽園立川
+ムリイイ</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">め =
+閲覧履歴    メニュー</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text"><<前の台               生体<
+ホールTOP 設置機種 台番
+=|                      site7
+<          >         [
+——</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">と兄る      ROG>>
+検索     マイリスト      ジャンプ
+77jp                  (の
+]        aa</div>
+                        <h5>center:</h5>
+                        <div class="region-text">: ゼロから始める異世.…   ti
+AMO HH
+1146番台 / [4] パチ
+)
+最大値 : 5700</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #12: S__78209156
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209156.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">マイページ</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/13</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:47
+6/13           6/12</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">マイページ
+EEiky川
+当り履歴      出玉詳
+6/11</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/10          >></div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">合      i)      C
+ホールTOP 設置機種 台番
+=|         site7
+Te</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">検索 マイリスト ジャンプ
+7ZJjDp         の
+7 oe</div>
+                        <h5>center:</h5>
+                        <div class="region-text">P大海物語5 MTE2        a
+AMD HRI
+223988 / [4] パチ
+)
+最大値:24560
+台     全体を見る     次(</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #13: S__78209160
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209160.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">ムロム</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1713</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/12</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:53
+6713        6/12
+ムロム・ゼ</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">当り履歴      出玉詳
+6/11
+may i BOA Z Bett</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/10        >></div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート              3989
+大当り回数                 30回
+初当り回数                  6回
+データ更新日時 :
+| マイメモ
+ft     i)     <
+ホールTOP        設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート                           430
+大当り確率              17132
+最高出玉                  22060
+2025/06/13 20:39
+リーに追加
+検索         マイリスト         ジャンプ
+77Jjp
+a</div>
+                        <h5>center:</h5>
+                        <div class="region-text">ーー
+pauo—ee | wee
+|大当り一覧 。 出玉失
+1105番台 / 【4】パチ
+)
+| 最大値:7080
+台   全体を見る    次</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #14: S__78209174
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209174.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">マイページ</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/13</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">21:01
+6/13           6/12</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">マイページ
+楽園立川
+当り履歴      出玉詳
+6/11</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">BERE    メニュー
+ia) 連日データ
+6/10        >></div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">ft           @⑥            C
+ホールTOP 設置機種 OAS
+=|                      site7
+<           >          fi
+es</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">検索     マイリスト     ジャンプ
+7Zjp                (の
+]        aa        2</div>
+                        <h5>center:</h5>
+                        <div class="region-text">: ゼロから始める異世.…   5
+| 大当り一覧| 出玉
+es
+)
+| 最大値:18860
+台     全体を見る     Re</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #15: S__78209162
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209162.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">マイページ</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:55
+pian         ムリ4の</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">@
+|_ |
+マイページ
+楽園立川
+ムリイイ</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">め =
+閲覧履歴    メニュー</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text"><<前の台               生体<
+ホールTOP 設置機種 台番
+=|                      site7
+<          >         [
+——</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">と兄る      ROG>>
+検索     マイリスト      ジャンプ
+77jp                  (の
+]        aa</div>
+                        <h5>center:</h5>
+                        <div class="region-text">rs     Mi
+: ゼロから始める異世.…  ti
+| 大当り一覧 | eee
+1104番台 / [4] パチ
+)
+最大値 : 12700</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #16: S__78209166
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209166.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">メニュー</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/13</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:57
+6/13           6/12</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">楽園立川
+6/11</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">閲覧履歴    メニュー
+‘A     連日データ
+6/10        >></div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">ft           i )            C
+ホールTOP 設置機種 OAS
+=|                      site7
+く             >            [
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">検索 マイリスト ジャンプ
+7ZJjp                       の
+1 Co 議評</div>
+                        <h5>center:</h5>
+                        <div class="region-text">P大海物語5 MTE2       ti
+大当り一覧 | HEHE
+2230846 / 【4】 パチ
+)
+Ril: 1360
+台     全体を見る     次</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #17: S__78209158
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209158.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">ーーニーニーー</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/13</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:50
+|
+6/13    |    6/12
+eRe:
+FP</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">|
+6711   |
+15 td) S Bt...
+| 大当り一覧|.
+ーーニーニーー一ーー
+1 23</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">as
+6/10        >>
+横軸:稼動
+玉推移一覧
+—</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">ft           oe           C
+ホールTOP          設置機種           台番
+=|                      site7
+<         >        i
+Ce</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">検索        マイリスト        ジャンプ
+7Zjp                (の
+5       Mm</div>
+                        <h5>center:</h5>
+                        <div class="region-text">)
+)
+最大値 : 3540
+台        全体を見る        次
+ト        3886 スタート
+18回 大当り確率
+4回 最高出玉
+データ更新日時 : 2025/06/13 20:39</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #18: S__78209170
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209170.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">マイページ</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:59
+elaa             elag</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">@
+|_ |
+マイページ
+楽園立川
+ムリイイ</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">め =
+閲覧履歴    メニュー</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text"><<前の台               生体<
+ホールTOP 設置機種 台番
+=|                      site7
+<          >         [
+——</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">と兄る      ROG>>
+検索     マイリスト      ジャンプ
+77jp                  (の
+]        aa</div>
+                        <h5>center:</h5>
+                        <div class="region-text">: ゼロから始める異世.…   ti
+AMO HH
+10584 / [4] パチ
+)
+最大値:390</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #19: S__78209164
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209164.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">スタート</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1711</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/13</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:56
+出玉推移       大:
+6/13           6/12</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">楽園立川
+6/11</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/10          >>
+|  _._ |</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">果計スタート              5372
+大当り回数                47回
+初当り回数                  8回
+データ更新日時 :
+|             WW マイマキ
+合     i)     <
+ホールTOP       設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート                   555
+大当り確率              17114
+最高出玉                  24220
+2025/06/13 20:39
+1] —(-3Bhn
+検索         マイリスト         ジャンプ
+77jp
+Se</div>
+                        <h5>center:</h5>
+                        <div class="region-text">ーー CHA つら2ロロソ でやまだピー    に
+| 大当り一覧 a
+114664 / 【4】パチ
+)
+最大値 : 21020
+台     全体を見る      次|</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #20: S__78848014
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78848014.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">データ</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1133</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/18</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">5:00
+6/18            6/17</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">楽園立川
+6716</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">te) 日データ
+6/15         >>
+,</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート               4018
+大当り回数                 12回
+初当り回数                  6回
+データ更新日時 :
+|            MW マイマエ
+合     i)     <
+ホールTOP       設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート                   364
+大当り確率              11334
+最高出玉                  6630
+2025/06/18 23:33
+11 —t-sehn
+検索         マイリスト         ジャンプ
+77jp
+a</div>
+                        <h5>center:</h5>
+                        <div class="region-text">STA AVIAN VY /VELIAS    le
+235468 / 【4】 パチ
+)
+)
+台         全体を見る          次</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #21: S__78209088
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209088.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">ホール</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/13</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:11
+Mate      A:
+6/13         6/12
+P大:</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">ヨウ Re        吊玉主:
+6711
+生物語5 MTE2
+大当り一覧   上</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/10        >>
+横W:稼動|
+玉推移一臣</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">ft           e           C
+ホールTOP          設置機種           台番
+=|                      site7
+<         >        [
+a</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">検索        YTUAk        ジャンプ
+7Zjp                (の
+5       aa</div>
+                        <h5>center:</h5>
+                        <div class="region-text">70番台 / 【4】 パチ
+)
+)
+最大値 : 3340
+台    全体を見る   =次
+ト     4233 スタート
+27回 大当り確率
+9回 最高出玉
+データ重新日時 : 2025/06/13 20°10</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #22: S__78209128
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209128.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">ソコロリ</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/13</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:28
+6/13           6/12
+PX?</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">当り履歴        出玉詳
+6/11
+生物語5 MTE2
+大当り一覧| |</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">all 5G GED
+a
+6/10        >>
+横軸:稼動|
+H玉推移一覧</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">FO A SAN AST
+| neo
+| so
+site7</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">SYUSIIVOI TO とソコロリ
+em
+77jp</div>
+                        <h5>center:</h5>
+                        <div class="region-text">81番台 / 【4】 パチ
+)
+最大値 : 11430
+台    全体を見る    次
+ト     4423 スタート
+30回 大当り確率
+」      10回 最高出玉</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #23: S__78716957
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78716957.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">ンゲリオン</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/17</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">11:17
+6718            6/17
+P新世紀エ</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">6/16
+ヴァンゲリオン1 .…</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/15          >>
+Wiss eR</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート           3871
+大当り回数            19回
+初当り回数             8回
+データ更新日時 :
+|         ny
+|      a マイメモ
+|          =
+==
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート                   125
+大当り確率              1/203
+最高出玉                  9290
+2025/06/18 11:09
+リーに追加              |
+ストに追加              |
+77Jjp
+SS</div>
+                        <h5>center:</h5>
+                        <div class="region-text">=
+| 大当り一覧 HEHE
+2158番台 / 【4】 パチ
+)
+最大値 : 1170
+台     全体を見る     次</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #24: S__78848016
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78848016.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">スタート</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/18</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">5:02
+6/18         6/17</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">楽園アメ横店
+当り履歴      出玉詳
+6/16</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/15          >>
+|</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート              4267
+大当り回数                 19回
+DAO ER                 4回
+データ更新日時 :
+|             WW マイマエ
+tf     i )     C
+ホールTOP        設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート                           710
+大当り確率              1/224
+最高出玉                  10030
+2025/06/18 23:55
+1] —i-3etn              |
+検索         マイリスト         ジャンプ
+77jp
+Se</div>
+                        <h5>center:</h5>
+                        <div class="region-text">=o SF AS SAY 1し   にじ
+| 大当り一覧 ee
+)
+NS
+最大値:690
+台-  -全体を見る- -次</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #25: S__78848012
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78848012.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">スタート</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">1</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/18</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">4:59
+6/18            6/17</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">楽園立川
+6/16</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">all 5G &
+6/15          >>
+;©~—SCSC<S3;<+</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">累計スタート              3950
+大当り回数                 38回
+初当り回数                 13回
+データ更新日時 :
+|             ma ラインマエ
+ft     i)     <
+ホールTOP        設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート                           288
+大当り確率              1/103
+最高出玉                25130
+2025/06/18 23:33
+11 f>-se-hn
+検索         マイリスト         ジャンプ
+77Jjp
+ーーシクシクnm</div>
+                        <h5>center:</h5>
+                        <div class="region-text">| 大当り一臣 | HEH
+1104番台 / [4] パチ
+)
+最大値: 19020
+台     全体を見る     次</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #26: S__78209138
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78209138.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">ホール</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/13</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">20:37
+6/13     |     6/12
+PA}</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">|      6/11      |
+Bi 5 MTE2</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">6/10    |    >>
+横軸:稼動
+LERCH</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">合           @⑥
+ホールTOP 設置機種 OAS
+=|                      site7
+<         3        [
+De</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">ーー
+検索     マイリスト      ジャンプ
+7Zjp                (の
+]        aa</div>
+                        <h5>center:</h5>
+                        <div class="region-text">)
+)
+最大値 20340
+台    全体を見る    次
+ト     4567 スタート
+37回 大当り確率
+_      10回 最高出玉
+データ更新日時 : 2025/06/13 20:10</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocr-item">
+                <div class="ocr-header">
+                    #27: S__78848010
+                </div>
+                <div class="ocr-content">
+                    <img src="graphs/original/S__78848010.jpg" alt="元画像" class="original-image">
+                    
+                    <div class="parsed-data">
+                        <h4>抽出データ</h4>
+
+                        <div class="data-item">
+                            <span class="data-label">機種名:</span>
+                            <span class="data-value">データ</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">確率:</span>
+                            <span class="data-value">157</span>
+                        </div>
+                        <div class="data-item">
+                            <span class="data-label">日時:</span>
+                            <span class="data-value">6/18</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-regions">
+                        <h4>領域別テキスト</h4>
+
+                        <h5>top_left:</h5>
+                        <div class="region-text">4:59
+6/18         6/17</div>
+                        <h5>top_center:</h5>
+                        <div class="region-text">楽園立川
+6716</div>
+                        <h5>top_right:</h5>
+                        <div class="region-text">ia         連日データ
+6/15          >>
+, J</div>
+                        <h5>bottom_left:</h5>
+                        <div class="region-text">困計スタート               4409
+大当り回数                 28回
+初当り回数                 108
+データ更新日時 :
+|           ma ラン
+合     i )     <
+ホールTOP       設置機種         ae
+site7
+Fe</div>
+                        <h5>bottom_right:</h5>
+                        <div class="region-text">スタート           119
+大当り確率          157
+最高出玉              8410
+2025/06/18 23:33
+11   『ーハ上串 ロ
+検索     VTUAR      ジャンプ
+77jp
+シクnm</div>
+                        <h5>center:</h5>
+                        <div class="region-text">ほ科語SヘヘンヤルELIA4   ia
+_74O—B HEH
+ししにパーリ(| Oe
+2304番台 / [4] パチ
+)
+最大値 : 8140
+台     全体を見る     次|</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

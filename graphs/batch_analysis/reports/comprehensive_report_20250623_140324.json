@@ -1,0 +1,132 @@
+{
+  "report_timestamp": "2025-06-23T14:03:24.749510",
+  "total_images": 2,
+  "summary_statistics": {
+    "total_analyzed": 2,
+    "by_color": {
+      "pink": {
+        "count": 2,
+        "max_values": [
+          12240.0,
+          21120.0
+        ],
+        "min_values": [
+          -8280.0,
+          -2520.0
+        ],
+        "final_values": [
+          7680.0,
+          20640.0
+        ],
+        "ranges": [
+          20520.0,
+          23640.0
+        ],
+        "avg_max": 16680.0,
+        "avg_min": -5400.0,
+        "avg_final": 14160.0,
+        "avg_range": 22080.0
+      }
+    },
+    "overall": {
+      "max_values": [
+        12240.0,
+        21120.0
+      ],
+      "min_values": [
+        -8280.0,
+        -2520.0
+      ],
+      "final_values": [
+        7680.0,
+        20640.0
+      ],
+      "ranges": [
+        20520.0,
+        23640.0
+      ],
+      "avg_max": 16680.0,
+      "avg_min": -5400.0,
+      "avg_final": 14160.0,
+      "avg_range": 22080.0
+    }
+  },
+  "individual_results": [
+    {
+      "original_image": "S__78209128_graph_only.png",
+      "timestamp": "2025-06-23T14:03:24.412821",
+      "graph_data": {
+        "image": "S__78209128_graph_only",
+        "size": [
+          597,
+          500
+        ],
+        "zero_line": 260,
+        "colors_detected": [
+          "pink"
+        ],
+        "data_points": {
+          "pink": 434
+        }
+      },
+      "analysis": {
+        "pink": {
+          "max": {
+            "x": 332,
+            "y": 158,
+            "value": 12240.0
+          },
+          "min": {
+            "x": 111,
+            "y": 329,
+            "value": -8280.0
+          },
+          "final": {
+            "x": 433,
+            "y": 196,
+            "value": 7680.0
+          },
+          "zero_line": 250
+        }
+      }
+    },
+    {
+      "original_image": "S__78209138_graph_only.png",
+      "timestamp": "2025-06-23T14:03:24.533727",
+      "graph_data": {
+        "image": "S__78209138_graph_only",
+        "size": [
+          597,
+          500
+        ],
+        "zero_line": 260,
+        "colors_detected": [
+          "pink"
+        ],
+        "data_points": {
+          "pink": 420
+        }
+      },
+      "analysis": {
+        "pink": {
+          "max": {
+            "x": 411,
+            "y": 84,
+            "value": 21120.0
+          },
+          "min": {
+            "x": 38,
+            "y": 281,
+            "value": -2520.0
+          },
+          "final": {
+            "x": 419,
+            "y": 88,
+            "value": 20640.0
+          },
+          "zero_line": 250
+        }
+      }
+    }
+  ]
+}

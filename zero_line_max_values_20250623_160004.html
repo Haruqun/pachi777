@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 0ライン基準最大値抽出レポート</title>
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .result-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+        }
+        .success {
+            border-left: 5px solid #4ecdc4;
+        }
+        .failure {
+            border-left: 5px solid #ff6b6b;
+        }
+        .max-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4ecdc4;
+            margin: 15px 0;
+        }
+        .method-badge {
+            background: rgba(76, 175, 80, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 0ライン基準最大値抽出レポート</h1>
+            <p>0ラインからの相対位置による高精度テキスト抽出</p>
+            <p>作成日時: 2025年06月23日 16:00:04</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <h3>📊 総画像数</h3>
+                <div style="font-size: 2em;">27</div>
+            </div>
+            <div class="stat-card">
+                <h3>✅ 抽出成功</h3>
+                <div style="font-size: 2em;">17</div>
+            </div>
+            <div class="stat-card">
+                <h3>🎯 成功率</h3>
+                <div style="font-size: 2em;">63.0%</div>
+            </div>
+            <div class="stat-card">
+                <h3>🏆 最高値</h3>
+                <div style="font-size: 2em;">41,615</div>
+            </div>
+        </div>
+        
+        <h2>📋 画像別抽出結果</h2>
+        <div class="results-grid">
+
+            <div class="result-card success">
+                <h3>📷 S__78209136</h3>
+
+                <div class="max-value">
+                    52
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "52"</div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78716974</h3>
+
+                <div class="max-value">
+                    6
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "6"</div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78716960</h3>
+
+                <div class="max-value">
+                    152
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "00152"</div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78848008</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold; font-size: 1.2em;">
+                    ❌ 最大値検出失敗
+                </div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78848020</h3>
+
+                <div class="max-value">
+                    7
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "7"</div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78716962</h3>
+
+                <div class="max-value">
+                    1,615
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "1615"</div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209130</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold; font-size: 1.2em;">
+                    ❌ 最大値検出失敗
+                </div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78716972</h3>
+
+                <div class="max-value">
+                    1,661
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "1661"</div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78848018</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold; font-size: 1.2em;">
+                    ❌ 最大値検出失敗
+                </div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78716970</h3>
+
+                <div class="max-value">
+                    16,615
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "16615"</div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209168</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold; font-size: 1.2em;">
+                    ❌ 最大値検出失敗
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209156</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold; font-size: 1.2em;">
+                    ❌ 最大値検出失敗
+                </div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78209160</h3>
+
+                <div class="max-value">
+                    66
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "66"</div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78209174</h3>
+
+                <div class="max-value">
+                    7
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "7"</div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209162</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold; font-size: 1.2em;">
+                    ❌ 最大値検出失敗
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209166</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold; font-size: 1.2em;">
+                    ❌ 最大値検出失敗
+                </div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78209158</h3>
+
+                <div class="max-value">
+                    4
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "4"</div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209170</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold; font-size: 1.2em;">
+                    ❌ 最大値検出失敗
+                </div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78209164</h3>
+
+                <div class="max-value">
+                    6,110
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "6110"</div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78848014</h3>
+
+                <div class="max-value">
+                    41,615
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "41615"</div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78209088</h3>
+
+                <div class="max-value">
+                    52
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "52"</div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78209128</h3>
+
+                <div class="max-value">
+                    2
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "2"</div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78716957</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold; font-size: 1.2em;">
+                    ❌ 最大値検出失敗
+                </div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78848016</h3>
+
+                <div class="max-value">
+                    1,615
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "1615"</div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78848012</h3>
+
+                <div class="max-value">
+                    5
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "5"</div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78209138</h3>
+
+                <div class="max-value">
+                    4
+                    <span class="method-badge">0ライン基準</span>
+                </div>
+                <div>検出テキスト: "4"</div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78848010</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold; font-size: 1.2em;">
+                    ❌ 最大値検出失敗
+                </div>
+</div>
+        </div>
+    </div>
+</body>
+</html>

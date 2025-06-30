@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📋 テキスト最大値抽出レポート</title>
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .result-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+        }
+        .success {
+            border-left: 5px solid #4ecdc4;
+        }
+        .failure {
+            border-left: 5px solid #ff6b6b;
+        }
+        .max-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #4ecdc4;
+            margin: 10px 0;
+        }
+        .stats-detail {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        .stats-detail div {
+            margin: 5px 0;
+        }
+        .ocr-text {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.8em;
+            margin-top: 10px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 パチンコ画面テキスト最大値抽出レポート</h1>
+            <p>OCRによる画面下部テキスト解析結果</p>
+            <p>作成日時: 2025年06月23日 15:57:04</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <h3>📊 総画像数</h3>
+                <div style="font-size: 2em;">27</div>
+            </div>
+            <div class="stat-card">
+                <h3>✅ 抽出成功</h3>
+                <div style="font-size: 2em;">3</div>
+            </div>
+            <div class="stat-card">
+                <h3>🎯 成功率</h3>
+                <div style="font-size: 2em;">11.1%</div>
+            </div>
+            <div class="stat-card">
+                <h3>🏆 最高値</h3>
+                <div style="font-size: 2em;">12,700</div>
+            </div>
+        </div>
+        
+        <h2>📋 画像別テキスト抽出結果</h2>
+        <div class="results-grid">
+
+            <div class="result-card failure">
+                <h3>📷 S__78209136</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    累計スタート         3940 スタート            116
+大当り回数          20回 大当り確率         1/197
+初当り回数 、       6回 最高出玉       14150
+データダタ更新日時 : 2025/06/13 20:10
+KY マイメモリーに追加
+記 マイリストに追加
+site777.jp
+
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78716974</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<有前の台           全体を見る           次の台>>
+累計スタート       3438 スタート          197
+大当り回数         17回 大当り確率       1/202
+初当り回数         3回 最高出玉        17160
+データ更新日時 : 2025/06/18 11:08
+th    i    Q    oh    て
+ホール...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78716960</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    ゃでHロロマソン ロロ              ーー の フロ ane              ソン[コー
+累計スタート        4348 スタート          157
+大当り回数         28回 大当り確率        1/155
+初当り回数        11回 最高出玉         17100
+データ更新日時 : 2025/06/18 11:09
+|      ...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78848008</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<前の台          全体を見る           次の台>>
+累計スタート              3489 スタート                   351
+大当り回数         26回 大当り確率        1/134
+初当り回数              12回 最高出玉                16500
+データダ更新日時 : 2025/06/18 22:...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78848020</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<前の台          全体を見る          次の台>>
+果計スタート        5315 スタート           202
+大当り回数         35回 大当り確率        1/151
+初当り回数             10回 最高出玉               23460
+データ更新日時 : 2025/06/18 23:55
+|            BR...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78716962</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    累計スタート        4263 スタート          368
+大当り回数         25回 大当り確率        1/170
+初当り回数                     7回 最高出玉                   20340
+データ更新日時 : 2025/06/18 11:09
+|     My マイメモリーに追加     |
+|              V...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209130</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    累計スタート        4120 スタート          564
+大当り回数            21回 大当り確率          1/196
+初当り回数           8回 最高出玉            15430
+データダタ更新日時 : 2025/06/13 20:10
+|        MY マイメモリーに追加        |
+|        言 マイリストに追加 ...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78716972</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<前の台          全体を見る          次の台>>
+累計スタート        4115 スタート          897
+大当り回数         20回 大当り確率        1/205
+初当り回数          7回 最高出玉         9970
+データ更新日時 : 2025/06/18 11:08
+|        a ew 2 aN = = ee b...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78848018</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    累計スタート              3371 スタート                  295
+大当り回数         21回 大当り確率        1/160
+初当り回数               6回 最高出玉                16310
+データダタ更新日時 : 2025/06/18 23:55
+Ky マイメモリーに追加     |
+|              ...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78716970</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<前の台          全体を見る          次の台>>
+累計スタート        4376 スタート           178
+大当り回数         29回 大当り確率        1/150
+初当り回数                     7回 最高出玉                   21300
+データ更新日時 : 2025/06/18 11:08
+|   ...
+                </div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78209168</h3>
+
+                <div class="max-value">最大値: 5,700</div>
+                <div class="stats-detail">
+                    <h4>📈 抽出された統計情報:</h4>
+<div>その他の統計情報は検出されませんでした</div></div>
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    ae
+30,000       最大値 : 5700
+<<前の台          全体を見る          次の同>>
+th             oO             Q             =~            "¢
+ホールTOP        設置機種          台番検索        マイリスト         ジンジア4
+=               ...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209156</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<前の台            全体を見る            RD Be>
+tt               Oo               Q               =~               "
+ホールTOP         設置機種          台番検索         マイリスト          ジンジア4
+=                         s...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209160</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    くく月 (ウー           FAC RO           (ソロッッ
+累計スタート        3989 スタート          430
+大当り回数         30回 大当り確率        1/132
+初当り回数                     6回 最高出玉                   22060
+データ更新日時 : 2025/06/13 20:39
+...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209174</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<前の台      全体を見る      次の台>>
+th               i               Q               =~               "¢
+ホールTOP         設置機種          台番検索         マイリスト          ジャンプ
+=                         site777.jp     ...
+                </div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78209162</h3>
+
+                <div class="max-value">最大値: 12,700</div>
+                <div class="stats-detail">
+                    <h4>📈 抽出された統計情報:</h4>
+<div>その他の統計情報は検出されませんでした</div></div>
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    ー-30.000
+最大値 : 12700
+<<前の台          全体を見る          次の同>>
+th             oO             Q             =~            "¢
+ホールTOP        設置機種          台番検索        マイリスト         ジンジア4
+=                     ...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209166</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<前の台            全体を見る            次の台>>
+ft               ひ               Q               “2               て
+ホールTOP         設置機種          台番検索         マイリスト          シヤシシ/
+=                         sit...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209158</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    初当り回数                 4回 最高出玉              11560
+データ更新日時 : 2025/06/13 20:39
+tt             i             Q             =~             go
+ホールTOP         設置機種          台番検索         マイリスト          ジンジア4
+...
+                </div>
+</div>
+            <div class="result-card success">
+                <h3>📷 S__78209170</h3>
+
+                <div class="max-value">最大値: 390</div>
+                <div class="stats-detail">
+                    <h4>📈 抽出された統計情報:</h4>
+<div>その他の統計情報は検出されませんでした</div></div>
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    ー-30.000
+最大値 : 390
+<<前の台          全体を見る          次の同>>
+th           oO           Q           =~          "¢
+ホールTOP         設置機種          台番検索         マイリスト          ジンジア4
+=                     site777...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209164</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<前の台     全体を見る     次の台>>
+累計スタート               5372 スタート                    555
+大当り回数         47回 大当り確率        1/114
+初当り回数                     8回 最高出玉                   24220
+データ更新日時 : 2025/06/13 20:3...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78848014</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<前の台        全体を見る        次の台>>
+累計スタート     4018 スタート      364
+大当り回数       12回 大当り確率     1/334
+初当り回数       6回 最高出玉      6630
+データ更新日時 : 2025/06/18 23:33
+|        MY ライマエ1ロコーー「ーバ戸才T        |
+th          ...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209088</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    大当り回数        27回 大当り確率        1/156
+初当り回数                     9回 最高出玉                   12470
+データ更新日時 : 2025/06/13 20:10
+th     Li     Q     oe    "
+ホールTOP         設置機種          BERR         aj Zs    ...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209128</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    PRAlLA SYP             S449 AY,                 149
+大当り回数         30回 大当り確率        1/147
+初当り回数         10回 mews         21350
+データ更新日時 : 2025/06/13 20:10
+Ky マイメモリーに追加       |
+or マイリストに追加
+遊技広場に投稿     |
+...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78716957</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    累計スタート          3871 スタート             125
+大当り回数         19回 大当り確率       1/203
+初当り回数                      8回 最高出玉                    9290
+データ更新日時 : 2025/06/18 11:09
+|            My マイメモリーに追加           ...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78848016</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<前の台          全体を見る          次の台>>
+累計スタート        4267 スタート          710
+大当り回数         19回 大当り確率        1/224
+初当り回数                     4回 最高出玉                   10030
+データ更新日時 : 2025/06/18 23:55
+|    ...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78848012</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<有前の台          全体を見る          次の台>>
+累計スタート              3950 スタート                  288
+大当り回数         38回 大当り確率        1/103
+初当り回数         13回 最高出玉          25130
+データダタ更新日時 : 2025/06/18 23:33
+|       ...
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78209138</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    ホールTOP         設置機種           台番検索         マイリスト          ジャング
+=                         site777jp                         (4の
+<        u   aa
+
+                </div>
+</div>
+            <div class="result-card failure">
+                <h3>📷 S__78848010</h3>
+
+                <div style="color: #ff6b6b; font-weight: bold;">❌ 最大値の検出に失敗しました</div>
+
+                <div class="ocr-text">
+                    <strong>OCR生テキスト:</strong><br>
+                    <<前の台          全体を見る          次の台>>
+果計スタート        4409 スタート           119
+大当り回数         28回 大当り確率       1/157
+初当り回数              10回 最高出玉                8410
+データダタ更新日時 : 2025/06/18 23:33
+|            ...
+                </div>
+</div>
+        </div>
+    </div>
+</body>
+</html>

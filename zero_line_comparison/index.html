@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ゼロライン検出＆スケールテスト比較 - 複数画像比較ビューワー</title>
+    <link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+    <header>
+        <h1>🔍 ゼロライン検出＆スケールテスト比較</h1>
+        <div class="controls">
+            <button onclick="toggleSync()" class="btn btn-primary">
+                <span id="sync-icon">🔗</span> 同期: <span id="sync-status">ON</span>
+            </button>
+            <button onclick="resetZoom()" class="btn">🔄 ズームリセット</button>
+            <button onclick="toggleOverlay()" class="btn">
+                <span id="overlay-icon">👁️</span> オーバーレイ: <span id="overlay-status">OFF</span>
+            </button>
+        </div>
+    </header>
+    
+    <main>
+        <div class="image-grid" id="imageGrid">
+            <!-- 画像セットはJavaScriptで動的に生成 -->
+        </div>
+    </main>
+    
+    <aside class="sidebar">
+        <h2>画像リスト</h2>
+        <div id="imageList" class="image-list">
+            <!-- 画像リストはJavaScriptで動的に生成 -->
+        </div>
+        
+        <h2>比較モード</h2>
+        <div class="comparison-modes">
+            <label>
+                <input type="radio" name="mode" value="grid" checked onchange="changeMode('grid')">
+                グリッド表示
+            </label>
+            <label>
+                <input type="radio" name="mode" value="slider" onchange="changeMode('slider')">
+                スライダー比較
+            </label>
+            <label>
+                <input type="radio" name="mode" value="diff" onchange="changeMode('diff')">
+                差分表示
+            </label>
+        </div>
+        
+        <h2>詳細データ</h2>
+        <div id="detailData" class="detail-data">
+            <p>画像を選択してください</p>
+        </div>
+    </aside>
+    
+    <script src="viewer.js"></script>
+</body>
+</html>
