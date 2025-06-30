@@ -71,56 +71,94 @@ class WebCompatibleAnalyzer:
             pass
     
     def crop_graph_area(self, image_path):
-        """グラフ領域の切り抜き"""
+        """グラフ領域の切り抜き（production版と同じロジック）"""
         img = cv2.imread(image_path)
         if img is None:
+            print(f"Error: Could not read image {image_path}")
             return None
             
         height, width = img.shape[:2]
-        
-        # オレンジ色のバーを検出してグラフ領域を特定
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        orange_lower = np.array([10, 100, 100])
-        orange_upper = np.array([25, 255, 255])
-        mask = cv2.inRange(hsv, orange_lower, orange_upper)
         
-        # Y方向のプロジェクション
-        y_projection = np.sum(mask, axis=1)
+        # 1. オレンジバーを検出
+        orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
+        orange_bottom = 0
         
-        # オレンジバーの位置を検出
-        threshold = width * 0.3
-        orange_bars = []
-        in_bar = False
-        start_y = 0
+        # オレンジバーの最下端を検出
+        for y in range(height//2):
+            if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
+                orange_bottom = y
         
-        for y, count in enumerate(y_projection):
-            if count > threshold and not in_bar:
-                in_bar = True
-                start_y = y
-            elif count <= threshold and in_bar:
-                in_bar = False
-                if y - start_y > 5:
-                    orange_bars.append((start_y, y))
+        if orange_bottom == 0:
+            print(f"Warning: Could not detect orange bar in {image_path}")
+            # デフォルト値を使用
+            orange_bottom = int(height * 0.1)
         
-        if len(orange_bars) >= 2:
-            top_bar = orange_bars[0]
-            bottom_bar = orange_bars[-1]
+        # 2. Y軸ラベル領域を推定
+        y_label_top = orange_bottom + 50  # デフォルト
+        search_area = gray[orange_bottom+20:min(orange_bottom+200, height), :width//3]
+        
+        if search_area.size > 0:
+            for y in range(search_area.shape[0]):
+                row_variance = np.var(search_area[y, :])
+                if row_variance > 500:  # テキストがある
+                    y_label_top = orange_bottom + 20 + y
+                    break
+        
+        # 3. グラフの境界を定義（固定オフセット）
+        graph_top = y_label_top + 40 + 30 - 200
+        graph_left = 90 + 30 + 2  # 122px
+        graph_right = width - 90 + 40 - 100  # width - 150px
+        
+        # 境界チェック
+        graph_top = max(0, graph_top)
+        graph_left = max(0, graph_left)
+        graph_right = min(width, graph_right)
+        
+        # 4. ゼロラインを検出
+        if graph_top < height and graph_right > graph_left:
+            graph_region = gray[graph_top:min(graph_top+600, height), graph_left:graph_right]
             
-            # グラフ領域の切り抜き（最適サイズ: 689×558px）
-            crop_top = top_bar[1] + 10
-            crop_bottom = bottom_bar[0] - 10
-            crop_left = int(width * 0.15)
-            crop_right = int(width * 0.85)
-            
-            cropped = img[crop_top:crop_bottom, crop_left:crop_right]
-            
-            # 最適サイズにリサイズ
-            target_width = 689
-            target_height = 558
-            cropped = cv2.resize(cropped, (target_width, target_height), interpolation=cv2.INTER_CUBIC)
-            
-            return cropped
+            best_zero_y = 250  # デフォルト
+            if graph_region.size > 0:
+                best_score = -1
+                
+                for y in range(100, min(500, graph_region.shape[0]-100)):
+                    if y < graph_region.shape[0]:
+                        row = graph_region[y, :]
+                        darkness = 1.0 - (np.mean(row) / 255.0)
+                        uniformity = 1.0 - (np.std(row) / 128.0)
+                        score = darkness * 0.5 + uniformity * 0.5
+                        
+                        if score > best_score:
+                            best_score = score
+                            best_zero_y = y
+        else:
+            best_zero_y = 250
         
+        # 5. グラフの下端を決定（ゼロラインから+250px）
+        graph_bottom = graph_top + best_zero_y + 250
+        graph_bottom = min(graph_bottom, height)
+        
+        # 6. 切り抜き
+        if graph_bottom > graph_top and graph_right > graph_left:
+            cropped = img[graph_top:graph_bottom, graph_left:graph_right]
+            
+            # サイズチェック
+            if cropped.shape[0] > 10 and cropped.shape[1] > 10:
+                # 最適サイズ（689×558px）にリサイズ
+                target_width = 689
+                target_height = 558
+                cropped = cv2.resize(cropped, (target_width, target_height), interpolation=cv2.INTER_CUBIC)
+                
+                # ゼロライン位置を更新（リサイズ後）
+                resize_ratio = target_height / (graph_bottom - graph_top)
+                self.zero_y = int(best_zero_y * resize_ratio)
+                
+                return cropped
+        
+        print(f"Warning: Invalid crop dimensions for {image_path}")
         return None
     
     def detect_zero_line(self, img):
@@ -396,10 +434,37 @@ class WebCompatibleAnalyzer:
             # グラフ領域の切り抜き
             cropped = self.crop_graph_area(image_path)
             if cropped is None:
-                return None
+                print(f"Warning: Could not crop graph area from {image_path}")
+                # エラー情報を含む結果を返す
+                error_result = {
+                    'filename': os.path.basename(image_path),
+                    'error': 'グラフ領域の検出に失敗',
+                    'analysis': {
+                        'max_value': 0,
+                        'max_index': 0,
+                        'min_value': 0,
+                        'min_index': 0,
+                        'first_hit_index': -1,
+                        'first_hit_value': 0,
+                        'final_value': 0
+                    },
+                    'data_points': 0,
+                    'visualization': None
+                }
+                return error_result
             
             # データ抽出
             values = self.extract_graph_data(cropped)
+            if not values or len(values) < 10:
+                print(f"Warning: Insufficient data extracted from {image_path}")
+                error_result = {
+                    'filename': os.path.basename(image_path),
+                    'error': 'データ抽出が不十分',
+                    'analysis': self.analyze_values(values),
+                    'data_points': len(values) if values else 0,
+                    'visualization': None
+                }
+                return error_result
             
             # 分析
             analysis = self.analyze_values(values)
@@ -414,7 +479,8 @@ class WebCompatibleAnalyzer:
                 'filename': os.path.basename(image_path),
                 'analysis': analysis,
                 'data_points': len(values),
-                'visualization': os.path.basename(vis_path)
+                'visualization': os.path.basename(vis_path),
+                'error': None
             }
             
             self.results.append(result)
@@ -422,7 +488,26 @@ class WebCompatibleAnalyzer:
             
         except Exception as e:
             print(f"Error processing {image_path}: {str(e)}")
-            return None
+            import traceback
+            traceback.print_exc()
+            
+            # エラー情報を含む結果を返す
+            error_result = {
+                'filename': os.path.basename(image_path),
+                'error': f'処理エラー: {str(e)}',
+                'analysis': {
+                    'max_value': 0,
+                    'max_index': 0,
+                    'min_value': 0,
+                    'min_index': 0,
+                    'first_hit_index': -1,
+                    'first_hit_value': 0,
+                    'final_value': 0
+                },
+                'data_points': 0,
+                'visualization': None
+            }
+            return error_result
     
     def generate_html_report(self, output_path):
         """HTMLレポート生成"""

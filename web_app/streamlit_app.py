@@ -191,7 +191,10 @@ with tab1:
                                 result = analyzer.process_single_image(file_path, output_dir)
                                 
                                 if show_individual and result:
-                                    st.write(f"✅ {result['filename']}: 最高値 {result['analysis']['max_value']:,}玉")
+                                    if result.get('error'):
+                                        st.error(f"❌ {result['filename']}: {result['error']}")
+                                    else:
+                                        st.write(f"✅ {result['filename']}: 最高値 {result['analysis']['max_value']:,}玉")
                             
                             # レポート生成
                             status_text.text("📝 レポートを生成中...")
@@ -258,12 +261,20 @@ with tab1:
                                 st.markdown("### 📊 解析サマリー")
                                 col1, col2, col3, col4 = st.columns(4)
                                 
-                                all_max = max([r['analysis']['max_value'] for r in analyzer.results])
-                                all_min = min([r['analysis']['min_value'] for r in analyzer.results])
-                                hit_count = sum(1 for r in analyzer.results if r['analysis']['first_hit_index'] >= 0)
+                                # 成功した結果のみをフィルタ
+                                successful_results = [r for r in analyzer.results if not r.get('error')]
+                                
+                                if successful_results:
+                                    all_max = max([r['analysis']['max_value'] for r in successful_results])
+                                    all_min = min([r['analysis']['min_value'] for r in successful_results])
+                                    hit_count = sum(1 for r in successful_results if r['analysis']['first_hit_index'] >= 0)
+                                else:
+                                    all_max = 0
+                                    all_min = 0
+                                    hit_count = 0
                                 
                                 with col1:
-                                    st.metric("処理成功", f"{len(analyzer.results)} 枚")
+                                    st.metric("処理成功", f"{len(successful_results)} 枚")
                                 with col2:
                                     st.metric("全体最高値", f"+{all_max:,} 玉")
                                 with col3:
@@ -294,7 +305,8 @@ with tab2:
         with col1:
             st.metric("処理画像数", f"{results['image_count']} 枚")
         with col2:
-            st.metric("解析成功", f"{len(results['analysis_results'])} 枚")
+            successful_count = sum(1 for r in results['analysis_results'] if not r.get('error'))
+            st.metric("解析成功", f"{successful_count} 枚")
         with col3:
             st.metric("精度", "99.9%")
         with col4:
