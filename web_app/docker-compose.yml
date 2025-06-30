@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # Streamlit版
+  streamlit-app:
+    build:
+      context: ..
+      dockerfile: web_app/Dockerfile
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../production:/app/production:ro
+      - ../graphs:/app/graphs:ro
+      - ./reports:/app/reports
+    environment:
+      - PYTHONUNBUFFERED=1
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_FILE_WATCHER_TYPE=none
+    restart: unless-stopped
+    
+  # Flask版（軽量API）
+  flask-app:
+    build:
+      context: ..
+      dockerfile: web_app/Dockerfile.flask
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../production:/app/production:ro
+      - ./uploads:/app/uploads
+      - ./reports:/app/reports
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+  # Nginx（リバースプロキシ）
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - streamlit-app
+      - flask-app
+    restart: unless-stopped
