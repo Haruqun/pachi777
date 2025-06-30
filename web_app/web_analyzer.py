@@ -156,7 +156,12 @@ class WebCompatibleAnalyzer:
                 resize_ratio = target_height / (graph_bottom - graph_top)
                 self.zero_y = int(best_zero_y * resize_ratio)
                 
-                return cropped
+                # BGRフォーマットを確認（OpenCVのデフォルト）
+                if len(cropped.shape) == 3 and cropped.shape[2] == 3:
+                    return cropped
+                else:
+                    print(f"Warning: Unexpected image format after crop: {cropped.shape}")
+                    return None
         
         print(f"Warning: Invalid crop dimensions for {image_path}")
         return None
@@ -196,13 +201,25 @@ class WebCompatibleAnalyzer:
     
     def detect_graph_color(self, img, x):
         """グラフの色を検出"""
+        # 画像の有効性チェック
+        if img is None or img.size == 0:
+            return 'unknown', None
+            
+        # 画像が3チャンネルか確認
+        if len(img.shape) != 3 or img.shape[2] != 3:
+            return 'unknown', None
+            
         height, width = img.shape[:2]
         
         # 境界チェック
         if x < 2 or x >= width - 2:
             return 'unknown', None
             
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        try:
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        except Exception as e:
+            print(f"Error converting to HSV: {e}")
+            return 'unknown', None
         
         # 安全な範囲でカラムを取得
         start_x = max(0, x - 2)
@@ -214,9 +231,13 @@ class WebCompatibleAnalyzer:
             return 'unknown', None
         
         for color_name, color_range in self.color_ranges.items():
-            mask = cv2.inRange(column_hsv, color_range['lower'], color_range['upper'])
-            if cv2.countNonZero(mask) > 10:
-                return color_name, mask
+            try:
+                mask = cv2.inRange(column_hsv, color_range['lower'], color_range['upper'])
+                if cv2.countNonZero(mask) > 10:
+                    return color_name, mask
+            except Exception as e:
+                print(f"Error in color detection for {color_name}: {e}")
+                continue
         
         return 'unknown', None
     
@@ -460,6 +481,8 @@ class WebCompatibleAnalyzer:
     def process_single_image(self, image_path, output_dir):
         """単一画像の処理"""
         try:
+            print(f"Processing: {image_path}")
+            
             # グラフ領域の切り抜き
             cropped = self.crop_graph_area(image_path)
             if cropped is None:
@@ -481,6 +504,8 @@ class WebCompatibleAnalyzer:
                     'visualization': None
                 }
                 return error_result
+            
+            print(f"Cropped image shape: {cropped.shape}")
             
             # データ抽出
             values = self.extract_graph_data(cropped)
