@@ -196,10 +196,22 @@ class WebCompatibleAnalyzer:
     
     def detect_graph_color(self, img, x):
         """グラフの色を検出"""
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        height = img.shape[0]
+        height, width = img.shape[:2]
         
-        column_hsv = hsv[:, x-2:x+3, :]
+        # 境界チェック
+        if x < 2 or x >= width - 2:
+            return 'unknown', None
+            
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        
+        # 安全な範囲でカラムを取得
+        start_x = max(0, x - 2)
+        end_x = min(width, x + 3)
+        column_hsv = hsv[:, start_x:end_x, :]
+        
+        # カラムが空でないことを確認
+        if column_hsv.size == 0:
+            return 'unknown', None
         
         for color_name, color_range in self.color_ranges.items():
             mask = cv2.inRange(column_hsv, color_range['lower'], color_range['upper'])
@@ -210,25 +222,42 @@ class WebCompatibleAnalyzer:
     
     def extract_graph_data(self, img):
         """グラフデータの抽出"""
+        if img is None or img.size == 0:
+            return []
+            
         height, width = img.shape[:2]
+        
+        # サイズチェック
+        if width < 10 or height < 10:
+            return []
         
         # 0ライン検出
         detected_zero = self.detect_zero_line(img)
         if detected_zero != self.zero_y:
             self.zero_y = detected_zero
-            self.scale = 30000 / (self.zero_y - self.target_30k_y)
+            self.scale = 30000 / max(1, (self.zero_y - self.target_30k_y))
         
         # データ抽出
         values = []
-        for x in range(0, width, 5):  # 5ピクセルおきにサンプリング
+        step = max(1, width // 200)  # 最大200点程度にサンプリング
+        
+        for x in range(0, width, step):
+            if x >= width:
+                break
+                
             color_name, mask = self.detect_graph_color(img, x)
             
-            if mask is not None:
-                y_coords = np.where(mask[:, mask.shape[1]//2] > 0)[0]
-                if len(y_coords) > 0:
-                    graph_y = int(np.mean(y_coords))
-                    value = (self.zero_y - graph_y) * self.scale
-                    values.append(value)
+            if mask is not None and mask.size > 0:
+                # マスクの中央列を安全に取得
+                col_idx = min(mask.shape[1]//2, mask.shape[1]-1)
+                if col_idx >= 0 and col_idx < mask.shape[1]:
+                    y_coords = np.where(mask[:, col_idx] > 0)[0]
+                    if len(y_coords) > 0:
+                        graph_y = int(np.mean(y_coords))
+                        value = (self.zero_y - graph_y) * self.scale
+                        values.append(value)
+                    else:
+                        values.append(0)
                 else:
                     values.append(0)
             else:
