@@ -242,15 +242,15 @@ class WebCompatibleAnalyzer:
         return 'unknown', None
     
     def extract_graph_data(self, img):
-        """グラフデータの抽出"""
+        """グラフデータの抽出（production版と同じロジック）"""
         if img is None or img.size == 0:
-            return []
+            return [], "なし", self.zero_y
             
         height, width = img.shape[:2]
         
         # サイズチェック
         if width < 10 or height < 10:
-            return []
+            return [], "なし", self.zero_y
         
         # 0ライン検出
         detected_zero = self.detect_zero_line(img)
@@ -258,37 +258,45 @@ class WebCompatibleAnalyzer:
             self.zero_y = detected_zero
             self.scale = 30000 / max(1, (self.zero_y - self.target_30k_y))
         
-        # データ抽出
-        values = []
-        step = max(1, width // 200)  # 最大200点程度にサンプリング
+        # HSV変換
+        try:
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        except:
+            return [], "なし", detected_zero
         
-        for x in range(0, width, step):
-            if x >= width:
-                break
+        best_result = []
+        best_color = "なし"
+        max_points = 0
+        
+        # 各色でデータ抽出を試みる
+        for color_name, color_range in self.color_ranges.items():
+            try:
+                mask = cv2.inRange(hsv, color_range['lower'], color_range['upper'])
                 
-            color_name, mask = self.detect_graph_color(img, x)
-            
-            if mask is not None and mask.size > 0:
-                # マスクの中央列を安全に取得
-                col_idx = min(mask.shape[1]//2, mask.shape[1]-1)
-                if col_idx >= 0 and col_idx < mask.shape[1]:
-                    y_coords = np.where(mask[:, col_idx] > 0)[0]
-                    if len(y_coords) > 0:
-                        graph_y = int(np.mean(y_coords))
-                        value = (self.zero_y - graph_y) * self.scale
-                        values.append(value)
-                    else:
-                        values.append(0)
-                else:
-                    values.append(0)
-            else:
-                values.append(0)
+                data_points = []
+                for x in range(0, width, 2):  # production版と同じ2ピクセルステップ
+                    col_mask = mask[:, x]
+                    colored_pixels = np.where(col_mask > 0)[0]
+                    
+                    if len(colored_pixels) > 0:
+                        avg_y = np.mean(colored_pixels)
+                        value = (detected_zero - avg_y) * self.scale
+                        # -30000から30000の範囲にクリップ
+                        value = max(-30000, min(30000, value))
+                        data_points.append((x, value))
+                
+                if len(data_points) > max_points:
+                    max_points = len(data_points)
+                    best_result = data_points
+                    best_color = color_name
+            except:
+                continue
         
-        return values
+        return best_result, best_color, detected_zero
     
-    def analyze_values(self, values):
-        """値の分析"""
-        if not values:
+    def analyze_values(self, data_points):
+        """値の分析（data_pointsは(x, value)のタプルリスト）"""
+        if not data_points:
             return {
                 'max_value': 0,
                 'max_index': 0,
@@ -298,6 +306,9 @@ class WebCompatibleAnalyzer:
                 'first_hit_value': 0,
                 'final_value': 0
             }
+        
+        # タプルから値のリストを抽出
+        values = [p[1] for p in data_points]
         
         # 最大値・最小値
         max_val = max(values)
@@ -371,40 +382,40 @@ class WebCompatibleAnalyzer:
             'final_value': int(current_val)
         }
     
-    def create_analysis_image(self, cropped_img, values, analysis, output_path):
-        """解析結果の可視化画像作成（グリッドライン付き）"""
+    def create_analysis_image(self, cropped_img, data_points, detected_color, detected_zero, analysis, output_path):
+        """解析結果の可視化画像作成（production版と同じオーバーレイ形式）"""
+        if not data_points:
+            return
+            
         height, width = cropped_img.shape[:2]
+        img_rgb = cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB)
         
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12), gridspec_kw={'height_ratios': [3, 2]})
+        # production版と同じく1枚の画像で表示
+        fig, ax = plt.subplots(figsize=(20, 14))
+        ax.imshow(img_rgb)
         
-        # グラフ画像表示（グリッドライン付き）
-        ax1.imshow(cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB))
-        ax1.set_title('グラフ画像（解析グリッド付き）', fontsize=16)
+        # 0ライン（太く明確に）
+        ax.axhline(y=detected_zero, color='#2C3E50', linewidth=6, 
+                  label=f'基準ライン (0)', alpha=0.9, linestyle='-')
         
-        # グリッドラインを描画
-        # 0ライン
-        ax1.axhline(y=self.zero_y, color='red', linewidth=3, alpha=0.8, label='0ライン')
-        
-        # ±30,000ライン（1px上調整）
-        plus_30k_y = self.zero_y - (30000 / self.scale) - 1
-        minus_30k_y = self.zero_y + (30000 / self.scale) - 1
-        if 0 <= plus_30k_y <= height:
-            ax1.axhline(y=plus_30k_y, color='#E74C3C', linewidth=2.5, 
-                       label='+30,000', alpha=0.85, linestyle='--')
-        if 0 <= minus_30k_y <= height:
-            ax1.axhline(y=minus_30k_y, color='#E74C3C', linewidth=2.5, 
-                       label='-30,000', alpha=0.85, linestyle='--')
+        # ±30,000ライン（1px上方向に調整）
+        ax.axhline(y=self.target_30k_y - 1, color='#E74C3C', linewidth=4, 
+                  label='+30,000', alpha=0.85, linestyle='--')
+        minus_30k_y = detected_zero + (30000 / self.scale) - 1
+        if minus_30k_y <= height:
+            ax.axhline(y=minus_30k_y, color='#E74C3C', linewidth=4, 
+                      label='-30,000', alpha=0.85, linestyle='--')
         
         # 補助グリッドライン
         grid_values = [25000, 20000, 15000, 10000, 5000]
         for value in grid_values:
-            plus_y = self.zero_y - (value / self.scale)
-            minus_y = self.zero_y + (value / self.scale)
+            plus_y = detected_zero - (value / self.scale)
+            minus_y = detected_zero + (value / self.scale)
             
-            # グリッドライン個別調整（production版と同じ）
+            # グリッドライン個別調整
             if value == 20000:
-                plus_adjustment = -1  # +20000ラインは2px上方向に調整
-                minus_adjustment = 1  # -20000ラインは2px下方向に調整
+                plus_adjustment = -1
+                minus_adjustment = 1
             else:
                 plus_adjustment = 0
                 minus_adjustment = 0
@@ -415,65 +426,57 @@ class WebCompatibleAnalyzer:
             linewidth = 2 if value >= 20000 else 1
             
             if 0 <= plus_y <= height:
-                ax1.axhline(y=plus_y, color='#3498DB', linewidth=linewidth, 
+                ax.axhline(y=plus_y, color='#3498DB', linewidth=linewidth, 
                           alpha=alpha, linestyle=':')
             
             if 0 <= minus_y <= height:
-                ax1.axhline(y=minus_y, color='#3498DB', linewidth=linewidth, 
+                ax.axhline(y=minus_y, color='#3498DB', linewidth=linewidth, 
                           alpha=alpha, linestyle=':')
         
-        ax1.set_xlim(0, width)
-        ax1.set_ylim(height, 0)
-        ax1.grid(False)
+        # 抽出されたグラフデータをオーバーレイ
+        if data_points:
+            x_coords = [p[0] for p in data_points]
+            y_coords = [detected_zero - (p[1] / self.scale) for p in data_points]
+            values = [p[1] for p in data_points]
+            
+            # グラフ線を強調表示
+            ax.plot(x_coords, y_coords, color='#F39C12', linewidth=4, 
+                   alpha=0.9, label=f'データ抽出結果 ({detected_color})')
+            
+            # 重要ポイントのマーク
+            if analysis['max_value'] > 0 and analysis['max_index'] < len(data_points):
+                max_point = data_points[analysis['max_index']]
+                max_y = detected_zero - (max_point[1] / self.scale)
+                ax.plot(max_point[0], max_y, 'o', color='#FFD700', markersize=20, 
+                       markeredgecolor='#B8860B', markeredgewidth=3)
+                ax.annotate(f'最高値\n{analysis["max_value"]:,}玉', 
+                           xy=(max_point[0], max_y),
+                           xytext=(30, -30), textcoords='offset points',
+                           bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.8),
+                           fontsize=16, fontweight='bold',
+                           arrowprops=dict(arrowstyle='->', color='black', lw=2))
+            
+            # 初当たりマーク
+            if analysis['first_hit_index'] >= 0 and analysis['first_hit_index'] < len(data_points):
+                hit_point = data_points[analysis['first_hit_index']]
+                hit_y = detected_zero - (hit_point[1] / self.scale)
+                ax.plot(hit_point[0], hit_y, 'o', color='#32CD32', markersize=20,
+                       markeredgecolor='#228B22', markeredgewidth=3)
+                ax.annotate(f'初当たり\n{analysis["first_hit_value"]:,}玉',
+                           xy=(hit_point[0], hit_y),
+                           xytext=(-50, 30), textcoords='offset points',
+                           bbox=dict(boxstyle='round,pad=0.5', fc='lightgreen', alpha=0.8),
+                           fontsize=16, fontweight='bold',
+                           arrowprops=dict(arrowstyle='->', color='black', lw=2))
         
-        # データプロット
-        x_points = list(range(len(values)))
-        ax2.plot(x_points, values, color='#F39C12', linewidth=3, label='玉数推移', alpha=0.9)
-        ax2.axhline(y=0, color='red', linestyle='-', linewidth=2, alpha=0.8)
+        # グラフ設定
+        ax.set_xlim(0, width)
+        ax.set_ylim(height, 0)
+        ax.set_title(f'パチンコグラフ解析結果 - {detected_color}検出', fontsize=24, pad=20)
+        ax.legend(loc='upper right', fontsize=14)
+        ax.grid(False)
         
-        # グリッドライン（データプロット側）
-        for value in [30000, 20000, 10000, -10000, -20000, -30000]:
-            ax2.axhline(y=value, color='gray', linestyle=':', linewidth=1, alpha=0.5)
-        
-        ax2.grid(True, alpha=0.3, which='both')
-        
-        # 重要ポイントのマーク
-        if analysis['max_value'] > 0:
-            ax2.plot(analysis['max_index'], analysis['max_value'], 'ro', markersize=12)
-            ax2.annotate(f'最高値: {analysis["max_value"]:,}玉', 
-                        xy=(analysis['max_index'], analysis['max_value']),
-                        xytext=(10, 10), textcoords='offset points',
-                        bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.8),
-                        fontsize=11, fontweight='bold')
-        
-        if analysis['first_hit_index'] >= 0:
-            ax2.plot(analysis['first_hit_index'], analysis['first_hit_value'], 'go', markersize=12)
-            ax2.annotate(f'初当たり: {analysis["first_hit_value"]:,}玉', 
-                        xy=(analysis['first_hit_index'], analysis['first_hit_value']),
-                        xytext=(10, -30), textcoords='offset points',
-                        bbox=dict(boxstyle='round,pad=0.5', fc='lightgreen', alpha=0.8),
-                        fontsize=11, fontweight='bold')
-        
-        # 最終値マーク
-        final_idx = len(values) - 1
-        ax2.plot(final_idx, analysis['final_value'], 'ko', markersize=8)
-        ax2.annotate(f'最終: {analysis["final_value"]:,}玉', 
-                    xy=(final_idx, analysis['final_value']),
-                    xytext=(-80, 10), textcoords='offset points',
-                    bbox=dict(boxstyle='round,pad=0.5', fc='lightblue', alpha=0.8),
-                    fontsize=10)
-        
-        ax2.set_xlabel('回転数 (スピン)', fontsize=12)
-        ax2.set_ylabel('差玉数', fontsize=12)
-        ax2.set_title('抽出データ分析', fontsize=16)
-        ax2.legend(loc='best', fontsize=11)
-        
-        # Y軸の範囲を適切に設定
-        y_margin = 5000
-        y_min = min(min(values), -30000) - y_margin
-        y_max = max(max(values), 30000) + y_margin
-        ax2.set_ylim(y_min, y_max)
-        
+        # 余白を最小化
         plt.tight_layout()
         plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white')
         plt.close()
@@ -507,33 +510,37 @@ class WebCompatibleAnalyzer:
             
             print(f"Cropped image shape: {cropped.shape}")
             
-            # データ抽出
-            values = self.extract_graph_data(cropped)
-            if not values or len(values) < 10:
+            # データ抽出（production版形式）
+            data_points, detected_color, detected_zero = self.extract_graph_data(cropped)
+            print(f"Extracted {len(data_points)} data points, color: {detected_color}")
+            
+            if not data_points or len(data_points) < 10:
                 print(f"Warning: Insufficient data extracted from {image_path}")
                 error_result = {
                     'filename': os.path.basename(image_path),
-                    'error': 'データ抽出が不十分',
-                    'analysis': self.analyze_values(values),
-                    'data_points': len(values) if values else 0,
-                    'visualization': None
+                    'error': f'データ抽出が不十分（{len(data_points)}点）',
+                    'analysis': self.analyze_values(data_points),
+                    'data_points': len(data_points),
+                    'visualization': None,
+                    'detected_color': detected_color
                 }
                 return error_result
             
             # 分析
-            analysis = self.analyze_values(values)
+            analysis = self.analyze_values(data_points)
             
             # 結果画像作成
             base_name = Path(image_path).stem
             vis_path = os.path.join(output_dir, f"{base_name}_analysis.png")
-            self.create_analysis_image(cropped, values, analysis, vis_path)
+            self.create_analysis_image(cropped, data_points, detected_color, detected_zero, analysis, vis_path)
             
             # 結果を保存
             result = {
                 'filename': os.path.basename(image_path),
                 'analysis': analysis,
-                'data_points': len(values),
+                'data_points': len(data_points),
                 'visualization': os.path.basename(vis_path),
+                'detected_color': detected_color,
                 'error': None
             }
             
@@ -821,6 +828,10 @@ class WebCompatibleAnalyzer:
                             <tr>
                                 <td>初当たり</td>
                                 <td>{'検出' if analysis['first_hit_index'] >= 0 else '未検出'}</td>
+                            </tr>
+                            <tr>
+                                <td>検出色</td>
+                                <td>{result.get('detected_color', 'なし')}</td>
                             </tr>
                         </table>
                     </div>
