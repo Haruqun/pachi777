@@ -332,7 +332,7 @@ ErrorDocument 404 /index.html
                             
                             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                                 # HTMLレポートをindex.htmlとして保存
-                                zipf.writestr("index.html", html_content)
+                                zipf.write(report_path, "index.html")
                                 
                                 # README.txt
                                 zipf.writestr("README.txt", readme_content)
