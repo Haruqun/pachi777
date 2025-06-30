@@ -2,7 +2,13 @@
 """
 Web環境対応版 パチンコグラフ解析モジュール
 ファイルパスを柔軟に扱える設計
+
+Version: 1.0.58 (Build e7bcf76)
+Last Updated: 2025-06-30
 """
+
+__version__ = "1.0.58"
+__build__ = "e7bcf76"
 
 import os
 import cv2
@@ -845,6 +851,7 @@ class WebCompatibleAnalyzer:
         <div class="footer">
             <p><i class="fas fa-lock"></i> セキュア処理 | <i class="fas fa-rocket"></i> 高速解析 | <i class="fas fa-chart-line"></i> 高精度</p>
             <p>© 2024 PPタウン様専用システム | 開発: ファイブナインデザイン</p>
+            <p style="font-size: 0.8em; opacity: 0.7;">Version {__version__} (Build {__build__})</p>
         </div>
     </div>
 </body>

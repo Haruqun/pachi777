@@ -2,7 +2,13 @@
 """
 パチンコグラフ解析システム - Streamlit Cloud版（フル機能版）
 実際の解析機能を含む完全版
+
+Version: 1.0.58 (Build e7bcf76)
+Last Updated: 2025-06-30
 """
+
+__version__ = "1.0.58"
+__build__ = "e7bcf76"
 
 import streamlit as st
 import tempfile
@@ -79,8 +85,9 @@ if 'analyzer' not in st.session_state:
 # サイドバー
 with st.sidebar:
     st.header("📊 システム情報")
-    st.info("""
-    **バージョン**: 2.0.0  
+    st.info(f"""
+    **バージョン**: {__version__}  
+    **ビルド**: {__build__}  
     **精度**: 99.9%  
     **対応色数**: 10色  
     **解析機能**: フル機能版
@@ -459,9 +466,10 @@ with tab3:
 
 # フッター
 st.markdown("---")
-st.markdown("""
+st.markdown(f"""
 <div style="text-align: center; color: #666; font-size: 0.9em;">
     <p>© 2024 PPタウン様専用システム | 開発: ファイブナインデザイン - 佐藤</p>
     <p>🔒 セキュア処理 | 🚀 高速解析 | 📊 99.9%高精度</p>
+    <p style="opacity: 0.7;">Version {__version__} (Build {__build__})</p>
 </div>
 """, unsafe_allow_html=True)
