@@ -343,7 +343,7 @@ ErrorDocument 404 /index.html
                                 # .htaccess
                                 zipf.writestr(".htaccess", htaccess_content)
                                 
-                                # 画像ファイル
+                                # 画像ファイル（professional_analysis_*.png と cropped_*.png）
                                 for img_file in os.listdir(output_dir):
                                     img_path = os.path.join(output_dir, img_file)
                                     if os.path.isfile(img_path):

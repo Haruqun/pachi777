@@ -112,10 +112,11 @@ class WebCompatibleAnalyzer:
                     y_label_top = orange_bottom + 20 + y
                     break
         
-        # 3. グラフの境界を定義（固定オフセット）
-        graph_top = y_label_top + 40 + 30 - 200
-        graph_left = 90 + 30 + 2  # 122px
-        graph_right = width - 90 + 40 - 100  # width - 150px
+        # 3. グラフの境界を定義（production版と同じ設定）
+        # オレンジバーの下から適切な位置を計算
+        graph_top = orange_bottom + 100  # オレンジバーの下100pxから開始
+        graph_left = 120  # 左マージン
+        graph_right = width - 150  # 右マージン
         
         # 境界チェック
         graph_top = max(0, graph_top)
@@ -143,8 +144,9 @@ class WebCompatibleAnalyzer:
         else:
             best_zero_y = 250
         
-        # 5. グラフの下端を決定（ゼロラインから+250px）
-        graph_bottom = graph_top + best_zero_y + 250
+        # 5. グラフの下端を決定
+        # 適切なサイズになるように調整
+        graph_bottom = graph_top + 500  # 約500pxの高さ
         graph_bottom = min(graph_bottom, height)
         
         # 6. 切り抜き
@@ -287,8 +289,6 @@ class WebCompatibleAnalyzer:
                     if len(colored_pixels) > 0:
                         avg_y = np.mean(colored_pixels)
                         value = (detected_zero - avg_y) * self.scale
-                        # -30000から30000の範囲にクリップ
-                        value = max(-30000, min(30000, value))
                         data_points.append((x, value))
                 
                 if len(data_points) > max_points:
@@ -516,6 +516,12 @@ class WebCompatibleAnalyzer:
             
             print(f"Cropped image shape: {cropped.shape}")
             
+            # 切り抜いた画像を保存（デバッグ用）
+            base_name = Path(image_path).stem
+            cropped_path = os.path.join(output_dir, f"cropped_{base_name}.png")
+            cv2.imwrite(cropped_path, cropped)
+            print(f"Saved cropped image to: {cropped_path}")
+            
             # データ抽出（production版形式）
             data_points, detected_color, detected_zero = self.extract_graph_data(cropped)
             print(f"Extracted {len(data_points)} data points, color: {detected_color}")
@@ -536,7 +542,6 @@ class WebCompatibleAnalyzer:
             analysis = self.analyze_values(data_points)
             
             # 結果画像作成（production版と同じファイル名）
-            base_name = Path(image_path).stem
             vis_path = os.path.join(output_dir, f"professional_analysis_{base_name}.png")
             self.create_analysis_image(cropped, data_points, detected_color, detected_zero, analysis, vis_path)
             
@@ -547,7 +552,8 @@ class WebCompatibleAnalyzer:
                 'data_points': len(data_points),
                 'visualization': os.path.basename(vis_path),
                 'detected_color': detected_color,
-                'error': None
+                'error': None,
+                'cropped_image': os.path.basename(cropped_path)
             }
             
             self.results.append(result)
