@@ -18,6 +18,7 @@ import zipfile
 from pathlib import Path
 import base64
 import sys
+import json
 
 # 同じディレクトリのモジュールをインポート
 from web_analyzer import WebCompatibleAnalyzer
@@ -214,16 +215,133 @@ with tab1:
                             with open(report_path, 'r', encoding='utf-8') as f:
                                 html_content = f.read()
                             
-                            # ZIPファイル作成
+                            # ZIPファイル作成（production版と同じ形式）
                             status_text.text("📦 パッケージを作成中...")
                             progress_bar.progress(90)
                             
                             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                            zip_path = os.path.join(temp_dir, f"analysis_report_{timestamp}.zip")
+                            package_name = f"pptown_graph_analysis_report_{timestamp}"
+                            zip_path = os.path.join(temp_dir, f"{package_name}.zip")
                             
-                            with zipfile.ZipFile(zip_path, 'w') as zipf:
-                                # HTMLレポート
-                                zipf.writestr("report.html", html_content)
+                            # README.txt作成
+                            readme_content = f"""
+📊 PPタウン様 パチンコグラフ分析レポート
+==================================================
+
+パッケージ名: {package_name}
+作成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}
+
+📁 ファイル構成:
+├── index.html          ... メインレポート（ブラウザで開いてください）
+├── images/             ... 画像ファイル
+│   ├── *.png          ... AI分析結果画像
+│   └── *.jpg          ... 元画像ファイル
+├── README.txt          ... このファイル
+├── package.json        ... Webメタデータ
+└── .htaccess          ... Web配信設定
+
+🌐 Web配信方法:
+1. このZIPファイルをWebサーバーに展開
+2. ブラウザでindex.htmlにアクセス
+3. モバイル・デスクトップ対応
+
+🔧 技術仕様:
+- HTML5 + CSS3 + JavaScript
+- レスポンシブデザイン
+- 高解像度画像対応
+- 最新ブラウザ推奨
+
+🎨 制作:
+Report Design: ファイブナインデザイン - 佐藤
+AI Analysis: Next-Gen ML Platform
+
+© 2024 PPタウン様専用レポート | 機密情報取扱注意
+"""
+                            
+                            # package.json作成
+                            package_data = {
+                                "name": package_name,
+                                "version": __version__,
+                                "description": "PPタウン様 パチンコグラフ分析レポート - AI高精度解析システム",
+                                "main": "index.html",
+                                "keywords": ["pachinko", "graph", "analysis", "ai", "report"],
+                                "author": "ファイブナインデザイン - 佐藤",
+                                "license": "Proprietary",
+                                "private": True,
+                                "created": datetime.now().isoformat(),
+                                "client": "PPタウン様",
+                                "type": "analysis-report",
+                                "build": __build__,
+                                "technologies": [
+                                    "HTML5",
+                                    "CSS3", 
+                                    "JavaScript",
+                                    "AI Machine Learning",
+                                    "Computer Vision",
+                                    "OCR"
+                                ],
+                                "features": [
+                                    "10色グラフ線検出",
+                                    "±1px精度測定", 
+                                    "自動0ライン検出",
+                                    "レスポンシブデザイン",
+                                    "高解像度画像対応"
+                                ]
+                            }
+                            
+                            # .htaccess作成
+                            htaccess_content = """
+# PPタウン様 パチンコグラフ分析レポート - Web配信設定
+
+# MIME Types
+AddType text/html .html
+AddType application/json .json
+AddType image/png .png
+AddType image/jpeg .jpg
+
+# キャッシュ設定
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/html "access plus 1 hour"
+    ExpiresByType image/png "access plus 1 week"
+    ExpiresByType image/jpeg "access plus 1 week"
+    ExpiresByType application/json "access plus 1 day"
+</IfModule>
+
+# 圧縮設定
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/json
+</IfModule>
+
+# セキュリティヘッダー
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# DirectoryIndex
+DirectoryIndex index.html
+
+# エラーページ
+ErrorDocument 404 /index.html
+"""
+                            
+                            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                                # HTMLレポートをindex.htmlとして保存
+                                zipf.writestr("index.html", html_content)
+                                
+                                # README.txt
+                                zipf.writestr("README.txt", readme_content)
+                                
+                                # package.json
+                                zipf.writestr("package.json", json.dumps(package_data, ensure_ascii=False, indent=2))
+                                
+                                # .htaccess
+                                zipf.writestr(".htaccess", htaccess_content)
                                 
                                 # 画像ファイル
                                 for img_file in os.listdir(output_dir):
@@ -233,7 +351,7 @@ with tab1:
                                 
                                 # 元画像
                                 for i, original in enumerate(saved_files):
-                                    zipf.write(original, f"original/{os.path.basename(original)}")
+                                    zipf.write(original, f"images/{os.path.basename(original)}")
                             
                             # ZIPファイルを読み込み
                             with open(zip_path, 'rb') as f:
@@ -372,7 +490,7 @@ with tab2:
             st.download_button(
                 label="📦 完全パッケージ (ZIP)",
                 data=results['zip_data'],
-                file_name=f"complete_package_{results['timestamp']}.zip",
+                file_name=f"pptown_graph_analysis_report_{results['timestamp']}.zip",
                 mime="application/zip",
                 use_container_width=True
             )

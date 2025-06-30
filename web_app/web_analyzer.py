@@ -535,9 +535,9 @@ class WebCompatibleAnalyzer:
             # 分析
             analysis = self.analyze_values(data_points)
             
-            # 結果画像作成
+            # 結果画像作成（production版と同じファイル名）
             base_name = Path(image_path).stem
-            vis_path = os.path.join(output_dir, f"{base_name}_analysis.png")
+            vis_path = os.path.join(output_dir, f"professional_analysis_{base_name}.png")
             self.create_analysis_image(cropped, data_points, detected_color, detected_zero, analysis, vis_path)
             
             # 結果を保存
