@@ -1,3 +1,57 @@
-.env
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
-.vscode/launch.json
+Thumbs.db
+
+# Environment
+.env
+
+# Project specific - data files
+graphs/manual_crop/
+reports/20*/
+output/analysis_images/
+output/packages/
+output/reports/
+data/csv/
+data/json/
+data/txt/
+backup*/
+archive*/
+test_results/
+zero_detection_results/
+zero_line_comparison/
+old_file/
+dev/
+legacy/
+
+# Temporary files
+*.log
+*.tmp
+temp_*
+pipeline_summary_*
+
+# Large files
+*.zip
+pptown_graph_analysis_report_*
+
+# Keep important files
+!README.md
+!docs/CLAUDE.md
+!requirements.txt
+!web_app/requirements.txt
