@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 パチンコグラフ解析システム - Streamlit Cloud版
-メインアプリケーション
+メインアプリケーション（デモ版）
 """
 
 import streamlit as st
