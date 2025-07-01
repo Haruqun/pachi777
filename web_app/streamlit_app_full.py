@@ -113,20 +113,20 @@ def extract_site7_data(image):
         return None
 
 
+# デフォルト値
+default_settings = {
+    'search_start_offset': 50,
+    'search_end_offset': 400,
+    'crop_top': 246,
+    'crop_bottom': 247,
+    'left_margin': 125,
+    'right_margin': 125
+}
+
 # 調整機能（コラプス）
 with st.expander("⚙️ 画像解析の調整設定"):
     st.markdown("##### 端末ごとの調整設定")
     st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
-    
-    # デフォルト値
-    default_settings = {
-        'search_start_offset': 50,
-        'search_end_offset': 400,
-        'crop_top': 246,
-        'crop_bottom': 247,
-        'left_margin': 125,
-        'right_margin': 125
-    }
     
     # テスト画像のアップロード
     test_image = st.file_uploader(
@@ -328,36 +328,33 @@ with st.expander("⚙️ 画像解析の調整設定"):
                 'left_margin': left_margin,
                 'right_margin': right_margin
             }
-        
-        # JavaScriptで保存
-        st.markdown(f"""
-        <script>
-        saveSettings({settings});
-        alert('設定を保存しました');
-        </script>
-        """, unsafe_allow_html=True)
-        
-        st.success("✅ 設定を保存しました")
+            
+            # セッションステートにも保存
+            st.session_state.settings = settings
+            
+            # JavaScriptで保存
+            st.markdown(f"""
+            <script>
+            saveSettings({settings});
+            alert('設定を保存しました');
+            </script>
+            """, unsafe_allow_html=True)
+            
+            st.success("✅ 設定を保存しました")
     
-    # デフォルトに戻すボタン
-    if st.button("🔄 デフォルトに戻す"):
-        st.markdown("""
-        <script>
-        localStorage.removeItem('pachi777_settings');
-        window.location.reload();
-        </script>
-        """, unsafe_allow_html=True)
+    with col_reset:
+        if st.button("🔄 デフォルトに戻す"):
+            st.session_state.settings = default_settings.copy()
+            st.markdown("""
+            <script>
+            localStorage.removeItem('pachi777_settings');
+            window.location.reload();
+            </script>
+            """, unsafe_allow_html=True)
 
 # 設定値をセッションステートに保存
 if 'settings' not in st.session_state:
-    st.session_state.settings = {
-        'search_start_offset': search_start_offset,
-        'search_end_offset': search_end_offset,
-        'crop_top': crop_top,
-        'crop_bottom': crop_bottom,
-        'left_margin': left_margin,
-        'right_margin': right_margin
-    }
+    st.session_state.settings = default_settings.copy()
 
 # ファイルアップローダー（一番最初に表示）
 uploaded_files = st.file_uploader(
@@ -421,16 +418,6 @@ if uploaded_files:
         # ゼロライン検出
         gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
         
-        # IMG_0xxx.PNGシリーズの検出（H案の自動調整）
-        is_img_series = False
-        if height > 2400 and height < 2700:
-            if orange_bottom < 1000:  # オレンジバーが上部にある
-                # 背景色チェック
-                bg_sample = gray[orange_bottom + 100:orange_bottom + 200, width//4:width*3//4]
-                bg_mean = np.mean(bg_sample)
-                if bg_mean > 200 and bg_mean < 240:
-                    is_img_series = True
-        
         # 設定値を使用（セッションステートから取得）
         settings = st.session_state.get('settings', {
             'search_start_offset': 50,
@@ -441,16 +428,11 @@ if uploaded_files:
             'right_margin': 125
         })
         
-        if is_img_series:
-            # IMG_0xxx.PNG用の拡張検索範囲（H案：自動で拡張）
-            search_start = orange_bottom + 200  # より下から開始
-            search_end = min(height - 300, orange_bottom + 800)  # より広い範囲
-        else:
-            # 通常の検索範囲（設定値を使用）
-            search_start = orange_bottom + settings['search_start_offset']
-            search_end = min(height - 100, orange_bottom + settings['search_end_offset'])
+        # 検索範囲（設定値を使用）
+        search_start = orange_bottom + settings['search_start_offset']
+        search_end = min(height - 100, orange_bottom + settings['search_end_offset'])
         
-        # 共通の切り抜きサイズ（±30000）
+        # 切り抜きサイズ（±30000）
         crop_top_offset = settings['crop_top']
         crop_bottom_offset = settings['crop_bottom']
         
@@ -756,240 +738,7 @@ if uploaded_files:
             # 元画像を折りたたみ可能に
             with st.expander("📷 元画像を表示"):
                 st.image(result['original_image'], use_column_width=True)
-            
-            # テスト切り抜き機能（開発用）
-            with st.expander("🧪 切り抜きテスト（開発用）"):
-                st.caption("※ これは開発用のテスト機能です。通常の解析には影響しません。")
-                
-                # 現状の仕様
-                st.markdown("#### 現状の仕様（メイン処理）")
-                try:
-                    # 現在の実装と同じロジック
-                    test_hsv = cv2.cvtColor(result['original_image'], cv2.COLOR_RGB2HSV)
-                    test_orange_mask = cv2.inRange(test_hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
-                    test_height, test_width = result['original_image'].shape[:2]
-                    test_gray = cv2.cvtColor(result['original_image'], cv2.COLOR_RGB2GRAY)
-                    
-                    # オレンジバーの検出
-                    current_orange_bottom = 0
-                    for y in range(test_height//2):
-                        if np.sum(test_orange_mask[y, :]) > test_width * 0.3 * 255:
-                            current_orange_bottom = y
-                    
-                    # オレンジバーの下端を正確に見つける
-                    if current_orange_bottom > 0:
-                        for y in range(current_orange_bottom, min(current_orange_bottom + 100, test_height)):
-                            if np.sum(test_orange_mask[y, :]) < test_width * 0.1 * 255:
-                                current_orange_bottom = y
-                                break
-                    else:
-                        current_orange_bottom = 150
-                    
-                    # ゼロライン検出
-                    search_start_current = current_orange_bottom + 50
-                    search_end_current = min(test_height - 100, current_orange_bottom + 400)
-                    
-                    best_score_current = 0
-                    zero_line_current = (search_start_current + search_end_current) // 2
-                    
-                    for y in range(search_start_current, search_end_current):
-                        row = test_gray[y, 100:test_width-100]
-                        darkness = 1.0 - (np.mean(row) / 255.0)
-                        uniformity = 1.0 - (np.std(row) / 128.0)
-                        score = darkness * 0.5 + uniformity * 0.5
-                        
-                        if score > best_score_current:
-                            best_score_current = score
-                            zero_line_current = y
-                    
-                    # 切り抜き
-                    top_current = max(0, zero_line_current - 246)
-                    bottom_current = min(test_height, zero_line_current + 247)
-                    left_current = 125
-                    right_current = test_width - 125
-                    
-                    cropped_current = result['original_image'][int(top_current):int(bottom_current), int(left_current):int(right_current)].copy()
-                    
-                    # グリッドライン追加
-                    zero_in_crop_current = zero_line_current - top_current
-                    cv2.line(cropped_current, (0, int(zero_in_crop_current)), (cropped_current.shape[1], int(zero_in_crop_current)), (0, 0, 255), 2)
-                    cv2.putText(cropped_current, 'Zero (Current)', (10, int(zero_in_crop_current) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-                    
-                    st.image(cropped_current, caption="現状の仕様による切り抜き", use_column_width=True)
-                    st.info(f"オレンジバー: Y={current_orange_bottom}, ゼロライン: Y={zero_line_current}, スコア: {best_score_current:.3f}")
-                    
-                except Exception as e:
-                    st.error(f"現状の仕様でエラーが発生: {str(e)}")
-                
-                # H案: G案改良版（スケール調整付き）
-                st.markdown("#### H案: G案改良版（スケール調整付き）")
-                try:
-                    # 既に定義されている変数を使用（現状の仕様から）
-                    test_orange_bottom = current_orange_bottom
-                    
-                    # IMG_0xxx.PNGシリーズの検出
-                    is_img_series_h = False
-                    if test_height > 2400 and test_height < 2700:
-                        if test_orange_bottom < 1000:  # オレンジバーが上部にある
-                            # 背景色チェック
-                            bg_sample_h = test_gray[test_orange_bottom + 100:test_orange_bottom + 200, test_width//4:test_width*3//4]
-                            bg_mean_h = np.mean(bg_sample_h)
-                            if bg_mean_h > 200 and bg_mean_h < 240:
-                                is_img_series_h = True
-                    
-                    if is_img_series_h:
-                        # IMG_0xxx.PNG用の拡張検索範囲
-                        search_start_h = test_orange_bottom + 200
-                        search_end_h = min(test_height - 300, test_orange_bottom + 800)
-                        detection_info_h = "IMG_0xxx.PNG検出（拡張範囲）"
-                        # IMG_0xxx.PNG用のスケール（±50000）
-                        scale_h = 50000 / 408  # 約122.5玉/px（グラフ高さ816pxで±50000）
-                        crop_top_offset = 408  # 上方向の切り抜きサイズ
-                        crop_bottom_offset = 408  # 下方向の切り抜きサイズ
-                    else:
-                        # 通常の検索範囲
-                        search_start_h = test_orange_bottom + 50
-                        search_end_h = min(test_height - 100, test_orange_bottom + 400)
-                        detection_info_h = "通常検出"
-                        # 通常のスケール（±30000）
-                        scale_h = 30000 / 246  # 約122玉/px
-                        crop_top_offset = 246
-                        crop_bottom_offset = 247
-                    
-                    best_score_h = 0
-                    zero_line_h = (search_start_h + search_end_h) // 2
-                    
-                    for y in range(search_start_h, search_end_h):
-                        row_h = test_gray[y, 100:test_width-100]
-                        darkness_h = 1.0 - (np.mean(row_h) / 255.0)
-                        uniformity_h = 1.0 - (np.std(row_h) / 128.0)
-                        score_h = darkness_h * 0.5 + uniformity_h * 0.5
-                        
-                        if score_h > best_score_h:
-                            best_score_h = score_h
-                            zero_line_h = y
-                    
-                    # 切り抜き（スケールに応じたサイズ）
-                    top_h = max(0, zero_line_h - crop_top_offset)
-                    bottom_h = min(test_height, zero_line_h + crop_bottom_offset)
-                    left_h = 125
-                    right_h = test_width - 125
-                    
-                    cropped_h = result['original_image'][int(top_h):int(bottom_h), int(left_h):int(right_h)].copy()
-                    
-                    # グリッドライン追加
-                    zero_in_crop_h = zero_line_h - top_h
-                    cv2.line(cropped_h, (0, int(zero_in_crop_h)), (cropped_h.shape[1], int(zero_in_crop_h)), (128, 255, 128), 2)
-                    cv2.putText(cropped_h, 'Zero (H)', (10, int(zero_in_crop_h) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (128, 255, 128), 2)
-                    
-                    # スケールに応じたグリッドライン
-                    if is_img_series_h:
-                        # ±50000, ±25000のライン
-                        grid_values = [(50000, '+50k'), (25000, '+25k'), (-25000, '-25k'), (-50000, '-50k')]
-                    else:
-                        # ±30000, ±10000のライン
-                        grid_values = [(30000, '+30k'), (10000, '+10k'), (-10000, '-10k'), (-30000, '-30k')]
-                    
-                    for val, label in grid_values:
-                        y_offset = int(val / scale_h)
-                        y_pos = int(zero_in_crop_h - y_offset)
-                        if 0 < y_pos < cropped_h.shape[0]:
-                            cv2.line(cropped_h, (0, y_pos), (cropped_h.shape[1], y_pos), (200, 200, 200), 1)
-                            cv2.putText(cropped_h, label, (10, y_pos - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (128, 128, 128), 1)
-                    
-                    st.image(cropped_h, caption="H案による切り抜き", use_column_width=True)
-                    st.info(f"{detection_info_h}, ゼロライン: {zero_line_h}, スコア: {best_score_h:.3f}")
-                    st.caption(f"スケール: ±{int(scale_h * crop_top_offset):,}, 切り抜きサイズ: {int(bottom_h - top_h)}px")
-                    
-                except Exception as e:
-                    st.error(f"H案でエラーが発生: {str(e)}")
-                
-                # I案: H案改良版（正確なスケール配置）
-                st.markdown("#### I案: H案改良版（正確なスケール配置）")
-                try:
-                    # 既に定義されている変数を使用（現状の仕様から）
-                    test_orange_bottom = current_orange_bottom
-                    
-                    # IMG_0xxx.PNGシリーズの検出
-                    is_img_series_i = False
-                    if test_height > 2400 and test_height < 2700:
-                        if test_orange_bottom < 1000:  # オレンジバーが上部にある
-                            # 背景色チェック
-                            bg_sample_i = test_gray[test_orange_bottom + 100:test_orange_bottom + 200, test_width//4:test_width*3//4]
-                            bg_mean_i = np.mean(bg_sample_i)
-                            if bg_mean_i > 200 and bg_mean_i < 240:
-                                is_img_series_i = True
-                    
-                    if is_img_series_i:
-                        # IMG_0xxx.PNG用の拡張検索範囲
-                        search_start_i = test_orange_bottom + 200
-                        search_end_i = min(test_height - 300, test_orange_bottom + 800)
-                        detection_info_i = "IMG_0xxx.PNG検出"
-                    else:
-                        # 通常の検索範囲
-                        search_start_i = test_orange_bottom + 50
-                        search_end_i = min(test_height - 100, test_orange_bottom + 400)
-                        detection_info_i = "通常検出"
-                    
-                    best_score_i = 0
-                    zero_line_i = (search_start_i + search_end_i) // 2
-                    
-                    for y in range(search_start_i, search_end_i):
-                        row_i = test_gray[y, 100:test_width-100]
-                        darkness_i = 1.0 - (np.mean(row_i) / 255.0)
-                        uniformity_i = 1.0 - (np.std(row_i) / 128.0)
-                        score_i = darkness_i * 0.5 + uniformity_i * 0.5
-                        
-                        if score_i > best_score_i:
-                            best_score_i = score_i
-                            zero_line_i = y
-                    
-                    # 正確なスケール計算（±30000で固定）
-                    # 目標: ±30000の範囲を正確に切り抜く
-                    scale_i = 122.0  # 約122玉/px
-                    
-                    # 切り抜きサイズを計算（余白を最小化）
-                    crop_top_offset = int(30000 / scale_i)  # 約246px
-                    crop_bottom_offset = int(30000 / scale_i) + 1  # 約247px
-                    
-                    # 切り抜き
-                    top_i = max(0, zero_line_i - crop_top_offset)
-                    bottom_i = min(test_height, zero_line_i + crop_bottom_offset)
-                    left_i = 125
-                    right_i = test_width - 125
-                    
-                    cropped_i = result['original_image'][int(top_i):int(bottom_i), int(left_i):int(right_i)].copy()
-                    
-                    # グリッドライン追加
-                    zero_in_crop_i = zero_line_i - top_i
-                    cv2.line(cropped_i, (0, int(zero_in_crop_i)), (cropped_i.shape[1], int(zero_in_crop_i)), (255, 128, 128), 2)
-                    cv2.putText(cropped_i, 'Zero (I)', (10, int(zero_in_crop_i) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 128, 128), 2)
-                    
-                    # ±30000のラインを上下端に配置
-                    # 上端（+30000）
-                    cv2.line(cropped_i, (0, 0), (cropped_i.shape[1], 0), (128, 128, 128), 2)
-                    cv2.putText(cropped_i, '+30000', (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
-                    
-                    # 下端（-30000）
-                    cv2.line(cropped_i, (0, cropped_i.shape[0]-1), (cropped_i.shape[1], cropped_i.shape[0]-1), (128, 128, 128), 2)
-                    cv2.putText(cropped_i, '-30000', (10, cropped_i.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
-                    
-                    # 中間のグリッドライン（±20000, ±10000）
-                    for val, label in [(20000, '+20k'), (10000, '+10k'), (-10000, '-10k'), (-20000, '-20k')]:
-                        y_offset = int(val / scale_i)
-                        y_pos = int(zero_in_crop_i - y_offset)
-                        if 0 < y_pos < cropped_i.shape[0]:
-                            cv2.line(cropped_i, (0, y_pos), (cropped_i.shape[1], y_pos), (192, 192, 192), 1)
-                            cv2.putText(cropped_i, label, (10, y_pos - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (128, 128, 128), 1)
-                    
-                    st.image(cropped_i, caption="I案による切り抜き", use_column_width=True)
-                    st.info(f"{detection_info_i}, ゼロライン: {zero_line_i}, スコア: {best_score_i:.3f}")
-                    st.caption(f"切り抜きサイズ: {int(bottom_i - top_i)}px (上{crop_top_offset}px + 下{crop_bottom_offset}px)")
-                    st.caption(f"スケール: {scale_i:.1f}玉/px")
-                    
-                except Exception as e:
-                    st.error(f"I案でエラーが発生: {str(e)}")
-            
+
             # 成功時は統計情報を表示（解析結果の下に縦に並べる）
             if result['success']:
                 # 統計情報をカード風に表示
