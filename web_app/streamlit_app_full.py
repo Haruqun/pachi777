@@ -271,54 +271,50 @@ with main_container:
                         prev_x = x
                         prev_y = y
                 
-                # PILを使用して日本語を描画
-                # OpenCV画像をPIL画像に変換
-                overlay_pil = Image.fromarray(cv2.cvtColor(overlay_img, cv2.COLOR_BGR2RGB))
-                draw = ImageDraw.Draw(overlay_pil)
-                
-                # 日本語フォントを設定
-                try:
-                    if platform.system() == 'Darwin':  # macOS
-                        font_path = '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc'
-                        font = ImageFont.truetype(font_path, 16)
-                        font_small = ImageFont.truetype(font_path, 14)
-                    else:
-                        # Windows/Linux
-                        font = ImageFont.load_default()
-                        font_small = font
-                except:
-                    font = ImageFont.load_default()
-                    font_small = font
-                
                 # 横線を描画（最低値、最高値、現在値、初当たり値）
                 # 最高値ライン
                 max_y = int(zero_line_in_crop - (max_val / analyzer.scale))
                 if 0 <= max_y < overlay_img.shape[0]:
-                    draw.line([(0, max_y), (overlay_img.shape[1], max_y)], fill=(255, 255, 0), width=1)
-                    draw.text((10, max_y - 20), f'最高値: {int(max_val):,}', fill=(255, 255, 0), font=font_small)
+                    cv2.line(overlay_img, (0, max_y), (overlay_img.shape[1], max_y), (0, 255, 255), 1)
+                    # 背景付きテキスト
+                    text = f'MAX: {int(max_val):,}'
+                    cv2.rectangle(overlay_img, (10, max_y - 25), (150, max_y - 5), (0, 0, 0), -1)
+                    cv2.putText(overlay_img, text, (15, max_y - 10), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
                 
                 # 最低値ライン
                 min_y = int(zero_line_in_crop - (min_val / analyzer.scale))
                 if 0 <= min_y < overlay_img.shape[0]:
-                    draw.line([(0, min_y), (overlay_img.shape[1], min_y)], fill=(255, 0, 255), width=1)
-                    draw.text((10, min_y + 5), f'最低値: {int(min_val):,}', fill=(255, 0, 255), font=font_small)
+                    cv2.line(overlay_img, (0, min_y), (overlay_img.shape[1], min_y), (255, 0, 255), 1)
+                    # 背景付きテキスト
+                    text = f'MIN: {int(min_val):,}'
+                    cv2.rectangle(overlay_img, (10, min_y + 5), (150, min_y + 25), (0, 0, 0), -1)
+                    cv2.putText(overlay_img, text, (15, min_y + 20), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1, cv2.LINE_AA)
                 
                 # 現在値ライン
                 current_y = int(zero_line_in_crop - (current_val / analyzer.scale))
                 if 0 <= current_y < overlay_img.shape[0]:
-                    draw.line([(overlay_img.shape[1] - 50, current_y), (overlay_img.shape[1], current_y)], fill=(0, 255, 255), width=2)
-                    draw.text((overlay_img.shape[1] - 150, current_y - 20), f'現在値: {int(current_val):,}', fill=(0, 255, 255), font=font_small)
+                    cv2.line(overlay_img, (overlay_img.shape[1] - 50, current_y), (overlay_img.shape[1], current_y), (255, 255, 0), 2)
+                    # 背景付きテキスト
+                    text = f'CURRENT: {int(current_val):,}'
+                    text_width = 160
+                    cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 10, current_y - 25), 
+                                 (overlay_img.shape[1] - 10, current_y - 5), (0, 0, 0), -1)
+                    cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, current_y - 10), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1, cv2.LINE_AA)
                 
                 # 初当たり値ライン
                 if first_hit_x is not None:
                     first_hit_y = int(zero_line_in_crop - (first_hit_val / analyzer.scale))
                     if 0 <= first_hit_y < overlay_img.shape[0]:
                         # 縦線を描画
-                        draw.line([(first_hit_x, 0), (first_hit_x, overlay_img.shape[0])], fill=(0, 255, 0), width=1)
-                        draw.text((first_hit_x + 5, 20), f'初当たり: {int(first_hit_val):,}', fill=(0, 255, 0), font=font_small)
-                
-                # PIL画像をOpenCV画像に戻す
-                overlay_img = cv2.cvtColor(np.array(overlay_pil), cv2.COLOR_RGB2BGR)
+                        cv2.line(overlay_img, (first_hit_x, 0), (first_hit_x, overlay_img.shape[0]), (0, 255, 0), 1)
+                        # 背景付きテキスト
+                        text = f'FIRST HIT: {int(first_hit_val):,}'
+                        cv2.rectangle(overlay_img, (first_hit_x + 5, 10), (first_hit_x + 165, 30), (0, 0, 0), -1)
+                        cv2.putText(overlay_img, text, (first_hit_x + 10, 25), 
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
                 
                 # 画像を横幅いっぱいで表示
                 st.image(overlay_img, use_column_width=True)
