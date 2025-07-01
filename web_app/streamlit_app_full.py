@@ -128,6 +128,7 @@ if uploaded_files:
     # プログレスバー
     progress_bar = st.progress(0)
     status_text = st.empty()
+    detail_text = st.empty()
     
     # 解析結果を格納
     analysis_results = []
@@ -138,6 +139,7 @@ if uploaded_files:
         progress = (idx + 1) / len(uploaded_files)
         progress_bar.progress(progress)
         status_text.text(f'処理中... ({idx + 1}/{len(uploaded_files)})')
+        detail_text.text(f'📷 {uploaded_file.name} の画像を読み込み中...')
         
         # 画像を読み込み
         image = Image.open(uploaded_file)
@@ -145,9 +147,11 @@ if uploaded_files:
         height, width = img_array.shape[:2]
         
         # OCRでデータ抽出を試みる
+        detail_text.text(f'🔍 {uploaded_file.name} のOCR解析を実行中...')
         ocr_data = extract_site7_data(img_array)
         
         # Pattern3: Zero Line Based の自動検出
+        detail_text.text(f'📐 {uploaded_file.name} のグラフ領域を検出中...')
         hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
         orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
         orange_bottom = 0
@@ -246,6 +250,7 @@ if uploaded_files:
         cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
         
         # 解析を自動実行
+        detail_text.text(f'📊 {uploaded_file.name} のグラフデータを解析中...')
         with st.spinner(f"グラフを解析中... ({idx + 1}/{len(uploaded_files)})"):
             # アナライザーを初期化
             analyzer = WebCompatibleAnalyzer()
@@ -449,6 +454,7 @@ if uploaded_files:
     # プログレスバーを完了
     progress_bar.progress(1.0)
     status_text.text('✅ 全ての画像の処理が完了しました！')
+    detail_text.empty()
     
     # 結果をグリッド表示
     st.markdown("### 📊 解析結果一覧")
