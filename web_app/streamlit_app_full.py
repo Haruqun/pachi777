@@ -15,7 +15,7 @@ import platform
 
 # ページ設定
 st.set_page_config(
-    page_title="パチンコグラフ解析 - シンプル版",
+    page_title="パチンコグラフ解析",
     page_icon="🎰",
     layout="wide"
 )
@@ -154,61 +154,38 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# タイトルセクション
-st.markdown("""
-<div style="text-align: center; margin-bottom: 2rem;">
-    <h1 style="font-size: 3rem; margin-bottom: 0.5rem;">🎰 パチンコグラフ解析システム</h1>
-    <p style="color: #718096; font-size: 1.125rem; margin-top: 0;">グラフ画像を瞬時に解析し、収支データを可視化</p>
-</div>
-""", unsafe_allow_html=True)
+# ファイルアップローダー（一番最初に表示）
+uploaded_files = st.file_uploader(
+    "📤 グラフ画像をアップロード",
+    type=['jpg', 'jpeg', 'png'],
+    accept_multiple_files=True,
+    help="複数の画像を一度にアップロードできます（JPG, PNG形式）"
+)
 
-# セパレーター
-st.markdown("---")
-
-# メインコンテナ
-main_container = st.container()
-
-with main_container:
-    # アップロードセクション
+if uploaded_files:
+    st.success(f"✅ {len(uploaded_files)}枚の画像がアップロードされました")
+    
+    # 解析結果セクション
     st.markdown("""
-    <h3 style="color: #4a5568; font-weight: 600; margin-bottom: 1rem;">
-        <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📤</span> 
-        画像をアップロード
+    <h3 style="color: #4a5568; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">
+        <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🎯</span> 
+        解析結果
     </h3>
     """, unsafe_allow_html=True)
     
-    # ファイルアップローダー
-    uploaded_files = st.file_uploader(
-        "グラフ画像を選択してください",
-        type=['jpg', 'jpeg', 'png'],
-        accept_multiple_files=True,
-        help="複数の画像を一度にアップロードできます（JPG, PNG形式）"
-    )
+    # プログレスバー
+    progress_bar = st.progress(0)
+    status_text = st.empty()
     
-    if uploaded_files:
-        st.success(f"✅ {len(uploaded_files)}枚の画像がアップロードされました")
-        
-        # 解析結果セクション
-        st.markdown("""
-        <h3 style="color: #4a5568; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">
-            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🎯</span> 
-            解析結果
-        </h3>
-        """, unsafe_allow_html=True)
-        
-        # プログレスバー
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        # 解析結果を格納
-        analysis_results = []
-        
-        # 各画像を処理
-        for idx, uploaded_file in enumerate(uploaded_files):
-            # 進捗更新
-            progress = (idx + 1) / len(uploaded_files)
-            progress_bar.progress(progress)
-            status_text.text(f'処理中... ({idx + 1}/{len(uploaded_files)})')
+    # 解析結果を格納
+    analysis_results = []
+    
+    # 各画像を処理
+    for idx, uploaded_file in enumerate(uploaded_files):
+        # 進捗更新
+        progress = (idx + 1) / len(uploaded_files)
+        progress_bar.progress(progress)
+        status_text.text(f'処理中... ({idx + 1}/{len(uploaded_files)})')
             
             # 画像を読み込み
             image = Image.open(uploaded_file)
@@ -337,6 +314,10 @@ with main_container:
                     min_val = min(graph_values)
                     current_val = graph_values[-1] if graph_values else 0
                     
+                    # MAXがマイナスの場合は0を表示
+                    if max_val < 0:
+                        max_val = 0
+                    
                     # 初当たり値を探す（production版と同じロジック）
                     first_hit_val = 0
                     first_hit_x = None
@@ -377,6 +358,10 @@ with main_container:
                                             first_hit_x = i
                                             break
                     
+                    # 初当たり値がプラスの場合は0を表示
+                    if first_hit_val > 0:
+                        first_hit_val = 0
+                    
                     # オーバーレイ画像を作成
                     overlay_img = cropped_img.copy()
                     
@@ -416,7 +401,11 @@ with main_container:
                             prev_y = y
                     
                     # 最高値、最低値、初当たりの位置を見つける
-                    max_idx = graph_values.index(max_val)
+                    # MAXが0に修正された場合は、元の最高値のインデックスを保持
+                    if max_val == 0 and max(graph_values) < 0:
+                        max_idx = graph_values.index(max(graph_values))
+                    else:
+                        max_idx = graph_values.index(max_val)
                     min_idx = graph_values.index(min_val)
                     
                     # 横線を描画（最低値、最高値、現在値、初当たり値）
@@ -431,10 +420,11 @@ with main_container:
                         cv2.circle(overlay_img, (int(max_x), max_y), 10, (0, 200, 200), 2)
                         # 背景付きテキスト（白背景、濃い黄色文字）右端に表示
                         text = f'MAX: {int(max_val):,}'
-                        text_width = 120
-                        cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 10, max_y - 15), 
-                                     (overlay_img.shape[1] - 5, max_y + 5), (255, 255, 255), -1)
-                        cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, max_y), 
+                        text_width = 140
+                        text_y = max_y if max_y > 20 else max_y + 20  # 上端で見切れないように調整
+                        cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 15, text_y - 15), 
+                                     (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
+                        cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 150, 150), 1, cv2.LINE_AA)
                     
                     # 最低値ライン（端から端まで）
@@ -448,10 +438,11 @@ with main_container:
                         cv2.circle(overlay_img, (int(min_x), min_y), 10, (200, 0, 200), 2)
                         # 背景付きテキスト（白背景、濃いマゼンタ文字）右端に表示
                         text = f'MIN: {int(min_val):,}'
-                        text_width = 120
-                        cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 10, min_y - 15), 
-                                     (overlay_img.shape[1] - 5, min_y + 5), (255, 255, 255), -1)
-                        cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, min_y), 
+                        text_width = 140
+                        text_y = min_y if (min_y > 20 and min_y < overlay_img.shape[0] - 20) else (20 if min_y <= 20 else overlay_img.shape[0] - 20)
+                        cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 15, text_y - 15), 
+                                     (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
+                        cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 0, 150), 1, cv2.LINE_AA)
                     
                     # 現在値ライン（端から端まで）
@@ -461,9 +452,10 @@ with main_container:
                         # 背景付きテキスト（白背景、濃いシアン文字）右端に表示
                         text = f'CURRENT: {int(current_val):,}'
                         text_width = 160
-                        cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 10, current_y - 25), 
-                                     (overlay_img.shape[1] - 10, current_y - 5), (255, 255, 255), -1)
-                        cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, current_y - 10), 
+                        text_y = current_y - 10 if current_y > 30 else current_y + 15
+                        cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 15, text_y - 15), 
+                                     (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
+                        cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 0), 1, cv2.LINE_AA)
                     
                     # 初当たり値ライン（端から端まで）
@@ -478,10 +470,11 @@ with main_container:
                             cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 10, (120, 30, 200), 2)
                             # 背景付きテキスト（白背景、紫文字）右端に表示
                             text = f'FIRST HIT: {int(first_hit_val):,}'
-                            text_width = 120
-                            cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 10, first_hit_y - 15), 
-                                         (overlay_img.shape[1] - 5, first_hit_y + 5), (255, 255, 255), -1)
-                            cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, first_hit_y), 
+                            text_width = 150
+                            text_y = first_hit_y if (first_hit_y > 20 and first_hit_y < overlay_img.shape[0] - 20) else (20 if first_hit_y <= 20 else overlay_img.shape[0] - 20)
+                            cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 15, text_y - 15), 
+                                         (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
+                            cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
                                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 1, cv2.LINE_AA)
                     
                     # 結果を保存
