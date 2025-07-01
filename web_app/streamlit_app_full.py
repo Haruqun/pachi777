@@ -369,37 +369,109 @@ if uploaded_files:
     # 結果をグリッド表示
     st.markdown("### 📊 解析結果一覧")
     
-    # 各画像を表示
+    # 元画像を折りたたみ可能に
+    with st.expander("📷 元画像を表示"):
+        # 元画像を2列で表示
+        cols = st.columns(2)
+        for idx, result in enumerate(analysis_results):
+            with cols[idx % 2]:
+                st.markdown(f"**{idx + 1}. {result['name']}**")
+                st.image(result['original_image'], use_column_width=True)
+    
+    # 解析結果を2列で表示
+    st.markdown("### 🎯 解析結果")
+    cols = st.columns(2)
+    
     for idx, result in enumerate(analysis_results):
-        # 画像名を表示
-        st.markdown(f"#### {idx + 1}. {result['name']}")
-        
-        # 元画像と解析結果を並べて表示
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**元画像**")
-            st.image(result['original_image'], use_column_width=True)
-        
-        with col2:
-            st.markdown("**解析結果**")
+        with cols[idx % 2]:
+            # 画像名を表示
+            st.markdown(f"#### {idx + 1}. {result['name']}")
+            
+            # 解析結果画像
             st.image(result['overlay_image'], use_column_width=True)
             
             # 成功時は統計情報を表示（解析結果の下に縦に並べる）
             if result['success']:
+                # 統計情報をカード風に表示
+                st.markdown("""
+                <style>
+                .stat-card {
+                    background-color: #f0f2f6;
+                    padding: 15px;
+                    border-radius: 10px;
+                    margin-top: 10px;
+                }
+                .stat-item {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 5px 0;
+                    border-bottom: 1px solid #e0e0e0;
+                }
+                .stat-item:last-child {
+                    border-bottom: none;
+                }
+                .stat-label {
+                    color: #666;
+                    font-weight: 500;
+                }
+                .stat-value {
+                    font-weight: bold;
+                    color: #333;
+                }
+                .stat-value.positive {
+                    color: #28a745;
+                }
+                .stat-value.negative {
+                    color: #dc3545;
+                }
+                .stat-value.zero {
+                    color: #6c757d;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                # 値に応じて色分けするためのクラスを決定
+                def get_value_class(val):
+                    if val > 0:
+                        return "positive"
+                    elif val < 0:
+                        return "negative"
+                    else:
+                        return "zero"
+                
+                first_hit_text = f"{result['first_hit_val']:,}玉" if result['first_hit_val'] is not None else "なし"
+                first_hit_class = get_value_class(result['first_hit_val']) if result['first_hit_val'] is not None else ""
+                
                 st.markdown(f"""
-                **最高値**: {result['max_val']:,}玉  
-                **最低値**: {result['min_val']:,}玉  
-                **現在値**: {result['current_val']:,}玉  
-                **初当たり**: {f"{result['first_hit_val']:,}玉" if result['first_hit_val'] is not None else "なし"}  
-                **検出色**: {result['dominant_color']}
-                """)
+                <div class="stat-card">
+                    <div class="stat-item">
+                        <span class="stat-label">📈 最高値</span>
+                        <span class="stat-value {get_value_class(result['max_val'])}">{result['max_val']:,}玉</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">📉 最低値</span>
+                        <span class="stat-value {get_value_class(result['min_val'])}">{result['min_val']:,}玉</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">🎯 現在値</span>
+                        <span class="stat-value {get_value_class(result['current_val'])}">{result['current_val']:,}玉</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">🎰 初当たり</span>
+                        <span class="stat-value {first_hit_class}">{first_hit_text}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">🎨 検出色</span>
+                        <span class="stat-value">{result['dominant_color']}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
             else:
                 st.warning("⚠️ グラフデータを検出できませんでした")
-        
-        # 区切り線
-        if idx < len(analysis_results) - 1:
-            st.markdown("---")
+            
+            # 区切り線（各列内で）
+            if idx < len(analysis_results) - 2:
+                st.markdown("---")
         
     # サマリー情報
     st.markdown("### 📋 解析サマリー")
