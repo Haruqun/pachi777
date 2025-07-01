@@ -248,9 +248,12 @@ with main_container:
                 analyzer.scale = 30000 / 246  # スケール設定
                 
                 # グラフデータを抽出
-                graph_values, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
+                graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
                 
-                if graph_values:
+                if graph_data_points:
+                    # データポイントから値のみを抽出
+                    graph_values = [value for x, value in graph_data_points]
+                    
                     # 解析結果を表示
                     st.success("✅ グラフ解析が完了しました！")
                     
@@ -259,15 +262,15 @@ with main_container:
                     
                     with col1:
                         max_val = max(graph_values)
-                        st.metric("最高値", f"{max_val:,}玉")
+                        st.metric("最高値", f"{int(max_val):,}玉")
                     
                     with col2:
                         min_val = min(graph_values)
-                        st.metric("最低値", f"{min_val:,}玉")
+                        st.metric("最低値", f"{int(min_val):,}玉")
                     
                     with col3:
                         current_val = graph_values[-1] if graph_values else 0
-                        st.metric("現在値", f"{current_val:,}玉")
+                        st.metric("現在値", f"{int(current_val):,}玉")
                     
                     with col4:
                         st.metric("検出色", dominant_color)
