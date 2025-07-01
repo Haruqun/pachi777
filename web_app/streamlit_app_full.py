@@ -211,7 +211,7 @@ if uploaded_files:
         # +30000ライン（最上部）
         y_30k = -1  # 固定調整値
         cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
-        cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
+        cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
         
         # +20000ライン
         y_20k = int(zero_line_in_crop - (20000 / scale)) - 2  # 固定調整値
@@ -229,7 +229,7 @@ if uploaded_files:
         y_0 = int(zero_line_in_crop)  # 調整なし
         if 0 < y_0 < crop_height:
             cv2.line(cropped_img, (0, y_0), (cropped_img.shape[1], y_0), (255, 0, 0), 2)
-            cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+            cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
         
         # -10000ライン
         y_minus_10k = int(zero_line_in_crop + (10000 / scale)) + 1  # 固定調整値
@@ -247,7 +247,7 @@ if uploaded_files:
         y_minus_30k = crop_height - 1 + 2  # 固定調整値
         y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
         cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
-        cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
+        cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
         
         # 解析を自動実行
         detail_text.text(f'📊 {uploaded_file.name} のグラフデータを解析中...')
