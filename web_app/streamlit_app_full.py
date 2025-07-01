@@ -722,9 +722,8 @@ if uploaded_files:
                     
                     # デバッグ用：検出情報を表示
                     if debug_info:
-                        experimental_html += f'<div style="font-size: 0.7em; color: #856404; margin-top: 5px;">検出された傾き: {len(debug_info)}個</div>'
-                        if len(slopes) > 0:
-                            experimental_html += f'<div style="font-size: 0.7em; color: #856404;">有効な傾き: {len(slopes)}個 (範囲: 8-30球/回転)</div>'
+                        experimental_html += f'<div style="font-size: 0.7em; color: #856404; margin-top: 5px;">デバッグ: {"; ".join(debug_info[:3])}</div>'
+                        experimental_html += f'<div style="font-size: 0.7em; color: #856404;">検出された傾き: {len(debug_info)}個 / 有効: {len(slopes)}個</div>'
                 
                 experimental_html += '</div>'
                 st.markdown(experimental_html, unsafe_allow_html=True)
