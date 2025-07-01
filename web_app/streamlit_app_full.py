@@ -826,6 +826,79 @@ if uploaded_files:
                     
                 except Exception as e:
                     st.error(f"E案でエラーが発生: {str(e)}")
+                
+                # F案: 固定位置方式（IMG_0xxx.PNG専用）
+                st.markdown("#### F案: 固定位置方式")
+                try:
+                    # IMG_0xxx.PNGシリーズの特徴を検出
+                    is_img_series = False
+                    
+                    # 特徴1: 画面サイズが特定の値
+                    if test_height > 2400 and test_height < 2700:
+                        # 特徴2: オレンジバーの位置が特定の範囲
+                        if test_orange_bottom > 650 and test_orange_bottom < 750:
+                            # 特徴3: 背景色がグレー系
+                            bg_sample = test_gray[test_orange_bottom + 100:test_orange_bottom + 200, test_width//4:test_width*3//4]
+                            bg_mean = np.mean(bg_sample)
+                            if bg_mean > 200 and bg_mean < 240:
+                                is_img_series = True
+                    
+                    if is_img_series:
+                        # IMG_0xxx.PNG用の固定位置
+                        # 実際の観察から、ゼロラインは約Y=1350付近にある
+                        zero_line_f = test_orange_bottom + 650  # オレンジバーから650px下
+                        detection_info = "IMG_0xxx.PNG検出"
+                    else:
+                        # 通常の画像用（現在の実装と同じ）
+                        search_start_f = test_orange_bottom + 50
+                        search_end_f = min(test_height - 100, test_orange_bottom + 400)
+                        
+                        best_score_f = 0
+                        zero_line_f = (search_start_f + search_end_f) // 2
+                        
+                        for y in range(search_start_f, search_end_f):
+                            row = test_gray[y, 100:test_width-100]
+                            darkness = 1.0 - (np.mean(row) / 255.0)
+                            uniformity = 1.0 - (np.std(row) / 128.0)
+                            score = darkness * 0.5 + uniformity * 0.5
+                            
+                            if score > best_score_f:
+                                best_score_f = score
+                                zero_line_f = y
+                        
+                        detection_info = f"通常検出（スコア: {best_score_f:.3f}）"
+                    
+                    # 切り抜き
+                    top_f = max(0, zero_line_f - 246)
+                    bottom_f = min(test_height, zero_line_f + 247)
+                    left_f = 125
+                    right_f = test_width - 125
+                    
+                    cropped_f = result['original_image'][int(top_f):int(bottom_f), int(left_f):int(right_f)].copy()
+                    
+                    # グリッドライン追加
+                    zero_in_crop_f = zero_line_f - top_f
+                    cv2.line(cropped_f, (0, int(zero_in_crop_f)), (cropped_f.shape[1], int(zero_in_crop_f)), (255, 0, 255), 2)
+                    cv2.putText(cropped_f, 'Zero (F)', (10, int(zero_in_crop_f) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
+                    
+                    # 追加のグリッドライン（±10000）
+                    scale_f = 122  # 固定スケール
+                    for val, label in [(10000, '+10k'), (-10000, '-10k')]:
+                        y_offset = int(val / scale_f)
+                        y_pos = int(zero_in_crop_f - y_offset)
+                        if 0 < y_pos < cropped_f.shape[0]:
+                            cv2.line(cropped_f, (0, y_pos), (cropped_f.shape[1], y_pos), (200, 200, 200), 1)
+                            cv2.putText(cropped_f, label, (10, y_pos - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (128, 128, 128), 1)
+                    
+                    st.image(cropped_f, caption="F案による切り抜き", use_column_width=True)
+                    st.info(f"{detection_info}, ゼロライン: {zero_line_f}")
+                    
+                    if is_img_series:
+                        st.caption("IMG_0xxx.PNGシリーズと判定されました")
+                        st.caption(f"背景輝度: {bg_mean:.1f}, 画像高さ: {test_height}px")
+                    
+                except Exception as e:
+                    st.error(f"F案でエラーが発生: {str(e)}")
             
             # 成功時は統計情報を表示（解析結果の下に縦に並べる）
             if result['success']:
