@@ -128,6 +128,29 @@ with st.expander("⚙️ 画像解析の調整設定"):
     st.markdown("##### 端末ごとの調整設定")
     st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
     
+    # プリセット管理セクション
+    st.markdown("### 📁 設定プリセット")
+    preset_col1, preset_col2 = st.columns([2, 1])
+    
+    with preset_col1:
+        # 既存のプリセット選択
+        preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
+        selected_preset = st.selectbox(
+            "プリセットを選択",
+            preset_names,
+            help="保存された設定を選択して適用します"
+        )
+    
+    with preset_col2:
+        # プリセット適用ボタン
+        if st.button("📥 適用", use_container_width=True):
+            if selected_preset == "デフォルト":
+                st.session_state.settings = default_settings.copy()
+            else:
+                st.session_state.settings = st.session_state.saved_presets[selected_preset].copy()
+            st.success(f"✅ '{selected_preset}' を適用しました")
+            st.rerun()
+    
     # テスト画像のアップロード
     test_image = st.file_uploader(
         "🖼️ テスト用画像をアップロード",
@@ -139,28 +162,27 @@ with st.expander("⚙️ 画像解析の調整設定"):
     # LocalStorageとの連携用JavaScript
     st.markdown("""
     <script>
-    // LocalStorageから設定を読み込む
-    function loadSettings() {
-        const settings = localStorage.getItem('pachi777_settings');
-        if (settings) {
-            return JSON.parse(settings);
+    // LocalStorageから全設定を読み込む
+    function loadAllSettings() {
+        const allSettings = localStorage.getItem('pachi777_all_settings');
+        if (allSettings) {
+            return JSON.parse(allSettings);
         }
         return null;
     }
     
-    // LocalStorageに設定を保存
-    function saveSettings(settings) {
-        localStorage.setItem('pachi777_settings', JSON.stringify(settings));
-    }
-    
-    // Streamlitに設定を送信
-    const savedSettings = loadSettings();
-    if (savedSettings) {
-        window.parent.postMessage({
-            type: 'streamlit:setComponentValue',
-            value: savedSettings
-        }, '*');
-    }
+    // ページ読み込み時に設定を復元
+    window.addEventListener('load', function() {
+        const savedData = loadAllSettings();
+        if (savedData) {
+            // Streamlitのセッションステートを更新するためのメッセージ
+            window.parent.postMessage({
+                type: 'streamlit:setComponentValue',
+                key: 'load_saved_settings',
+                value: savedData
+            }, '*');
+        }
+    });
     </script>
     """, unsafe_allow_html=True)
     
@@ -199,14 +221,14 @@ with st.expander("⚙️ 画像解析の調整設定"):
     with col1:
         search_start_offset = st.number_input(
             "検索開始位置（オレンジバーから）",
-            min_value=0, max_value=800, value=default_settings['search_start_offset'],
+            min_value=0, max_value=800, value=st.session_state.settings['search_start_offset'],
             step=10, help="オレンジバーから何ピクセル下から検索を開始するか"
         )
     
     with col2:
         search_end_offset = st.number_input(
             "検索終了位置（オレンジバーから）",
-            min_value=100, max_value=1200, value=default_settings['search_end_offset'],
+            min_value=100, max_value=1200, value=st.session_state.settings['search_end_offset'],
             step=50, help="オレンジバーから何ピクセル下まで検索するか"
         )
     
@@ -216,24 +238,24 @@ with st.expander("⚙️ 画像解析の調整設定"):
     with col3:
         crop_top = st.number_input(
             "上方向の切り抜きサイズ",
-            min_value=100, max_value=500, value=default_settings['crop_top'],
+            min_value=100, max_value=500, value=st.session_state.settings['crop_top'],
             step=1, help="ゼロラインから上方向に何ピクセル切り抜くか"
         )
         crop_bottom = st.number_input(
             "下方向の切り抜きサイズ",
-            min_value=100, max_value=500, value=default_settings['crop_bottom'],
+            min_value=100, max_value=500, value=st.session_state.settings['crop_bottom'],
             step=1, help="ゼロラインから下方向に何ピクセル切り抜くか"
         )
     
     with col4:
         left_margin = st.number_input(
             "左側の余白",
-            min_value=0, max_value=300, value=default_settings['left_margin'],
+            min_value=0, max_value=300, value=st.session_state.settings['left_margin'],
             step=25, help="左側から何ピクセル除外するか"
         )
         right_margin = st.number_input(
             "右側の余白",
-            min_value=0, max_value=300, value=default_settings['right_margin'],
+            min_value=0, max_value=300, value=st.session_state.settings['right_margin'],
             step=25, help="右側から何ピクセル除外するか"
         )
     
@@ -315,46 +337,126 @@ with st.expander("⚙️ 画像解析の調整設定"):
         st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
         st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
     
-    # 設定を保存するボタン
-    col_save, col_reset = st.columns(2)
+    # 設定の保存
+    st.markdown("### 💾 設定の保存")
     
-    with col_save:
-        if st.button("💾 設定を保存", type="primary", use_container_width=True):
-            settings = {
-                'search_start_offset': search_start_offset,
-                'search_end_offset': search_end_offset,
-                'crop_top': crop_top,
-                'crop_bottom': crop_bottom,
-                'left_margin': left_margin,
-                'right_margin': right_margin
-            }
-            
-            # セッションステートにも保存
-            st.session_state.settings = settings
-            
-            # JavaScriptで保存
-            st.markdown(f"""
-            <script>
-            saveSettings({json.dumps(settings)});
-            alert('設定を保存しました');
-            </script>
-            """, unsafe_allow_html=True)
-            
-            st.success("✅ 設定を保存しました")
+    # プリセット名入力と保存
+    save_col1, save_col2, save_col3 = st.columns([2, 1, 1])
     
-    with col_reset:
+    with save_col1:
+        preset_name = st.text_input(
+            "プリセット名",
+            placeholder="例: iPhone15用、S__シリーズ用",
+            help="保存する設定の名前を入力してください"
+        )
+    
+    with save_col2:
+        if st.button("💾 プリセットを保存", type="primary", use_container_width=True):
+            if preset_name:
+                settings = {
+                    'search_start_offset': search_start_offset,
+                    'search_end_offset': search_end_offset,
+                    'crop_top': crop_top,
+                    'crop_bottom': crop_bottom,
+                    'left_margin': left_margin,
+                    'right_margin': right_margin
+                }
+                
+                # プリセットに保存
+                st.session_state.saved_presets[preset_name] = settings.copy()
+                # 現在の設定も更新
+                st.session_state.settings = settings
+                
+                # LocalStorageにも保存
+                all_presets = {
+                    'current': settings,
+                    'presets': st.session_state.saved_presets
+                }
+                
+                st.markdown(f"""
+                <script>
+                localStorage.setItem('pachi777_all_settings', JSON.stringify({json.dumps(all_presets)}));
+                alert('プリセット "{preset_name}" を保存しました');
+                </script>
+                """, unsafe_allow_html=True)
+                
+                st.success(f"✅ プリセット '{preset_name}' を保存しました")
+                st.rerun()
+            else:
+                st.error("プリセット名を入力してください")
+    
+    with save_col3:
         if st.button("🔄 デフォルトに戻す"):
             st.session_state.settings = default_settings.copy()
             st.markdown("""
             <script>
-            localStorage.removeItem('pachi777_settings');
-            window.location.reload();
+            alert('デフォルト設定に戻しました');
             </script>
             """, unsafe_allow_html=True)
+            st.rerun()
+    
+    # プリセット削除
+    if st.session_state.saved_presets:
+        st.markdown("### 🗑️ プリセットの削除")
+        delete_col1, delete_col2 = st.columns([2, 1])
+        
+        with delete_col1:
+            preset_to_delete = st.selectbox(
+                "削除するプリセット",
+                list(st.session_state.saved_presets.keys()),
+                key="delete_preset"
+            )
+        
+        with delete_col2:
+            if st.button("🗑️ 削除", type="secondary", use_container_width=True):
+                if preset_to_delete:
+                    del st.session_state.saved_presets[preset_to_delete]
+                    
+                    # LocalStorageも更新
+                    all_presets = {
+                        'current': st.session_state.settings,
+                        'presets': st.session_state.saved_presets
+                    }
+                    
+                    st.markdown(f"""
+                    <script>
+                    localStorage.setItem('pachi777_all_settings', JSON.stringify({json.dumps(all_presets)}));
+                    alert('プリセット "{preset_to_delete}" を削除しました');
+                    </script>
+                    """, unsafe_allow_html=True)
+                    
+                    st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
+                    st.rerun()
 
 # 設定値をセッションステートに保存（エキスパンダーの外で初期化）
 if 'settings' not in st.session_state:
     st.session_state.settings = default_settings.copy()
+
+# 保存された設定プリセット
+if 'saved_presets' not in st.session_state:
+    st.session_state.saved_presets = {}
+    
+# LocalStorageから設定を読み込むためのプレースホルダー
+load_placeholder = st.empty()
+with load_placeholder.container():
+    # JavaScriptからの設定読み込みを待つ
+    st.markdown("""
+    <script>
+    // LocalStorageから設定を読み込んでStreamlitに送信
+    const allSettings = localStorage.getItem('pachi777_all_settings');
+    if (allSettings) {
+        const data = JSON.parse(allSettings);
+        // Streamlitの隠しコンポーネントを通じて設定を送信
+        const hiddenDiv = document.getElementById('load_settings_div');
+        if (hiddenDiv) {
+            hiddenDiv.textContent = allSettings;
+            hiddenDiv.dispatchEvent(new Event('change'));
+        }
+    }
+    </script>
+    <div id="load_settings_div" style="display:none;"></div>
+    """, unsafe_allow_html=True)
+load_placeholder.empty()
 
 # ファイルアップローダー（一番最初に表示）
 uploaded_files = st.file_uploader(
