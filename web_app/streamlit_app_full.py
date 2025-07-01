@@ -319,6 +319,14 @@ with st.expander("⚙️ 画像解析の調整設定"):
     if test_image:
         st.markdown("### 🖼️ リアルタイムプレビュー")
         
+        # インタラクティブ調整モード
+        adjustment_mode = st.radio(
+            "調整モード",
+            ["数値入力", "ビジュアル調整"],
+            horizontal=True,
+            help="ビジュアル調整モードでは、ボタンで範囲を調整できます"
+        )
+        
         # 現在の設定で切り抜き処理を実行
         search_start = orange_bottom + search_start_offset
         search_end = min(height - 100, orange_bottom + search_end_offset)
@@ -423,6 +431,132 @@ with st.expander("⚙️ 画像解析の調整設定"):
         # 情報表示
         st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
         st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
+        
+        # ビジュアル調整モード
+        if adjustment_mode == "ビジュアル調整":
+            st.markdown("#### 🎯 矢印キーで範囲を調整")
+            st.info("💡 ヒント: 画像をクリックして、矢印キーで調整できます")
+            
+            # キーボード操作のJavaScript
+            st.markdown("""
+            <script>
+            document.addEventListener('keydown', function(e) {
+                let updated = false;
+                const settings = JSON.parse(localStorage.getItem('pachi777_temp_settings') || '{}');
+                
+                switch(e.key) {
+                    case 'ArrowUp':
+                        if (e.shiftKey) {
+                            // Shift+Up: 上端を上げる
+                            settings.crop_top = Math.min(500, (settings.crop_top || 246) + 5);
+                            updated = true;
+                        } else if (e.ctrlKey) {
+                            // Ctrl+Up: 下端を上げる
+                            settings.crop_bottom = Math.max(100, (settings.crop_bottom || 247) - 5);
+                            updated = true;
+                        }
+                        break;
+                    case 'ArrowDown':
+                        if (e.shiftKey) {
+                            // Shift+Down: 上端を下げる
+                            settings.crop_top = Math.max(100, (settings.crop_top || 246) - 5);
+                            updated = true;
+                        } else if (e.ctrlKey) {
+                            // Ctrl+Down: 下端を下げる
+                            settings.crop_bottom = Math.min(500, (settings.crop_bottom || 247) + 5);
+                            updated = true;
+                        }
+                        break;
+                    case 'ArrowLeft':
+                        if (e.shiftKey) {
+                            // Shift+Left: 左余白を減らす
+                            settings.left_margin = Math.max(0, (settings.left_margin || 125) - 25);
+                            updated = true;
+                        }
+                        break;
+                    case 'ArrowRight':
+                        if (e.shiftKey) {
+                            // Shift+Right: 右余白を減らす
+                            settings.right_margin = Math.max(0, (settings.right_margin || 125) - 25);
+                            updated = true;
+                        }
+                        break;
+                }
+                
+                if (updated) {
+                    e.preventDefault();
+                    localStorage.setItem('pachi777_temp_settings', JSON.stringify(settings));
+                    // Force reload to update the UI
+                    window.location.reload();
+                }
+            });
+            </script>
+            """, unsafe_allow_html=True)
+            
+            # 操作説明
+            with st.expander("⌨️ キーボード操作説明"):
+                st.markdown("""
+                - **Shift + ↑** : 上端を上げる（切り抜き範囲を広げる）
+                - **Shift + ↓** : 上端を下げる（切り抜き範囲を狭める）
+                - **Ctrl + ↑** : 下端を上げる（切り抜き範囲を狭める）
+                - **Ctrl + ↓** : 下端を下げる（切り抜き範囲を広げる）
+                - **Shift + ←** : 左余白を減らす
+                - **Shift + →** : 右余白を減らす
+                """)
+            
+            # 微調整ボタン（代替手段）
+            st.markdown("#### または、ボタンで調整")
+            
+            # 切り抜き範囲の調整
+            adjust_cols = st.columns(4)
+            
+            with adjust_cols[0]:
+                st.markdown("**上端**")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("↑5", key="top_up", help="上端を5px上げる"):
+                        st.session_state.settings['crop_top'] = min(500, crop_top + 5)
+                        st.rerun()
+                with col2:
+                    if st.button("↓5", key="top_down", help="上端を5px下げる"):
+                        st.session_state.settings['crop_top'] = max(100, crop_top - 5)
+                        st.rerun()
+            
+            with adjust_cols[1]:
+                st.markdown("**下端**")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("↑5", key="bottom_up", help="下端を5px上げる"):
+                        st.session_state.settings['crop_bottom'] = max(100, crop_bottom - 5)
+                        st.rerun()
+                with col2:
+                    if st.button("↓5", key="bottom_down", help="下端を5px下げる"):
+                        st.session_state.settings['crop_bottom'] = min(500, crop_bottom + 5)
+                        st.rerun()
+            
+            with adjust_cols[2]:
+                st.markdown("**左余白**")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("-25", key="left_minus", help="左余白を25px減らす"):
+                        st.session_state.settings['left_margin'] = max(0, left_margin - 25)
+                        st.rerun()
+                with col2:
+                    if st.button("+25", key="left_plus", help="左余白を25px増やす"):
+                        st.session_state.settings['left_margin'] = min(300, left_margin + 25)
+                        st.rerun()
+            
+            with adjust_cols[3]:
+                st.markdown("**右余白**")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("-25", key="right_minus", help="右余白を25px減らす"):
+                        st.session_state.settings['right_margin'] = max(0, right_margin - 25)
+                        st.rerun()
+                with col2:
+                    if st.button("+25", key="right_plus", help="右余白を25px増やす"):
+                        st.session_state.settings['right_margin'] = min(300, right_margin + 25)
+                        st.rerun()
     
     # 設定の保存
     st.markdown("### 💾 設定の保存")
