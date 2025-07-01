@@ -761,8 +761,8 @@ if uploaded_files:
                         # JSON文字列として表示（コピーしやすいように）
                         experimental_html += f'<div style="font-size: 0.7em; color: #856404; margin-top: 5px;">JSON: <code style="font-family: monospace; background: #f5f5f5; padding: 2px;">{json.dumps(debug_json, ensure_ascii=False)}</code></div>'
                 
-                experimental_html += '</div>'
-                st.markdown(experimental_html, unsafe_allow_html=True)
+                    experimental_html += '</div>'
+                    st.markdown(experimental_html, unsafe_allow_html=True)
             else:
                 st.warning("⚠️ グラフデータを検出できませんでした")
             
