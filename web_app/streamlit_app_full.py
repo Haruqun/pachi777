@@ -484,6 +484,66 @@ if uploaded_files:
             with st.expander("🧪 切り抜きテスト（開発用）"):
                 st.caption("※ これは開発用のテスト機能です。通常の解析には影響しません。")
                 
+                # 現状の仕様
+                st.markdown("#### 現状の仕様（メイン処理）")
+                try:
+                    # 現在の実装と同じロジック
+                    test_hsv = cv2.cvtColor(result['original_image'], cv2.COLOR_RGB2HSV)
+                    test_orange_mask = cv2.inRange(test_hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
+                    test_height, test_width = result['original_image'].shape[:2]
+                    test_gray = cv2.cvtColor(result['original_image'], cv2.COLOR_RGB2GRAY)
+                    
+                    # オレンジバーの検出
+                    current_orange_bottom = 0
+                    for y in range(test_height//2):
+                        if np.sum(test_orange_mask[y, :]) > test_width * 0.3 * 255:
+                            current_orange_bottom = y
+                    
+                    # オレンジバーの下端を正確に見つける
+                    if current_orange_bottom > 0:
+                        for y in range(current_orange_bottom, min(current_orange_bottom + 100, test_height)):
+                            if np.sum(test_orange_mask[y, :]) < test_width * 0.1 * 255:
+                                current_orange_bottom = y
+                                break
+                    else:
+                        current_orange_bottom = 150
+                    
+                    # ゼロライン検出
+                    search_start_current = current_orange_bottom + 50
+                    search_end_current = min(test_height - 100, current_orange_bottom + 400)
+                    
+                    best_score_current = 0
+                    zero_line_current = (search_start_current + search_end_current) // 2
+                    
+                    for y in range(search_start_current, search_end_current):
+                        row = test_gray[y, 100:test_width-100]
+                        darkness = 1.0 - (np.mean(row) / 255.0)
+                        uniformity = 1.0 - (np.std(row) / 128.0)
+                        score = darkness * 0.5 + uniformity * 0.5
+                        
+                        if score > best_score_current:
+                            best_score_current = score
+                            zero_line_current = y
+                    
+                    # 切り抜き
+                    top_current = max(0, zero_line_current - 246)
+                    bottom_current = min(test_height, zero_line_current + 247)
+                    left_current = 125
+                    right_current = test_width - 125
+                    
+                    cropped_current = result['original_image'][int(top_current):int(bottom_current), int(left_current):int(right_current)].copy()
+                    
+                    # グリッドライン追加
+                    zero_in_crop_current = zero_line_current - top_current
+                    cv2.line(cropped_current, (0, int(zero_in_crop_current)), (cropped_current.shape[1], int(zero_in_crop_current)), (0, 0, 255), 2)
+                    cv2.putText(cropped_current, 'Zero (Current)', (10, int(zero_in_crop_current) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                    
+                    st.image(cropped_current, caption="現状の仕様による切り抜き", use_column_width=True)
+                    st.info(f"オレンジバー: Y={current_orange_bottom}, ゼロライン: Y={zero_line_current}, スコア: {best_score_current:.3f}")
+                    
+                except Exception as e:
+                    st.error(f"現状の仕様でエラーが発生: {str(e)}")
+                
                 # A案: グラフエリア中央方式
                 st.markdown("#### A案: グラフエリア中央方式")
                 try:
