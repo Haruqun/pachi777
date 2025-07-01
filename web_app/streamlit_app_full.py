@@ -15,6 +15,7 @@ import platform
 import pytesseract
 import re
 import json
+import pandas as pd
 
 # ページ設定
 st.set_page_config(
@@ -802,6 +803,95 @@ if uploaded_files:
                 
                 # コピーボタン
                 st.markdown("👆 上記のJSONデータをコピーして、開発者に送信してください")
+    
+    # 結果を表形式で表示
+    st.markdown("### 📊 解析結果（表形式）")
+    
+    # データフレーム作成
+    table_data = []
+    for idx, result in enumerate(analysis_results):
+        if result.get('success'):
+            row = {
+                '番号': idx + 1,
+                'ファイル名': result['name'],
+                '最高値': f"{result['max_val']:,}",
+                '最低値': f"{result['min_val']:,}",
+                '現在値': f"{result['current_val']:,}",
+                '初当たり': f"{result['first_hit_val']:,}" if result['first_hit_val'] is not None else "-",
+                '収支': f"{result['current_val']:+,}",
+            }
+            
+            # OCRデータがある場合は追加
+            if result.get('ocr_data'):
+                ocr = result['ocr_data']
+                row.update({
+                    '台番号': ocr.get('machine_number', '-'),
+                    '累計スタート': ocr.get('total_start', '-'),
+                    '大当り回数': f"{ocr.get('jackpot_count')}回" if ocr.get('jackpot_count') else '-',
+                    '初当り回数': f"{ocr.get('first_hit_count')}回" if ocr.get('first_hit_count') else '-',
+                    '確率': ocr.get('jackpot_probability', '-'),
+                    '最高出玉': f"{ocr.get('max_payout')}玉" if ocr.get('max_payout') else '-',
+                })
+            
+            table_data.append(row)
+    
+    if table_data:
+        df = pd.DataFrame(table_data)
+        
+        # 表示する列を選択（存在する列のみ）
+        display_columns = ['番号', 'ファイル名', '台番号', '累計スタート', '大当り回数', 
+                          '最高値', '最低値', '現在値', '初当たり', '収支']
+        display_columns = [col for col in display_columns if col in df.columns]
+        
+        # データフレームを表示
+        st.dataframe(
+            df[display_columns],
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # ダウンロードボタンを横に並べる
+        col1, col2, col3 = st.columns([1, 1, 4])
+        
+        # CSVダウンロード
+        with col1:
+            csv = df.to_csv(index=False, encoding='utf-8-sig')
+            st.download_button(
+                label="📥 CSV ダウンロード",
+                data=csv,
+                file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                help="Excel等で開けるCSV形式でダウンロード"
+            )
+        
+        # Excelダウンロード
+        with col2:
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False, sheet_name='解析結果')
+            
+            st.download_button(
+                label="📊 Excel ダウンロード",
+                data=buffer.getvalue(),
+                file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                help="Excel形式でダウンロード"
+            )
+        
+        # コピー用のテキスト生成（タブ区切り）
+        with st.expander("📋 表データをコピー"):
+            # ヘッダー行
+            tsv_text = '\t'.join(display_columns) + '\n'
+            # データ行
+            for _, row in df[display_columns].iterrows():
+                tsv_text += '\t'.join(str(v) for v in row.values) + '\n'
+            
+            st.text_area(
+                "Excel等に貼り付け可能なタブ区切りデータ",
+                value=tsv_text,
+                height=200,
+                help="このテキストをコピーしてExcel等に貼り付けできます"
+            )
     
 else:
     # アップロード前の表示
