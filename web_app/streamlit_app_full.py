@@ -113,6 +113,151 @@ def extract_site7_data(image):
         return None
 
 
+# 調整機能（コラプス）
+with st.expander("⚙️ 画像解析の調整設定"):
+    st.markdown("##### 端末ごとの調整設定")
+    st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
+    
+    # デフォルト値
+    default_settings = {
+        'search_start_offset': 50,
+        'search_end_offset': 400,
+        'img_search_start_offset': 200,
+        'img_search_end_offset': 800,
+        'crop_top': 246,
+        'crop_bottom': 247,
+        'left_margin': 125,
+        'right_margin': 125
+    }
+    
+    # LocalStorageとの連携用JavaScript
+    st.markdown("""
+    <script>
+    // LocalStorageから設定を読み込む
+    function loadSettings() {
+        const settings = localStorage.getItem('pachi777_settings');
+        if (settings) {
+            return JSON.parse(settings);
+        }
+        return null;
+    }
+    
+    // LocalStorageに設定を保存
+    function saveSettings(settings) {
+        localStorage.setItem('pachi777_settings', JSON.stringify(settings));
+    }
+    
+    // Streamlitに設定を送信
+    const savedSettings = loadSettings();
+    if (savedSettings) {
+        window.parent.postMessage({
+            type: 'streamlit:setComponentValue',
+            value: savedSettings
+        }, '*');
+    }
+    </script>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**通常画像の設定**")
+        search_start_offset = st.number_input(
+            "ゼロライン検索開始位置（オレンジバーから）",
+            min_value=0, max_value=500, value=default_settings['search_start_offset'],
+            step=10, help="オレンジバーから何ピクセル下から検索を開始するか"
+        )
+        search_end_offset = st.number_input(
+            "ゼロライン検索終了位置（オレンジバーから）",
+            min_value=100, max_value=1000, value=default_settings['search_end_offset'],
+            step=50, help="オレンジバーから何ピクセル下まで検索するか"
+        )
+    
+    with col2:
+        st.markdown("**IMG_0xxx.PNG用の設定**")
+        img_search_start_offset = st.number_input(
+            "ゼロライン検索開始位置（IMG用）",
+            min_value=0, max_value=500, value=default_settings['img_search_start_offset'],
+            step=10, help="IMG_0xxx.PNG用の検索開始位置"
+        )
+        img_search_end_offset = st.number_input(
+            "ゼロライン検索終了位置（IMG用）",
+            min_value=100, max_value=1200, value=default_settings['img_search_end_offset'],
+            step=50, help="IMG_0xxx.PNG用の検索終了位置"
+        )
+    
+    st.markdown("**切り抜きサイズの設定**")
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        crop_top = st.number_input(
+            "上方向の切り抜きサイズ",
+            min_value=100, max_value=500, value=default_settings['crop_top'],
+            step=1, help="ゼロラインから上方向に何ピクセル切り抜くか"
+        )
+        crop_bottom = st.number_input(
+            "下方向の切り抜きサイズ",
+            min_value=100, max_value=500, value=default_settings['crop_bottom'],
+            step=1, help="ゼロラインから下方向に何ピクセル切り抜くか"
+        )
+    
+    with col4:
+        left_margin = st.number_input(
+            "左側の余白",
+            min_value=0, max_value=300, value=default_settings['left_margin'],
+            step=25, help="左側から何ピクセル除外するか"
+        )
+        right_margin = st.number_input(
+            "右側の余白",
+            min_value=0, max_value=300, value=default_settings['right_margin'],
+            step=25, help="右側から何ピクセル除外するか"
+        )
+    
+    # 設定を保存するボタン
+    if st.button("💾 設定を保存", type="primary"):
+        settings = {
+            'search_start_offset': search_start_offset,
+            'search_end_offset': search_end_offset,
+            'img_search_start_offset': img_search_start_offset,
+            'img_search_end_offset': img_search_end_offset,
+            'crop_top': crop_top,
+            'crop_bottom': crop_bottom,
+            'left_margin': left_margin,
+            'right_margin': right_margin
+        }
+        
+        # JavaScriptで保存
+        st.markdown(f"""
+        <script>
+        saveSettings({settings});
+        alert('設定を保存しました');
+        </script>
+        """, unsafe_allow_html=True)
+        
+        st.success("✅ 設定を保存しました")
+    
+    # デフォルトに戻すボタン
+    if st.button("🔄 デフォルトに戻す"):
+        st.markdown("""
+        <script>
+        localStorage.removeItem('pachi777_settings');
+        window.location.reload();
+        </script>
+        """, unsafe_allow_html=True)
+
+# 設定値をセッションステートに保存
+if 'settings' not in st.session_state:
+    st.session_state.settings = {
+        'search_start_offset': search_start_offset,
+        'search_end_offset': search_end_offset,
+        'img_search_start_offset': img_search_start_offset,
+        'img_search_end_offset': img_search_end_offset,
+        'crop_top': crop_top,
+        'crop_bottom': crop_bottom,
+        'left_margin': left_margin,
+        'right_margin': right_margin
+    }
+
 # ファイルアップローダー（一番最初に表示）
 uploaded_files = st.file_uploader(
     "📤 グラフ画像をアップロード",
@@ -185,20 +330,32 @@ if uploaded_files:
                 if bg_mean > 200 and bg_mean < 240:
                     is_img_series = True
         
+        # 設定値を使用（セッションステートから取得）
+        settings = st.session_state.get('settings', {
+            'search_start_offset': 50,
+            'search_end_offset': 400,
+            'img_search_start_offset': 200,
+            'img_search_end_offset': 800,
+            'crop_top': 246,
+            'crop_bottom': 247,
+            'left_margin': 125,
+            'right_margin': 125
+        })
+        
         if is_img_series:
             # IMG_0xxx.PNG用の拡張検索範囲
-            search_start = orange_bottom + 200  # より下から開始
-            search_end = min(height - 300, orange_bottom + 800)  # より広い範囲
+            search_start = orange_bottom + settings['img_search_start_offset']
+            search_end = min(height - 300, orange_bottom + settings['img_search_end_offset'])
             # IMG_0xxx.PNG用のスケール（±30000固定）
-            crop_top_offset = 246  # 上方向の切り抜きサイズ
-            crop_bottom_offset = 247  # 下方向の切り抜きサイズ
+            crop_top_offset = settings['crop_top']
+            crop_bottom_offset = settings['crop_bottom']
         else:
             # 通常の検索範囲
-            search_start = orange_bottom + 50
-            search_end = min(height - 100, orange_bottom + 400)
+            search_start = orange_bottom + settings['search_start_offset']
+            search_end = min(height - 100, orange_bottom + settings['search_end_offset'])
             # 通常のスケール（±30000）
-            crop_top_offset = 246
-            crop_bottom_offset = 247
+            crop_top_offset = settings['crop_top']
+            crop_bottom_offset = settings['crop_bottom']
         
         best_score = 0
         zero_line_y = (search_start + search_end) // 2
@@ -216,8 +373,8 @@ if uploaded_files:
         # 切り抜き範囲を設定（最終調整値）
         top = max(0, zero_line_y - crop_top_offset)  # 0ラインから上
         bottom = min(height, zero_line_y + crop_bottom_offset)  # 0ラインから下
-        left = 125  # 左右の余白125px
-        right = width - 125  # 左右の余白125px
+        left = settings['left_margin']  # 左右の余白
+        right = width - settings['right_margin']  # 左右の余白
         
         # 切り抜き実行
         cropped_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
