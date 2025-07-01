@@ -118,25 +118,56 @@ def extract_site7_data(image):
         graph_bottom_text = pytesseract.image_to_string(graph_bottom_section, lang='jpn')
         
         # 「最大値：」というラベルが付いた数値を優先的に探す
-        max_value_match = re.search(r'最大値\s*[:：]\s*(\d+)', graph_bottom_text)
+        # 複数のパターンで試行
+        patterns = [
+            r'最大値\s*[:：]\s*(\d+)',           # 通常のパターン
+            r'大値\s*[:：]\s*(\d+)',             # 「最」が欠落した場合
+            r'値\s*[:：]\s*(\d+)',               # さらに欠落した場合
+            r'最大\s*(\d+)',                      # コロンが認識されない場合
+        ]
         
-        if max_value_match:
-            data['graph_max'] = max_value_match.group(1)
-        else:
-            # 見つからない場合は全体テキストから探す（ただし30,000のような軸ラベルを除外）
-            all_numbers = re.findall(r'(\d{4,5})', text)
-            
-            # 「最大値」の近くにある数値を探す
-            max_label_pos = text.find('最大値')
-            if max_label_pos != -1:
-                # 最大値ラベルの後の100文字以内で数値を探す
-                nearby_text = text[max_label_pos:max_label_pos + 100]
-                nearby_match = re.search(r'[:：]\s*(\d{4,5})', nearby_text)
-                if nearby_match:
-                    value = nearby_match.group(1)
-                    # 30000, 20000, 10000のような軸ラベルを除外
-                    if value not in ['30000', '20000', '10000', '00000']:
+        max_value_found = False
+        for pattern in patterns:
+            max_value_match = re.search(pattern, graph_bottom_text)
+            if max_value_match:
+                value = max_value_match.group(1)
+                # 3桁以上の数値であることを確認（60のような短い値を除外）
+                if len(value) >= 3:
+                    data['graph_max'] = value
+                    max_value_found = True
+                    break
+        
+        if not max_value_found:
+            # 全体テキストから再度探す
+            for pattern in patterns:
+                max_value_match = re.search(pattern, text)
+                if max_value_match:
+                    value = max_value_match.group(1)
+                    # 3桁以上で、軸ラベルでないことを確認
+                    if len(value) >= 3 and value not in ['30000', '20000', '10000', '000']:
                         data['graph_max'] = value
+                        max_value_found = True
+                        break
+            
+            # それでも見つからない場合、「最大値」の近くの数値を探す
+            if not max_value_found:
+                max_label_pos = text.find('最大値')
+                if max_label_pos == -1:
+                    max_label_pos = text.find('大値')  # 部分的な認識も考慮
+                
+                if max_label_pos != -1:
+                    # 最大値ラベルの前後50文字を探索
+                    start_pos = max(0, max_label_pos - 10)
+                    end_pos = min(len(text), max_label_pos + 50)
+                    nearby_text = text[start_pos:end_pos]
+                    
+                    # 3-5桁の数値を探す
+                    number_match = re.search(r'(\d{3,5})', nearby_text)
+                    if number_match:
+                        value = number_match.group(1)
+                        # 軸ラベルでないことを確認
+                        if value not in ['30000', '20000', '10000', '000']:
+                            data['graph_max'] = value
         
         return data
     except Exception as e:
