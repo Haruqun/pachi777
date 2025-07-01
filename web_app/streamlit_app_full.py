@@ -622,6 +622,9 @@ if uploaded_files:
                         ocr_html += f'<div class="ocr-item"><span class="ocr-label">💰 最高出玉</span><span class="ocr-value">{ocr["max_payout"]}玉</span></div>'
                     if ocr.get('graph_max'):
                         ocr_html += f'<div class="ocr-item"><span class="ocr-label">📊 グラフ最大値</span><span class="ocr-value">{ocr["graph_max"]}玉</span></div>'
+                    elif result.get('max_val', 0) <= 0:
+                        # グラフがプラスになっていない場合
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">📊 グラフ最大値</span><span class="ocr-value">-</span></div>'
                     
                     ocr_html += '</div>'
                     st.markdown(ocr_html, unsafe_allow_html=True)
