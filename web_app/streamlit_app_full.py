@@ -123,6 +123,13 @@ default_settings = {
     'right_margin': 125
 }
 
+# セッションステートの初期化（エキスパンダーより前に行う）
+if 'settings' not in st.session_state:
+    st.session_state.settings = default_settings.copy()
+
+if 'saved_presets' not in st.session_state:
+    st.session_state.saved_presets = {}
+
 # 調整機能（コラプス）
 with st.expander("⚙️ 画像解析の調整設定"):
     st.markdown("##### 端末ごとの調整設定")
@@ -428,14 +435,6 @@ with st.expander("⚙️ 画像解析の調整設定"):
                     st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
                     st.rerun()
 
-# 設定値をセッションステートに保存（エキスパンダーの外で初期化）
-if 'settings' not in st.session_state:
-    st.session_state.settings = default_settings.copy()
-
-# 保存された設定プリセット
-if 'saved_presets' not in st.session_state:
-    st.session_state.saved_presets = {}
-    
 # LocalStorageから設定を読み込むためのプレースホルダー
 load_placeholder = st.empty()
 with load_placeholder.container():
