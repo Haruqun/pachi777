@@ -148,24 +148,29 @@ if not st.session_state.authenticated:
     # カスタムスタイルの適用
     st.markdown("""
     <style>
+    .stApp > main {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+    }
     .auth-container {
         background: transparent;
         padding: 60px 40px;
-        border-radius: 20px;
-        border: 2px solid #e0e0e0;
         margin: 50px auto;
         max-width: 500px;
+        text-align: center;
     }
     .auth-title {
         text-align: center;
-        color: #333;
+        color: white;
         font-size: 36px;
         font-weight: 700;
         margin-bottom: 10px;
     }
     .auth-subtitle {
         text-align: center;
-        color: #666;
+        color: white;
         font-size: 18px;
         margin-bottom: 40px;
     }
@@ -185,6 +190,13 @@ if not st.session_state.authenticated:
         color: #666;
         font-size: 14px;
         margin-top: 30px;
+    }
+    .stForm {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 30px;
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
     </style>
     """, unsafe_allow_html=True)
