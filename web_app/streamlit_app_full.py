@@ -202,15 +202,15 @@ with main_container:
     """, unsafe_allow_html=True)
     
     # ファイルアップローダー
-    uploaded_file = st.file_uploader(
+    uploaded_files = st.file_uploader(
         "グラフ画像を選択してください",
         type=['jpg', 'jpeg', 'png'],
-        accept_multiple_files=False,
-        help="グラフ画像をアップロードしてください（JPG, PNG形式）"
+        accept_multiple_files=True,
+        help="複数の画像を一度にアップロードできます（JPG, PNG形式）"
     )
     
-    if uploaded_file:
-        st.success(f"✅ 画像がアップロードされました: {uploaded_file.name}")
+    if uploaded_files:
+        st.success(f"✅ {len(uploaded_files)}枚の画像がアップロードされました")
         
         # 解析結果セクション
         st.markdown("""
@@ -220,8 +220,19 @@ with main_container:
         </h3>
         """, unsafe_allow_html=True)
         
-        # 画像処理
-        with st.spinner('画像を処理中...'):
+        # プログレスバー
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # 解析結果を格納
+        analysis_results = []
+        
+        # 各画像を処理
+        for idx, uploaded_file in enumerate(uploaded_files):
+            # 進捗更新
+            progress = (idx + 1) / len(uploaded_files)
+            progress_bar.progress(progress)
+            status_text.text(f'処理中... ({idx + 1}/{len(uploaded_files)})')
             
             # 画像を読み込み
             image = Image.open(uploaded_file)
@@ -350,14 +361,45 @@ with main_container:
                 min_val = min(graph_values)
                 current_val = graph_values[-1] if graph_values else 0
                 
-                # 初当たり値を探す（最初にプラスになったポイント）
+                # 初当たり値を探す（production版と同じロジック）
                 first_hit_val = 0
                 first_hit_x = None
-                for i, val in enumerate(graph_values):
-                    if val > 0:
-                        first_hit_val = val
-                        first_hit_x = i
-                        break
+                min_payout = 100  # 最低払い出し玉数
+                
+                # 方法1: 100玉以上の急激な増加を検出
+                for i in range(1, min(len(graph_values)-2, 150)):  # 最大150点まで探索
+                    current_increase = graph_values[i+1] - graph_values[i]
+                    
+                    # 100玉以上の増加を検出
+                    if current_increase > min_payout:
+                        # 次の点も上昇または維持していることを確認（ノイズ除外）
+                        if graph_values[i+2] >= graph_values[i+1] - 50:
+                            # 初当たりは必ずマイナス値から
+                            if graph_values[i] < 0:
+                                first_hit_val = graph_values[i]
+                                first_hit_x = i
+                                break
+                
+                # 方法2: 減少傾向からの急上昇を検出
+                if first_hit_x is None:
+                    window_size = 5
+                    for i in range(window_size, len(graph_values)-1):
+                        # 過去の傾向を計算
+                        past_window = graph_values[max(0, i-window_size):i]
+                        if len(past_window) >= 2:
+                            avg_slope = (past_window[-1] - past_window[0]) / len(past_window)
+                            
+                            # 現在の変化
+                            current_change = graph_values[i+1] - graph_values[i]
+                            
+                            # 減少傾向からの急上昇
+                            if avg_slope <= 0 and current_change > min_payout:
+                                if i + 2 < len(graph_values) and graph_values[i+2] > graph_values[i+1] - 50:
+                                    # 初当たりは必ずマイナス値
+                                    if graph_values[i] < 0:
+                                        first_hit_val = graph_values[i]
+                                        first_hit_x = i
+                                        break
                 
                 # オーバーレイ画像を作成
                 overlay_img = cropped_img.copy()
@@ -398,24 +440,32 @@ with main_container:
                         prev_y = y
                 
                 # 横線を描画（最低値、最高値、現在値、初当たり値）
-                # 最高値ライン
+                # 最高値ライン（右端に短い線）
                 max_y = int(zero_line_in_crop - (max_val / analyzer.scale))
                 if 0 <= max_y < overlay_img.shape[0]:
-                    cv2.line(overlay_img, (0, max_y), (overlay_img.shape[1], max_y), (0, 255, 255), 1)
+                    # 右端に短い線
+                    line_start = overlay_img.shape[1] - 100
+                    cv2.line(overlay_img, (line_start, max_y), (overlay_img.shape[1], max_y), (0, 255, 255), 2)
                     # 背景付きテキスト（白背景、濃い黄色文字）
                     text = f'MAX: {int(max_val):,}'
-                    cv2.rectangle(overlay_img, (10, max_y - 25), (150, max_y - 5), (255, 255, 255), -1)
-                    cv2.putText(overlay_img, text, (15, max_y - 10), 
+                    text_width = 120
+                    cv2.rectangle(overlay_img, (line_start - text_width - 10, max_y - 15), 
+                                 (line_start - 5, max_y + 5), (255, 255, 255), -1)
+                    cv2.putText(overlay_img, text, (line_start - text_width - 5, max_y), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 150, 150), 1, cv2.LINE_AA)
                 
-                # 最低値ライン
+                # 最低値ライン（右端に短い線）
                 min_y = int(zero_line_in_crop - (min_val / analyzer.scale))
                 if 0 <= min_y < overlay_img.shape[0]:
-                    cv2.line(overlay_img, (0, min_y), (overlay_img.shape[1], min_y), (255, 0, 255), 1)
+                    # 右端に短い線
+                    line_start = overlay_img.shape[1] - 100
+                    cv2.line(overlay_img, (line_start, min_y), (overlay_img.shape[1], min_y), (255, 0, 255), 2)
                     # 背景付きテキスト（白背景、濃いマゼンタ文字）
                     text = f'MIN: {int(min_val):,}'
-                    cv2.rectangle(overlay_img, (10, min_y + 5), (150, min_y + 25), (255, 255, 255), -1)
-                    cv2.putText(overlay_img, text, (15, min_y + 20), 
+                    text_width = 120
+                    cv2.rectangle(overlay_img, (line_start - text_width - 10, min_y - 15), 
+                                 (line_start - 5, min_y + 5), (255, 255, 255), -1)
+                    cv2.putText(overlay_img, text, (line_start - text_width - 5, min_y), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 0, 150), 1, cv2.LINE_AA)
                 
                 # 現在値ライン
@@ -430,26 +480,84 @@ with main_container:
                     cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, current_y - 10), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 0), 1, cv2.LINE_AA)
                 
-                # 初当たり値ライン（横線のみ）
+                # 初当たり値ライン（右端に短い線）
                 if first_hit_val > 0:  # 初当たりがある場合
                     first_hit_y = int(zero_line_in_crop - (first_hit_val / analyzer.scale))
                     if 0 <= first_hit_y < overlay_img.shape[0]:
-                        cv2.line(overlay_img, (0, first_hit_y), (overlay_img.shape[1], first_hit_y), (155, 48, 255), 1)
+                        # 右端に短い線
+                        line_start = overlay_img.shape[1] - 100
+                        cv2.line(overlay_img, (line_start, first_hit_y), (overlay_img.shape[1], first_hit_y), (155, 48, 255), 2)
                         # 背景付きテキスト（白背景、紫文字）
                         text = f'FIRST HIT: {int(first_hit_val):,}'
-                        cv2.rectangle(overlay_img, (10, first_hit_y - 25), (170, first_hit_y - 5), (255, 255, 255), -1)
-                        cv2.putText(overlay_img, text, (15, first_hit_y - 10), 
+                        text_width = 120
+                        cv2.rectangle(overlay_img, (line_start - text_width - 10, first_hit_y - 15), 
+                                     (line_start - 5, first_hit_y + 5), (255, 255, 255), -1)
+                        cv2.putText(overlay_img, text, (line_start - text_width - 5, first_hit_y), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 1, cv2.LINE_AA)
                 
-                # 画像を横幅いっぱいで表示
-                st.image(overlay_img, use_column_width=True)
-                
-                # 解析成功メッセージ
-                st.success("✅ グラフ解析が完了しました！")
+                # 結果を保存
+                analysis_results.append({
+                    'name': uploaded_file.name,
+                    'image': overlay_img,
+                    'success': True,
+                    'max_val': int(max_val),
+                    'min_val': int(min_val),
+                    'current_val': int(current_val),
+                    'first_hit_val': int(first_hit_val) if first_hit_val > 0 else None,
+                    'dominant_color': dominant_color
+                })
             else:
-                # 解析失敗時は元画像を表示
-                st.image(cropped_img, use_column_width=True)
-                st.warning("⚠️ グラフデータを検出できませんでした")
+                # 解析失敗時
+                analysis_results.append({
+                    'name': uploaded_file.name,
+                    'image': cropped_img,
+                    'success': False
+                })
+        
+        # プログレスバーを完了
+        progress_bar.progress(1.0)
+        status_text.text('✅ 全ての画像の処理が完了しました！')
+        
+        # 結果をグリッド表示
+        st.markdown("""
+        <h3 style="color: #4a5568; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">
+            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📊</span> 
+            解析結果一覧
+        </h3>
+        """, unsafe_allow_html=True)
+        
+        # 2列のグリッドで表示
+        cols = st.columns(2)
+        for idx, result in enumerate(analysis_results):
+            col_idx = idx % 2
+            with cols[col_idx]:
+                # カードスタイルのコンテナ
+                with st.container():
+                    st.markdown(f"""
+                    <div style="background: white; padding: 1.5rem; border-radius: 0.75rem; 
+                                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+                                margin-bottom: 1.5rem; overflow: hidden;">
+                        <h4 style="color: #4a5568; margin-bottom: 1rem; font-weight: 600;">
+                            {result['name']}
+                        </h4>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # 画像表示
+                    st.image(result['image'], use_column_width=True)
+                    
+                    # 成功時は統計情報を表示
+                    if result['success']:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("最高値", f"{result['max_val']:,}玉")
+                            st.metric("最低値", f"{result['min_val']:,}玉")
+                        with col2:
+                            st.metric("現在値", f"{result['current_val']:,}玉")
+                            if result['first_hit_val']:
+                                st.metric("初当たり", f"{result['first_hit_val']:,}玉")
+                    else:
+                        st.warning("⚠️ グラフデータを検出できませんでした")
         
         # 詳細解析セクション
         if graph_data_points:
@@ -482,8 +590,8 @@ with main_container:
         with st.expander("💡 使い方"):
             st.markdown("""
             1. **「Browse files」ボタン**をクリック
-            2. **グラフ画像を選択**
-            3. **自動的に切り抜きが実行されます**
+            2. **グラフ画像を選択**（複数選択可）
+            3. **自動的に切り抜きと解析が実行されます**
             
             対応フォーマット:
             - JPG/JPEG
