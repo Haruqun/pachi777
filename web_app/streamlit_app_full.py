@@ -364,15 +364,16 @@ with st.expander("⚙️ 画像解析の調整設定"):
         cv2.putText(overlay_img, 'Orange Bar', (10, orange_bottom + 30), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 140, 0), 2)
         
-        # プレビューを表示
-        col_preview, col_cropped = st.columns(2)
-        
-        with col_preview:
-            st.caption("元画像（調整範囲を表示）")
+        # プレビューを左カラムに表示（縦に配置）
+        with main_col1:
+            st.markdown("### 🖼️ リアルタイムプレビュー")
+            
+            # 元画像（調整範囲を表示）
+            st.markdown("#### 元画像（調整範囲を表示）")
             st.image(overlay_img, use_column_width=True)
-        
-        with col_cropped:
-            st.caption("切り抜き結果")
+            
+            # 切り抜き結果（元画像の下に配置）
+            st.markdown("#### 切り抜き結果")
             cropped_preview = img_array[int(top):int(bottom), int(left):int(right)].copy()
             
             # グリッドラインを追加
@@ -380,37 +381,11 @@ with st.expander("⚙️ 画像解析の調整設定"):
             cv2.line(cropped_preview, (0, int(zero_in_crop)), (cropped_preview.shape[1], int(zero_in_crop)), (255, 0, 0), 2)
             
             # グリッドラインを追加（調整値付き）
-            scale = 122.0
-            
             # +30000ライン（最上部付近）
             y_30k = 0 + grid_30k_offset  # 最上部を基準に調整
             if 0 <= y_30k < cropped_preview.shape[0]:
                 cv2.line(cropped_preview, (0, y_30k), (cropped_preview.shape[1], y_30k), (0, 150, 0), 3)
                 cv2.putText(cropped_preview, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 100, 0), 2)
-            
-            # +20000ライン
-            y_20k = int(zero_in_crop - (20000 / scale)) + grid_20k_offset
-            if 0 < y_20k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_20k), (cropped_preview.shape[1], y_20k), (100, 100, 100), 2)
-                cv2.putText(cropped_preview, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
-            
-            # +10000ライン
-            y_10k = int(zero_in_crop - (10000 / scale)) + grid_10k_offset
-            if 0 < y_10k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_10k), (cropped_preview.shape[1], y_10k), (100, 100, 100), 2)
-                cv2.putText(cropped_preview, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
-            
-            # -10000ライン
-            y_minus_10k = int(zero_in_crop + (10000 / scale)) + grid_minus_10k_offset
-            if 0 < y_minus_10k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_minus_10k), (cropped_preview.shape[1], y_minus_10k), (100, 100, 100), 2)
-                cv2.putText(cropped_preview, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
-            
-            # -20000ライン
-            y_minus_20k = int(zero_in_crop + (20000 / scale)) + grid_minus_20k_offset
-            if 0 < y_minus_20k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_minus_20k), (cropped_preview.shape[1], y_minus_20k), (100, 100, 100), 2)
-                cv2.putText(cropped_preview, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
             
             # -30000ライン
             y_minus_30k = cropped_preview.shape[0] - 1 + grid_minus_30k_offset  # 最下部基準
@@ -418,20 +393,46 @@ with st.expander("⚙️ 画像解析の調整設定"):
                 cv2.line(cropped_preview, (0, y_minus_30k), (cropped_preview.shape[1], y_minus_30k), (150, 0, 0), 3)
                 cv2.putText(cropped_preview, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 0, 0), 2)
             
+            # ゼロラインから±30000ラインまでの距離を計算
+            distance_to_plus_30k = zero_in_crop - y_30k
+            distance_to_minus_30k = y_minus_30k - zero_in_crop
+            
+            # +20000ライン（+30000の2/3の位置）
+            y_20k = int(zero_in_crop - (distance_to_plus_30k * 2 / 3)) + grid_20k_offset
+            if 0 < y_20k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_20k), (cropped_preview.shape[1], y_20k), (100, 100, 100), 2)
+                cv2.putText(cropped_preview, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
+            
+            # +10000ライン（+30000の1/3の位置）
+            y_10k = int(zero_in_crop - (distance_to_plus_30k * 1 / 3)) + grid_10k_offset
+            if 0 < y_10k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_10k), (cropped_preview.shape[1], y_10k), (100, 100, 100), 2)
+                cv2.putText(cropped_preview, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
+            
+            # -10000ライン（-30000の1/3の位置）
+            y_minus_10k = int(zero_in_crop + (distance_to_minus_30k * 1 / 3)) + grid_minus_10k_offset
+            if 0 < y_minus_10k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_minus_10k), (cropped_preview.shape[1], y_minus_10k), (100, 100, 100), 2)
+                cv2.putText(cropped_preview, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
+            
+            # -20000ライン（-30000の2/3の位置）
+            y_minus_20k = int(zero_in_crop + (distance_to_minus_30k * 2 / 3)) + grid_minus_20k_offset
+            if 0 < y_minus_20k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_minus_20k), (cropped_preview.shape[1], y_minus_20k), (100, 100, 100), 2)
+                cv2.putText(cropped_preview, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
+            
             st.image(cropped_preview, use_column_width=True)
+            
+            # 情報表示
+            st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
+            st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
         
-        # 情報表示
-        st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
-        st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
-        
-        # ビジュアル調整モード
+        # ビジュアル調整モード（右カラム）
         if adjustment_mode == "ビジュアル調整":
-            st.markdown("#### 🎯 ボタンで範囲を調整")
-            
-            # 切り抜き範囲の調整
-            adjust_cols = st.columns(4)
-            
-            with adjust_cols[0]:
+            with main_col2:
+                st.markdown("#### 🎯 ボタンで範囲を調整")
+                
+                # 切り抜き範囲の調整
                 st.markdown("**上端**")
                 col1, col2 = st.columns(2)
                 with col1:
@@ -442,8 +443,7 @@ with st.expander("⚙️ 画像解析の調整設定"):
                     if st.button("↓5", key="top_down", help="上端を5px下げる"):
                         st.session_state.settings['crop_top'] = max(100, crop_top - 5)
                         st.rerun()
-            
-            with adjust_cols[1]:
+                
                 st.markdown("**下端**")
                 col1, col2 = st.columns(2)
                 with col1:
@@ -454,8 +454,7 @@ with st.expander("⚙️ 画像解析の調整設定"):
                     if st.button("↓5", key="bottom_down", help="下端を5px下げる"):
                         st.session_state.settings['crop_bottom'] = min(500, crop_bottom + 5)
                         st.rerun()
-            
-            with adjust_cols[2]:
+                
                 st.markdown("**左余白**")
                 col1, col2 = st.columns(2)
                 with col1:
@@ -466,8 +465,7 @@ with st.expander("⚙️ 画像解析の調整設定"):
                     if st.button("+25", key="left_plus", help="左余白を25px増やす"):
                         st.session_state.settings['left_margin'] = min(300, left_margin + 25)
                         st.rerun()
-            
-            with adjust_cols[3]:
+                
                 st.markdown("**右余白**")
                 col1, col2 = st.columns(2)
                 with col1:
@@ -756,14 +754,24 @@ if uploaded_files:
             cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
             cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
         
-        # +20000ライン
-        y_20k = int(zero_line_in_crop - (20000 / scale)) + settings.get('grid_20k_offset', 0)
+        # -30000ライン（最下部）
+        y_minus_30k = crop_height - 1 + settings.get('grid_minus_30k_offset', 0)
+        y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
+        cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
+        cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
+        
+        # ゼロラインから±30000ラインまでの距離を計算
+        distance_to_plus_30k = zero_line_in_crop - y_30k
+        distance_to_minus_30k = y_minus_30k - zero_line_in_crop
+        
+        # +20000ライン（+30000の2/3の位置）
+        y_20k = int(zero_line_in_crop - (distance_to_plus_30k * 2 / 3)) + settings.get('grid_20k_offset', 0)
         if 0 < y_20k < crop_height:
             cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
         
-        # +10000ライン
-        y_10k = int(zero_line_in_crop - (10000 / scale)) + settings.get('grid_10k_offset', 0)
+        # +10000ライン（+30000の1/3の位置）
+        y_10k = int(zero_line_in_crop - (distance_to_plus_30k * 1 / 3)) + settings.get('grid_10k_offset', 0)
         if 0 < y_10k < crop_height:
             cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
@@ -774,23 +782,17 @@ if uploaded_files:
             cv2.line(cropped_img, (0, y_0), (cropped_img.shape[1], y_0), (255, 0, 0), 2)
             cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
         
-        # -10000ライン
-        y_minus_10k = int(zero_line_in_crop + (10000 / scale)) + settings.get('grid_minus_10k_offset', 0)
+        # -10000ライン（-30000の1/3の位置）
+        y_minus_10k = int(zero_line_in_crop + (distance_to_minus_30k * 1 / 3)) + settings.get('grid_minus_10k_offset', 0)
         if 0 < y_minus_10k < crop_height:
             cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
         
-        # -20000ライン
-        y_minus_20k = int(zero_line_in_crop + (20000 / scale)) + settings.get('grid_minus_20k_offset', 0)
+        # -20000ライン（-30000の2/3の位置）
+        y_minus_20k = int(zero_line_in_crop + (distance_to_minus_30k * 2 / 3)) + settings.get('grid_minus_20k_offset', 0)
         if 0 < y_minus_20k < crop_height:
             cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
-        
-        # -30000ライン（最下部）
-        y_minus_30k = crop_height - 1 + settings.get('grid_minus_30k_offset', 0)
-        y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
-        cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
-        cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
         
         # 解析を自動実行
         detail_text.text(f'📊 {uploaded_file.name} のグラフデータを解析中...')
