@@ -165,7 +165,7 @@ with st.expander("⚙️ 画像解析の調整設定"):
             st.success(f"✅ '{selected_preset}' を適用しました")
             st.rerun()
     
-    # テスト画像のアップロード
+    # テスト画像のアップロード（全幅で表示）
     test_image = st.file_uploader(
         "🖼️ テスト用画像をアップロード",
         type=['jpg', 'jpeg', 'png'],
@@ -227,93 +227,83 @@ with st.expander("⚙️ 画像解析の調整設定"):
         gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
         
         st.info(f"画像サイズ: {width}x{height}px")
+        
+        # レイアウト用のメインカラム（画像を読み込んだ後）
+        main_col1, main_col2 = st.columns([3, 2])
     
-    # 設定用の入力フィールド
-    st.markdown("### 🔍 ゼロライン検索設定")
-    col1, col2 = st.columns(2)
+    # 画像がアップロードされている場合のみレイアウトを適用
+    if test_image:
+        with main_col2:
+            # 設定用の入力フィールド
+            st.markdown("### 🔍 ゼロライン検索設定")
+            col1, col2 = st.columns(2)
     
-    with col1:
-        search_start_offset = st.number_input(
-            "検索開始位置（オレンジバーから）",
-            min_value=0, max_value=800, value=st.session_state.settings['search_start_offset'],
-            step=10, help="オレンジバーから何ピクセル下から検索を開始するか"
-        )
+            with col1:
+                search_start_offset = st.number_input(
+                    "検索開始位置（オレンジバーから）",
+                    min_value=0, max_value=800, value=st.session_state.settings['search_start_offset'],
+                    step=10, help="オレンジバーから何ピクセル下から検索を開始するか"
+                )
+            
+            with col2:
+                search_end_offset = st.number_input(
+                    "検索終了位置（オレンジバーから）",
+                    min_value=100, max_value=1200, value=st.session_state.settings['search_end_offset'],
+                    step=50, help="オレンジバーから何ピクセル下まで検索するか"
+                )
+            
+            st.markdown("### ✂️ 切り抜きサイズの設定")
+            col3, col4 = st.columns(2)
     
-    with col2:
-        search_end_offset = st.number_input(
-            "検索終了位置（オレンジバーから）",
-            min_value=100, max_value=1200, value=st.session_state.settings['search_end_offset'],
-            step=50, help="オレンジバーから何ピクセル下まで検索するか"
-        )
-    
-    st.markdown("### ✂️ 切り抜きサイズの設定")
-    col3, col4 = st.columns(2)
-    
-    with col3:
-        crop_top = st.number_input(
-            "上方向の切り抜きサイズ",
-            min_value=100, max_value=500, value=st.session_state.settings['crop_top'],
-            step=1, help="ゼロラインから上方向に何ピクセル切り抜くか"
-        )
-        crop_bottom = st.number_input(
-            "下方向の切り抜きサイズ",
-            min_value=100, max_value=500, value=st.session_state.settings['crop_bottom'],
-            step=1, help="ゼロラインから下方向に何ピクセル切り抜くか"
-        )
-    
-    with col4:
-        left_margin = st.number_input(
-            "左側の余白",
-            min_value=0, max_value=300, value=st.session_state.settings['left_margin'],
-            step=25, help="左側から何ピクセル除外するか"
-        )
-        right_margin = st.number_input(
-            "右側の余白",
-            min_value=0, max_value=300, value=st.session_state.settings['right_margin'],
-            step=25, help="右側から何ピクセル除外するか"
-        )
-    
-    # グリッドライン調整
-    st.markdown("### 📏 グリッドライン微調整")
-    st.caption("※ グリッドラインが正確に±30,000等の位置に来るように調整します")
-    
-    grid_col1, grid_col2, grid_col3 = st.columns(3)
-    
-    with grid_col1:
-        grid_30k_offset = st.number_input(
-            "+30,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_30k_offset', 0),
-            step=1, help="上端の+30,000ラインの位置調整"
-        )
-        grid_20k_offset = st.number_input(
-            "+20,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_20k_offset', 0),
-            step=1, help="+20,000ラインの位置調整"
-        )
-    
-    with grid_col2:
-        grid_10k_offset = st.number_input(
-            "+10,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_10k_offset', 0),
-            step=1, help="+10,000ラインの位置調整"
-        )
-        grid_minus_10k_offset = st.number_input(
-            "-10,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_10k_offset', 0),
-            step=1, help="-10,000ラインの位置調整"
-        )
-    
-    with grid_col3:
-        grid_minus_20k_offset = st.number_input(
-            "-20,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_20k_offset', 0),
-            step=1, help="-20,000ラインの位置調整"
-        )
-        grid_minus_30k_offset = st.number_input(
-            "-30,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
-            step=1, help="下端の-30,000ラインの位置調整"
-        )
+            with col3:
+                crop_top = st.number_input(
+                    "上方向の切り抜きサイズ",
+                    min_value=100, max_value=500, value=st.session_state.settings['crop_top'],
+                    step=1, help="ゼロラインから上方向に何ピクセル切り抜くか"
+                )
+                crop_bottom = st.number_input(
+                    "下方向の切り抜きサイズ",
+                    min_value=100, max_value=500, value=st.session_state.settings['crop_bottom'],
+                    step=1, help="ゼロラインから下方向に何ピクセル切り抜くか"
+                )
+            
+            with col4:
+                left_margin = st.number_input(
+                    "左側の余白",
+                    min_value=0, max_value=300, value=st.session_state.settings['left_margin'],
+                    step=25, help="左側から何ピクセル除外するか"
+                )
+                right_margin = st.number_input(
+                    "右側の余白",
+                    min_value=0, max_value=300, value=st.session_state.settings['right_margin'],
+                    step=25, help="右側から何ピクセル除外するか"
+                )
+            
+            # グリッドライン調整
+            st.markdown("### 📏 グリッドライン微調整")
+            st.caption("※ ±30,000ラインを調整すると、±10,000、±20,000ラインも自動的に調整されます")
+            
+            grid_col1, grid_col2 = st.columns(2)
+            
+            with grid_col1:
+                grid_30k_offset = st.number_input(
+                    "+30,000ライン調整",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_30k_offset', 0),
+                    step=1, help="上端の+30,000ラインの位置調整（±10,000、±20,000も連動）"
+                )
+            
+            with grid_col2:
+                grid_minus_30k_offset = st.number_input(
+                    "-30,000ライン調整",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
+                    step=1, help="下端の-30,000ラインの位置調整（±10,000、±20,000も連動）"
+                )
+            
+            # 中間ラインは自動計算
+            grid_20k_offset = grid_30k_offset * 2 // 3  # +20,000は+30,000の2/3の位置
+            grid_10k_offset = grid_30k_offset // 3      # +10,000は+30,000の1/3の位置
+            grid_minus_10k_offset = grid_minus_30k_offset // 3      # -10,000は-30,000の1/3の位置
+            grid_minus_20k_offset = grid_minus_30k_offset * 2 // 3  # -20,000は-30,000の2/3の位置
     
     # リアルタイムプレビュー
     if test_image:
@@ -505,20 +495,26 @@ with st.expander("⚙️ 画像解析の調整設定"):
     with save_col2:
         if st.button("💾 プリセットを保存", type="primary", use_container_width=True):
             if preset_name:
-                settings = {
-                    'search_start_offset': search_start_offset,
-                    'search_end_offset': search_end_offset,
-                    'crop_top': crop_top,
-                    'crop_bottom': crop_bottom,
-                    'left_margin': left_margin,
-                    'right_margin': right_margin,
-                    'grid_30k_offset': grid_30k_offset,
-                    'grid_20k_offset': grid_20k_offset,
-                    'grid_10k_offset': grid_10k_offset,
-                    'grid_minus_10k_offset': grid_minus_10k_offset,
-                    'grid_minus_20k_offset': grid_minus_20k_offset,
-                    'grid_minus_30k_offset': grid_minus_30k_offset
-                }
+                # セッションステートから現在の値を取得
+                if test_image:
+                    # test_imageがある場合は入力フィールドから直接取得
+                    settings = {
+                        'search_start_offset': search_start_offset,
+                        'search_end_offset': search_end_offset,
+                        'crop_top': crop_top,
+                        'crop_bottom': crop_bottom,
+                        'left_margin': left_margin,
+                        'right_margin': right_margin,
+                        'grid_30k_offset': grid_30k_offset,
+                        'grid_20k_offset': grid_20k_offset,
+                        'grid_10k_offset': grid_10k_offset,
+                        'grid_minus_10k_offset': grid_minus_10k_offset,
+                        'grid_minus_20k_offset': grid_minus_20k_offset,
+                        'grid_minus_30k_offset': grid_minus_30k_offset
+                    }
+                else:
+                    # test_imageがない場合はセッションステートから取得
+                    settings = st.session_state.settings.copy()
                 
                 # プリセットに保存
                 st.session_state.saved_presets[preset_name] = settings.copy()
@@ -553,38 +549,71 @@ with st.expander("⚙️ 画像解析の調整設定"):
             """, unsafe_allow_html=True)
             st.rerun()
     
-    # プリセット削除
+    # プリセット削除（test_imageがある場合は右カラム、ない場合は全幅）
     if st.session_state.saved_presets:
-        st.markdown("### 🗑️ プリセットの削除")
-        delete_col1, delete_col2 = st.columns([2, 1])
-        
-        with delete_col1:
-            preset_to_delete = st.selectbox(
-                "削除するプリセット",
-                list(st.session_state.saved_presets.keys()),
-                key="delete_preset"
-            )
-        
-        with delete_col2:
-            if st.button("🗑️ 削除", type="secondary", use_container_width=True):
-                if preset_to_delete:
-                    del st.session_state.saved_presets[preset_to_delete]
-                    
-                    # LocalStorageも更新
-                    all_presets = {
-                        'current': st.session_state.settings,
-                        'presets': st.session_state.saved_presets
-                    }
-                    
-                    st.markdown(f"""
-                    <script>
-                    localStorage.setItem('pachi777_all_settings', JSON.stringify({json.dumps(all_presets)}));
-                    alert('プリセット "{preset_to_delete}" を削除しました');
-                    </script>
-                    """, unsafe_allow_html=True)
-                    
-                    st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
-                    st.rerun()
+        if test_image:
+            with main_col2:
+                st.markdown("### 🗑️ プリセットの削除")
+                delete_col1, delete_col2 = st.columns([2, 1])
+                
+                with delete_col1:
+                    preset_to_delete = st.selectbox(
+                        "削除するプリセット",
+                        list(st.session_state.saved_presets.keys()),
+                        key="delete_preset"
+                    )
+                
+                with delete_col2:
+                    if st.button("🗑️ 削除", type="secondary", use_container_width=True):
+                        if preset_to_delete:
+                            del st.session_state.saved_presets[preset_to_delete]
+                            
+                            # LocalStorageも更新
+                            all_presets = {
+                                'current': st.session_state.settings,
+                                'presets': st.session_state.saved_presets
+                            }
+                            
+                            st.markdown(f"""
+                            <script>
+                            localStorage.setItem('pachi777_all_settings', JSON.stringify({json.dumps(all_presets)}));
+                            alert('プリセット "{preset_to_delete}" を削除しました');
+                            </script>
+                            """, unsafe_allow_html=True)
+                            
+                            st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
+                            st.rerun()
+        else:
+            st.markdown("### 🗑️ プリセットの削除")
+            delete_col1, delete_col2 = st.columns([2, 1])
+            
+            with delete_col1:
+                preset_to_delete = st.selectbox(
+                    "削除するプリセット",
+                    list(st.session_state.saved_presets.keys()),
+                    key="delete_preset"
+                )
+            
+            with delete_col2:
+                if st.button("🗑️ 削除", type="secondary", use_container_width=True):
+                    if preset_to_delete:
+                        del st.session_state.saved_presets[preset_to_delete]
+                        
+                        # LocalStorageも更新
+                        all_presets = {
+                            'current': st.session_state.settings,
+                            'presets': st.session_state.saved_presets
+                        }
+                        
+                        st.markdown(f"""
+                        <script>
+                        localStorage.setItem('pachi777_all_settings', JSON.stringify({json.dumps(all_presets)}));
+                        alert('プリセット "{preset_to_delete}" を削除しました');
+                        </script>
+                        """, unsafe_allow_html=True)
+                        
+                        st.success(f"✅ プリセット '{preset_to_delete}' を削隔しました")
+                        st.rerun()
 
 # LocalStorageから設定を読み込むためのプレースホルダー
 load_placeholder = st.empty()
