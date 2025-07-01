@@ -327,34 +327,48 @@ if uploaded_files:
                 total_used_balls_estimated = None
                 investment_efficiency = None
                 
-                # 下降区間の傾きから計算
-                slopes = []
-                for i in range(1, len(graph_data_points)):
-                    change = graph_data_points[i][1] - graph_data_points[i-1][1]
-                    x_diff = graph_data_points[i][0] - graph_data_points[i-1][0]
-                    
-                    # 下降中（通常時）で、x軸の差分がある場合
-                    if change < -5 and x_diff > 2:  # ノイズを除外（条件を緩和）
-                        # 傾き = 球数変化 / 回転数変化
-                        slope = abs(change) / x_diff
-                        # 妥当な範囲の値のみ使用（10～30球/回転）
-                        if 10 <= slope <= 30:
-                            slopes.append(slope)
-                
-                if slopes and len(slopes) >= 3:  # 最低3つのサンプルが必要
-                    # 中央値を使用（外れ値の影響を減らす）
-                    balls_per_spin = np.median(slopes)
-                    
-                    # OCRで累計スタートが取得できている場合のみ計算
-                    if result.get('ocr_data') and result['ocr_data'].get('total_start'):
-                        try:
-                            total_starts = int(result['ocr_data']['total_start'])
+                # グラフから累計スタートを推定（横軸の最大値）
+                if graph_data_points and result.get('ocr_data') and result['ocr_data'].get('total_start'):
+                    try:
+                        # OCRで取得した累計スタート
+                        total_starts = int(result['ocr_data']['total_start'])
+                        
+                        # グラフの横軸の最大値（ピクセル）
+                        max_x_pixel = max(x for x, _ in graph_data_points)
+                        
+                        # 横軸のスケール（回転数/ピクセル）を計算
+                        x_scale = total_starts / max_x_pixel if max_x_pixel > 0 else 0
+                        
+                        # 下降区間の傾きから計算
+                        slopes = []
+                        debug_info = []  # デバッグ情報
+                        
+                        for i in range(1, len(graph_data_points)):
+                            change = graph_data_points[i][1] - graph_data_points[i-1][1]
+                            x_diff_pixel = graph_data_points[i][0] - graph_data_points[i-1][0]
+                            
+                            # 実際の回転数差分に変換
+                            x_diff_spins = x_diff_pixel * x_scale
+                            
+                            # 下降中（通常時）で、回転数差分がある場合
+                            if change < -10 and x_diff_spins > 0.5:  # ノイズを除外
+                                # 傾き = 球数変化 / 回転数変化
+                                slope = abs(change) / x_diff_spins
+                                debug_info.append(f"change={change:.1f}, spins={x_diff_spins:.1f}, slope={slope:.1f}")
+                                
+                                # 妥当な範囲の値のみ使用（10～25球/回転）
+                                if 10 <= slope <= 25:
+                                    slopes.append(slope)
+                        
+                        if slopes and len(slopes) >= 2:  # 最低2つのサンプル
+                            # 中央値を使用（外れ値の影響を減らす）
+                            balls_per_spin = np.median(slopes)
                             total_used_balls_estimated = int(total_starts * balls_per_spin)
                             # 投資効率 = 現在値 / 総使用球数 * 100
                             if total_used_balls_estimated > 0:
                                 investment_efficiency = (current_val / total_used_balls_estimated) * 100
-                        except (ValueError, TypeError):
-                            pass
+                    except (ValueError, TypeError):
+                        pass
                 
                 # オーバーレイ画像を作成
                 overlay_img = cropped_img.copy()
@@ -702,7 +716,15 @@ if uploaded_files:
                     experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ グラフの下降部分から推定した値です</div>'
                 else:
                     experimental_html += '<div class="experimental-error">消費球数を推定できませんでした</div>'
-                    experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ グラフの下降部分が少ないため計算できません</div>'
+                    # 検出数を表示
+                    if 'slopes' in locals():
+                        experimental_html += f'<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ グラフの下降部分が少ないため計算できません（検出数: {len(slopes)}）</div>'
+                    else:
+                        experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ OCRデータが不足しているか、グラフデータが検出できません</div>'
+                    
+                    # デバッグ用：最初の3つの検出情報を表示
+                    if 'debug_info' in locals() and debug_info:
+                        experimental_html += f'<div style="font-size: 0.7em; color: #856404; margin-top: 5px;">デバッグ: {"; ".join(debug_info[:3])}</div>'
                 
                 experimental_html += '</div>'
                 st.markdown(experimental_html, unsafe_allow_html=True)
