@@ -738,6 +738,94 @@ if uploaded_files:
                     
                 except Exception as e:
                     st.error(f"D案でエラーが発生: {str(e)}")
+                
+                # E案: グラフ線ベース検出方式（IMG_0164.PNG対応）
+                st.markdown("#### E案: グラフ線ベース検出方式")
+                try:
+                    # グラフの色を検出（紫、ピンク、緑、青など）
+                    hsv_e = cv2.cvtColor(result['original_image'], cv2.COLOR_RGB2HSV)
+                    
+                    # 複数の色範囲でグラフ線を検出
+                    masks = []
+                    # 紫色
+                    masks.append(cv2.inRange(hsv_e, np.array([130, 30, 30]), np.array([160, 255, 255])))
+                    # ピンク色
+                    masks.append(cv2.inRange(hsv_e, np.array([160, 30, 30]), np.array([180, 255, 255])))
+                    masks.append(cv2.inRange(hsv_e, np.array([0, 30, 30]), np.array([10, 255, 255])))
+                    # 緑色
+                    masks.append(cv2.inRange(hsv_e, np.array([40, 30, 30]), np.array([80, 255, 255])))
+                    # 青色
+                    masks.append(cv2.inRange(hsv_e, np.array([100, 30, 30]), np.array([130, 255, 255])))
+                    
+                    # 全てのマスクを結合
+                    graph_mask_e = masks[0]
+                    for mask in masks[1:]:
+                        graph_mask_e = cv2.bitwise_or(graph_mask_e, mask)
+                    
+                    # グラフ線が存在するY座標を収集
+                    graph_y_positions = []
+                    search_start_e = test_orange_bottom + 50
+                    search_end_e = test_height - 300
+                    
+                    for y in range(search_start_e, search_end_e):
+                        # 中央部分のみチェック（左右の余白を除く）
+                        center_region = graph_mask_e[y, test_width//4:test_width*3//4]
+                        if np.sum(center_region) > 100:  # 閾値
+                            graph_y_positions.append(y)
+                    
+                    if graph_y_positions:
+                        # グラフ線の最小Y座標と最大Y座標を取得
+                        min_y = min(graph_y_positions)
+                        max_y = max(graph_y_positions)
+                        
+                        # グラフがほぼ水平な場合（変動が少ない）
+                        if max_y - min_y < 50:
+                            # グラフ線の平均位置をゼロラインとする
+                            zero_line_e = int(np.mean(graph_y_positions))
+                            detection_method = "水平グラフ検出"
+                        else:
+                            # グラフに変動がある場合は、グラフの重心をゼロラインとする
+                            weighted_sum = 0
+                            weight_total = 0
+                            for y in graph_y_positions:
+                                weight = np.sum(graph_mask_e[y, test_width//4:test_width*3//4])
+                                weighted_sum += y * weight
+                                weight_total += weight
+                            zero_line_e = int(weighted_sum / weight_total) if weight_total > 0 else int(np.mean(graph_y_positions))
+                            detection_method = "グラフ重心検出"
+                    else:
+                        # グラフ線が検出できない場合のフォールバック
+                        # オレンジバーから一定の比率で推定
+                        zero_line_e = test_orange_bottom + int((search_end_e - test_orange_bottom) * 0.4)
+                        detection_method = "フォールバック"
+                    
+                    # 切り抜き
+                    top_e = max(0, zero_line_e - 246)
+                    bottom_e = min(test_height, zero_line_e + 247)
+                    left_e = 125
+                    right_e = test_width - 125
+                    
+                    cropped_e = result['original_image'][int(top_e):int(bottom_e), int(left_e):int(right_e)].copy()
+                    
+                    # グリッドライン追加
+                    zero_in_crop_e = zero_line_e - top_e
+                    cv2.line(cropped_e, (0, int(zero_in_crop_e)), (cropped_e.shape[1], int(zero_in_crop_e)), (255, 255, 0), 2)
+                    cv2.putText(cropped_e, 'Zero (E)', (10, int(zero_in_crop_e) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+                    
+                    # グラフ線の検出結果を可視化（デバッグ用）
+                    if graph_y_positions:
+                        for y in [min(graph_y_positions), max(graph_y_positions)]:
+                            y_in_crop = y - top_e
+                            if 0 <= y_in_crop < cropped_e.shape[0]:
+                                cv2.line(cropped_e, (0, int(y_in_crop)), (50, int(y_in_crop)), (0, 255, 255), 1)
+                    
+                    st.image(cropped_e, caption="E案による切り抜き", use_column_width=True)
+                    st.info(f"検出方法: {detection_method}, ゼロライン: {zero_line_e}")
+                    if graph_y_positions:
+                        st.caption(f"グラフ検出範囲: Y={min(graph_y_positions)}〜{max(graph_y_positions)} (幅: {max(graph_y_positions)-min(graph_y_positions)}px)")
+                    
+                except Exception as e:
+                    st.error(f"E案でエラーが発生: {str(e)}")
             
             # 成功時は統計情報を表示（解析結果の下に縦に並べる）
             if result['success']:
