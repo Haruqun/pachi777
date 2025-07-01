@@ -443,10 +443,6 @@ if uploaded_files:
                         <span class="stat-label">🎰 初当たり</span>
                         <span class="stat-value {first_hit_class}">{first_hit_text}</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-label">🎨 検出色</span>
-                        <span class="stat-value">{result['dominant_color']}</span>
-                    </div>
                 </div>
                 """, unsafe_allow_html=True)
             else:
