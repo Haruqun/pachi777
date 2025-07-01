@@ -322,6 +322,40 @@ if uploaded_files:
                 if first_hit_val > 0:
                     first_hit_val = 0
                 
+                # 実験的機能：1回転あたりの消費球数を推定
+                balls_per_spin = None
+                total_used_balls_estimated = None
+                investment_efficiency = None
+                
+                # 下降区間の傾きから計算
+                slopes = []
+                for i in range(1, len(graph_data_points)):
+                    change = graph_data_points[i][1] - graph_data_points[i-1][1]
+                    x_diff = graph_data_points[i][0] - graph_data_points[i-1][0]
+                    
+                    # 下降中（通常時）で、x軸の差分がある場合
+                    if change < -10 and x_diff > 5:  # ノイズを除外
+                        # 傾き = 球数変化 / 回転数変化
+                        slope = abs(change) / x_diff
+                        # 妥当な範囲の値のみ使用（10～30球/回転）
+                        if 10 <= slope <= 30:
+                            slopes.append(slope)
+                
+                if slopes and len(slopes) >= 3:  # 最低3つのサンプルが必要
+                    # 中央値を使用（外れ値の影響を減らす）
+                    balls_per_spin = np.median(slopes)
+                    
+                    # OCRで累計スタートが取得できている場合のみ計算
+                    if result.get('ocr_data') and result['ocr_data'].get('total_start'):
+                        try:
+                            total_starts = int(result['ocr_data']['total_start'])
+                            total_used_balls_estimated = int(total_starts * balls_per_spin)
+                            # 投資効率 = 現在値 / 総使用球数 * 100
+                            if total_used_balls_estimated > 0:
+                                investment_efficiency = (current_val / total_used_balls_estimated) * 100
+                        except (ValueError, TypeError):
+                            pass
+                
                 # オーバーレイ画像を作成
                 overlay_img = cropped_img.copy()
                     
@@ -438,7 +472,10 @@ if uploaded_files:
                     'current_val': int(current_val),
                     'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
                     'dominant_color': dominant_color,
-                    'ocr_data': ocr_data  # OCRデータを追加
+                    'ocr_data': ocr_data,  # OCRデータを追加
+                    'balls_per_spin': balls_per_spin,  # 1回転あたりの消費球数
+                    'total_used_balls': total_used_balls_estimated,  # 推定総使用球数
+                    'investment_efficiency': investment_efficiency  # 投資効率
                 })
             else:
                 # 解析失敗時
@@ -610,6 +647,57 @@ if uploaded_files:
                     
                     ocr_html += '</div>'
                     st.markdown(ocr_html, unsafe_allow_html=True)
+                
+                # 実験的機能：総使用球数と投資効率の表示
+                if result.get('balls_per_spin') is not None:
+                    st.markdown("""
+                    <style>
+                    .experimental-card {
+                        background-color: #fff3cd;
+                        padding: 15px;
+                        border-radius: 10px;
+                        margin-top: 10px;
+                        border: 1px solid #ffeaa7;
+                    }
+                    .experimental-title {
+                        color: #856404;
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                    }
+                    .experimental-item {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 5px 0;
+                        border-bottom: 1px solid #ffeaa7;
+                    }
+                    .experimental-item:last-child {
+                        border-bottom: none;
+                    }
+                    .experimental-label {
+                        color: #856404;
+                        font-weight: 500;
+                    }
+                    .experimental-value {
+                        font-weight: bold;
+                        color: #856404;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+                    
+                    experimental_html = '<div class="experimental-card"><div class="experimental-title">🧪 実験的機能</div>'
+                    
+                    experimental_html += f'<div class="experimental-item"><span class="experimental-label">🎯 1回転あたり消費球数</span><span class="experimental-value">{result["balls_per_spin"]:.1f}玉/回転</span></div>'
+                    
+                    if result.get('total_used_balls') is not None:
+                        experimental_html += f'<div class="experimental-item"><span class="experimental-label">⚪ 推定総使用球数</span><span class="experimental-value">{result["total_used_balls"]:,}玉</span></div>'
+                    
+                    if result.get('investment_efficiency') is not None:
+                        efficiency_class = "positive" if result['investment_efficiency'] > 0 else ("negative" if result['investment_efficiency'] < 0 else "zero")
+                        experimental_html += f'<div class="experimental-item"><span class="experimental-label">💹 投資効率</span><span class="experimental-value">{result["investment_efficiency"]:+.1f}%</span></div>'
+                    
+                    experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ グラフの下降部分から推定した値です</div>'
+                    experimental_html += '</div>'
+                    st.markdown(experimental_html, unsafe_allow_html=True)
             else:
                 st.warning("⚠️ グラフデータを検出できませんでした")
             
