@@ -669,8 +669,9 @@ if uploaded_files:
                     ocr_html += '</div>'
                     st.markdown(ocr_html, unsafe_allow_html=True)
                 
-                # 実験的機能：総使用球数と投資効率の表示
-                st.markdown("""
+                # 実験的機能：総使用球数と投資効率の表示（一時的に非表示）
+                if False:  # 実験的機能を一時的に無効化
+                    st.markdown("""
                 <style>
                 .experimental-card {
                     background-color: #fff3cd;
@@ -775,31 +776,32 @@ if uploaded_files:
     success_count = sum(1 for r in analysis_results if r['success'])
     st.info(f"📈 総画像数: {len(analysis_results)}枚 | ✅ 成功: {success_count}枚 | ⚠️ 失敗: {len(analysis_results) - success_count}枚")
     
-    # 実験的機能の失敗データを収集
-    failed_estimations = []
-    for result in analysis_results:
-        if result.get('success') and result.get('balls_per_spin') is None:
-            # OCRデータがある場合のみ
-            if result.get('ocr_data') and result['ocr_data'].get('total_start'):
-                failed_data = {
-                    "file": result['name'],
-                    "total_start": result['ocr_data'].get('total_start'),
-                    "current_val": result.get('current_val'),
-                    "max_val": result.get('max_val'),
-                    "min_val": result.get('min_val')
-                }
-                failed_estimations.append(failed_data)
-    
-    # 失敗データがある場合、一括コピー用のセクションを表示
-    if failed_estimations:
-        st.markdown("### 🔧 実験的機能デバッグ情報")
-        with st.expander(f"消費球数を推定できなかった画像 ({len(failed_estimations)}件)"):
-            # JSON形式で表示
-            failed_json = json.dumps(failed_estimations, ensure_ascii=False, indent=2)
-            st.code(failed_json, language='json')
-            
-            # コピーボタン
-            st.markdown("👆 上記のJSONデータをコピーして、開発者に送信してください")
+    # 実験的機能の失敗データを収集（一時的に非表示）
+    if False:  # 実験的機能を一時的に無効化
+        failed_estimations = []
+        for result in analysis_results:
+            if result.get('success') and result.get('balls_per_spin') is None:
+                # OCRデータがある場合のみ
+                if result.get('ocr_data') and result['ocr_data'].get('total_start'):
+                    failed_data = {
+                        "file": result['name'],
+                        "total_start": result['ocr_data'].get('total_start'),
+                        "current_val": result.get('current_val'),
+                        "max_val": result.get('max_val'),
+                        "min_val": result.get('min_val')
+                    }
+                    failed_estimations.append(failed_data)
+        
+        # 失敗データがある場合、一括コピー用のセクションを表示
+        if failed_estimations:
+            st.markdown("### 🔧 実験的機能デバッグ情報")
+            with st.expander(f"消費球数を推定できなかった画像 ({len(failed_estimations)}件)"):
+                # JSON形式で表示
+                failed_json = json.dumps(failed_estimations, ensure_ascii=False, indent=2)
+                st.code(failed_json, language='json')
+                
+                # コピーボタン
+                st.markdown("👆 上記のJSONデータをコピーして、開発者に送信してください")
     
 else:
     # アップロード前の表示

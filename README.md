@@ -1,23 +1,29 @@
-# Pachinko Graph Analysis System
+# パチンコグラフ解析システム v2.0
 
-パチンコ台のグラフデータを高精度で解析する統合システム
+site7のグラフデータを高精度で解析するWebアプリケーション
 
 ## 🚀 概要
 
-このシステムは、パチンコ台のスクリーンショットからグラフデータを自動抽出し、詳細な分析レポートを生成します。
+このシステムは、[site7](https://m.site777.jp/)のパチンコ台グラフ画像から自動的にデータを抽出し、詳細な統計分析を提供するStreamlitベースのWebアプリケーションです。
 
 ### 主な機能
-- 📸 **自動画像切り抜き**: スクリーンショットからグラフ領域を精密に検出・切り抜き
-- 📊 **高精度データ抽出**: 10色対応のマルチカラー検出システム
-- 📈 **統計分析**: 最高値・最低値・初当たり検出など
-- 📝 **プロフェッショナルレポート**: HTML形式の美しいレポート生成
-- 📦 **Web配信対応**: ZIP形式でのパッケージ化
+- 📸 **自動画像切り抜き**: ゼロラインを基準に±30,000玉の範囲を精密に切り抜き
+- 📊 **高精度グラフ解析**: AIによるグラフライン自動検出
+- 📈 **統計分析**: 最高値・最低値・現在値・初当たり値を自動計算
+- 🔍 **OCRデータ抽出**: site7の画像から台番号、累計スタート、大当り回数などを自動抽出
+- 🌐 **Web対応**: ブラウザから簡単にアクセス・利用可能
 
 ## 🛠️ インストール
 
+### 必要な環境
+- Python 3.8以上
+- Tesseract OCR（日本語対応）
+
+### セットアップ
+
 ```bash
 # リポジトリのクローン
-git clone https://github.com/yourusername/pachi777.git
+git clone https://github.com/Haruqun/pachi777.git
 cd pachi777
 
 # 仮想環境の作成と有効化
@@ -27,123 +33,159 @@ source .venv/bin/activate  # macOS/Linux
 .venv\Scripts\activate  # Windows
 
 # 依存関係のインストール
-pip install opencv-python pillow numpy pandas matplotlib pytesseract
+pip install -r requirements.txt
+
+# Tesseract OCRのインストール
+# macOS
+brew install tesseract tesseract-lang
+
+# Ubuntu/Debian
+sudo apt-get install tesseract-ocr tesseract-ocr-jpn
+
+# Windows
+# https://github.com/UB-Mannheim/tesseract/wiki からインストーラーをダウンロード
 ```
 
 ## 📁 ディレクトリ構造
 
 ```
 pachi777/
-├── production/          # 本番用システム
-│   ├── complete_pipeline.py      # 完全パイプライン
-│   ├── quick_analysis.py         # クイック分析
-│   ├── manual_graph_cropper.py   # 画像切り抜き
-│   ├── professional_graph_report.py  # レポート生成
-│   └── web_package_creator.py    # パッケージ作成
-├── graphs/              # 画像データ
-│   ├── original/        # 元画像
-│   └── manual_crop/     # 切り抜き済み画像
-├── reports/             # 生成レポート（日時別）
-│   └── YYYYMMDDHHMMSS/  # タイムスタンプディレクトリ
-│       ├── html/        # HTMLレポート
-│       ├── images/      # 分析画像
-│       └── packages/    # ZIPパッケージ
-├── dev/                 # 開発・テスト用
-└── legacy/              # 旧バージョン
+├── web_app/                      # Webアプリケーション
+│   ├── streamlit_app_full.py     # メインアプリケーション
+│   └── web_analyzer.py           # グラフ解析エンジン
+├── production/                   # スタンドアロン版（レガシー）
+├── graphs/                       # テスト用画像データ
+├── reports/                      # 生成レポート
+├── requirements.txt              # Python依存関係
+├── README.md                     # このファイル
+└── CLAUDE.md                     # AI開発ガイド
 ```
 
 ## 🎯 使い方
 
-### 1. 完全パイプライン実行（推奨）
-元画像から切り抜き、分析、レポート生成まで一括処理：
+### Webアプリケーションの起動
 
 ```bash
-python production/complete_pipeline.py
+# ローカル環境で起動
+streamlit run web_app/streamlit_app_full.py
+
+# ポート指定して起動
+streamlit run web_app/streamlit_app_full.py --server.port 8080
 ```
 
-### 2. クイック分析
-既に切り抜き済みの画像から分析とレポート生成：
+### 使用手順
 
-```bash
-python production/quick_analysis.py
-```
+1. **画像のアップロード**
+   - 「Browse files」ボタンをクリック
+   - site7のグラフ画像を選択（複数選択可）
+   - 対応形式：JPG/JPEG、PNG
 
-### 3. 個別実行
+2. **自動解析**
+   - アップロード後、自動的に以下の処理が実行されます：
+     - グラフ領域の検出と切り抜き
+     - ゼロラインの自動検出
+     - グラフデータの抽出
+     - 統計情報の計算
+     - OCRによるテキストデータ抽出
 
-```bash
-# 画像切り抜きのみ
-python production/manual_graph_cropper.py
+3. **結果の確認**
+   - 解析結果は2列で表示（モバイルでは1列）
+   - 各結果には以下が含まれます：
+     - 解析済みグラフ画像（緑色のライン）
+     - 統計情報（最高値、最低値、現在値、初当たり）
+     - OCRで抽出したsite7データ
+     - 元画像（折りたたみ可能）
 
-# レポート生成のみ
-python production/professional_graph_report.py
-
-# ZIPパッケージ作成のみ
-python production/web_package_creator.py
-```
-
-## 📊 分析機能
+## 📊 技術仕様
 
 ### グラフ解析
-- **ゼロライン自動検出**: ±1px以下の高精度
-- **スケール自動計算**: -30,000〜+30,000の範囲を正確に測定
-- **10色マルチカラー対応**: pink, magenta, red, blue, green, cyan, yellow, orange, purple
+- **ゼロライン検出**: オレンジバーの下部を基準に自動検出
+- **切り抜き範囲**: ゼロラインから上246px、下247px（±30,000玉相当）
+- **スケール**: 約122玉/ピクセル
+- **左右余白**: 125px除外
 
-### 統計情報
-- **最高値・最低値**: グラフ全体の最大・最小値を検出
-- **初当たり検出**: 100玉以上の増加を自動検出
-- **最終値**: 現在の差玉数を表示
+### 統計計算
+- **最高値（MAX）**: グラフ全体の最大値（マイナスの場合は0）
+- **最低値（MIN）**: グラフ全体の最小値
+- **現在値（CURRENT）**: グラフの最終値
+- **初当たり値（FIRST HIT）**: 100玉以上の急激な増加を検出
 
-### グリッド表示
-- 5,000玉単位の補助線
-- ±10,000、±20,000、±30,000の主要ライン強調表示
+### OCR機能
+- **抽出可能データ**:
+  - 台番号
+  - 累計スタート
+  - 大当り回数
+  - 初当り回数
+  - 現在のスタート
+  - 大当り確率
+  - 最高出玉
 
-## 🎨 レポート出力
+### 処理性能
+- **画像あたりの処理時間**: 約2-5秒
+- **複数画像の並列処理**: 対応
+- **メモリ効率**: 大量画像の処理に最適化
 
-### HTMLレポート
-- レスポンシブデザイン（PC・スマホ対応）
-- Font Awesomeアイコン統合
-- 画像クリックで拡大表示
-- プロフェッショナルなデザイン
+## 🌐 デプロイ
 
-### 出力ファイル
-- `reports/YYYYMMDDHHMMSS/html/professional_graph_report_*.html`
-- `reports/YYYYMMDDHHMMSS/images/professional_analysis_*.png`
-- `reports/YYYYMMDDHHMMSS/packages/pptown_graph_analysis_report_*.zip`
+### Streamlit Community Cloud
+1. GitHubリポジトリをStreamlit Cloudに接続
+2. アプリファイルパス: `web_app/streamlit_app_full.py`
+3. Python 3.8以上を指定
 
-## ⚙️ 技術仕様
+### その他のデプロイオプション
+- Heroku
+- AWS EC2
+- Google Cloud Platform
+- Azure App Service
 
-### 画像処理
-- **グラフサイズ**: 597×500ピクセル（標準化）
-- **色空間**: HSV色空間での高精度色検出
-- **フィルタリング**: ガウシアンフィルタ + エッジ検出
+## ⚙️ 設定とカスタマイズ
 
-### 精度
-- **ゼロライン検出**: 100%成功率（27枚で検証済み）
-- **色検出成功率**: 100%（10色対応）
-- **グリッド精度**: ピクセル単位での微調整実装
+### 画像処理パラメータ
+```python
+# web_analyzer.py内で調整可能
+ZERO_LINE_OFFSET_TOP = 246    # ゼロラインから上のピクセル数
+ZERO_LINE_OFFSET_BOTTOM = 247 # ゼロラインから下のピクセル数
+CROP_MARGIN_LEFT = 125        # 左右の余白
+SCALE = 30000 / 246           # 玉数/ピクセルのスケール
+```
 
 ## 🔧 トラブルシューティング
 
-### Tesseract OCRエラー
-```bash
-# macOS
-brew install tesseract tesseract-lang
+### OCRが動作しない
+- Tesseract OCRが正しくインストールされているか確認
+- 日本語言語パックがインストールされているか確認
+- `pytesseract.pytesseract.tesseract_cmd`のパスを確認
 
-# Ubuntu/Debian
-sudo apt-get install tesseract-ocr tesseract-ocr-jpn
-```
+### メモリエラー
+- 画像サイズを確認（推奨: 2MB以下）
+- 一度に処理する画像数を減らす
 
-### フォントエラー（macOS）
-システムは自動的にHiragino Sansフォントを使用します。
+### グラフ検出エラー
+- site7の画像形式であることを確認
+- 画像が切れていないか確認
+- グラフ全体が含まれているか確認
 
-## 📝 ライセンス
+## 📝 更新履歴
+
+### v2.0 (2025-01-01)
+- Streamlit Webアプリケーション版リリース
+- 複数画像の一括処理機能追加
+- OCRによるデータ抽出機能追加
+- モバイル対応レスポンシブデザイン
+- 処理速度の大幅改善
+
+### v1.0 (2024-12-15)
+- 初回リリース（スタンドアロン版）
+
+## 📄 ライセンス
 
 Proprietary - PPタウン様専用システム
 
 ## 👥 開発者
 
-ファイブナインデザイン - 佐藤
+- 開発: [ファイブナインデザイン](https://fivenine-design.com)
+- 制作協力: [PPタウン](https://pp-town.com/)
 
 ---
 
-最終更新: 2025年6月30日
+最終更新: 2025年1月1日
