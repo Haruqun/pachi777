@@ -582,19 +582,20 @@ if uploaded_files:
     
     # プリセット選択セクション（画像アップロード後に表示）
     st.markdown("### 📋 解析設定")
-    preset_col1, preset_col2, preset_col3 = st.columns([2, 1, 1])
     
-    with preset_col1:
-        # 既存のプリセット選択
-        preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
-        selected_preset = st.selectbox(
-            "設定プリセットを選択",
-            preset_names,
-            help="保存された設定を選択して適用します",
-            key="analysis_preset_select"
-        )
+    # プリセット選択（上段）
+    preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
+    selected_preset = st.selectbox(
+        "設定プリセットを選択",
+        preset_names,
+        help="保存された設定を選択して適用します",
+        key="analysis_preset_select"
+    )
     
-    with preset_col2:
+    # ボタン（下段）
+    button_col1, button_col2, button_col3 = st.columns([1, 1, 1])
+    
+    with button_col1:
         # プリセット適用ボタン
         if st.button("📥 適用", use_container_width=True, key="apply_preset_analysis"):
             if selected_preset == "デフォルト":
@@ -604,11 +605,14 @@ if uploaded_files:
             st.success(f"✅ '{selected_preset}' を適用しました")
             st.rerun()
     
-    with preset_col3:
+    with button_col2:
         # 設定を調整ボタン
         if st.button("⚙️ 設定を調整", use_container_width=True):
             st.session_state.show_adjustment = True
             st.rerun()
+    
+    with button_col3:
+        pass  # 空のカラムでバランスを取る
     
     # 解析開始ボタン
     if st.button("🚀 解析を開始", type="primary", use_container_width=True):
