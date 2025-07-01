@@ -356,8 +356,8 @@ if uploaded_files:
                                 slope = abs(change) / x_diff_spins
                                 debug_info.append(f"change={change:.1f}, spins={x_diff_spins:.1f}, slope={slope:.1f}")
                                 
-                                # 妥当な範囲の値のみ使用（10～25球/回転）
-                                if 10 <= slope <= 25:
+                                # 妥当な範囲の値のみ使用（8～30球/回転に拡大）
+                                if 8 <= slope <= 30:
                                     slopes.append(slope)
                         
                         if slopes and len(slopes) >= 2:  # 最低2つのサンプル
