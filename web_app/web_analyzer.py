@@ -22,6 +22,17 @@ from datetime import datetime
 from pathlib import Path
 import re
 import matplotlib.font_manager as fm
+import platform
+
+# 日本語フォント設定
+if platform.system() == 'Darwin':  # macOS
+    plt.rcParams['font.family'] = 'Hiragino Sans GB'
+else:
+    # Windows/Linuxの場合
+    plt.rcParams['font.family'] = ['DejaVu Sans', 'sans-serif']
+
+# 日本語が正しく表示されるようにfallbackも設定
+plt.rcParams['font.sans-serif'] = ['Hiragino Sans GB', 'Arial Unicode MS', 'Noto Sans CJK JP', 'DejaVu Sans']
 
 class WebCompatibleAnalyzer:
     """Web環境対応の解析クラス"""
@@ -30,7 +41,9 @@ class WebCompatibleAnalyzer:
         self.work_dir = work_dir or "."
         self.zero_y = 250
         self.target_30k_y = 4
-        self.scale = 30000 / (self.zero_y - self.target_30k_y)
+        # グラフの実際の領域に基づいてスケールを計算
+        # 0ラインから上下に250ピクセルずつで、±30,000相当
+        self.scale = 30000 / 250  # 120玉/ピクセル
         
         # 10色対応の色検出範囲
         self.color_ranges = {
@@ -404,10 +417,13 @@ class WebCompatibleAnalyzer:
         ax.axhline(y=detected_zero, color='#2C3E50', linewidth=6, 
                   label=f'基準ライン (0)', alpha=0.9, linestyle='-')
         
-        # ±30,000ライン（1px上方向に調整）
-        ax.axhline(y=self.target_30k_y - 1, color='#E74C3C', linewidth=4, 
-                  label='+30,000', alpha=0.85, linestyle='--')
-        minus_30k_y = detected_zero + (30000 / self.scale) - 1
+        # ±30,000ライン（0ラインを基準に対称配置）
+        plus_30k_y = detected_zero - (30000 / self.scale)
+        minus_30k_y = detected_zero + (30000 / self.scale)
+        
+        if plus_30k_y >= 0:
+            ax.axhline(y=plus_30k_y, color='#E74C3C', linewidth=4, 
+                      label='+30,000', alpha=0.85, linestyle='--')
         if minus_30k_y <= height:
             ax.axhline(y=minus_30k_y, color='#E74C3C', linewidth=4, 
                       label='-30,000', alpha=0.85, linestyle='--')

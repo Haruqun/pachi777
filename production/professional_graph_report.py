@@ -31,7 +31,9 @@ class ProfessionalGraphReport:
     def __init__(self):
         self.zero_y = 250
         self.target_30k_y = 4
-        self.scale = 30000 / (250 - 4)
+        # グラフの実際の領域に基づいてスケールを計算
+        # 0ラインから上下に250ピクセルずつで、±30,000相当
+        self.scale = 30000 / 250  # 120玉/ピクセル
         self.report_timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         
         # 10色対応の色検出範囲
@@ -177,10 +179,13 @@ class ProfessionalGraphReport:
         ax.axhline(y=detected_zero, color='#2C3E50', linewidth=6, 
                   label=f'基準ライン (0)', alpha=0.9, linestyle='-')
         
-        # ±30,000ライン（1px上方向に調整）
-        ax.axhline(y=self.target_30k_y - 1, color='#E74C3C', linewidth=4, 
-                  label='+30,000', alpha=0.85, linestyle='--')
-        minus_30k_y = detected_zero + (30000 / self.scale) - 1  # -30000ラインを1px下に戻す
+        # ±30,000ライン（0ラインを基準に対称配置）
+        plus_30k_y = detected_zero - (30000 / self.scale)
+        minus_30k_y = detected_zero + (30000 / self.scale)
+        
+        if plus_30k_y >= 0:
+            ax.axhline(y=plus_30k_y, color='#E74C3C', linewidth=4, 
+                      label='+30,000', alpha=0.85, linestyle='--')
         if minus_30k_y <= height:
             ax.axhline(y=minus_30k_y, color='#E74C3C', linewidth=4, 
                       label='-30,000', alpha=0.85, linestyle='--')
@@ -1475,12 +1480,12 @@ class ProfessionalGraphReport:
                     <div class="image-comparison">
                         <div class="image-panel">
                             <div class="image-panel-title">📷 お客様の元画像</div>
-                            <img src="{result['original_path']}" alt="元画像" class="panel-image">
+                            <img src="../{result['original_path'].replace('reports/' + self.report_timestamp + '/', '')}" alt="元画像" class="panel-image">
                         </div>
                         
                         <div class="image-panel">
                             <div class="image-panel-title">📈 AI分析結果</div>
-                            <img src="{result['output_path']}" alt="分析結果" class="panel-image">
+                            <img src="../{result['output_path'].replace('reports/' + self.report_timestamp + '/', '')}" alt="分析結果" class="panel-image">
                         </div>
                     </div>
                     
