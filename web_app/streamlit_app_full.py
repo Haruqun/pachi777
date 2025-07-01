@@ -48,7 +48,8 @@ def extract_site7_data(image):
             'first_hit_count': None,
             'current_start': None,
             'jackpot_probability': None,
-            'max_payout': None
+            'max_payout': None,
+            'graph_max': None  # グラフ内の最大値
         }
         
         # 台番号の抽出
@@ -103,6 +104,23 @@ def extract_site7_data(image):
                 if 100 <= value <= 99999:
                     data['max_payout'] = str(value)
                     break
+        
+        # グラフ内の最大値を探す（30,000のような表記）
+        max_graph_patterns = [
+            r'30[,，]000',  # 30,000 or 30，000
+            r'30000',       # 30000
+            r'20[,，]000',  # 20,000 or 20，000
+            r'20000',       # 20000
+            r'10[,，]000',  # 10,000 or 10，000
+            r'10000'        # 10000
+        ]
+        
+        for pattern in max_graph_patterns:
+            if re.search(pattern, text):
+                # カンマを除去して数値に変換
+                value = pattern.replace('[,，]', '').replace(',', '').replace('，', '')
+                data['graph_max'] = value
+                break
         
         return data
     except Exception as e:
@@ -600,6 +618,8 @@ if uploaded_files:
                         ocr_html += f'<div class="ocr-item"><span class="ocr-label">📈 大当り確率</span><span class="ocr-value">{ocr["jackpot_probability"]}</span></div>'
                     if ocr.get('max_payout'):
                         ocr_html += f'<div class="ocr-item"><span class="ocr-label">💰 最高出玉</span><span class="ocr-value">{ocr["max_payout"]}玉</span></div>'
+                    if ocr.get('graph_max'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">📊 グラフ最大値</span><span class="ocr-value">{ocr["graph_max"]}玉</span></div>'
                     
                     ocr_html += '</div>'
                     st.markdown(ocr_html, unsafe_allow_html=True)
