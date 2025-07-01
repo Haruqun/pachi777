@@ -141,11 +141,11 @@ with main_container:
                     best_score = score
                     zero_line_y = y
             
-            # 自動検出結果を設定
-            st.session_state.top = float(max(orange_bottom + 20, zero_line_y - 250))
-            st.session_state.bottom = float(min(height - 50, zero_line_y + 250))
-            st.session_state.left = 100.0
-            st.session_state.right = float(width - 100)
+            # 自動検出結果を設定（調整済みの値を使用）
+            st.session_state.top = float(max(0, zero_line_y - 246))  # 0ラインから上246px
+            st.session_state.bottom = float(min(height, zero_line_y + 247))  # 0ラインから下247px
+            st.session_state.left = 125.0  # 左右の余白125px
+            st.session_state.right = float(width - 125)  # 左右の余白125px
             st.session_state.zero_line = float(zero_line_y)
             
             # 切り抜き範囲内で0ラインを再検出
@@ -298,11 +298,11 @@ with main_container:
                             best_score = score
                             zero_line_y = y
                     
-                    # 3. ゼロラインから上下に拡張（Pattern3のアプローチ）
-                    st.session_state.top = max(orange_bottom + 20, zero_line_y - 250)
-                    st.session_state.bottom = min(height - 50, zero_line_y + 250)
-                    st.session_state.left = 100
-                    st.session_state.right = width - 100
+                    # 3. ゼロラインから上下に拡張（調整済みの値を使用）
+                    st.session_state.top = max(0, zero_line_y - 246)  # 0ラインから上246px
+                    st.session_state.bottom = min(height, zero_line_y + 247)  # 0ラインから下247px
+                    st.session_state.left = 125  # 左右の余白125px
+                    st.session_state.right = width - 125  # 左右の余白125px
                     
                     st.rerun()
             
@@ -389,7 +389,7 @@ with main_container:
                 "0ラインから上方向 (px)", 
                 0.0, 
                 float(height), 
-                250.0, 
+                246.0,  # デフォルト値を246pxに変更
                 step=1.0, 
                 format="%.1f",
                 key="pixels_above",
@@ -400,7 +400,7 @@ with main_container:
                 "0ラインから下方向 (px)", 
                 0.0, 
                 float(height), 
-                250.0, 
+                247.0,  # デフォルト値を247pxに変更
                 step=1.0, 
                 format="%.1f",
                 key="pixels_below",
@@ -412,7 +412,7 @@ with main_container:
                 "左右の余白 (px)", 
                 0.0, 
                 float(width/2), 
-                100.0, 
+                125.0,  # デフォルト値を125pxに変更
                 step=1.0, 
                 format="%.1f",
                 key="horizontal_margin",
