@@ -70,6 +70,25 @@ with main_container:
     if uploaded_files:
         st.success(f"✅ {len(uploaded_files)}枚の画像がアップロードされました")
         
+        # グリッドライン調整UI
+        with st.expander("⚙️ グリッドライン位置調整", expanded=False):
+            st.markdown("各グリッドラインの位置を微調整できます（ピクセル単位）")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**プラス側**")
+                adjust_30k = st.number_input("+30000ライン調整", -5, 5, 0, 1, key="adj_30k")
+                adjust_20k = st.number_input("+20000ライン調整", -5, 5, 0, 1, key="adj_20k")
+                adjust_10k = st.number_input("+10000ライン調整", -5, 5, 0, 1, key="adj_10k")
+            
+            with col2:
+                st.markdown("**マイナス側**")
+                adjust_0 = st.number_input("0ライン調整", -5, 5, 0, 1, key="adj_0")
+                adjust_minus_10k = st.number_input("-10000ライン調整", -5, 5, 0, 1, key="adj_minus_10k")
+                adjust_minus_20k = st.number_input("-20000ライン調整", -5, 5, 1, 1, key="adj_minus_20k")  # デフォルト1
+                adjust_minus_30k = st.number_input("-30000ライン調整", -5, 5, 0, 1, key="adj_minus_30k")
+        
         # 切り抜き処理
         st.markdown("### ✂️ 切り抜き結果")
         
@@ -149,42 +168,45 @@ with main_container:
             
             # グリッドライン描画
             # +30000ライン（最上部）
-            cv2.line(cropped_img, (0, 0), (cropped_img.shape[1], 0), (128, 128, 128), 2)
-            cv2.putText(cropped_img, '+30000', (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
+            y_30k = 0 + st.session_state.get('adj_30k', 0)
+            cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
+            cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
             
             # +20000ライン
-            y_20k = int(zero_line_in_crop - (20000 / scale))
+            y_20k = int(zero_line_in_crop - (20000 / scale)) + st.session_state.get('adj_20k', 0)
             if 0 < y_20k < crop_height:
                 cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (128, 128, 128), 1)
                 cv2.putText(cropped_img, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
             
             # +10000ライン
-            y_10k = int(zero_line_in_crop - (10000 / scale))
+            y_10k = int(zero_line_in_crop - (10000 / scale)) + st.session_state.get('adj_10k', 0)
             if 0 < y_10k < crop_height:
                 cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (128, 128, 128), 1)
                 cv2.putText(cropped_img, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
             
             # 0ライン
-            y_0 = int(zero_line_in_crop)
+            y_0 = int(zero_line_in_crop) + st.session_state.get('adj_0', 0)
             if 0 < y_0 < crop_height:
                 cv2.line(cropped_img, (0, y_0), (cropped_img.shape[1], y_0), (255, 0, 0), 2)
                 cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
             
             # -10000ライン
-            y_minus_10k = int(zero_line_in_crop + (10000 / scale))
+            y_minus_10k = int(zero_line_in_crop + (10000 / scale)) + st.session_state.get('adj_minus_10k', 0)
             if 0 < y_minus_10k < crop_height:
                 cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (128, 128, 128), 1)
                 cv2.putText(cropped_img, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
             
             # -20000ライン
-            y_minus_20k = int(zero_line_in_crop + (20000 / scale))
+            y_minus_20k = int(zero_line_in_crop + (20000 / scale)) + st.session_state.get('adj_minus_20k', 1)  # デフォルト1px下
             if 0 < y_minus_20k < crop_height:
                 cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (128, 128, 128), 1)
                 cv2.putText(cropped_img, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
             
             # -30000ライン（最下部）
-            cv2.line(cropped_img, (0, crop_height - 1), (cropped_img.shape[1], crop_height - 1), (128, 128, 128), 2)
-            cv2.putText(cropped_img, '-30000', (10, crop_height - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
+            y_minus_30k = crop_height - 1 + st.session_state.get('adj_minus_30k', 0)
+            y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
+            cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
+            cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
             
             # 切り抜き結果を保存
             cropped_images.append({
