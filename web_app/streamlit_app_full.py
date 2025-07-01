@@ -697,6 +697,6 @@ st.markdown("---")
 st.markdown(f"""
 🎰 パチンコグラフ解析システム v2.0  
 更新日: {datetime.now().strftime('%Y/%m/%d')}  
-Produced by PPタウン  
+Produced by [PPタウン](https://pp-town.com/)  
 Created by [fivenine-design.com](https://fivenine-design.com)
 """)
