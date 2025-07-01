@@ -14,6 +14,7 @@ from web_analyzer import WebCompatibleAnalyzer
 import platform
 import pytesseract
 import re
+import json
 
 # ページ設定
 st.set_page_config(
@@ -724,6 +725,27 @@ if uploaded_files:
                     if debug_info:
                         experimental_html += f'<div style="font-size: 0.7em; color: #856404; margin-top: 5px;">デバッグ: {"; ".join(debug_info[:3])}</div>'
                         experimental_html += f'<div style="font-size: 0.7em; color: #856404;">検出された傾き: {len(debug_info)}個 / 有効: {len(slopes)}個</div>'
+                        
+                        # JSON形式のデバッグ情報を生成
+                        debug_json = {
+                            "file": uploaded_file.name,
+                            "total_detected": len(debug_info),
+                            "valid_slopes": len(slopes),
+                            "slopes": slopes[:5] if slopes else [],  # 最初の5個
+                            "samples": []
+                        }
+                        
+                        # 最初の3つのサンプルを構造化
+                        for info in debug_info[:3]:
+                            parts = info.split(", ")
+                            sample = {}
+                            for part in parts:
+                                key, value = part.split("=")
+                                sample[key] = float(value)
+                            debug_json["samples"].append(sample)
+                        
+                        # JSON文字列として表示（コピーしやすいように）
+                        experimental_html += f'<div style="font-size: 0.7em; color: #856404; margin-top: 5px;">JSON: <code style="font-family: monospace; background: #f5f5f5; padding: 2px;">{json.dumps(debug_json, ensure_ascii=False)}</code></div>'
                 
                 experimental_html += '</div>'
                 st.markdown(experimental_html, unsafe_allow_html=True)
@@ -739,6 +761,32 @@ if uploaded_files:
     
     success_count = sum(1 for r in analysis_results if r['success'])
     st.info(f"📈 総画像数: {len(analysis_results)}枚 | ✅ 成功: {success_count}枚 | ⚠️ 失敗: {len(analysis_results) - success_count}枚")
+    
+    # 実験的機能の失敗データを収集
+    failed_estimations = []
+    for result in analysis_results:
+        if result.get('success') and result.get('balls_per_spin') is None:
+            # OCRデータがある場合のみ
+            if result.get('ocr_data') and result['ocr_data'].get('total_start'):
+                failed_data = {
+                    "file": result['name'],
+                    "total_start": result['ocr_data'].get('total_start'),
+                    "current_val": result.get('current_val'),
+                    "max_val": result.get('max_val'),
+                    "min_val": result.get('min_val')
+                }
+                failed_estimations.append(failed_data)
+    
+    # 失敗データがある場合、一括コピー用のセクションを表示
+    if failed_estimations:
+        st.markdown("### 🔧 実験的機能デバッグ情報")
+        with st.expander(f"消費球数を推定できなかった画像 ({len(failed_estimations)}件)"):
+            # JSON形式で表示
+            failed_json = json.dumps(failed_estimations, ensure_ascii=False, indent=2)
+            st.code(failed_json, language='json')
+            
+            # コピーボタン
+            st.markdown("👆 上記のJSONデータをコピーして、開発者に送信してください")
     
 else:
     # アップロード前の表示
