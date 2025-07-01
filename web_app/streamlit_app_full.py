@@ -60,15 +60,15 @@ with main_container:
     st.markdown("### 📤 画像をアップロード")
     
     # ファイルアップローダー
-    uploaded_files = st.file_uploader(
+    uploaded_file = st.file_uploader(
         "グラフ画像を選択してください",
         type=['jpg', 'jpeg', 'png'],
-        accept_multiple_files=True,
-        help="複数の画像を一度にアップロードできます（JPG, PNG形式）"
+        accept_multiple_files=False,
+        help="グラフ画像をアップロードしてください（JPG, PNG形式）"
     )
     
-    if uploaded_files:
-        st.success(f"✅ {len(uploaded_files)}枚の画像がアップロードされました")
+    if uploaded_file:
+        st.success(f"✅ 画像がアップロードされました: {uploaded_file.name}")
         
         # グリッドライン調整UI
         with st.expander("⚙️ グリッドライン位置調整", expanded=False):
@@ -92,18 +92,8 @@ with main_container:
         # 切り抜き処理
         st.markdown("### ✂️ 切り抜き結果")
         
-        # プログレスバー
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        # 切り抜き画像を格納するリスト
-        cropped_images = []
-        
-        for idx, uploaded_file in enumerate(uploaded_files):
-            # 進捗更新
-            progress = (idx + 1) / len(uploaded_files)
-            progress_bar.progress(progress)
-            status_text.text(f"処理中... ({idx + 1}/{len(uploaded_files)})")
+        # 画像処理
+        with st.spinner('画像を処理中...'):")
             
             # 画像を読み込み
             image = Image.open(uploaded_file)
@@ -208,83 +198,36 @@ with main_container:
             cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
             cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
             
-            # 切り抜き結果を保存
-            cropped_images.append({
-                'name': uploaded_file.name,
-                'image': cropped_img,
-                'size': (cropped_img.shape[1], cropped_img.shape[0]),
-                'zero_line': zero_line_in_crop
-            })
+        # 画像を横幅いっぱいで表示
+        st.image(cropped_img, use_column_width=True)
         
-        # プログレスバーを完了状態に
-        progress_bar.progress(1.0)
-        status_text.text("✅ 処理完了！")
+        # 画像情報とダウンロード
+        col1, col2, col3 = st.columns([2, 1, 1])
         
-        # 切り抜き画像をグリッド表示
-        st.markdown("### 📸 切り抜き画像一覧")
+        with col1:
+            st.info(f"📐 サイズ: {cropped_img.shape[1]}×{cropped_img.shape[0]}px")
         
-        # 3列のグリッドで表示
-        cols = st.columns(3)
-        for idx, crop_data in enumerate(cropped_images):
-            col_idx = idx % 3
-            with cols[col_idx]:
-                # 画像表示
-                st.image(
-                    crop_data['image'],
-                    caption=crop_data['name'],
-                    use_column_width=True
-                )
-                
-                # 画像情報
-                st.caption(f"サイズ: {crop_data['size'][0]}×{crop_data['size'][1]}px")
-                
-                # ダウンロードボタン
-                # OpenCVのBGRからRGBに変換（必要な場合）
-                cropped_pil = Image.fromarray(crop_data['image'])
-                
-                # バイトストリームに保存
-                buf = io.BytesIO()
-                cropped_pil.save(buf, format='PNG')
-                byte_im = buf.getvalue()
-                
-                st.download_button(
-                    label="ダウンロード",
-                    data=byte_im,
-                    file_name=f"cropped_{crop_data['name']}",
-                    mime="image/png",
-                    key=f"download_{idx}"
-                )
+        with col2:
+            # グリッドライン表示/非表示トグル
+            show_grid = st.checkbox("グリッドラインを表示", value=True, key="show_grid")
+            if not show_grid:
+                # グリッドラインなしの画像を再生成
+                cropped_img_no_grid = img_array[int(top):int(bottom), int(left):int(right)].copy()
+                st.rerun()
         
-        # 一括ダウンロード機能
-        st.markdown("---")
-        st.markdown("### 📦 一括ダウンロード")
-        
-        # ZIPファイルを作成
-        import zipfile
-        from datetime import datetime
-        
-        zip_buffer = io.BytesIO()
-        
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for idx, crop_data in enumerate(cropped_images):
-                # 画像をPNGとして保存
-                img_buffer = io.BytesIO()
-                cropped_pil = Image.fromarray(crop_data['image'])
-                cropped_pil.save(img_buffer, format='PNG')
-                
-                # ZIPに追加
-                zip_file.writestr(
-                    f"cropped_{crop_data['name']}",
-                    img_buffer.getvalue()
-                )
-        
-        # ダウンロードボタン
-        st.download_button(
-            label="🗜️ すべての切り抜き画像をZIPでダウンロード",
-            data=zip_buffer.getvalue(),
-            file_name=f"cropped_images_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
-            mime="application/zip"
-        )
+        with col3:
+            # ダウンロードボタン
+            cropped_pil = Image.fromarray(cropped_img)
+            buf = io.BytesIO()
+            cropped_pil.save(buf, format='PNG')
+            byte_im = buf.getvalue()
+            
+            st.download_button(
+                label="⬇️ ダウンロード",
+                data=byte_im,
+                file_name=f"cropped_{uploaded_file.name}",
+                mime="image/png"
+            )
         
     else:
         # アップロード前の表示
@@ -294,7 +237,7 @@ with main_container:
         with st.expander("💡 使い方"):
             st.markdown("""
             1. **「Browse files」ボタン**をクリック
-            2. **グラフ画像を選択**（複数選択可）
+            2. **グラフ画像を選択**
             3. **自動的に切り抜きが実行されます**
             
             対応フォーマット:
