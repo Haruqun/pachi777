@@ -281,41 +281,50 @@ with st.expander("⚙️ 画像解析の調整設定"):
             
             # グリッドライン調整
             st.markdown("### 📏 グリッドライン微調整")
-            st.caption("※ ±30,000ラインを調整すると、±10,000、±20,000ラインも自動的に調整されます")
+            st.caption("※ 各グリッドラインを個別に調整できます")
             
-            grid_col1, grid_col2 = st.columns(2)
+            grid_col1, grid_col2, grid_col3 = st.columns(3)
             
             with grid_col1:
                 grid_30k_offset = st.number_input(
                     "+30,000ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_30k_offset', 0),
-                    step=1, help="上端の+30,000ラインの位置調整（±10,000、±20,000も連動）"
+                    step=1, help="上端の+30,000ラインの位置調整"
+                )
+                grid_20k_offset = st.number_input(
+                    "+20,000ライン調整",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_20k_offset', 0),
+                    step=1, help="+20,000ラインの位置調整"
                 )
             
             with grid_col2:
+                grid_10k_offset = st.number_input(
+                    "+10,000ライン調整",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_10k_offset', 0),
+                    step=1, help="+10,000ラインの位置調整"
+                )
+                grid_minus_10k_offset = st.number_input(
+                    "-10,000ライン調整",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_10k_offset', 0),
+                    step=1, help="-10,000ラインの位置調整"
+                )
+            
+            with grid_col3:
+                grid_minus_20k_offset = st.number_input(
+                    "-20,000ライン調整",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_20k_offset', 0),
+                    step=1, help="-20,000ラインの位置調整"
+                )
                 grid_minus_30k_offset = st.number_input(
                     "-30,000ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
-                    step=1, help="下端の-30,000ラインの位置調整（±10,000、±20,000も連動）"
+                    step=1, help="下端の-30,000ラインの位置調整"
                 )
-            
-            # 中間ラインは自動計算
-            grid_20k_offset = grid_30k_offset * 2 // 3  # +20,000は+30,000の2/3の位置
-            grid_10k_offset = grid_30k_offset // 3      # +10,000は+30,000の1/3の位置
-            grid_minus_10k_offset = grid_minus_30k_offset // 3      # -10,000は-30,000の1/3の位置
-            grid_minus_20k_offset = grid_minus_30k_offset * 2 // 3  # -20,000は-30,000の2/3の位置
     
     # リアルタイムプレビュー
     if test_image:
         st.markdown("### 🖼️ リアルタイムプレビュー")
         
-        # インタラクティブ調整モード
-        adjustment_mode = st.radio(
-            "調整モード",
-            ["数値入力", "ビジュアル調整"],
-            horizontal=True,
-            help="ビジュアル調整モードでは、ボタンで範囲を調整できます"
-        )
         
         # 現在の設定で切り抜き処理を実行
         search_start = orange_bottom + search_start_offset
@@ -397,25 +406,25 @@ with st.expander("⚙️ 画像解析の調整設定"):
             distance_to_plus_30k = zero_in_crop - y_30k
             distance_to_minus_30k = y_minus_30k - zero_in_crop
             
-            # +20000ライン（+30000の2/3の位置）
+            # +20000ライン（+30000の2/3の位置 + 微調整）
             y_20k = int(zero_in_crop - (distance_to_plus_30k * 2 / 3)) + grid_20k_offset
             if 0 < y_20k < cropped_preview.shape[0]:
                 cv2.line(cropped_preview, (0, y_20k), (cropped_preview.shape[1], y_20k), (100, 100, 100), 2)
                 cv2.putText(cropped_preview, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
             
-            # +10000ライン（+30000の1/3の位置）
+            # +10000ライン（+30000の1/3の位置 + 微調整）
             y_10k = int(zero_in_crop - (distance_to_plus_30k * 1 / 3)) + grid_10k_offset
             if 0 < y_10k < cropped_preview.shape[0]:
                 cv2.line(cropped_preview, (0, y_10k), (cropped_preview.shape[1], y_10k), (100, 100, 100), 2)
                 cv2.putText(cropped_preview, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
             
-            # -10000ライン（-30000の1/3の位置）
+            # -10000ライン（-30000の1/3の位置 + 微調整）
             y_minus_10k = int(zero_in_crop + (distance_to_minus_30k * 1 / 3)) + grid_minus_10k_offset
             if 0 < y_minus_10k < cropped_preview.shape[0]:
                 cv2.line(cropped_preview, (0, y_minus_10k), (cropped_preview.shape[1], y_minus_10k), (100, 100, 100), 2)
                 cv2.putText(cropped_preview, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
             
-            # -20000ライン（-30000の2/3の位置）
+            # -20000ライン（-30000の2/3の位置 + 微調整）
             y_minus_20k = int(zero_in_crop + (distance_to_minus_30k * 2 / 3)) + grid_minus_20k_offset
             if 0 < y_minus_20k < cropped_preview.shape[0]:
                 cv2.line(cropped_preview, (0, y_minus_20k), (cropped_preview.shape[1], y_minus_20k), (100, 100, 100), 2)
@@ -427,55 +436,6 @@ with st.expander("⚙️ 画像解析の調整設定"):
             st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
             st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
         
-        # ビジュアル調整モード（右カラム）
-        if adjustment_mode == "ビジュアル調整":
-            with main_col2:
-                st.markdown("#### 🎯 ボタンで範囲を調整")
-                
-                # 切り抜き範囲の調整
-                st.markdown("**上端**")
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("↑5", key="top_up", help="上端を5px上げる"):
-                        st.session_state.settings['crop_top'] = min(500, crop_top + 5)
-                        st.rerun()
-                with col2:
-                    if st.button("↓5", key="top_down", help="上端を5px下げる"):
-                        st.session_state.settings['crop_top'] = max(100, crop_top - 5)
-                        st.rerun()
-                
-                st.markdown("**下端**")
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("↑5", key="bottom_up", help="下端を5px上げる"):
-                        st.session_state.settings['crop_bottom'] = max(100, crop_bottom - 5)
-                        st.rerun()
-                with col2:
-                    if st.button("↓5", key="bottom_down", help="下端を5px下げる"):
-                        st.session_state.settings['crop_bottom'] = min(500, crop_bottom + 5)
-                        st.rerun()
-                
-                st.markdown("**左余白**")
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("-25", key="left_minus", help="左余白を25px減らす"):
-                        st.session_state.settings['left_margin'] = max(0, left_margin - 25)
-                        st.rerun()
-                with col2:
-                    if st.button("+25", key="left_plus", help="左余白を25px増やす"):
-                        st.session_state.settings['left_margin'] = min(300, left_margin + 25)
-                        st.rerun()
-                
-                st.markdown("**右余白**")
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("-25", key="right_minus", help="右余白を25px減らす"):
-                        st.session_state.settings['right_margin'] = max(0, right_margin - 25)
-                        st.rerun()
-                with col2:
-                    if st.button("+25", key="right_plus", help="右余白を25px増やす"):
-                        st.session_state.settings['right_margin'] = min(300, right_margin + 25)
-                        st.rerun()
     
     # 設定の保存
     st.markdown("### 💾 設定の保存")
@@ -764,13 +724,13 @@ if uploaded_files:
         distance_to_plus_30k = zero_line_in_crop - y_30k
         distance_to_minus_30k = y_minus_30k - zero_line_in_crop
         
-        # +20000ライン（+30000の2/3の位置）
+        # +20000ライン（+30000の2/3の位置 + 微調整）
         y_20k = int(zero_line_in_crop - (distance_to_plus_30k * 2 / 3)) + settings.get('grid_20k_offset', 0)
         if 0 < y_20k < crop_height:
             cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
         
-        # +10000ライン（+30000の1/3の位置）
+        # +10000ライン（+30000の1/3の位置 + 微調整）
         y_10k = int(zero_line_in_crop - (distance_to_plus_30k * 1 / 3)) + settings.get('grid_10k_offset', 0)
         if 0 < y_10k < crop_height:
             cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (128, 128, 128), 1)
@@ -782,13 +742,13 @@ if uploaded_files:
             cv2.line(cropped_img, (0, y_0), (cropped_img.shape[1], y_0), (255, 0, 0), 2)
             cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
         
-        # -10000ライン（-30000の1/3の位置）
+        # -10000ライン（-30000の1/3の位置 + 微調整）
         y_minus_10k = int(zero_line_in_crop + (distance_to_minus_30k * 1 / 3)) + settings.get('grid_minus_10k_offset', 0)
         if 0 < y_minus_10k < crop_height:
             cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
         
-        # -20000ライン（-30000の2/3の位置）
+        # -20000ライン（-30000の2/3の位置 + 微調整）
         y_minus_20k = int(zero_line_in_crop + (distance_to_minus_30k * 2 / 3)) + settings.get('grid_minus_20k_offset', 0)
         if 0 < y_minus_20k < crop_height:
             cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (128, 128, 128), 1)
@@ -805,7 +765,14 @@ if uploaded_files:
             
             # 0ラインの位置を設定
             analyzer.zero_y = zero_line_in_crop
-            analyzer.scale = 30000 / 246  # スケール設定
+            # 実際の切り抜きサイズに基づいてスケールを計算
+            # 切り抜き高さの半分が30,000玉に相当
+            crop_height = analysis_img.shape[0]
+            # ゼロラインから上端までと下端までの距離の平均を使用
+            distance_to_top = zero_line_in_crop
+            distance_to_bottom = crop_height - zero_line_in_crop
+            avg_distance = (distance_to_top + distance_to_bottom) / 2
+            analyzer.scale = 30000 / avg_distance  # 動的スケール設定
             
             # グラフデータを抽出
             graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
