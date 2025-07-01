@@ -361,6 +361,10 @@ with main_container:
                 min_val = min(graph_values)
                 current_val = graph_values[-1] if graph_values else 0
                 
+                # MAXがマイナスの場合は0を表示
+                if max_val < 0:
+                    max_val = 0
+                
                 # 初当たり値を探す（production版と同じロジック）
                 first_hit_val = 0
                 first_hit_x = None
@@ -400,6 +404,10 @@ with main_container:
                                         first_hit_val = graph_values[i]
                                         first_hit_x = i
                                         break
+                
+                # 初当たり値がプラスの場合は0を表示
+                if first_hit_val > 0:
+                    first_hit_val = 0
                 
                 # オーバーレイ画像を作成
                 overlay_img = cropped_img.copy()
@@ -481,7 +489,7 @@ with main_container:
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 0), 1, cv2.LINE_AA)
                 
                 # 初当たり値ライン（右端に短い線）
-                if first_hit_val > 0:  # 初当たりがある場合
+                if first_hit_x is not None:  # 初当たりがある場合
                     first_hit_y = int(zero_line_in_crop - (first_hit_val / analyzer.scale))
                     if 0 <= first_hit_y < overlay_img.shape[0]:
                         # 右端に短い線
@@ -498,19 +506,23 @@ with main_container:
                 # 結果を保存
                 analysis_results.append({
                     'name': uploaded_file.name,
-                    'image': overlay_img,
+                    'original_image': img_array,  # 元画像を保存
+                    'cropped_image': cropped_img,  # 切り抜き画像
+                    'overlay_image': overlay_img,  # オーバーレイ画像
                     'success': True,
                     'max_val': int(max_val),
                     'min_val': int(min_val),
                     'current_val': int(current_val),
-                    'first_hit_val': int(first_hit_val) if first_hit_val > 0 else None,
+                    'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
                     'dominant_color': dominant_color
                 })
             else:
                 # 解析失敗時
                 analysis_results.append({
                     'name': uploaded_file.name,
-                    'image': cropped_img,
+                    'original_image': img_array,  # 元画像を保存
+                    'cropped_image': cropped_img,
+                    'overlay_image': cropped_img,  # 解析失敗時は切り抜き画像を使用
                     'success': False
                 })
         
@@ -526,61 +538,63 @@ with main_container:
         </h3>
         """, unsafe_allow_html=True)
         
-        # 2列のグリッドで表示
-        cols = st.columns(2)
+        # 各画像を表示
         for idx, result in enumerate(analysis_results):
-            col_idx = idx % 2
-            with cols[col_idx]:
-                # カードスタイルのコンテナ
-                with st.container():
-                    st.markdown(f"""
-                    <div style="background: white; padding: 1.5rem; border-radius: 0.75rem; 
-                                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
-                                margin-bottom: 1.5rem; overflow: hidden;">
-                        <h4 style="color: #4a5568; margin-bottom: 1rem; font-weight: 600;">
-                            {result['name']}
-                        </h4>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # 画像表示
-                    st.image(result['image'], use_column_width=True)
-                    
-                    # 成功時は統計情報を表示
-                    if result['success']:
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.metric("最高値", f"{result['max_val']:,}玉")
-                            st.metric("最低値", f"{result['min_val']:,}玉")
-                        with col2:
-                            st.metric("現在値", f"{result['current_val']:,}玉")
-                            if result['first_hit_val']:
-                                st.metric("初当たり", f"{result['first_hit_val']:,}玉")
-                    else:
-                        st.warning("⚠️ グラフデータを検出できませんでした")
-        
-        # 詳細解析セクション
-        if graph_data_points:
-            st.markdown("---")
-            st.markdown("### 📈 詳細解析")
+            # カードスタイルのコンテナ
+            st.markdown(f"""
+            <div style="background: white; padding: 1.5rem; border-radius: 0.75rem; 
+                        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+                        margin-bottom: 2rem;">
+                <h4 style="color: #4a5568; margin-bottom: 1rem; font-weight: 600;">
+                    {idx + 1}. {result['name']}
+                </h4>
+            </div>
+            """, unsafe_allow_html=True)
             
-            # 統計情報を表示
-            col1, col2, col3, col4, col5 = st.columns(5)
+            # 元画像と解析結果を並べて表示
+            col1, col2 = st.columns(2)
             
             with col1:
-                st.metric("最高値", f"{int(max_val):,}玉")
+                st.markdown("**元画像**")
+                st.image(result['original_image'], use_column_width=True)
             
             with col2:
-                st.metric("最低値", f"{int(min_val):,}玉")
+                st.markdown("**解析結果**")
+                st.image(result['overlay_image'], use_column_width=True)
             
-            with col3:
-                st.metric("現在値", f"{int(current_val):,}玉")
+            # 成功時は統計情報を表示
+            if result['success']:
+                metrics_cols = st.columns(5)
+                with metrics_cols[0]:
+                    st.metric("最高値", f"{result['max_val']:,}玉")
+                with metrics_cols[1]:
+                    st.metric("最低値", f"{result['min_val']:,}玉")
+                with metrics_cols[2]:
+                    st.metric("現在値", f"{result['current_val']:,}玉")
+                with metrics_cols[3]:
+                    if result['first_hit_val'] is not None:
+                        st.metric("初当たり", f"{result['first_hit_val']:,}玉")
+                    else:
+                        st.metric("初当たり", "なし")
+                with metrics_cols[4]:
+                    st.metric("検出色", result['dominant_color'])
+            else:
+                st.warning("⚠️ グラフデータを検出できませんでした")
             
-            with col4:
-                st.metric("初当たり", f"{int(first_hit_val):,}玉" if first_hit_x else "なし")
-            
-            with col5:
-                st.metric("検出色", dominant_color)
+            # 区切り線
+            if idx < len(analysis_results) - 1:
+                st.markdown("---")
+        
+        # サマリー情報
+        st.markdown("""
+        <h3 style="color: #4a5568; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">
+            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📋</span> 
+            解析サマリー
+        </h3>
+        """, unsafe_allow_html=True)
+        
+        success_count = sum(1 for r in analysis_results if r['success'])
+        st.info(f"📈 総画像数: {len(analysis_results)}枚 | ✅ 成功: {success_count}枚 | ⚠️ 失敗: {len(analysis_results) - success_count}枚")
         
     else:
         # アップロード前の表示
