@@ -1026,6 +1026,86 @@ if uploaded_files:
                     
                 except Exception as e:
                     st.error(f"G案でエラーが発生: {str(e)}")
+                
+                # H案: G案改良版（スケール調整付き）
+                st.markdown("#### H案: G案改良版（スケール調整付き）")
+                try:
+                    # IMG_0xxx.PNGシリーズの検出
+                    is_img_series_h = False
+                    if test_height > 2400 and test_height < 2700:
+                        if test_orange_bottom < 1000:  # オレンジバーが上部にある
+                            # 背景色チェック
+                            bg_sample_h = test_gray[test_orange_bottom + 100:test_orange_bottom + 200, test_width//4:test_width*3//4]
+                            bg_mean_h = np.mean(bg_sample_h)
+                            if bg_mean_h > 200 and bg_mean_h < 240:
+                                is_img_series_h = True
+                    
+                    if is_img_series_h:
+                        # IMG_0xxx.PNG用の拡張検索範囲
+                        search_start_h = test_orange_bottom + 200
+                        search_end_h = min(test_height - 300, test_orange_bottom + 800)
+                        detection_info_h = "IMG_0xxx.PNG検出（拡張範囲）"
+                        # IMG_0xxx.PNG用のスケール（±50000）
+                        scale_h = 50000 / 408  # 約122.5玉/px（グラフ高さ816pxで±50000）
+                        crop_top_offset = 408  # 上方向の切り抜きサイズ
+                        crop_bottom_offset = 408  # 下方向の切り抜きサイズ
+                    else:
+                        # 通常の検索範囲
+                        search_start_h = test_orange_bottom + 50
+                        search_end_h = min(test_height - 100, test_orange_bottom + 400)
+                        detection_info_h = "通常検出"
+                        # 通常のスケール（±30000）
+                        scale_h = 30000 / 246  # 約122玉/px
+                        crop_top_offset = 246
+                        crop_bottom_offset = 247
+                    
+                    best_score_h = 0
+                    zero_line_h = (search_start_h + search_end_h) // 2
+                    
+                    for y in range(search_start_h, search_end_h):
+                        row_h = test_gray[y, 100:test_width-100]
+                        darkness_h = 1.0 - (np.mean(row_h) / 255.0)
+                        uniformity_h = 1.0 - (np.std(row_h) / 128.0)
+                        score_h = darkness_h * 0.5 + uniformity_h * 0.5
+                        
+                        if score_h > best_score_h:
+                            best_score_h = score_h
+                            zero_line_h = y
+                    
+                    # 切り抜き（スケールに応じたサイズ）
+                    top_h = max(0, zero_line_h - crop_top_offset)
+                    bottom_h = min(test_height, zero_line_h + crop_bottom_offset)
+                    left_h = 125
+                    right_h = test_width - 125
+                    
+                    cropped_h = result['original_image'][int(top_h):int(bottom_h), int(left_h):int(right_h)].copy()
+                    
+                    # グリッドライン追加
+                    zero_in_crop_h = zero_line_h - top_h
+                    cv2.line(cropped_h, (0, int(zero_in_crop_h)), (cropped_h.shape[1], int(zero_in_crop_h)), (128, 255, 128), 2)
+                    cv2.putText(cropped_h, 'Zero (H)', (10, int(zero_in_crop_h) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (128, 255, 128), 2)
+                    
+                    # スケールに応じたグリッドライン
+                    if is_img_series_h:
+                        # ±50000, ±25000のライン
+                        grid_values = [(50000, '+50k'), (25000, '+25k'), (-25000, '-25k'), (-50000, '-50k')]
+                    else:
+                        # ±30000, ±10000のライン
+                        grid_values = [(30000, '+30k'), (10000, '+10k'), (-10000, '-10k'), (-30000, '-30k')]
+                    
+                    for val, label in grid_values:
+                        y_offset = int(val / scale_h)
+                        y_pos = int(zero_in_crop_h - y_offset)
+                        if 0 < y_pos < cropped_h.shape[0]:
+                            cv2.line(cropped_h, (0, y_pos), (cropped_h.shape[1], y_pos), (200, 200, 200), 1)
+                            cv2.putText(cropped_h, label, (10, y_pos - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (128, 128, 128), 1)
+                    
+                    st.image(cropped_h, caption="H案による切り抜き", use_column_width=True)
+                    st.info(f"{detection_info_h}, ゼロライン: {zero_line_h}, スコア: {best_score_h:.3f}")
+                    st.caption(f"スケール: ±{int(scale_h * crop_top_offset):,}, 切り抜きサイズ: {int(bottom_h - top_h)}px")
+                    
+                except Exception as e:
+                    st.error(f"H案でエラーが発生: {str(e)}")
             
             # 成功時は統計情報を表示（解析結果の下に縦に並べる）
             if result['success']:
