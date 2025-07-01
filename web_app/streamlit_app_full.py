@@ -53,8 +53,7 @@ def extract_site7_data(image):
             'first_hit_count': None,
             'current_start': None,
             'jackpot_probability': None,
-            'max_payout': None,
-            'graph_max': None  # グラフ内の最大値
+            'max_payout': None
         }
         
         # 台番号の抽出
@@ -110,92 +109,6 @@ def extract_site7_data(image):
                     data['max_payout'] = str(value)
                     break
         
-        # グラフの最大値を探す（「最大値：」または「最大値:」のパターン）
-        # グラフ領域の直下を重点的に探す（画像の中央付近）
-        graph_bottom_section = adjusted[int(height * 0.55):int(height * 0.75), :]
-        
-        # カーニング問題に対処するための前処理
-        # 1. 画像を拡大（文字間隔を広げる）
-        scale_factor = 2
-        scaled_section = cv2.resize(graph_bottom_section, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_CUBIC)
-        
-        # 2. モルフォロジー変換で文字を少し太くする
-        kernel = np.ones((2,2), np.uint8)
-        processed_section = cv2.morphologyEx(scaled_section, cv2.MORPH_CLOSE, kernel)
-        
-        # 複数のOCR設定を試す
-        ocr_configs = [
-            '',  # デフォルト設定
-            '--psm 7',  # 単一行のテキストとして扱う
-            '--psm 8',  # 単一単語として扱う
-            '--psm 11',  # スパースなテキスト
-        ]
-        
-        graph_bottom_text = ""
-        for config in ocr_configs:
-            try:
-                temp_text = pytesseract.image_to_string(processed_section, lang='jpn', config=config)
-                graph_bottom_text += " " + temp_text
-            except:
-                pass
-        
-        # 元の画像でも試す
-        graph_bottom_text += " " + pytesseract.image_to_string(graph_bottom_section, lang='jpn')
-        
-        # 「最大値：」というラベルが付いた数値を優先的に探す
-        # 複数のパターンで試行
-        patterns = [
-            r'最大値\s*[:：]\s*(\d+)',           # 通常のパターン
-            r'大値\s*[:：]\s*(\d+)',             # 「最」が欠落した場合
-            r'値\s*[:：]\s*(\d+)',               # さらに欠落した場合
-            r'最大\s*(\d+)',                      # コロンが認識されない場合
-        ]
-        
-        max_value_found = False
-        for pattern in patterns:
-            max_value_match = re.search(pattern, graph_bottom_text)
-            if max_value_match:
-                value = max_value_match.group(1)
-                # 3桁以上で10の倍数であることを確認
-                if len(value) >= 3 and value.isdigit() and int(value) % 10 == 0:
-                    data['graph_max'] = value
-                    max_value_found = True
-                    break
-        
-        if not max_value_found:
-            # 全体テキストから再度探す
-            for pattern in patterns:
-                max_value_match = re.search(pattern, text)
-                if max_value_match:
-                    value = max_value_match.group(1)
-                    # 3桁以上で、10の倍数で、軸ラベルでないことを確認
-                    if (len(value) >= 3 and value.isdigit() and 
-                        int(value) % 10 == 0 and 
-                        value not in ['30000', '20000', '10000', '000']):
-                        data['graph_max'] = value
-                        max_value_found = True
-                        break
-            
-            # それでも見つからない場合、「最大値」の近くの数値を探す
-            if not max_value_found:
-                max_label_pos = text.find('最大値')
-                if max_label_pos == -1:
-                    max_label_pos = text.find('大値')  # 部分的な認識も考慮
-                
-                if max_label_pos != -1:
-                    # 最大値ラベルの前後50文字を探索
-                    start_pos = max(0, max_label_pos - 10)
-                    end_pos = min(len(text), max_label_pos + 50)
-                    nearby_text = text[start_pos:end_pos]
-                    
-                    # 3-5桁の数値を探す
-                    number_match = re.search(r'(\d{3,5})', nearby_text)
-                    if number_match:
-                        value = number_match.group(1)
-                        # 軸ラベルでないことを確認し、妥当な値であることを確認
-                        if (value not in ['30000', '20000', '10000', '000'] and 
-                            int(value) >= 100 and int(value) % 10 == 0):
-                            data['graph_max'] = value
         
         return data
     except Exception as e:
@@ -693,102 +606,9 @@ if uploaded_files:
                         ocr_html += f'<div class="ocr-item"><span class="ocr-label">📈 大当り確率</span><span class="ocr-value">{ocr["jackpot_probability"]}</span></div>'
                     if ocr.get('max_payout'):
                         ocr_html += f'<div class="ocr-item"><span class="ocr-label">💰 最高出玉</span><span class="ocr-value">{ocr["max_payout"]}玉</span></div>'
-                    if ocr.get('graph_max'):
-                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">📊 グラフ最大値</span><span class="ocr-value">{ocr["graph_max"]}玉</span></div>'
                     
                     ocr_html += '</div>'
                     st.markdown(ocr_html, unsafe_allow_html=True)
-                    
-                    # グラフ解析値とOCR値の比較（グラフ最大値が存在する場合のみ）
-                    if ocr.get('graph_max') and result.get('max_val') is not None:
-                        try:
-                            ocr_max = int(ocr['graph_max'])
-                            graph_max = result['max_val']
-                            
-                            # 差分計算
-                            difference = graph_max - ocr_max
-                            
-                            # 一致率計算（OCR値を基準とした誤差率）
-                            if ocr_max != 0:
-                                match_rate = (1 - abs(difference) / abs(ocr_max)) * 100
-                            else:
-                                match_rate = 100 if difference == 0 else 0
-                            
-                            # 比較結果の表示
-                            st.markdown("""
-                            <style>
-                            .comparison-card {
-                                background-color: #f8f9fa;
-                                padding: 15px;
-                                border-radius: 10px;
-                                margin-top: 10px;
-                                border: 1px solid #dee2e6;
-                            }
-                            .comparison-title {
-                                color: #495057;
-                                font-weight: bold;
-                                margin-bottom: 10px;
-                            }
-                            .comparison-item {
-                                display: flex;
-                                justify-content: space-between;
-                                padding: 5px 0;
-                                border-bottom: 1px solid #e9ecef;
-                            }
-                            .comparison-item:last-child {
-                                border-bottom: none;
-                            }
-                            .comparison-label {
-                                color: #6c757d;
-                                font-weight: 500;
-                            }
-                            .comparison-value {
-                                font-weight: bold;
-                            }
-                            .match-good {
-                                color: #28a745;
-                            }
-                            .match-warning {
-                                color: #ffc107;
-                            }
-                            .match-bad {
-                                color: #dc3545;
-                            }
-                            </style>
-                            """, unsafe_allow_html=True)
-                            
-                            # 一致率に応じた色分け
-                            if match_rate >= 95:
-                                rate_class = "match-good"
-                            elif match_rate >= 80:
-                                rate_class = "match-warning"
-                            else:
-                                rate_class = "match-bad"
-                            
-                            comparison_html = f'''
-                            <div class="comparison-card">
-                                <div class="comparison-title">🔍 解析精度チェック</div>
-                                <div class="comparison-item">
-                                    <span class="comparison-label">グラフ解析値</span>
-                                    <span class="comparison-value">{graph_max:,}玉</span>
-                                </div>
-                                <div class="comparison-item">
-                                    <span class="comparison-label">OCR検出値</span>
-                                    <span class="comparison-value">{ocr_max:,}玉</span>
-                                </div>
-                                <div class="comparison-item">
-                                    <span class="comparison-label">差分</span>
-                                    <span class="comparison-value">{difference:+,}玉</span>
-                                </div>
-                                <div class="comparison-item">
-                                    <span class="comparison-label">一致率</span>
-                                    <span class="comparison-value {rate_class}">{match_rate:.1f}%</span>
-                                </div>
-                            </div>
-                            '''
-                            st.markdown(comparison_html, unsafe_allow_html=True)
-                        except (ValueError, TypeError):
-                            pass
             else:
                 st.warning("⚠️ グラフデータを検出できませんでした")
             
@@ -801,99 +621,6 @@ if uploaded_files:
     
     success_count = sum(1 for r in analysis_results if r['success'])
     st.info(f"📈 総画像数: {len(analysis_results)}枚 | ✅ 成功: {success_count}枚 | ⚠️ 失敗: {len(analysis_results) - success_count}枚")
-    
-    # 一致率の統計情報を計算
-    match_stats = {
-        'under_10k': {'count': 0, 'total_rate': 0},
-        'under_20k': {'count': 0, 'total_rate': 0},
-        'under_30k': {'count': 0, 'total_rate': 0},
-        'over_30k': {'count': 0, 'total_rate': 0}
-    }
-    
-    for result in analysis_results:
-        if result.get('success') and result.get('ocr_data') and result['ocr_data'].get('graph_max'):
-            try:
-                ocr_max = int(result['ocr_data']['graph_max'])
-                graph_max = result['max_val']
-                
-                # 差分計算
-                difference = graph_max - ocr_max
-                
-                # 一致率計算
-                if ocr_max != 0:
-                    match_rate = (1 - abs(difference) / abs(ocr_max)) * 100
-                else:
-                    match_rate = 100 if difference == 0 else 0
-                
-                # カテゴリ分け
-                if ocr_max < 10000:
-                    match_stats['under_10k']['count'] += 1
-                    match_stats['under_10k']['total_rate'] += match_rate
-                elif ocr_max < 20000:
-                    match_stats['under_20k']['count'] += 1
-                    match_stats['under_20k']['total_rate'] += match_rate
-                elif ocr_max < 30000:
-                    match_stats['under_30k']['count'] += 1
-                    match_stats['under_30k']['total_rate'] += match_rate
-                else:
-                    match_stats['over_30k']['count'] += 1
-                    match_stats['over_30k']['total_rate'] += match_rate
-            except (ValueError, TypeError):
-                pass
-    
-    # 一致率統計の表示
-    if any(stats['count'] > 0 for stats in match_stats.values()):
-        st.markdown("### 📊 一致率統計（グラフ最大値別）")
-        
-        cols = st.columns(4)
-        
-        # 10,000未満
-        with cols[0]:
-            if match_stats['under_10k']['count'] > 0:
-                avg_rate = match_stats['under_10k']['total_rate'] / match_stats['under_10k']['count']
-                st.metric(
-                    "10,000未満",
-                    f"{avg_rate:.1f}%",
-                    f"{match_stats['under_10k']['count']}件"
-                )
-            else:
-                st.metric("10,000未満", "-", "0件")
-        
-        # 20,000未満
-        with cols[1]:
-            if match_stats['under_20k']['count'] > 0:
-                avg_rate = match_stats['under_20k']['total_rate'] / match_stats['under_20k']['count']
-                st.metric(
-                    "10,000～20,000",
-                    f"{avg_rate:.1f}%",
-                    f"{match_stats['under_20k']['count']}件"
-                )
-            else:
-                st.metric("10,000～20,000", "-", "0件")
-        
-        # 30,000未満
-        with cols[2]:
-            if match_stats['under_30k']['count'] > 0:
-                avg_rate = match_stats['under_30k']['total_rate'] / match_stats['under_30k']['count']
-                st.metric(
-                    "20,000～30,000",
-                    f"{avg_rate:.1f}%",
-                    f"{match_stats['under_30k']['count']}件"
-                )
-            else:
-                st.metric("20,000～30,000", "-", "0件")
-        
-        # 30,000以上
-        with cols[3]:
-            if match_stats['over_30k']['count'] > 0:
-                avg_rate = match_stats['over_30k']['total_rate'] / match_stats['over_30k']['count']
-                st.metric(
-                    "30,000以上",
-                    f"{avg_rate:.1f}%",
-                    f"{match_stats['over_30k']['count']}件"
-                )
-            else:
-                st.metric("30,000以上", "-", "0件")
     
 else:
     # アップロード前の表示
