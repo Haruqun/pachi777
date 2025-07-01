@@ -602,6 +602,142 @@ if uploaded_files:
                     
                 except Exception as e:
                     st.error(f"B案でエラーが発生: {str(e)}")
+                
+                # C案: グリッド目盛りベース方式（IMG_0167.PNG対応）
+                st.markdown("#### C案: グリッド目盛りベース方式")
+                try:
+                    # 右側のグリッド目盛りをOCRで読み取る
+                    right_area = result['original_image'][:, test_width - 100:]
+                    right_gray = cv2.cvtColor(right_area, cv2.COLOR_RGB2GRAY)
+                    
+                    # OCRで数値を検出
+                    import pytesseract
+                    ocr_text = pytesseract.image_to_string(right_gray, config='--psm 6 -c tessedit_char_whitelist=0123456789,.-')
+                    
+                    # 数値を抽出
+                    import re
+                    numbers = re.findall(r'-?\d+[,.]?\d*', ocr_text.replace(',', ''))
+                    detected_scale = None
+                    
+                    if numbers:
+                        # 最大値を推定（通常は30000, 50000, 80000など）
+                        max_num = max([abs(float(n)) for n in numbers if n])
+                        if max_num > 20000:
+                            detected_scale = max_num
+                    
+                    # スケールに基づいてグラフエリアを推定
+                    if detected_scale:
+                        st.caption(f"検出されたスケール: ±{int(detected_scale):,}")
+                    else:
+                        detected_scale = 30000  # デフォルト
+                        st.caption("スケール検出失敗、デフォルト値を使用")
+                    
+                    # グラフエリアをオレンジバーから推定
+                    graph_top_c = test_orange_bottom + 30
+                    # スケールに応じてグラフの高さを調整
+                    if detected_scale >= 50000:
+                        graph_height = 600  # より大きなグラフ
+                    else:
+                        graph_height = 493  # 標準サイズ
+                    
+                    # グラフの中央をゼロラインとする
+                    zero_line_c = graph_top_c + graph_height // 2
+                    
+                    # 切り抜き
+                    top_c = max(0, zero_line_c - graph_height // 2)
+                    bottom_c = min(test_height, zero_line_c + graph_height // 2)
+                    left_c = 125
+                    right_c = test_width - 125
+                    
+                    cropped_c = result['original_image'][int(top_c):int(bottom_c), int(left_c):int(right_c)].copy()
+                    
+                    # グリッドライン追加
+                    zero_in_crop_c = zero_line_c - top_c
+                    cv2.line(cropped_c, (0, int(zero_in_crop_c)), (cropped_c.shape[1], int(zero_in_crop_c)), (255, 0, 255), 2)
+                    cv2.putText(cropped_c, 'Zero (C)', (10, int(zero_in_crop_c) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
+                    
+                    st.image(cropped_c, caption="C案による切り抜き", use_column_width=True)
+                    st.info(f"グラフ高さ: {graph_height}px, ゼロライン: {zero_line_c}")
+                    
+                except Exception as e:
+                    st.error(f"C案でエラーが発生: {str(e)}")
+                
+                # D案: 適応的検出方式（複合アプローチ）
+                st.markdown("#### D案: 適応的検出方式")
+                try:
+                    # 複数の方法を試して最適なものを選択
+                    candidates = []
+                    
+                    # 方法1: 現在の実装と同じ（暗い線検出）
+                    search_start_d = test_orange_bottom + 50
+                    search_end_d = min(test_height - 100, test_orange_bottom + 400)
+                    
+                    best_darkness_score = 0
+                    darkness_zero = (search_start_d + search_end_d) // 2
+                    
+                    for y in range(search_start_d, search_end_d):
+                        row = test_gray[y, 100:test_width-100]
+                        darkness = 1.0 - (np.mean(row) / 255.0)
+                        uniformity = 1.0 - (np.std(row) / 128.0)
+                        score = darkness * 0.5 + uniformity * 0.5
+                        
+                        if score > best_darkness_score:
+                            best_darkness_score = score
+                            darkness_zero = y
+                    
+                    if best_darkness_score > 0.3:  # 閾値
+                        candidates.append(('暗い線検出', darkness_zero, best_darkness_score))
+                    
+                    # 方法2: グラフ線の分布から推定
+                    hsv_d = cv2.cvtColor(result['original_image'], cv2.COLOR_RGB2HSV)
+                    # ピンク・紫系の色を検出
+                    pink_mask = cv2.inRange(hsv_d, np.array([140, 50, 50]), np.array([170, 255, 255]))
+                    purple_mask = cv2.inRange(hsv_d, np.array([270, 50, 50]), np.array([320, 255, 255]))
+                    graph_mask = cv2.bitwise_or(pink_mask, purple_mask)
+                    
+                    # グラフ線のY座標分布を調べる
+                    graph_y_coords = []
+                    for y in range(search_start_d, search_end_d):
+                        if np.sum(graph_mask[y, 100:test_width-100]) > 50:
+                            graph_y_coords.append(y)
+                    
+                    if graph_y_coords:
+                        # グラフの中央値をゼロラインとして推定
+                        median_y = int(np.median(graph_y_coords))
+                        candidates.append(('グラフ分布', median_y, 0.5))
+                    
+                    # 方法3: デフォルト位置（グラフエリアの推定中央）
+                    default_zero = test_orange_bottom + 300
+                    candidates.append(('デフォルト', default_zero, 0.1))
+                    
+                    # 最適な候補を選択
+                    if candidates:
+                        candidates.sort(key=lambda x: x[2], reverse=True)
+                        best_method, zero_line_d, confidence = candidates[0]
+                        
+                        # 切り抜き
+                        top_d = max(0, zero_line_d - 246)
+                        bottom_d = min(test_height, zero_line_d + 247)
+                        left_d = 125
+                        right_d = test_width - 125
+                        
+                        cropped_d = result['original_image'][int(top_d):int(bottom_d), int(left_d):int(right_d)].copy()
+                        
+                        # グリッドライン追加
+                        zero_in_crop_d = zero_line_d - top_d
+                        cv2.line(cropped_d, (0, int(zero_in_crop_d)), (cropped_d.shape[1], int(zero_in_crop_d)), (0, 255, 255), 2)
+                        cv2.putText(cropped_d, 'Zero (D)', (10, int(zero_in_crop_d) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+                        
+                        st.image(cropped_d, caption="D案による切り抜き", use_column_width=True)
+                        st.info(f"選択された方法: {best_method}, 信頼度: {confidence:.2f}")
+                        
+                        # 全候補を表示
+                        st.caption("検出候補:")
+                        for method, y, score in candidates:
+                            st.caption(f"- {method}: Y={y}, スコア={score:.3f}")
+                    
+                except Exception as e:
+                    st.error(f"D案でエラーが発生: {str(e)}")
             
             # 成功時は統計情報を表示（解析結果の下に縦に並べる）
             if result['success']:
