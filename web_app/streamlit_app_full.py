@@ -87,14 +87,26 @@ def extract_site7_data(image):
             data['current_start'] = current_start_match.group(1)
         
         # 大当り確率
-        prob_match = re.search(r'1/(\d{2,3})', text)
+        prob_match = re.search(r'1/(\d{2,4})', text)
         if prob_match:
             data['jackpot_probability'] = f"1/{prob_match.group(1)}"
         
         # 最高出玉
-        max_payout_match = re.search(r'(\d{3,5})\s*(?:玉|出玉|最高)', text)
-        if max_payout_match:
-            data['max_payout'] = max_payout_match.group(1)
+        max_payout_patterns = [
+            r'最高出玉\s*(\d{3,5})',
+            r'(\d{3,5})\s*最高',
+            r'出玉\s*(\d{3,5})',
+            r'(\d{4,5})(?=\s|$)'  # 4-5桁の独立した数字（最後の手段）
+        ]
+        
+        for pattern in max_payout_patterns:
+            max_payout_match = re.search(pattern, text)
+            if max_payout_match:
+                value = int(max_payout_match.group(1))
+                # 妥当な範囲の値かチェック（100-99999）
+                if 100 <= value <= 99999:
+                    data['max_payout'] = str(value)
+                    break
         
         return data
     except Exception as e:
@@ -449,8 +461,12 @@ if uploaded_files:
     
     for idx, result in enumerate(analysis_results):
         with cols[idx % 2]:
-            # 画像名を表示
-            st.markdown(f"#### {idx + 1}. {result['name']}")
+            # 台番号を優先表示、なければファイル名
+            if result.get('ocr_data') and result['ocr_data'].get('machine_number'):
+                display_name = result['ocr_data']['machine_number']
+            else:
+                display_name = result['name']
+            st.markdown(f"#### {idx + 1}. {display_name}")
             
             # 解析結果画像
             st.image(result['overlay_image'], use_column_width=True)
