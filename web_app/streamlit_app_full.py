@@ -228,24 +228,25 @@ with main_container:
                     st.session_state.right = width - margin
                     st.rerun()
             
-            # スライダーで切り抜き範囲を指定
+            # 数値入力で切り抜き範囲を指定
             st.markdown("**手動調整**")
-            new_top = st.slider("上端位置", 0, height, top, key="slider_top")
-            new_bottom = st.slider("下端位置", 0, height, bottom, key="slider_bottom")
-            new_left = st.slider("左端位置", 0, width, left, key="slider_left")
-            new_right = st.slider("右端位置", 0, width, right, key="slider_right")
+            
+            # 2列レイアウトで数値入力
+            num_col1, num_col2 = st.columns(2)
+            
+            with num_col1:
+                new_top = st.number_input("上端 (px)", 0, height, top, step=10, key="num_top")
+                new_left = st.number_input("左端 (px)", 0, width, left, step=10, key="num_left")
+            
+            with num_col2:
+                new_bottom = st.number_input("下端 (px)", 0, height, bottom, step=10, key="num_bottom")
+                new_right = st.number_input("右端 (px)", 0, width, right, step=10, key="num_right")
             
             # 値が変更されたら更新
-            if new_top != top:
+            if new_top != top or new_bottom != bottom or new_left != left or new_right != right:
                 st.session_state.top = new_top
-                st.rerun()
-            if new_bottom != bottom:
                 st.session_state.bottom = new_bottom
-                st.rerun()
-            if new_left != left:
                 st.session_state.left = new_left
-                st.rerun()
-            if new_right != right:
                 st.session_state.right = new_right
                 st.rerun()
             
