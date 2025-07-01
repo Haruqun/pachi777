@@ -487,7 +487,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     }
                     with open(preset_file, 'wb') as f:
                         pickle.dump(all_presets, f)
-except:
+                except:
                     pass
                 
                 st.success(f"✅ プリセット '{preset_name}' を保存しました")
