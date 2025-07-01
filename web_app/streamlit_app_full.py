@@ -156,83 +156,83 @@ if uploaded_files:
         with st.spinner(f"グラフを解析中... ({idx + 1}/{len(uploaded_files)})"):
             # アナライザーを初期化
             analyzer = WebCompatibleAnalyzer()
+            
+            # グリッドラインなしの画像を使用
+            analysis_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
+            
+            # 0ラインの位置を設定
+            analyzer.zero_y = zero_line_in_crop
+            analyzer.scale = 30000 / 246  # スケール設定
+            
+            # グラフデータを抽出
+            graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
+            
+            if graph_data_points:
+                # データポイントから値のみを抽出
+                graph_values = [value for x, value in graph_data_points]
                 
-                # グリッドラインなしの画像を使用
-                analysis_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
+                # 統計情報を計算
+                max_val = max(graph_values)
+                min_val = min(graph_values)
+                current_val = graph_values[-1] if graph_values else 0
                 
-                # 0ラインの位置を設定
-                analyzer.zero_y = zero_line_in_crop
-                analyzer.scale = 30000 / 246  # スケール設定
+                # MAXがマイナスの場合は0を表示
+                if max_val < 0:
+                    max_val = 0
                 
-                # グラフデータを抽出
-                graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
+                # 初当たり値を探す（production版と同じロジック）
+                first_hit_val = 0
+                first_hit_x = None
+                min_payout = 100  # 最低払い出し玉数
                 
-                if graph_data_points:
-                    # データポイントから値のみを抽出
-                    graph_values = [value for x, value in graph_data_points]
-                
-                    # 統計情報を計算
-                    max_val = max(graph_values)
-                    min_val = min(graph_values)
-                    current_val = graph_values[-1] if graph_values else 0
+                # 方法1: 100玉以上の急激な増加を検出
+                for i in range(1, min(len(graph_values)-2, 150)):  # 最大150点まで探索
+                    current_increase = graph_values[i+1] - graph_values[i]
                     
-                    # MAXがマイナスの場合は0を表示
-                    if max_val < 0:
-                        max_val = 0
-                    
-                    # 初当たり値を探す（production版と同じロジック）
+                    # 100玉以上の増加を検出
+                    if current_increase > min_payout:
+                        # 次の点も上昇または維持していることを確認（ノイズ除外）
+                        if graph_values[i+2] >= graph_values[i+1] - 50:
+                            # 初当たりは必ずマイナス値から
+                            if graph_values[i] < 0:
+                                first_hit_val = graph_values[i]
+                                first_hit_x = i
+                                break
+                
+                # 方法2: 減少傾向からの急上昇を検出
+                if first_hit_x is None:
+                    window_size = 5
+                    for i in range(window_size, len(graph_values)-1):
+                        # 過去の傾向を計算
+                        past_window = graph_values[max(0, i-window_size):i]
+                        if len(past_window) >= 2:
+                            avg_slope = (past_window[-1] - past_window[0]) / len(past_window)
+                            
+                            # 現在の変化
+                            current_change = graph_values[i+1] - graph_values[i]
+                            
+                            # 減少傾向からの急上昇
+                            if avg_slope <= 0 and current_change > min_payout:
+                                if i + 2 < len(graph_values) and graph_values[i+2] > graph_values[i+1] - 50:
+                                    # 初当たりは必ずマイナス値
+                                    if graph_values[i] < 0:
+                                        first_hit_val = graph_values[i]
+                                        first_hit_x = i
+                                        break
+                
+                # 初当たり値がプラスの場合は0を表示
+                if first_hit_val > 0:
                     first_hit_val = 0
-                    first_hit_x = None
-                    min_payout = 100  # 最低払い出し玉数
+                
+                # オーバーレイ画像を作成
+                overlay_img = cropped_img.copy()
                     
-                    # 方法1: 100玉以上の急激な増加を検出
-                    for i in range(1, min(len(graph_values)-2, 150)):  # 最大150点まで探索
-                        current_increase = graph_values[i+1] - graph_values[i]
-                        
-                        # 100玉以上の増加を検出
-                        if current_increase > min_payout:
-                            # 次の点も上昇または維持していることを確認（ノイズ除外）
-                            if graph_values[i+2] >= graph_values[i+1] - 50:
-                                # 初当たりは必ずマイナス値から
-                                if graph_values[i] < 0:
-                                    first_hit_val = graph_values[i]
-                                    first_hit_x = i
-                                    break
-                    
-                    # 方法2: 減少傾向からの急上昇を検出
-                    if first_hit_x is None:
-                        window_size = 5
-                        for i in range(window_size, len(graph_values)-1):
-                            # 過去の傾向を計算
-                            past_window = graph_values[max(0, i-window_size):i]
-                            if len(past_window) >= 2:
-                                avg_slope = (past_window[-1] - past_window[0]) / len(past_window)
-                                
-                                # 現在の変化
-                                current_change = graph_values[i+1] - graph_values[i]
-                                
-                                # 減少傾向からの急上昇
-                                if avg_slope <= 0 and current_change > min_payout:
-                                    if i + 2 < len(graph_values) and graph_values[i+2] > graph_values[i+1] - 50:
-                                        # 初当たりは必ずマイナス値
-                                        if graph_values[i] < 0:
-                                            first_hit_val = graph_values[i]
-                                            first_hit_x = i
-                                            break
-                    
-                    # 初当たり値がプラスの場合は0を表示
-                    if first_hit_val > 0:
-                        first_hit_val = 0
-                    
-                    # オーバーレイ画像を作成
-                    overlay_img = cropped_img.copy()
-                    
-                    # 検出されたグラフラインを描画
-                    prev_x = None
-                    prev_y = None
-                    
-                    # 色の設定（検出色に応じて変更）
-                    color_map = {
+                # 検出されたグラフラインを描画
+                prev_x = None
+                prev_y = None
+                
+                # 色の設定（検出色に応じて変更）
+                color_map = {
                         'green': (0, 255, 0),
                         'red': (0, 0, 255),
                         'blue': (255, 0, 0),
@@ -242,116 +242,116 @@ if uploaded_files:
                         'orange': (0, 165, 255),
                         'pink': (203, 192, 255),
                         'purple': (255, 0, 255)
-                    }
-                    draw_color = color_map.get(dominant_color, (0, 255, 0))
+                }
+                draw_color = color_map.get(dominant_color, (0, 255, 0))
+                
+                # グラフポイントを描画
+                for x, value in graph_data_points:
+                    # Y座標を計算（0ラインからの相対位置）
+                    y = int(zero_line_in_crop - (value / analyzer.scale))
                     
-                    # グラフポイントを描画
-                    for x, value in graph_data_points:
-                        # Y座標を計算（0ラインからの相対位置）
-                        y = int(zero_line_in_crop - (value / analyzer.scale))
+                    # 画像範囲内かチェック
+                    if 0 <= y < overlay_img.shape[0] and 0 <= x < overlay_img.shape[1]:
+                        # 点を描画（より見やすくするため）
+                        cv2.circle(overlay_img, (int(x), y), 2, draw_color, -1)
                         
-                        # 画像範囲内かチェック
-                        if 0 <= y < overlay_img.shape[0] and 0 <= x < overlay_img.shape[1]:
-                            # 点を描画（より見やすくするため）
-                            cv2.circle(overlay_img, (int(x), y), 2, draw_color, -1)
-                            
-                            # 線で接続
-                            if prev_x is not None and prev_y is not None:
-                                cv2.line(overlay_img, (int(prev_x), int(prev_y)), (int(x), y), draw_color, 2)
-                            
-                            prev_x = x
-                            prev_y = y
-                    
-                    # 最高値、最低値、初当たりの位置を見つける
-                    # MAXが0に修正された場合は、元の最高値のインデックスを保持
-                    if max_val == 0 and max(graph_values) < 0:
-                        max_idx = graph_values.index(max(graph_values))
-                    else:
-                        max_idx = graph_values.index(max_val)
-                    min_idx = graph_values.index(min_val)
-                    
-                    # 横線を描画（最低値、最高値、現在値、初当たり値）
-                    # 最高値ライン（端から端まで）
-                    max_y = int(zero_line_in_crop - (max_val / analyzer.scale))
-                    if 0 <= max_y < overlay_img.shape[0]:
+                        # 線で接続
+                        if prev_x is not None and prev_y is not None:
+                            cv2.line(overlay_img, (int(prev_x), int(prev_y)), (int(x), y), draw_color, 2)
+                        
+                        prev_x = x
+                        prev_y = y
+                
+                # 最高値、最低値、初当たりの位置を見つける
+                # MAXが0に修正された場合は、元の最高値のインデックスを保持
+                if max_val == 0 and max(graph_values) < 0:
+                    max_idx = graph_values.index(max(graph_values))
+                else:
+                    max_idx = graph_values.index(max_val)
+                min_idx = graph_values.index(min_val)
+                
+                # 横線を描画（最低値、最高値、現在値、初当たり値）
+                # 最高値ライン（端から端まで）
+                max_y = int(zero_line_in_crop - (max_val / analyzer.scale))
+                if 0 <= max_y < overlay_img.shape[0]:
+                    # 端から端まで線を引く
+                    cv2.line(overlay_img, (0, max_y), (overlay_img.shape[1], max_y), (0, 255, 255), 2)
+                    # 最高値の点に大きめの円を描画
+                    max_x = graph_data_points[max_idx][0]
+                    cv2.circle(overlay_img, (int(max_x), max_y), 8, (0, 255, 255), -1)
+                    cv2.circle(overlay_img, (int(max_x), max_y), 10, (0, 200, 200), 2)
+                    # 背景付きテキスト（白背景、濃い黄色文字）右端に表示
+                    text = f'MAX: {int(max_val):,}'
+                    text_width = 140
+                    text_y = max_y if max_y > 20 else max_y + 20  # 上端で見切れないように調整
+                    cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 15, text_y - 15), 
+                                 (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
+                    cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 150, 150), 1, cv2.LINE_AA)
+                
+                # 最低値ライン（端から端まで）
+                min_y = int(zero_line_in_crop - (min_val / analyzer.scale))
+                if 0 <= min_y < overlay_img.shape[0]:
+                    # 端から端まで線を引く
+                    cv2.line(overlay_img, (0, min_y), (overlay_img.shape[1], min_y), (255, 0, 255), 2)
+                    # 最低値の点に大きめの円を描画
+                    min_x = graph_data_points[min_idx][0]
+                    cv2.circle(overlay_img, (int(min_x), min_y), 8, (255, 0, 255), -1)
+                    cv2.circle(overlay_img, (int(min_x), min_y), 10, (200, 0, 200), 2)
+                    # 背景付きテキスト（白背景、濃いマゼンタ文字）右端に表示
+                    text = f'MIN: {int(min_val):,}'
+                    text_width = 140
+                    text_y = min_y if (min_y > 20 and min_y < overlay_img.shape[0] - 20) else (20 if min_y <= 20 else overlay_img.shape[0] - 20)
+                    cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 15, text_y - 15), 
+                                 (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
+                    cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 0, 150), 1, cv2.LINE_AA)
+                
+                # 現在値ライン（端から端まで）
+                current_y = int(zero_line_in_crop - (current_val / analyzer.scale))
+                if 0 <= current_y < overlay_img.shape[0]:
+                    cv2.line(overlay_img, (0, current_y), (overlay_img.shape[1], current_y), (255, 255, 0), 2)
+                    # 背景付きテキスト（白背景、濃いシアン文字）右端に表示
+                    text = f'CURRENT: {int(current_val):,}'
+                    text_width = 160
+                    text_y = current_y - 10 if current_y > 30 else current_y + 15
+                    cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 15, text_y - 15), 
+                                 (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
+                    cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 0), 1, cv2.LINE_AA)
+                
+                # 初当たり値ライン（端から端まで）
+                if first_hit_x is not None and first_hit_val != 0:  # 初当たりがある場合
+                    first_hit_y = int(zero_line_in_crop - (first_hit_val / analyzer.scale))
+                    if 0 <= first_hit_y < overlay_img.shape[0]:
                         # 端から端まで線を引く
-                        cv2.line(overlay_img, (0, max_y), (overlay_img.shape[1], max_y), (0, 255, 255), 2)
-                        # 最高値の点に大きめの円を描画
-                        max_x = graph_data_points[max_idx][0]
-                        cv2.circle(overlay_img, (int(max_x), max_y), 8, (0, 255, 255), -1)
-                        cv2.circle(overlay_img, (int(max_x), max_y), 10, (0, 200, 200), 2)
-                        # 背景付きテキスト（白背景、濃い黄色文字）右端に表示
-                        text = f'MAX: {int(max_val):,}'
-                        text_width = 140
-                        text_y = max_y if max_y > 20 else max_y + 20  # 上端で見切れないように調整
+                        cv2.line(overlay_img, (0, first_hit_y), (overlay_img.shape[1], first_hit_y), (155, 48, 255), 2)
+                        # 初当たりの点に大きめの円を描画
+                        first_hit_graph_x = graph_data_points[first_hit_x][0]
+                        cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 8, (155, 48, 255), -1)
+                        cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 10, (120, 30, 200), 2)
+                        # 背景付きテキスト（白背景、紫文字）右端に表示
+                        text = f'FIRST HIT: {int(first_hit_val):,}'
+                        text_width = 150
+                        text_y = first_hit_y if (first_hit_y > 20 and first_hit_y < overlay_img.shape[0] - 20) else (20 if first_hit_y <= 20 else overlay_img.shape[0] - 20)
                         cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 15, text_y - 15), 
                                      (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
                         cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 150, 150), 1, cv2.LINE_AA)
-                    
-                    # 最低値ライン（端から端まで）
-                    min_y = int(zero_line_in_crop - (min_val / analyzer.scale))
-                    if 0 <= min_y < overlay_img.shape[0]:
-                        # 端から端まで線を引く
-                        cv2.line(overlay_img, (0, min_y), (overlay_img.shape[1], min_y), (255, 0, 255), 2)
-                        # 最低値の点に大きめの円を描画
-                        min_x = graph_data_points[min_idx][0]
-                        cv2.circle(overlay_img, (int(min_x), min_y), 8, (255, 0, 255), -1)
-                        cv2.circle(overlay_img, (int(min_x), min_y), 10, (200, 0, 200), 2)
-                        # 背景付きテキスト（白背景、濃いマゼンタ文字）右端に表示
-                        text = f'MIN: {int(min_val):,}'
-                        text_width = 140
-                        text_y = min_y if (min_y > 20 and min_y < overlay_img.shape[0] - 20) else (20 if min_y <= 20 else overlay_img.shape[0] - 20)
-                        cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 15, text_y - 15), 
-                                     (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
-                        cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 0, 150), 1, cv2.LINE_AA)
-                    
-                    # 現在値ライン（端から端まで）
-                    current_y = int(zero_line_in_crop - (current_val / analyzer.scale))
-                    if 0 <= current_y < overlay_img.shape[0]:
-                        cv2.line(overlay_img, (0, current_y), (overlay_img.shape[1], current_y), (255, 255, 0), 2)
-                        # 背景付きテキスト（白背景、濃いシアン文字）右端に表示
-                        text = f'CURRENT: {int(current_val):,}'
-                        text_width = 160
-                        text_y = current_y - 10 if current_y > 30 else current_y + 15
-                        cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 15, text_y - 15), 
-                                     (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
-                        cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 0), 1, cv2.LINE_AA)
-                    
-                    # 初当たり値ライン（端から端まで）
-                    if first_hit_x is not None and first_hit_val != 0:  # 初当たりがある場合
-                        first_hit_y = int(zero_line_in_crop - (first_hit_val / analyzer.scale))
-                        if 0 <= first_hit_y < overlay_img.shape[0]:
-                            # 端から端まで線を引く
-                            cv2.line(overlay_img, (0, first_hit_y), (overlay_img.shape[1], first_hit_y), (155, 48, 255), 2)
-                            # 初当たりの点に大きめの円を描画
-                            first_hit_graph_x = graph_data_points[first_hit_x][0]
-                            cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 8, (155, 48, 255), -1)
-                            cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 10, (120, 30, 200), 2)
-                            # 背景付きテキスト（白背景、紫文字）右端に表示
-                            text = f'FIRST HIT: {int(first_hit_val):,}'
-                            text_width = 150
-                            text_y = first_hit_y if (first_hit_y > 20 and first_hit_y < overlay_img.shape[0] - 20) else (20 if first_hit_y <= 20 else overlay_img.shape[0] - 20)
-                            cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 15, text_y - 15), 
-                                         (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
-                            cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
-                                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 1, cv2.LINE_AA)
-                    
-                    # 結果を保存
-                    analysis_results.append({
-                        'name': uploaded_file.name,
-                        'original_image': img_array,  # 元画像を保存
-                        'cropped_image': cropped_img,  # 切り抜き画像
-                        'overlay_image': overlay_img,  # オーバーレイ画像
-                        'success': True,
-                        'max_val': int(max_val),
-                        'min_val': int(min_val),
-                        'current_val': int(current_val),
-                        'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
-                        'dominant_color': dominant_color
-                    })
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 1, cv2.LINE_AA)
+                
+                # 結果を保存
+                analysis_results.append({
+                    'name': uploaded_file.name,
+                    'original_image': img_array,  # 元画像を保存
+                    'cropped_image': cropped_img,  # 切り抜き画像
+                    'overlay_image': overlay_img,  # オーバーレイ画像
+                    'success': True,
+                    'max_val': int(max_val),
+                    'min_val': int(min_val),
+                    'current_val': int(current_val),
+                    'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
+                    'dominant_color': dominant_color
+                })
             else:
                 # 解析失敗時
                 analysis_results.append({
