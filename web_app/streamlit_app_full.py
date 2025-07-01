@@ -517,6 +517,48 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         cv2.putText(overlay_img, 'Orange Bar', (10, orange_bottom + 30), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 140, 0), 2)
         
+        # グリッドラインを元画像にも追加
+        # +30000ライン（元画像座標）
+        y_30k_orig = int(top + grid_30k_offset)
+        if 0 <= y_30k_orig < height:
+            cv2.line(overlay_img, (0, y_30k_orig), (width, y_30k_orig), (128, 128, 128), 2)
+            cv2.putText(overlay_img, '+30000', (10, max(20, y_30k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
+        
+        # -30000ライン（元画像座標）
+        y_minus_30k_orig = int(bottom - 1 + grid_minus_30k_offset)
+        if 0 <= y_minus_30k_orig < height:
+            cv2.line(overlay_img, (0, y_minus_30k_orig), (width, y_minus_30k_orig), (128, 128, 128), 2)
+            cv2.putText(overlay_img, '-30000', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
+        
+        # ゼロラインから±30000ラインまでの距離を計算（切り抜き内での計算）
+        zero_in_crop = zero_line_y - top
+        distance_to_plus_30k = zero_in_crop - grid_30k_offset
+        distance_to_minus_30k = (bottom - top - 1 + grid_minus_30k_offset) - zero_in_crop
+        
+        # +20000ライン（元画像座標）
+        y_20k_orig = int(zero_line_y - (distance_to_plus_30k * 2 / 3) + grid_20k_offset)
+        if 0 <= y_20k_orig < height:
+            cv2.line(overlay_img, (0, y_20k_orig), (width, y_20k_orig), (128, 128, 128), 1)
+            cv2.putText(overlay_img, '+20000', (10, y_20k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
+        
+        # +10000ライン（元画像座標）
+        y_10k_orig = int(zero_line_y - (distance_to_plus_30k * 1 / 3) + grid_10k_offset)
+        if 0 <= y_10k_orig < height:
+            cv2.line(overlay_img, (0, y_10k_orig), (width, y_10k_orig), (128, 128, 128), 1)
+            cv2.putText(overlay_img, '+10000', (10, y_10k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
+        
+        # -10000ライン（元画像座標）
+        y_minus_10k_orig = int(zero_line_y + (distance_to_minus_30k * 1 / 3) + grid_minus_10k_offset)
+        if 0 <= y_minus_10k_orig < height:
+            cv2.line(overlay_img, (0, y_minus_10k_orig), (width, y_minus_10k_orig), (128, 128, 128), 1)
+            cv2.putText(overlay_img, '-10000', (10, y_minus_10k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
+        
+        # -20000ライン（元画像座標）
+        y_minus_20k_orig = int(zero_line_y + (distance_to_minus_30k * 2 / 3) + grid_minus_20k_offset)
+        if 0 <= y_minus_20k_orig < height:
+            cv2.line(overlay_img, (0, y_minus_20k_orig), (width, y_minus_20k_orig), (128, 128, 128), 1)
+            cv2.putText(overlay_img, '-20000', (10, y_minus_20k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
+        
         # プレビューを左カラムに表示（縦に配置）
         with main_col1:
             st.markdown("### 🖼️ リアルタイムプレビュー")
@@ -984,6 +1026,21 @@ if uploaded_files:
 
                 # グラフデータを抽出
                 graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
+                
+                # デバッグ情報を追加
+                if uploaded_file.name == "IMG_0165.PNG":
+                    st.write(f"🔍 デバッグ情報 - {uploaded_file.name}")
+                    st.write(f"- ゼロライン位置（切り抜き内）: {zero_line_in_crop}px")
+                    st.write(f"- 切り抜き画像の高さ: {crop_height}px")
+                    st.write(f"- スケール: {analyzer.scale:.2f} 玉/ピクセル")
+                    st.write(f"- 検出された色: {dominant_color}")
+                    st.write(f"- データポイント数: {len(graph_data_points) if graph_data_points else 0}")
+                    if graph_data_points:
+                        sample_points = graph_data_points[::100][:10]  # 10点をサンプル表示
+                        st.write("- サンプルデータ (x, 値):")
+                        for x, val in sample_points:
+                            y_pixel = zero_line_in_crop - (val / analyzer.scale)
+                            st.write(f"  X={int(x)}, 値={int(val)}玉, Y座標={int(y_pixel)}px")
 
                 if graph_data_points:
                     # データポイントから値のみを抽出
