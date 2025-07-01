@@ -331,16 +331,24 @@ if uploaded_files:
                 debug_info = []  # ここで初期化
                 
                 # グラフから累計スタートを推定（横軸の最大値）
-                if graph_data_points and ocr_data and ocr_data.get('total_start'):
+                if graph_data_points:
                     try:
-                        # OCRで取得した累計スタート
-                        total_starts = int(ocr_data['total_start'])
-                        
                         # グラフの横軸の最大値（ピクセル）
                         max_x_pixel = max(x for x, _ in graph_data_points)
                         
-                        # 横軸のスケール（回転数/ピクセル）を計算
-                        x_scale = total_starts / max_x_pixel if max_x_pixel > 0 else 0
+                        # 累計スタートの推定
+                        if ocr_data and ocr_data.get('total_start'):
+                            # OCRで取得した累計スタート
+                            total_starts = int(ocr_data['total_start'])
+                            # 横軸のスケール（回転数/ピクセル）を計算
+                            x_scale = total_starts / max_x_pixel if max_x_pixel > 0 else 0
+                        else:
+                            # OCRデータがない場合は、グラフの幅から推定
+                            # 一般的に1日の稼働で3000-5000回転程度と仮定
+                            # グラフの幅（ピクセル）から推定
+                            estimated_starts = int(max_x_pixel * 10)  # 暫定的に10回転/ピクセルと仮定
+                            total_starts = min(5000, max(1000, estimated_starts))  # 1000-5000の範囲に制限
+                            x_scale = 10  # 固定スケール
                         
                         for i in range(1, len(graph_data_points)):
                             change = graph_data_points[i][1] - graph_data_points[i-1][1]
@@ -715,11 +723,16 @@ if uploaded_files:
                     experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ グラフの下降部分から推定した値です</div>'
                 else:
                     experimental_html += '<div class="experimental-error">消費球数を推定できませんでした</div>'
-                    # 検出数を表示
-                    if 'slopes' in locals():
-                        experimental_html += f'<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ グラフの下降部分が少ないため計算できません（検出数: {len(slopes)}）</div>'
+                    # 失敗の原因を特定
+                    if not graph_data_points:
+                        experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ グラフデータが検出できません</div>'
+                    elif slopes and len(slopes) >= 2:
+                        # 十分な傾きがあるのに失敗した場合
+                        experimental_html += f'<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ 計算エラーが発生しました（有効データ: {len(slopes)}個）</div>'
+                    elif 'slopes' in locals():
+                        experimental_html += f'<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ 有効なデータが不足しています（検出数: {len(slopes)}個、最低2個必要）</div>'
                     else:
-                        experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ OCRデータが不足しているか、グラフデータが検出できません</div>'
+                        experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ データの解析に失敗しました</div>'
                     
                     # デバッグ用：検出情報を表示
                     if debug_info:
@@ -728,7 +741,7 @@ if uploaded_files:
                         
                         # JSON形式のデバッグ情報を生成
                         debug_json = {
-                            "file": uploaded_file.name,
+                            "file": result['name'],
                             "total_detected": len(debug_info),
                             "valid_slopes": len(slopes),
                             "slopes": slopes[:5] if slopes else [],  # 最初の5個
