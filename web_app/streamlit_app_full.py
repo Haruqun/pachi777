@@ -37,8 +37,13 @@ def extract_site7_data(image):
         beta = 0     # 明度制御
         adjusted = cv2.convertScaleAbs(gray, alpha=alpha, beta=beta)
         
-        # OCR実行（日本語対応）
+        # 全体のOCR実行（日本語対応）
         text = pytesseract.image_to_string(adjusted, lang='jpn')
+        
+        # グラフ下部の最大値を取得するため、画像の下部1/4のみを別途OCR
+        height = image.shape[0]
+        bottom_section = adjusted[int(height * 0.75):height, :]
+        bottom_text = pytesseract.image_to_string(bottom_section, lang='jpn')
         
         # 抽出したいデータのパターン定義
         data = {
@@ -105,22 +110,49 @@ def extract_site7_data(image):
                     data['max_payout'] = str(value)
                     break
         
-        # グラフ内の最大値を探す（30,000のような表記）
-        max_graph_patterns = [
-            r'30[,，]000',  # 30,000 or 30，000
-            r'30000',       # 30000
-            r'20[,，]000',  # 20,000 or 20，000
-            r'20000',       # 20000
-            r'10[,，]000',  # 10,000 or 10，000
-            r'10000'        # 10000
+        # グラフ内の最大値を探す（画像下部から）
+        # より柔軟なパターンで数値を検出
+        max_value_patterns = [
+            r'(\d{1,2})[,，](\d{3})',  # X,XXX or XX,XXX
+            r'(\d{5})',                 # XXXXX
+            r'(\d{4})',                 # XXXX (4桁の数値)
         ]
         
-        for pattern in max_graph_patterns:
-            if re.search(pattern, text):
-                # カンマを除去して数値に変換
-                value = pattern.replace('[,，]', '').replace(',', '').replace('，', '')
-                data['graph_max'] = value
-                break
+        # 下部テキストから最大値を探す
+        for pattern in max_value_patterns:
+            matches = re.findall(pattern, bottom_text)
+            if matches:
+                for match in matches:
+                    if isinstance(match, tuple):
+                        # カンマ区切りの場合
+                        value = int(match[0]) * 1000 + int(match[1])
+                    else:
+                        # 連続した数字の場合
+                        value = int(match)
+                    
+                    # 1000〜50000の範囲の値を最大値として扱う
+                    if 1000 <= value <= 50000:
+                        data['graph_max'] = str(value)
+                        break
+                if data['graph_max']:
+                    break
+        
+        # 全体テキストからも探す（フォールバック）
+        if not data['graph_max']:
+            for pattern in max_value_patterns:
+                matches = re.findall(pattern, text)
+                if matches:
+                    for match in matches:
+                        if isinstance(match, tuple):
+                            value = int(match[0]) * 1000 + int(match[1])
+                        else:
+                            value = int(match)
+                        
+                        if 1000 <= value <= 50000:
+                            data['graph_max'] = str(value)
+                            break
+                    if data['graph_max']:
+                        break
         
         return data
     except Exception as e:
