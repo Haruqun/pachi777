@@ -162,30 +162,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 機能紹介カード
-st.markdown("""
-<div style="background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 2rem;">
-    <h4 style="color: #4a5568; margin-bottom: 1rem; font-weight: 600;">🚀 主な機能</h4>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
-        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
-            <span style="font-size: 1.5rem;">📈</span>
-            <h5 style="margin: 0.5rem 0; color: #2d3748;">AIグラフ解析</h5>
-            <p style="color: #718096; font-size: 0.875rem;">AIがグラフを自動認識し、正確なデータを抽出</p>
-        </div>
-        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
-            <span style="font-size: 1.5rem;">✂️</span>
-            <h5 style="margin: 0.5rem 0; color: #2d3748;">自動切り抜き</h5>
-            <p style="color: #718096; font-size: 0.875rem;">グラフ領域を自動検出して最適化</p>
-        </div>
-        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
-            <span style="font-size: 1.5rem;">💡</span>
-            <h5 style="margin: 0.5rem 0; color: #2d3748;">統計分析</h5>
-            <p style="color: #718096; font-size: 0.875rem;">最高値、最低値、初当たり等を瞬時に計算</p>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
 # セパレーター
 st.markdown("---")
 
@@ -439,12 +415,20 @@ with main_container:
                             prev_x = x
                             prev_y = y
                     
+                    # 最高値、最低値、初当たりの位置を見つける
+                    max_idx = graph_values.index(max_val)
+                    min_idx = graph_values.index(min_val)
+                    
                     # 横線を描画（最低値、最高値、現在値、初当たり値）
                     # 最高値ライン（端から端まで）
                     max_y = int(zero_line_in_crop - (max_val / analyzer.scale))
                     if 0 <= max_y < overlay_img.shape[0]:
                         # 端から端まで線を引く
                         cv2.line(overlay_img, (0, max_y), (overlay_img.shape[1], max_y), (0, 255, 255), 2)
+                        # 最高値の点に大きめの円を描画
+                        max_x = graph_data_points[max_idx][0]
+                        cv2.circle(overlay_img, (int(max_x), max_y), 8, (0, 255, 255), -1)
+                        cv2.circle(overlay_img, (int(max_x), max_y), 10, (0, 200, 200), 2)
                         # 背景付きテキスト（白背景、濃い黄色文字）右端に表示
                         text = f'MAX: {int(max_val):,}'
                         text_width = 120
@@ -458,6 +442,10 @@ with main_container:
                     if 0 <= min_y < overlay_img.shape[0]:
                         # 端から端まで線を引く
                         cv2.line(overlay_img, (0, min_y), (overlay_img.shape[1], min_y), (255, 0, 255), 2)
+                        # 最低値の点に大きめの円を描画
+                        min_x = graph_data_points[min_idx][0]
+                        cv2.circle(overlay_img, (int(min_x), min_y), 8, (255, 0, 255), -1)
+                        cv2.circle(overlay_img, (int(min_x), min_y), 10, (200, 0, 200), 2)
                         # 背景付きテキスト（白背景、濃いマゼンタ文字）右端に表示
                         text = f'MIN: {int(min_val):,}'
                         text_width = 120
@@ -484,6 +472,10 @@ with main_container:
                         if 0 <= first_hit_y < overlay_img.shape[0]:
                             # 端から端まで線を引く
                             cv2.line(overlay_img, (0, first_hit_y), (overlay_img.shape[1], first_hit_y), (155, 48, 255), 2)
+                            # 初当たりの点に大きめの円を描画
+                            first_hit_graph_x = graph_data_points[first_hit_x][0]
+                            cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 8, (155, 48, 255), -1)
+                            cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 10, (120, 30, 200), 2)
                             # 背景付きテキスト（白背景、紫文字）右端に表示
                             text = f'FIRST HIT: {int(first_hit_val):,}'
                             text_width = 120
@@ -605,6 +597,31 @@ with main_container:
             - 0ラインから上246px、下247px
             - 左右125pxの余白を除外
             """)
+
+# 機能紹介カード
+st.markdown("---")
+st.markdown("""
+<div style="background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-top: 3rem; margin-bottom: 2rem;">
+    <h4 style="color: #4a5568; margin-bottom: 1rem; font-weight: 600;">🚀 主な機能</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
+            <span style="font-size: 1.5rem;">📈</span>
+            <h5 style="margin: 0.5rem 0; color: #2d3748;">AIグラフ解析</h5>
+            <p style="color: #718096; font-size: 0.875rem;">AIがグラフを自動認識し、正確なデータを抽出</p>
+        </div>
+        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
+            <span style="font-size: 1.5rem;">✂️</span>
+            <h5 style="margin: 0.5rem 0; color: #2d3748;">自動切り抜き</h5>
+            <p style="color: #718096; font-size: 0.875rem;">グラフ領域を自動検出して最適化</p>
+        </div>
+        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
+            <span style="font-size: 1.5rem;">💡</span>
+            <h5 style="margin: 0.5rem 0; color: #2d3748;">統計分析</h5>
+            <p style="color: #718096; font-size: 0.875rem;">最高値、最低値、初当たり等を瞬時に計算</p>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # フッター
 st.markdown("""
