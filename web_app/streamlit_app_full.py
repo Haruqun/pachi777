@@ -42,7 +42,6 @@ def extract_site7_data(image):
         
         # 抽出したいデータのパターン定義
         data = {
-            'machine_name': None,
             'machine_number': None,
             'total_start': None,
             'jackpot_count': None,
@@ -52,14 +51,11 @@ def extract_site7_data(image):
             'max_payout': None
         }
         
-        # 機種名の抽出（最初の長い文字列）
+        # 台番号の抽出
         lines = text.split('\n')
         for line in lines:
-            if 'Re' in line or 'パチ' in line or '番台' in line:
-                if not data['machine_name'] and len(line) > 5:
-                    data['machine_name'] = line.strip()
-                if '番台' in line and '【' in line:
-                    data['machine_number'] = line.strip()
+            if '番台' in line and '【' in line:
+                data['machine_number'] = line.strip()
         
         # 数値データの抽出
         # 累計スタート
@@ -587,9 +583,7 @@ if uploaded_files:
                     
                     ocr_html = '<div class="ocr-card"><div class="ocr-title">📱 site7データ</div>'
                     
-                    # 機種情報
-                    if ocr.get('machine_name'):
-                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎮 機種名</span><span class="ocr-value">{ocr["machine_name"]}</span></div>'
+                    # 台番号
                     if ocr.get('machine_number'):
                         ocr_html += f'<div class="ocr-item"><span class="ocr-label">🔢 台番号</span><span class="ocr-value">{ocr["machine_number"]}</span></div>'
                     
