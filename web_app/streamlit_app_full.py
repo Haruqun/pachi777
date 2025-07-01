@@ -893,52 +893,15 @@ if uploaded_files:
             hide_index=True
         )
         
-        # ダウンロードボタンを横に並べる
-        col1, col2, col3 = st.columns([1, 1, 4])
-        
         # CSVダウンロード
-        with col1:
-            csv = df.to_csv(index=False, encoding='utf-8-sig')
-            st.download_button(
-                label="📥 CSV ダウンロード",
-                data=csv,
-                file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv",
-                help="Excel等で開けるCSV形式でダウンロード"
-            )
-        
-        # Excelダウンロード
-        with col2:
-            try:
-                # xlsxwriterを試す
-                buffer = io.BytesIO()
-                with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                    df.to_excel(writer, index=False, sheet_name='解析結果')
-                
-                st.download_button(
-                    label="📊 Excel ダウンロード",
-                    data=buffer.getvalue(),
-                    file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    help="Excel形式でダウンロード"
-                )
-            except ImportError:
-                try:
-                    # openpyxlを試す
-                    buffer = io.BytesIO()
-                    df.to_excel(buffer, index=False, sheet_name='解析結果', engine='openpyxl')
-                    buffer.seek(0)
-                    
-                    st.download_button(
-                        label="📊 Excel ダウンロード",
-                        data=buffer.getvalue(),
-                        file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        help="Excel形式でダウンロード"
-                    )
-                except ImportError:
-                    # どちらもインストールされていない場合はCSVのみ提供
-                    st.info("📊 Excel出力にはxlsxwriterまたはopenpyxlが必要です。CSVをご利用ください。")
+        csv = df.to_csv(index=False, encoding='utf-8-sig')
+        st.download_button(
+            label="📥 CSV ダウンロード",
+            data=csv,
+            file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            help="Excel等で開けるCSV形式でダウンロード"
+        )
         
         # コピー用のテキスト生成（タブ区切り）
         with st.expander("📋 表データをコピー"):
