@@ -120,7 +120,14 @@ default_settings = {
     'crop_top': 246,
     'crop_bottom': 247,
     'left_margin': 125,
-    'right_margin': 125
+    'right_margin': 125,
+    # グリッドライン調整値
+    'grid_30k_offset': -1,      # +30000ライン
+    'grid_20k_offset': -2,      # +20000ライン  
+    'grid_10k_offset': -1,      # +10000ライン
+    'grid_minus_10k_offset': 1, # -10000ライン
+    'grid_minus_20k_offset': 1, # -20000ライン
+    'grid_minus_30k_offset': 2  # -30000ライン
 }
 
 # セッションステートの初期化（エキスパンダーより前に行う）
@@ -266,6 +273,48 @@ with st.expander("⚙️ 画像解析の調整設定"):
             step=25, help="右側から何ピクセル除外するか"
         )
     
+    # グリッドライン調整
+    st.markdown("### 📏 グリッドライン微調整")
+    st.caption("※ グリッドラインが正確に±30,000等の位置に来るように調整します")
+    
+    grid_col1, grid_col2, grid_col3 = st.columns(3)
+    
+    with grid_col1:
+        grid_30k_offset = st.number_input(
+            "+30,000ライン調整",
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_30k_offset', -1),
+            step=1, help="上端の+30,000ラインの位置調整"
+        )
+        grid_20k_offset = st.number_input(
+            "+20,000ライン調整",
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_20k_offset', -2),
+            step=1, help="+20,000ラインの位置調整"
+        )
+    
+    with grid_col2:
+        grid_10k_offset = st.number_input(
+            "+10,000ライン調整",
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_10k_offset', -1),
+            step=1, help="+10,000ラインの位置調整"
+        )
+        grid_minus_10k_offset = st.number_input(
+            "-10,000ライン調整",
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_10k_offset', 1),
+            step=1, help="-10,000ラインの位置調整"
+        )
+    
+    with grid_col3:
+        grid_minus_20k_offset = st.number_input(
+            "-20,000ライン調整",
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_20k_offset', 1),
+            step=1, help="-20,000ラインの位置調整"
+        )
+        grid_minus_30k_offset = st.number_input(
+            "-30,000ライン調整",
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_30k_offset', 2),
+            step=1, help="下端の-30,000ラインの位置調整"
+        )
+    
     # リアルタイムプレビュー
     if test_image:
         st.markdown("### 🖼️ リアルタイムプレビュー")
@@ -330,13 +379,44 @@ with st.expander("⚙️ 画像解析の調整設定"):
             zero_in_crop = zero_line_y - top
             cv2.line(cropped_preview, (0, int(zero_in_crop)), (cropped_preview.shape[1], int(zero_in_crop)), (255, 0, 0), 2)
             
-            # ±30000のライン
+            # グリッドラインを追加（調整値付き）
             scale = 122.0
-            for val, color in [(30000, (128, 128, 128)), (-30000, (128, 128, 128))]:
-                y_offset = int(val / scale)
-                y_pos = int(zero_in_crop - y_offset)
-                if 0 <= y_pos < cropped_preview.shape[0]:
-                    cv2.line(cropped_preview, (0, y_pos), (cropped_preview.shape[1], y_pos), color, 2)
+            
+            # +30000ライン
+            y_30k = grid_30k_offset
+            if 0 <= y_30k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_30k), (cropped_preview.shape[1], y_30k), (128, 128, 128), 2)
+                cv2.putText(cropped_preview, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
+            
+            # +20000ライン
+            y_20k = int(zero_in_crop - (20000 / scale)) + grid_20k_offset
+            if 0 < y_20k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_20k), (cropped_preview.shape[1], y_20k), (128, 128, 128), 1)
+                cv2.putText(cropped_preview, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+            
+            # +10000ライン
+            y_10k = int(zero_in_crop - (10000 / scale)) + grid_10k_offset
+            if 0 < y_10k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_10k), (cropped_preview.shape[1], y_10k), (128, 128, 128), 1)
+                cv2.putText(cropped_preview, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+            
+            # -10000ライン
+            y_minus_10k = int(zero_in_crop + (10000 / scale)) + grid_minus_10k_offset
+            if 0 < y_minus_10k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_minus_10k), (cropped_preview.shape[1], y_minus_10k), (128, 128, 128), 1)
+                cv2.putText(cropped_preview, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+            
+            # -20000ライン
+            y_minus_20k = int(zero_in_crop + (20000 / scale)) + grid_minus_20k_offset
+            if 0 < y_minus_20k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_minus_20k), (cropped_preview.shape[1], y_minus_20k), (128, 128, 128), 1)
+                cv2.putText(cropped_preview, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+            
+            # -30000ライン
+            y_minus_30k = min(cropped_preview.shape[0] - 1, cropped_preview.shape[0] - 1 + grid_minus_30k_offset)
+            if 0 <= y_minus_30k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_minus_30k), (cropped_preview.shape[1], y_minus_30k), (128, 128, 128), 2)
+                cv2.putText(cropped_preview, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
             
             st.image(cropped_preview, use_column_width=True)
         
@@ -366,7 +446,13 @@ with st.expander("⚙️ 画像解析の調整設定"):
                     'crop_top': crop_top,
                     'crop_bottom': crop_bottom,
                     'left_margin': left_margin,
-                    'right_margin': right_margin
+                    'right_margin': right_margin,
+                    'grid_30k_offset': grid_30k_offset,
+                    'grid_20k_offset': grid_20k_offset,
+                    'grid_10k_offset': grid_10k_offset,
+                    'grid_minus_10k_offset': grid_minus_10k_offset,
+                    'grid_minus_20k_offset': grid_minus_20k_offset,
+                    'grid_minus_30k_offset': grid_minus_30k_offset
                 }
                 
                 # プリセットに保存
@@ -569,20 +655,20 @@ if uploaded_files:
         # スケール計算（上下246,247pxで±30000）
         scale = 30000 / 246  # 約121.95玉/px
         
-        # グリッドライン描画（固定値）
+        # グリッドライン描画（設定値を使用）
         # +30000ライン（最上部）
-        y_30k = -1  # 固定調整値
+        y_30k = settings.get('grid_30k_offset', -1)
         cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
         cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
         
         # +20000ライン
-        y_20k = int(zero_line_in_crop - (20000 / scale)) - 2  # 固定調整値
+        y_20k = int(zero_line_in_crop - (20000 / scale)) + settings.get('grid_20k_offset', -2)
         if 0 < y_20k < crop_height:
             cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
         
         # +10000ライン
-        y_10k = int(zero_line_in_crop - (10000 / scale)) - 1  # 固定調整値
+        y_10k = int(zero_line_in_crop - (10000 / scale)) + settings.get('grid_10k_offset', -1)
         if 0 < y_10k < crop_height:
             cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
@@ -594,19 +680,19 @@ if uploaded_files:
             cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
         
         # -10000ライン
-        y_minus_10k = int(zero_line_in_crop + (10000 / scale)) + 1  # 固定調整値
+        y_minus_10k = int(zero_line_in_crop + (10000 / scale)) + settings.get('grid_minus_10k_offset', 1)
         if 0 < y_minus_10k < crop_height:
             cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
         
         # -20000ライン
-        y_minus_20k = int(zero_line_in_crop + (20000 / scale)) + 1  # 固定調整値
+        y_minus_20k = int(zero_line_in_crop + (20000 / scale)) + settings.get('grid_minus_20k_offset', 1)
         if 0 < y_minus_20k < crop_height:
             cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
         
         # -30000ライン（最下部）
-        y_minus_30k = crop_height - 1 + 2  # 固定調整値
+        y_minus_30k = crop_height - 1 + settings.get('grid_minus_30k_offset', 2)
         y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
         cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
         cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
