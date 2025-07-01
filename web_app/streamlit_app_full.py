@@ -356,10 +356,70 @@ with main_container:
             # 切り抜き実行（整数に変換）
             cropped_img = img_array[int(top):int(bottom), int(left):int(right)]
             
+            # ズームレベル選択
+            zoom_level = st.select_slider(
+                "ズームレベル",
+                options=[0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0],
+                value=1.0,
+                format_func=lambda x: f"{int(x*100)}%"
+            )
+            
             # プレビュー表示
-            preview_cols = st.columns([2, 3, 2])
-            with preview_cols[1]:
-                st.image(cropped_img, caption="切り抜き結果", use_column_width=True)
+            if zoom_level == 1.0:
+                # 通常表示
+                preview_cols = st.columns([2, 3, 2])
+                with preview_cols[1]:
+                    st.image(cropped_img, caption="切り抜き結果", use_column_width=True)
+            else:
+                # ズーム表示
+                # 画像をリサイズ
+                zoom_height = int(cropped_img.shape[0] * zoom_level)
+                zoom_width = int(cropped_img.shape[1] * zoom_level)
+                
+                if zoom_level < 1.0:
+                    # 縮小
+                    zoomed_img = cv2.resize(cropped_img, (zoom_width, zoom_height), interpolation=cv2.INTER_AREA)
+                else:
+                    # 拡大
+                    zoomed_img = cv2.resize(cropped_img, (zoom_width, zoom_height), interpolation=cv2.INTER_CUBIC)
+                
+                # スクロール可能なコンテナで表示
+                st.markdown(f"**切り抜き結果（{int(zoom_level*100)}%表示）**")
+                
+                # 画像が大きい場合はスクロール可能にする
+                if zoom_level > 1.5:
+                    # スタイルを適用してスクロール可能にする
+                    st.markdown(
+                        f"""
+                        <style>
+                        .zoom-container {{
+                            max-height: 600px;
+                            overflow: auto;
+                            border: 2px solid #ddd;
+                            border-radius: 5px;
+                            padding: 10px;
+                            background-color: #f9f9f9;
+                        }}
+                        </style>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    
+                    # PILイメージに変換してbase64エンコード
+                    from PIL import Image as PILImage
+                    import base64
+                    
+                    pil_img = PILImage.fromarray(zoomed_img)
+                    buffered = io.BytesIO()
+                    pil_img.save(buffered, format="PNG")
+                    img_str = base64.b64encode(buffered.getvalue()).decode()
+                    
+                    st.markdown(
+                        f'<div class="zoom-container"><img src="data:image/png;base64,{img_str}" style="width: 100%;"></div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.image(zoomed_img, caption=f"切り抜き結果（{int(zoom_level*100)}%）", use_column_width=True)
                 
                 # 切り抜き画像をダウンロード可能にする
                 # OpenCVのBGRからRGBに変換（必要な場合）
