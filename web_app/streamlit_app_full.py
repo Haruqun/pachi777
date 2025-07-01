@@ -328,10 +328,10 @@ if uploaded_files:
                 investment_efficiency = None
                 
                 # グラフから累計スタートを推定（横軸の最大値）
-                if graph_data_points and result.get('ocr_data') and result['ocr_data'].get('total_start'):
+                if graph_data_points and ocr_data and ocr_data.get('total_start'):
                     try:
                         # OCRで取得した累計スタート
-                        total_starts = int(result['ocr_data']['total_start'])
+                        total_starts = int(ocr_data['total_start'])
                         
                         # グラフの横軸の最大値（ピクセル）
                         max_x_pixel = max(x for x, _ in graph_data_points)
