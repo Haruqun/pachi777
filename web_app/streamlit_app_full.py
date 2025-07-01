@@ -8,9 +8,10 @@ import streamlit as st
 from datetime import datetime
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import io
 from web_analyzer import WebCompatibleAnalyzer
+import platform
 
 # ページ設定
 st.set_page_config(
@@ -199,8 +200,155 @@ with main_container:
             cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
             cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
             
-        # 画像を横幅いっぱいで表示
-        st.image(cropped_img, use_column_width=True)
+        # 解析を自動実行
+        with st.spinner("グラフを解析中..."):
+            # アナライザーを初期化
+            analyzer = WebCompatibleAnalyzer()
+            
+            # グリッドラインなしの画像を使用
+            analysis_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
+            
+            # 0ラインの位置を設定
+            analyzer.zero_y = zero_line_in_crop
+            analyzer.scale = 30000 / 246  # スケール設定
+            
+            # グラフデータを抽出
+            graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
+            
+            # 完全なグラフデータを作成（欠損部分を0で埋める）
+            if graph_data_points:
+                # 最大X座標を取得
+                max_x = max(x for x, _ in graph_data_points)
+                
+                # 全X座標に対する値の辞書を作成
+                value_dict = {x: value for x, value in graph_data_points}
+                
+                # 0から最大X座標まで、2ピクセルステップで完全なデータを作成
+                complete_graph_data = []
+                complete_graph_values = []
+                
+                for x in range(0, max_x + 1, 2):
+                    if x in value_dict:
+                        value = value_dict[x]
+                    else:
+                        # 前後の値から補間または0を設定
+                        value = 0
+                    complete_graph_data.append((x, value))
+                    complete_graph_values.append(value)
+                
+                graph_data_points = complete_graph_data
+                graph_values = complete_graph_values
+                
+                # 統計情報を計算
+                max_val = max(graph_values)
+                min_val = min(graph_values)
+                current_val = graph_values[-1] if graph_values else 0
+                
+                # 初当たり値を探す（最初にプラスになったポイント）
+                first_hit_val = 0
+                first_hit_x = None
+                for i, val in enumerate(graph_values):
+                    if val > 0:
+                        first_hit_val = val
+                        first_hit_x = i
+                        break
+                
+                # オーバーレイ画像を作成
+                overlay_img = cropped_img.copy()
+                
+                # 検出されたグラフラインを描画
+                prev_x = None
+                prev_y = None
+                
+                # 色の設定（検出色に応じて変更）
+                color_map = {
+                    'green': (0, 255, 0),
+                    'red': (0, 0, 255),
+                    'blue': (255, 0, 0),
+                    'yellow': (0, 255, 255),
+                    'cyan': (255, 255, 0),
+                    'magenta': (255, 0, 255),
+                    'orange': (0, 165, 255),
+                    'pink': (203, 192, 255),
+                    'purple': (255, 0, 255)
+                }
+                draw_color = color_map.get(dominant_color, (0, 255, 0))
+                
+                # グラフポイントを描画
+                for x, value in graph_data_points:
+                    # Y座標を計算（0ラインからの相対位置）
+                    y = int(zero_line_in_crop - (value / analyzer.scale))
+                    
+                    # 画像範囲内かチェック
+                    if 0 <= y < overlay_img.shape[0] and 0 <= x < overlay_img.shape[1]:
+                        # 点を描画（より見やすくするため）
+                        cv2.circle(overlay_img, (int(x), y), 2, draw_color, -1)
+                        
+                        # 線で接続
+                        if prev_x is not None and prev_y is not None:
+                            cv2.line(overlay_img, (int(prev_x), int(prev_y)), (int(x), y), draw_color, 2)
+                        
+                        prev_x = x
+                        prev_y = y
+                
+                # PILを使用して日本語を描画
+                # OpenCV画像をPIL画像に変換
+                overlay_pil = Image.fromarray(cv2.cvtColor(overlay_img, cv2.COLOR_BGR2RGB))
+                draw = ImageDraw.Draw(overlay_pil)
+                
+                # 日本語フォントを設定
+                try:
+                    if platform.system() == 'Darwin':  # macOS
+                        font_path = '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc'
+                        font = ImageFont.truetype(font_path, 16)
+                        font_small = ImageFont.truetype(font_path, 14)
+                    else:
+                        # Windows/Linux
+                        font = ImageFont.load_default()
+                        font_small = font
+                except:
+                    font = ImageFont.load_default()
+                    font_small = font
+                
+                # 横線を描画（最低値、最高値、現在値、初当たり値）
+                # 最高値ライン
+                max_y = int(zero_line_in_crop - (max_val / analyzer.scale))
+                if 0 <= max_y < overlay_img.shape[0]:
+                    draw.line([(0, max_y), (overlay_img.shape[1], max_y)], fill=(255, 255, 0), width=1)
+                    draw.text((10, max_y - 20), f'最高値: {int(max_val):,}', fill=(255, 255, 0), font=font_small)
+                
+                # 最低値ライン
+                min_y = int(zero_line_in_crop - (min_val / analyzer.scale))
+                if 0 <= min_y < overlay_img.shape[0]:
+                    draw.line([(0, min_y), (overlay_img.shape[1], min_y)], fill=(255, 0, 255), width=1)
+                    draw.text((10, min_y + 5), f'最低値: {int(min_val):,}', fill=(255, 0, 255), font=font_small)
+                
+                # 現在値ライン
+                current_y = int(zero_line_in_crop - (current_val / analyzer.scale))
+                if 0 <= current_y < overlay_img.shape[0]:
+                    draw.line([(overlay_img.shape[1] - 50, current_y), (overlay_img.shape[1], current_y)], fill=(0, 255, 255), width=2)
+                    draw.text((overlay_img.shape[1] - 150, current_y - 20), f'現在値: {int(current_val):,}', fill=(0, 255, 255), font=font_small)
+                
+                # 初当たり値ライン
+                if first_hit_x is not None:
+                    first_hit_y = int(zero_line_in_crop - (first_hit_val / analyzer.scale))
+                    if 0 <= first_hit_y < overlay_img.shape[0]:
+                        # 縦線を描画
+                        draw.line([(first_hit_x, 0), (first_hit_x, overlay_img.shape[0])], fill=(0, 255, 0), width=1)
+                        draw.text((first_hit_x + 5, 20), f'初当たり: {int(first_hit_val):,}', fill=(0, 255, 0), font=font_small)
+                
+                # PIL画像をOpenCV画像に戻す
+                overlay_img = cv2.cvtColor(np.array(overlay_pil), cv2.COLOR_RGB2BGR)
+                
+                # 画像を横幅いっぱいで表示
+                st.image(overlay_img, use_column_width=True)
+                
+                # 解析成功メッセージ
+                st.success("✅ グラフ解析が完了しました！")
+            else:
+                # 解析失敗時は元画像を表示
+                st.image(cropped_img, use_column_width=True)
+                st.warning("⚠️ グラフデータを検出できませんでした")
         
         # 画像情報とダウンロード
         col1, col2, col3 = st.columns([2, 1, 1])
@@ -230,156 +378,84 @@ with main_container:
                 mime="image/png"
             )
         
-        # グラフ解析セクション
-        st.markdown("---")
-        st.markdown("### 📈 グラフ解析")
-        
-        # 解析ボタン
-        if st.button("🔍 グラフを解析する", use_container_width=True):
-            with st.spinner("グラフを解析中..."):
-                # アナライザーを初期化
-                analyzer = WebCompatibleAnalyzer()
-                
-                # グリッドラインなしの画像を使用
-                analysis_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
-                
-                # 0ラインの位置を設定
-                analyzer.zero_y = zero_line_in_crop
-                analyzer.scale = 30000 / 246  # スケール設定
-                
-                # グラフデータを抽出
-                graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
-                
-                if graph_data_points:
-                    # データポイントから値のみを抽出
-                    graph_values = [value for x, value in graph_data_points]
-                    
-                    # 解析結果を表示
-                    st.success("✅ グラフ解析が完了しました！")
-                    
-                    # 統計情報を表示
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        max_val = max(graph_values)
-                        st.metric("最高値", f"{int(max_val):,}玉")
-                    
-                    with col2:
-                        min_val = min(graph_values)
-                        st.metric("最低値", f"{int(min_val):,}玉")
-                    
-                    with col3:
-                        current_val = graph_values[-1] if graph_values else 0
-                        st.metric("現在値", f"{int(current_val):,}玉")
-                    
-                    with col4:
-                        st.metric("検出色", dominant_color)
-                    
-                    # オーバーレイ画像を作成
-                    st.markdown("#### 🎯 解析結果オーバーレイ")
-                    
-                    # グリッドライン付きの画像をコピー
-                    overlay_img = cropped_img.copy()
-                    
-                    # 検出されたグラフラインを描画
-                    prev_x = None
-                    prev_y = None
-                    
-                    # 色の設定（検出色に応じて変更）
-                    color_map = {
-                        'green': (0, 255, 0),
-                        'red': (0, 0, 255),
-                        'blue': (255, 0, 0),
-                        'yellow': (0, 255, 255),
-                        'cyan': (255, 255, 0),
-                        'magenta': (255, 0, 255),
-                        'orange': (0, 165, 255),
-                        'pink': (203, 192, 255),
-                        'purple': (255, 0, 255)
-                    }
-                    draw_color = color_map.get(dominant_color, (0, 255, 0))
-                    
-                    # グラフポイントを描画
-                    for x, value in graph_data_points:
-                        # Y座標を計算（0ラインからの相対位置）
-                        y = int(zero_line_in_crop - (value / analyzer.scale))
-                        
-                        # 画像範囲内かチェック
-                        if 0 <= y < overlay_img.shape[0] and 0 <= x < overlay_img.shape[1]:
-                            # 点を描画（より見やすくするため）
-                            cv2.circle(overlay_img, (int(x), y), 2, draw_color, -1)
-                            
-                            # 線で接続
-                            if prev_x is not None and prev_y is not None:
-                                cv2.line(overlay_img, (int(prev_x), int(prev_y)), (int(x), y), draw_color, 2)
-                            
-                            prev_x = x
-                            prev_y = y
-                    
-                    # 解析情報を画像に追加
-                    info_y = 30
-                    cv2.putText(overlay_img, f'Max: {int(max_val):,}', (overlay_img.shape[1] - 150, info_y), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-                    cv2.putText(overlay_img, f'Min: {int(min_val):,}', (overlay_img.shape[1] - 150, info_y + 20), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-                    cv2.putText(overlay_img, f'Current: {int(current_val):,}', (overlay_img.shape[1] - 150, info_y + 40), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-                    
-                    # オーバーレイ画像を表示
-                    st.image(overlay_img, use_column_width=True)
-                    
-                    # グラフを可視化
-                    st.markdown("#### 📊 解析結果グラフ")
-                    
-                    import matplotlib.pyplot as plt
-                    import matplotlib
-                    matplotlib.use('Agg')
-                    
-                    fig, ax = plt.subplots(figsize=(12, 6))
-                    
-                    # グラフをプロット
-                    x_values = [x for x, _ in graph_data_points]
-                    ax.plot(x_values, graph_values, linewidth=2, color='green')
-                    
-                    # グリッドラインを追加
-                    ax.axhline(y=0, color='blue', linestyle='-', linewidth=2, alpha=0.7)
-                    ax.axhline(y=10000, color='gray', linestyle='--', alpha=0.5)
-                    ax.axhline(y=20000, color='gray', linestyle='--', alpha=0.5)
-                    ax.axhline(y=30000, color='gray', linestyle='--', alpha=0.5)
-                    ax.axhline(y=-10000, color='gray', linestyle='--', alpha=0.5)
-                    ax.axhline(y=-20000, color='gray', linestyle='--', alpha=0.5)
-                    ax.axhline(y=-30000, color='gray', linestyle='--', alpha=0.5)
-                    
-                    # 軸の設定
-                    ax.set_ylim(-35000, 35000)
-                    ax.set_xlabel('X座標（ピクセル）')
-                    ax.set_ylabel('収支（玉）')
-                    ax.set_title('パチンコ収支グラフ解析結果')
-                    ax.grid(True, alpha=0.3)
-                    
-                    # Y軸のフォーマット
-                    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
-                    
-                    plt.tight_layout()
-                    st.pyplot(fig)
-                    
-                    # データをダウンロード可能にする
-                    st.markdown("#### 💾 データダウンロード")
-                    
-                    # CSVデータを作成
-                    csv_data = "X座標,収支（玉）\n"
-                    for i, value in enumerate(graph_values):
-                        csv_data += f"{i},{value}\n"
-                    
-                    st.download_button(
-                        label="📄 CSVファイルをダウンロード",
-                        data=csv_data,
-                        file_name=f"graph_data_{uploaded_file.name.split('.')[0]}.csv",
-                        mime="text/csv"
-                    )
-                    
-                else:
-                    st.error("グラフデータを検出できませんでした。画像の品質を確認してください。")
+        # 詳細解析セクション
+        if graph_data_points:
+            st.markdown("---")
+            st.markdown("### 📈 詳細解析")
+            
+            # 統計情報を表示
+            col1, col2, col3, col4, col5 = st.columns(5)
+            
+            with col1:
+                st.metric("最高値", f"{int(max_val):,}玉")
+            
+            with col2:
+                st.metric("最低値", f"{int(min_val):,}玉")
+            
+            with col3:
+                st.metric("現在値", f"{int(current_val):,}玉")
+            
+            with col4:
+                st.metric("初当たり", f"{int(first_hit_val):,}玉" if first_hit_x else "なし")
+            
+            with col5:
+                st.metric("検出色", dominant_color)
+            
+            # グラフを可視化
+            st.markdown("#### 📊 解析結果グラフ")
+            
+            import matplotlib.pyplot as plt
+            import matplotlib
+            matplotlib.use('Agg')
+            
+            # 日本語フォント設定
+            if platform.system() == 'Darwin':  # macOS
+                plt.rcParams['font.family'] = 'Hiragino Sans GB'
+            else:
+                plt.rcParams['font.family'] = ['DejaVu Sans', 'sans-serif']
+            
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            # グラフをプロット
+            x_values = [x for x, _ in graph_data_points]
+            ax.plot(x_values, graph_values, linewidth=2, color='green')
+            
+            # グリッドラインを追加
+            ax.axhline(y=0, color='blue', linestyle='-', linewidth=2, alpha=0.7)
+            ax.axhline(y=10000, color='gray', linestyle='--', alpha=0.5)
+            ax.axhline(y=20000, color='gray', linestyle='--', alpha=0.5)
+            ax.axhline(y=30000, color='gray', linestyle='--', alpha=0.5)
+            ax.axhline(y=-10000, color='gray', linestyle='--', alpha=0.5)
+            ax.axhline(y=-20000, color='gray', linestyle='--', alpha=0.5)
+            ax.axhline(y=-30000, color='gray', linestyle='--', alpha=0.5)
+            
+            # 軸の設定
+            ax.set_ylim(-35000, 35000)
+            ax.set_xlabel('X座標（ピクセル）')
+            ax.set_ylabel('収支（玉）')
+            ax.set_title('パチンコ収支グラフ解析結果')
+            ax.grid(True, alpha=0.3)
+            
+            # Y軸のフォーマット
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # データをダウンロード可能にする
+            st.markdown("#### 💾 データダウンロード")
+            
+            # CSVデータを作成
+            csv_data = "X座標,収支（玉）\n"
+            for i, value in enumerate(graph_values):
+                csv_data += f"{i},{value}\n"
+            
+            st.download_button(
+                label="📄 CSVファイルをダウンロード",
+                data=csv_data,
+                file_name=f"graph_data_{uploaded_file.name.split('.')[0]}.csv",
+                mime="text/csv"
+            )
         
     else:
         # アップロード前の表示
