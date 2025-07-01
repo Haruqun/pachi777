@@ -910,6 +910,7 @@ if uploaded_files:
         # Excelダウンロード
         with col2:
             try:
+                # xlsxwriterを試す
                 buffer = io.BytesIO()
                 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
                     df.to_excel(writer, index=False, sheet_name='解析結果')
@@ -922,18 +923,22 @@ if uploaded_files:
                     help="Excel形式でダウンロード"
                 )
             except ImportError:
-                # xlsxwriterがインストールされていない場合は、openpyxlを使用
-                buffer = io.BytesIO()
-                df.to_excel(buffer, index=False, sheet_name='解析結果', engine='openpyxl')
-                buffer.seek(0)
-                
-                st.download_button(
-                    label="📊 Excel ダウンロード",
-                    data=buffer.getvalue(),
-                    file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    help="Excel形式でダウンロード"
-                )
+                try:
+                    # openpyxlを試す
+                    buffer = io.BytesIO()
+                    df.to_excel(buffer, index=False, sheet_name='解析結果', engine='openpyxl')
+                    buffer.seek(0)
+                    
+                    st.download_button(
+                        label="📊 Excel ダウンロード",
+                        data=buffer.getvalue(),
+                        file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        help="Excel形式でダウンロード"
+                    )
+                except ImportError:
+                    # どちらもインストールされていない場合はCSVのみ提供
+                    st.info("📊 Excel出力にはxlsxwriterまたはopenpyxlが必要です。CSVをご利用ください。")
         
         # コピー用のテキスト生成（タブ区切り）
         with st.expander("📋 表データをコピー"):
