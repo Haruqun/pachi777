@@ -145,6 +145,9 @@ if 'show_adjustment' not in st.session_state:
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
+if 'current_preset_name' not in st.session_state:
+    st.session_state.current_preset_name = 'デフォルト'
+
 # Cookieからログイン状態を確認
 if not st.session_state.authenticated:
     # JavaScriptでCookieを読み込む
@@ -834,6 +837,9 @@ if uploaded_files:
             else:
                 st.session_state.settings = st.session_state.saved_presets[selected_preset].copy()
             
+            # 現在のプリセット名を保存
+            st.session_state.current_preset_name = selected_preset
+            
             # デバッグ情報を表示
             with st.expander("🔍 適用された設定値", expanded=False):
                 st.code(f"検索開始: {st.session_state.settings.get('search_start_offset', 50)}")
@@ -864,6 +870,37 @@ if uploaded_files:
     if 'start_analysis' in st.session_state and st.session_state.start_analysis:
         # 解析結果セクション
         st.markdown("### 🎯 解析結果")
+        
+        # 現在使用中のプリセットを表示
+        current_preset_name = st.session_state.get('current_preset_name', 'デフォルト')
+        
+        st.info(f"📋 使用プリセット: **{current_preset_name}**")
+        
+        # 現在の設定値を表示
+        with st.expander("🔧 使用中の設定値", expanded=False):
+            current_settings = st.session_state.get('settings', default_settings)
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.markdown("**切り抜き設定**")
+                st.text(f"上方向: {current_settings.get('crop_top', 246)}px")
+                st.text(f"下方向: {current_settings.get('crop_bottom', 247)}px")
+                st.text(f"左余白: {current_settings.get('left_margin', 125)}px")
+                st.text(f"右余白: {current_settings.get('right_margin', 125)}px")
+            
+            with col2:
+                st.markdown("**検索範囲**")
+                st.text(f"開始位置: +{current_settings.get('search_start_offset', 50)}px")
+                st.text(f"終了位置: +{current_settings.get('search_end_offset', 400)}px")
+            
+            with col3:
+                st.markdown("**グリッドライン調整**")
+                st.text(f"+30k: {current_settings.get('grid_30k_offset', 0):+d}px")
+                st.text(f"+20k: {current_settings.get('grid_20k_offset', 0):+d}px")
+                st.text(f"+10k: {current_settings.get('grid_10k_offset', 0):+d}px")
+                st.text(f"-10k: {current_settings.get('grid_minus_10k_offset', 0):+d}px")
+                st.text(f"-20k: {current_settings.get('grid_minus_20k_offset', 0):+d}px")
+                st.text(f"-30k: {current_settings.get('grid_minus_30k_offset', 0):+d}px")
     
         # プログレスバー
         progress_bar = st.progress(0)
