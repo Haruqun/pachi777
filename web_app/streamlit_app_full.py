@@ -335,7 +335,7 @@ with st.expander("⚙️ 画像解析の調整設定"):
             # JavaScriptで保存
             st.markdown(f"""
             <script>
-            saveSettings({settings});
+            saveSettings({json.dumps(settings)});
             alert('設定を保存しました');
             </script>
             """, unsafe_allow_html=True)
@@ -352,7 +352,7 @@ with st.expander("⚙️ 画像解析の調整設定"):
             </script>
             """, unsafe_allow_html=True)
 
-# 設定値をセッションステートに保存
+# 設定値をセッションステートに保存（エキスパンダーの外で初期化）
 if 'settings' not in st.session_state:
     st.session_state.settings = default_settings.copy()
 
