@@ -669,6 +669,49 @@ if uploaded_files:
                     ocr_html += '</div>'
                     st.markdown(ocr_html, unsafe_allow_html=True)
                 
+                # 1000円あたりの回転数を表示（実験的機能）
+                if result.get('ocr_data') and result['ocr_data'].get('total_start') and result.get('current_val'):
+                    try:
+                        total_starts = int(result['ocr_data']['total_start'])
+                        current_val = result['current_val']
+                        
+                        # 総投資額を計算（1玉4円として計算）
+                        # 現在値がマイナスの場合、その分が投資額
+                        # 現在値がプラスの場合、回収分を考慮
+                        if current_val < 0:
+                            # マイナスの場合：総投資額 = |現在値|
+                            total_investment_balls = abs(current_val)
+                        else:
+                            # プラスの場合：より複雑な計算が必要（初当たり値を使用）
+                            if result.get('first_hit_val') is not None:
+                                # 初当たりまでの投資 + その後の追加投資を推定
+                                total_investment_balls = abs(result['first_hit_val'])
+                            else:
+                                # 初当たり値がない場合はスキップ
+                                total_investment_balls = None
+                        
+                        if total_investment_balls is not None and total_investment_balls > 0:
+                            # 1玉4円として計算
+                            total_investment_yen = total_investment_balls * 4
+                            
+                            # 1000円あたりの回転数
+                            if total_investment_yen > 0:
+                                rotations_per_1000yen = (total_starts / total_investment_yen) * 1000
+                                
+                                # 表示
+                                st.markdown(f"""
+                                <div style="background-color: #e8f5e9; padding: 10px; border-radius: 5px; margin-top: 10px; border: 1px solid #c8e6c9;">
+                                    <div style="color: #2e7d32; font-weight: bold;">
+                                        💴 1000円あたり: {rotations_per_1000yen:.1f}回転
+                                    </div>
+                                    <div style="font-size: 0.8em; color: #388e3c; margin-top: 5px;">
+                                        ※ 投資額: {total_investment_yen:,}円（{total_investment_balls:,}玉）/ 総回転: {total_starts:,}回
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                    except (ValueError, TypeError):
+                        pass
+                
                 # 実験的機能：総使用球数と投資効率の表示（一時的に非表示）
                 if False:  # 実験的機能を一時的に無効化
                     st.markdown("""
