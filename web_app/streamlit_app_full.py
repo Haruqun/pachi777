@@ -326,6 +326,8 @@ if uploaded_files:
                 balls_per_spin = None
                 total_used_balls_estimated = None
                 investment_efficiency = None
+                slopes = []  # ここで初期化
+                debug_info = []  # ここで初期化
                 
                 # グラフから累計スタートを推定（横軸の最大値）
                 if graph_data_points and ocr_data and ocr_data.get('total_start'):
@@ -338,10 +340,6 @@ if uploaded_files:
                         
                         # 横軸のスケール（回転数/ピクセル）を計算
                         x_scale = total_starts / max_x_pixel if max_x_pixel > 0 else 0
-                        
-                        # 下降区間の傾きから計算
-                        slopes = []
-                        debug_info = []  # デバッグ情報
                         
                         for i in range(1, len(graph_data_points)):
                             change = graph_data_points[i][1] - graph_data_points[i-1][1]
@@ -722,9 +720,11 @@ if uploaded_files:
                     else:
                         experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ OCRデータが不足しているか、グラフデータが検出できません</div>'
                     
-                    # デバッグ用：最初の3つの検出情報を表示
-                    if 'debug_info' in locals() and debug_info:
-                        experimental_html += f'<div style="font-size: 0.7em; color: #856404; margin-top: 5px;">デバッグ: {"; ".join(debug_info[:3])}</div>'
+                    # デバッグ用：検出情報を表示
+                    if debug_info:
+                        experimental_html += f'<div style="font-size: 0.7em; color: #856404; margin-top: 5px;">検出された傾き: {len(debug_info)}個</div>'
+                        if len(slopes) > 0:
+                            experimental_html += f'<div style="font-size: 0.7em; color: #856404;">有効な傾き: {len(slopes)}個 (範囲: 8-30球/回転)</div>'
                 
                 experimental_html += '</div>'
                 st.markdown(experimental_html, unsafe_allow_html=True)
