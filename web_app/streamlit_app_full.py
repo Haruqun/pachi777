@@ -20,36 +20,171 @@ st.set_page_config(
     layout="wide"
 )
 
-# カスタムCSS
+# Tailwind風カスタムCSS
 st.markdown("""
 <style>
+    /* グローバルスタイル */
+    .stApp {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+    }
+    
+    /* メインコンテナ */
     .main > div {
-        padding-top: 1rem;
-    }
-    .upload-section {
-        background-color: #f0f2f6;
         padding: 2rem;
-        border-radius: 10px;
-        margin-bottom: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
     }
-    .image-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1rem;
+    
+    /* タイトル */
+    h1 {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* サブタイトル */
+    h3 {
+        color: #4a5568;
+        font-weight: 600;
         margin-top: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* カードスタイル */
+    .stExpander {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        margin-bottom: 1rem;
+        border: none;
+    }
+    
+    /* ファイルアップローダー */
+    .stFileUploader {
+        background: white;
+        padding: 2rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 2px dashed #cbd5e0;
+        transition: all 0.3s ease;
+    }
+    
+    .stFileUploader:hover {
+        border-color: #667eea;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* メトリックス */
+    [data-testid="metric-container"] {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: transform 0.2s ease;
+    }
+    
+    [data-testid="metric-container"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* メトリックラベル */
+    [data-testid="metric-container"] label {
+        color: #718096;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    /* メトリック値 */
+    [data-testid="metric-container"] > div:nth-child(2) {
+        font-size: 1.875rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    /* 成功メッセージ */
+    .stSuccess {
+        background-color: #f0fdf4;
+        border: 1px solid #86efac;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        color: #166534;
+        font-weight: 500;
+    }
+    
+    /* 警告メッセージ */
+    .stWarning {
+        background-color: #fef3c7;
+        border: 1px solid #fcd34d;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        color: #92400e;
+        font-weight: 500;
+    }
+    
+    /* スピナー */
+    .stSpinner > div {
+        color: #667eea;
+    }
+    
+    /* 区切り線 */
+    hr {
+        border: none;
+        height: 1px;
+        background: linear-gradient(to right, transparent, #cbd5e0, transparent);
+        margin: 2rem 0;
+    }
+    
+    /* フッター */
+    .footer-text {
+        color: #718096;
+        font-size: 0.875rem;
+        text-align: center;
+        margin-top: 3rem;
+        padding: 2rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# タイトル
-st.title("🎰 パチンコグラフ解析システム")
-st.markdown("### シンプル版 - 画像アップロード")
-
-# 説明文
+# タイトルセクション
 st.markdown("""
-このシステムは、パチンコの収支グラフを解析するためのツールです。
-グラフ画像をアップロードすると、自動的に最適な範囲で切り抜きを行います。
-""")
+<div style="text-align: center; margin-bottom: 2rem;">
+    <h1 style="font-size: 3rem; margin-bottom: 0.5rem;">🎰 パチンコグラフ解析システム</h1>
+    <p style="color: #718096; font-size: 1.125rem; margin-top: 0;">グラフ画像を瞬時に解析し、収支データを可視化</p>
+</div>
+""", unsafe_allow_html=True)
+
+# 機能紹介カード
+st.markdown("""
+<div style="background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 2rem;">
+    <h4 style="color: #4a5568; margin-bottom: 1rem; font-weight: 600;">🚀 主な機能</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
+            <span style="font-size: 1.5rem;">📈</span>
+            <h5 style="margin: 0.5rem 0; color: #2d3748;">AIグラフ解析</h5>
+            <p style="color: #718096; font-size: 0.875rem;">AIがグラフを自動認識し、正確なデータを抽出</p>
+        </div>
+        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
+            <span style="font-size: 1.5rem;">✂️</span>
+            <h5 style="margin: 0.5rem 0; color: #2d3748;">自動切り抜き</h5>
+            <p style="color: #718096; font-size: 0.875rem;">グラフ領域を自動検出して最適化</p>
+        </div>
+        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
+            <span style="font-size: 1.5rem;">💡</span>
+            <h5 style="margin: 0.5rem 0; color: #2d3748;">統計分析</h5>
+            <p style="color: #718096; font-size: 0.875rem;">最高値、最低値、初当たり等を瞬時に計算</p>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # セパレーター
 st.markdown("---")
@@ -59,7 +194,12 @@ main_container = st.container()
 
 with main_container:
     # アップロードセクション
-    st.markdown("### 📤 画像をアップロード")
+    st.markdown("""
+    <h3 style="color: #4a5568; font-weight: 600; margin-bottom: 1rem;">
+        <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📤</span> 
+        画像をアップロード
+    </h3>
+    """, unsafe_allow_html=True)
     
     # ファイルアップローダー
     uploaded_file = st.file_uploader(
@@ -72,8 +212,13 @@ with main_container:
     if uploaded_file:
         st.success(f"✅ 画像がアップロードされました: {uploaded_file.name}")
         
-        # 切り抜き処理
-        st.markdown("### ✂️ 解析結果")
+        # 解析結果セクション
+        st.markdown("""
+        <h3 style="color: #4a5568; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">
+            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🎯</span> 
+            解析結果
+        </h3>
+        """, unsafe_allow_html=True)
         
         # 画像処理
         with st.spinner('画像を処理中...'):
@@ -375,14 +520,11 @@ with main_container:
             """)
 
 # フッター
-st.markdown("---")
-footer_col1, footer_col2 = st.columns([2, 1])
-
-with footer_col1:
-    st.markdown("パチンコグラフ解析システム v2.0")
-    
-with footer_col2:
-    st.markdown(
-        f"<div style='text-align: right'>更新日: {datetime.now().strftime('%Y/%m/%d')}</div>",
-        unsafe_allow_html=True
-    )
+st.markdown("""
+<div class="footer-text">
+    <hr style="margin-bottom: 2rem;"/>
+    <p style="margin: 0;">🎰 パチンコグラフ解析システム v2.0</p>
+    <p style="margin: 0.5rem 0; color: #a0aec0;">更新日: {}</p>
+    <p style="margin: 0.5rem 0; font-size: 0.75rem; color: #cbd5e0;">Made with ❤️ using Streamlit</p>
+</div>
+""".format(datetime.now().strftime('%Y/%m/%d')), unsafe_allow_html=True)
