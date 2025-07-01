@@ -959,6 +959,73 @@ if uploaded_files:
                     
                 except Exception as e:
                     st.error(f"F案でエラーが発生: {str(e)}")
+                
+                # G案: IMG_0xxx.PNG専用拡張検索方式
+                st.markdown("#### G案: IMG_0xxx.PNG専用拡張検索方式")
+                try:
+                    # IMG_0xxx.PNGシリーズの検出
+                    is_img_series_g = False
+                    if test_height > 2400 and test_height < 2700:
+                        if test_orange_bottom < 1000:  # オレンジバーが上部にある
+                            # 背景色チェック
+                            bg_sample_g = test_gray[test_orange_bottom + 100:test_orange_bottom + 200, test_width//4:test_width*3//4]
+                            bg_mean_g = np.mean(bg_sample_g)
+                            if bg_mean_g > 200 and bg_mean_g < 240:
+                                is_img_series_g = True
+                    
+                    if is_img_series_g:
+                        # IMG_0xxx.PNG用の拡張検索範囲
+                        search_start_g = test_orange_bottom + 200  # より下から開始
+                        search_end_g = min(test_height - 300, test_orange_bottom + 800)  # より広い範囲
+                        detection_info_g = "IMG_0xxx.PNG検出（拡張範囲）"
+                    else:
+                        # 通常の検索範囲
+                        search_start_g = test_orange_bottom + 50
+                        search_end_g = min(test_height - 100, test_orange_bottom + 400)
+                        detection_info_g = "通常検出"
+                    
+                    best_score_g = 0
+                    zero_line_g = (search_start_g + search_end_g) // 2
+                    scores_g = []
+                    
+                    for y in range(search_start_g, search_end_g):
+                        row_g = test_gray[y, 100:test_width-100]
+                        darkness_g = 1.0 - (np.mean(row_g) / 255.0)
+                        uniformity_g = 1.0 - (np.std(row_g) / 128.0)
+                        score_g = darkness_g * 0.5 + uniformity_g * 0.5
+                        
+                        scores_g.append((y, score_g))
+                        
+                        if score_g > best_score_g:
+                            best_score_g = score_g
+                            zero_line_g = y
+                    
+                    # 切り抜き
+                    top_g = max(0, zero_line_g - 246)
+                    bottom_g = min(test_height, zero_line_g + 247)
+                    left_g = 125
+                    right_g = test_width - 125
+                    
+                    cropped_g = result['original_image'][int(top_g):int(bottom_g), int(left_g):int(right_g)].copy()
+                    
+                    # グリッドライン追加
+                    zero_in_crop_g = zero_line_g - top_g
+                    cv2.line(cropped_g, (0, int(zero_in_crop_g)), (cropped_g.shape[1], int(zero_in_crop_g)), (0, 255, 128), 2)
+                    cv2.putText(cropped_g, 'Zero (G)', (10, int(zero_in_crop_g) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 128), 2)
+                    
+                    st.image(cropped_g, caption="G案による切り抜き", use_column_width=True)
+                    st.info(f"{detection_info_g}, ゼロライン: {zero_line_g}, スコア: {best_score_g:.3f}")
+                    st.caption(f"検索範囲: Y={search_start_g}〜{search_end_g} (幅: {search_end_g-search_start_g}px)")
+                    
+                    if is_img_series_g:
+                        # 上位スコアを表示
+                        top_scores_g = sorted(scores_g, key=lambda x: x[1], reverse=True)[:5]
+                        st.caption("上位5個の候補:")
+                        for i, (y, score) in enumerate(top_scores_g):
+                            st.caption(f"{i+1}. Y={y}, スコア={score:.3f}")
+                    
+                except Exception as e:
+                    st.error(f"G案でエラーが発生: {str(e)}")
             
             # 成功時は統計情報を表示（解析結果の下に縦に並べる）
             if result['success']:
