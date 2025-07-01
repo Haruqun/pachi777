@@ -480,6 +480,129 @@ if uploaded_files:
             with st.expander("📷 元画像を表示"):
                 st.image(result['original_image'], use_column_width=True)
             
+            # テスト切り抜き機能（開発用）
+            with st.expander("🧪 切り抜きテスト（開発用）"):
+                st.caption("※ これは開発用のテスト機能です。通常の解析には影響しません。")
+                
+                # A案: グラフエリア中央方式
+                st.markdown("#### A案: グラフエリア中央方式")
+                try:
+                    # グラフエリアの検出
+                    test_gray = cv2.cvtColor(result['original_image'], cv2.COLOR_RGB2GRAY)
+                    test_height, test_width = result['original_image'].shape[:2]
+                    
+                    # オレンジバーの位置は既に検出済みなので、そこから探す
+                    # ※ オレンジバーの位置を再検出
+                    test_hsv = cv2.cvtColor(result['original_image'], cv2.COLOR_RGB2HSV)
+                    test_orange_mask = cv2.inRange(test_hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
+                    test_orange_bottom = 0
+                    
+                    for y in range(test_height//2):
+                        if np.sum(test_orange_mask[y, :]) > test_width * 0.3 * 255:
+                            test_orange_bottom = y
+                    
+                    if test_orange_bottom > 0:
+                        for y in range(test_orange_bottom, min(test_orange_bottom + 100, test_height)):
+                            if np.sum(test_orange_mask[y, :]) < test_width * 0.1 * 255:
+                                test_orange_bottom = y
+                                break
+                    
+                    # グラフエリアの上端（オレンジバーの下）
+                    graph_top_a = test_orange_bottom + 20
+                    
+                    # グラフエリアの下端を見つける（統計情報の上）
+                    graph_bottom_a = test_height - 300  # デフォルト値
+                    for y in range(test_height - 300, test_orange_bottom, -1):
+                        row = test_gray[y, test_width//4:test_width*3//4]
+                        # 背景が急に暗くなる部分を探す（統計情報エリア）
+                        if np.mean(row) < 150:
+                            graph_bottom_a = y
+                            break
+                    
+                    # グラフエリアの中央をゼロラインとする
+                    zero_line_a = graph_top_a + (graph_bottom_a - graph_top_a) // 2
+                    
+                    # 切り抜き
+                    top_a = max(0, zero_line_a - 246)
+                    bottom_a = min(test_height, zero_line_a + 247)
+                    left_a = 125
+                    right_a = test_width - 125
+                    
+                    cropped_a = result['original_image'][int(top_a):int(bottom_a), int(left_a):int(right_a)].copy()
+                    
+                    # グリッドライン追加（簡易版）
+                    zero_in_crop_a = zero_line_a - top_a
+                    cv2.line(cropped_a, (0, int(zero_in_crop_a)), (cropped_a.shape[1], int(zero_in_crop_a)), (255, 0, 0), 2)
+                    cv2.putText(cropped_a, 'Zero (A)', (10, int(zero_in_crop_a) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+                    
+                    st.image(cropped_a, caption="A案による切り抜き", use_column_width=True)
+                    st.info(f"グラフエリア: top={graph_top_a}, bottom={graph_bottom_a}, zero={zero_line_a}")
+                    
+                except Exception as e:
+                    st.error(f"A案でエラーが発生: {str(e)}")
+                
+                # B案: 暗い水平線検出方式
+                st.markdown("#### B案: 暗い水平線検出方式")
+                try:
+                    # より広い範囲で暗い線を探す
+                    search_start_b = test_orange_bottom + 50
+                    search_end_b = test_height - 200
+                    
+                    best_score_b = 0
+                    zero_line_b = (search_start_b + search_end_b) // 2
+                    scores_b = []
+                    
+                    # エッジ検出を使用
+                    edges = cv2.Canny(test_gray, 50, 150)
+                    
+                    for y in range(search_start_b, search_end_b):
+                        # 左右の余白を考慮
+                        left_margin = test_width // 6
+                        right_margin = test_width - left_margin
+                        
+                        # エッジの強度をチェック
+                        edge_row = edges[y, left_margin:right_margin]
+                        edge_strength = np.sum(edge_row > 0) / len(edge_row)
+                        
+                        # グレースケール値をチェック
+                        gray_row = test_gray[y, left_margin:right_margin]
+                        
+                        # スコア計算
+                        darkness = 1.0 - (np.mean(gray_row) / 255.0)
+                        uniformity = 1.0 - (np.std(gray_row) / 128.0)
+                        score = darkness * 0.4 + uniformity * 0.3 + edge_strength * 0.3
+                        
+                        scores_b.append((y, score))
+                        
+                        if score > best_score_b:
+                            best_score_b = score
+                            zero_line_b = y
+                    
+                    # 切り抜き
+                    top_b = max(0, zero_line_b - 246)
+                    bottom_b = min(test_height, zero_line_b + 247)
+                    left_b = 125
+                    right_b = test_width - 125
+                    
+                    cropped_b = result['original_image'][int(top_b):int(bottom_b), int(left_b):int(right_b)].copy()
+                    
+                    # グリッドライン追加（簡易版）
+                    zero_in_crop_b = zero_line_b - top_b
+                    cv2.line(cropped_b, (0, int(zero_in_crop_b)), (cropped_b.shape[1], int(zero_in_crop_b)), (0, 255, 0), 2)
+                    cv2.putText(cropped_b, 'Zero (B)', (10, int(zero_in_crop_b) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    
+                    st.image(cropped_b, caption="B案による切り抜き", use_column_width=True)
+                    st.info(f"検出スコア: {best_score_b:.3f}, ゼロライン: {zero_line_b}")
+                    
+                    # スコアのグラフを表示（上位10個）
+                    top_scores = sorted(scores_b, key=lambda x: x[1], reverse=True)[:10]
+                    st.caption("上位10個の候補位置:")
+                    for i, (y, score) in enumerate(top_scores):
+                        st.caption(f"{i+1}. Y={y}, スコア={score:.3f}")
+                    
+                except Exception as e:
+                    st.error(f"B案でエラーが発生: {str(e)}")
+            
             # 成功時は統計情報を表示（解析結果の下に縦に並べる）
             if result['success']:
                 # 統計情報をカード風に表示
