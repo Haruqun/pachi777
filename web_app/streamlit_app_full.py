@@ -547,6 +547,9 @@ if uploaded_files:
                 # H案: G案改良版（スケール調整付き）
                 st.markdown("#### H案: G案改良版（スケール調整付き）")
                 try:
+                    # 既に定義されている変数を使用（現状の仕様から）
+                    test_orange_bottom = current_orange_bottom
+                    
                     # IMG_0xxx.PNGシリーズの検出
                     is_img_series_h = False
                     if test_height > 2400 and test_height < 2700:
@@ -627,6 +630,9 @@ if uploaded_files:
                 # I案: H案改良版（正確なスケール配置）
                 st.markdown("#### I案: H案改良版（正確なスケール配置）")
                 try:
+                    # 既に定義されている変数を使用（現状の仕様から）
+                    test_orange_bottom = current_orange_bottom
+                    
                     # IMG_0xxx.PNGシリーズの検出
                     is_img_series_i = False
                     if test_height > 2400 and test_height < 2700:
