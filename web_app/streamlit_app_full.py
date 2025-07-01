@@ -361,10 +361,6 @@ with main_container:
                 min_val = min(graph_values)
                 current_val = graph_values[-1] if graph_values else 0
                 
-                # MAXがマイナスの場合は0を表示
-                if max_val < 0:
-                    max_val = 0
-                
                 # 初当たり値を探す（production版と同じロジック）
                 first_hit_val = 0
                 first_hit_x = None
@@ -405,10 +401,6 @@ with main_container:
                                         first_hit_x = i
                                         break
                 
-                # 初当たり値がプラスの場合は0を表示
-                if first_hit_val > 0:
-                    first_hit_val = 0
-                
                 # オーバーレイ画像を作成
                 overlay_img = cropped_img.copy()
                 
@@ -448,39 +440,37 @@ with main_container:
                         prev_y = y
                 
                 # 横線を描画（最低値、最高値、現在値、初当たり値）
-                # 最高値ライン（右端に短い線）
+                # 最高値ライン（端から端まで）
                 max_y = int(zero_line_in_crop - (max_val / analyzer.scale))
                 if 0 <= max_y < overlay_img.shape[0]:
-                    # 右端に短い線
-                    line_start = overlay_img.shape[1] - 100
-                    cv2.line(overlay_img, (line_start, max_y), (overlay_img.shape[1], max_y), (0, 255, 255), 2)
-                    # 背景付きテキスト（白背景、濃い黄色文字）
+                    # 端から端まで線を引く
+                    cv2.line(overlay_img, (0, max_y), (overlay_img.shape[1], max_y), (0, 255, 255), 2)
+                    # 背景付きテキスト（白背景、濃い黄色文字）右端に表示
                     text = f'MAX: {int(max_val):,}'
                     text_width = 120
-                    cv2.rectangle(overlay_img, (line_start - text_width - 10, max_y - 15), 
-                                 (line_start - 5, max_y + 5), (255, 255, 255), -1)
-                    cv2.putText(overlay_img, text, (line_start - text_width - 5, max_y), 
+                    cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 10, max_y - 15), 
+                                 (overlay_img.shape[1] - 5, max_y + 5), (255, 255, 255), -1)
+                    cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, max_y), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 150, 150), 1, cv2.LINE_AA)
                 
-                # 最低値ライン（右端に短い線）
+                # 最低値ライン（端から端まで）
                 min_y = int(zero_line_in_crop - (min_val / analyzer.scale))
                 if 0 <= min_y < overlay_img.shape[0]:
-                    # 右端に短い線
-                    line_start = overlay_img.shape[1] - 100
-                    cv2.line(overlay_img, (line_start, min_y), (overlay_img.shape[1], min_y), (255, 0, 255), 2)
-                    # 背景付きテキスト（白背景、濃いマゼンタ文字）
+                    # 端から端まで線を引く
+                    cv2.line(overlay_img, (0, min_y), (overlay_img.shape[1], min_y), (255, 0, 255), 2)
+                    # 背景付きテキスト（白背景、濃いマゼンタ文字）右端に表示
                     text = f'MIN: {int(min_val):,}'
                     text_width = 120
-                    cv2.rectangle(overlay_img, (line_start - text_width - 10, min_y - 15), 
-                                 (line_start - 5, min_y + 5), (255, 255, 255), -1)
-                    cv2.putText(overlay_img, text, (line_start - text_width - 5, min_y), 
+                    cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 10, min_y - 15), 
+                                 (overlay_img.shape[1] - 5, min_y + 5), (255, 255, 255), -1)
+                    cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, min_y), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 0, 150), 1, cv2.LINE_AA)
                 
-                # 現在値ライン
+                # 現在値ライン（端から端まで）
                 current_y = int(zero_line_in_crop - (current_val / analyzer.scale))
                 if 0 <= current_y < overlay_img.shape[0]:
-                    cv2.line(overlay_img, (overlay_img.shape[1] - 50, current_y), (overlay_img.shape[1], current_y), (255, 255, 0), 2)
-                    # 背景付きテキスト（白背景、濃いシアン文字）
+                    cv2.line(overlay_img, (0, current_y), (overlay_img.shape[1], current_y), (255, 255, 0), 2)
+                    # 背景付きテキスト（白背景、濃いシアン文字）右端に表示
                     text = f'CURRENT: {int(current_val):,}'
                     text_width = 160
                     cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 10, current_y - 25), 
@@ -488,19 +478,18 @@ with main_container:
                     cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, current_y - 10), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 0), 1, cv2.LINE_AA)
                 
-                # 初当たり値ライン（右端に短い線）
-                if first_hit_x is not None:  # 初当たりがある場合
+                # 初当たり値ライン（端から端まで）
+                if first_hit_x is not None and first_hit_val != 0:  # 初当たりがある場合
                     first_hit_y = int(zero_line_in_crop - (first_hit_val / analyzer.scale))
                     if 0 <= first_hit_y < overlay_img.shape[0]:
-                        # 右端に短い線
-                        line_start = overlay_img.shape[1] - 100
-                        cv2.line(overlay_img, (line_start, first_hit_y), (overlay_img.shape[1], first_hit_y), (155, 48, 255), 2)
-                        # 背景付きテキスト（白背景、紫文字）
+                        # 端から端まで線を引く
+                        cv2.line(overlay_img, (0, first_hit_y), (overlay_img.shape[1], first_hit_y), (155, 48, 255), 2)
+                        # 背景付きテキスト（白背景、紫文字）右端に表示
                         text = f'FIRST HIT: {int(first_hit_val):,}'
                         text_width = 120
-                        cv2.rectangle(overlay_img, (line_start - text_width - 10, first_hit_y - 15), 
-                                     (line_start - 5, first_hit_y + 5), (255, 255, 255), -1)
-                        cv2.putText(overlay_img, text, (line_start - text_width - 5, first_hit_y), 
+                        cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 10, first_hit_y - 15), 
+                                     (overlay_img.shape[1] - 5, first_hit_y + 5), (255, 255, 255), -1)
+                        cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, first_hit_y), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 1, cv2.LINE_AA)
                 
                 # 結果を保存
