@@ -174,8 +174,31 @@ if uploaded_files:
         
         # ゼロライン検出
         gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-        search_start = orange_bottom + 50
-        search_end = min(height - 100, orange_bottom + 400)
+        
+        # IMG_0xxx.PNGシリーズの検出
+        is_img_series = False
+        if height > 2400 and height < 2700:
+            if orange_bottom < 1000:  # オレンジバーが上部にある
+                # 背景色チェック
+                bg_sample = gray[orange_bottom + 100:orange_bottom + 200, width//4:width*3//4]
+                bg_mean = np.mean(bg_sample)
+                if bg_mean > 200 and bg_mean < 240:
+                    is_img_series = True
+        
+        if is_img_series:
+            # IMG_0xxx.PNG用の拡張検索範囲
+            search_start = orange_bottom + 200  # より下から開始
+            search_end = min(height - 300, orange_bottom + 800)  # より広い範囲
+            # IMG_0xxx.PNG用のスケール（±30000固定）
+            crop_top_offset = 246  # 上方向の切り抜きサイズ
+            crop_bottom_offset = 247  # 下方向の切り抜きサイズ
+        else:
+            # 通常の検索範囲
+            search_start = orange_bottom + 50
+            search_end = min(height - 100, orange_bottom + 400)
+            # 通常のスケール（±30000）
+            crop_top_offset = 246
+            crop_bottom_offset = 247
         
         best_score = 0
         zero_line_y = (search_start + search_end) // 2
@@ -191,8 +214,8 @@ if uploaded_files:
                 zero_line_y = y
         
         # 切り抜き範囲を設定（最終調整値）
-        top = max(0, zero_line_y - 246)  # 0ラインから上246px
-        bottom = min(height, zero_line_y + 247)  # 0ラインから下247px
+        top = max(0, zero_line_y - crop_top_offset)  # 0ラインから上
+        bottom = min(height, zero_line_y + crop_bottom_offset)  # 0ラインから下
         left = 125  # 左右の余白125px
         right = width - 125  # 左右の余白125px
         
