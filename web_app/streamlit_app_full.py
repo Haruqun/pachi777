@@ -78,22 +78,22 @@ with main_container:
             
             with col1:
                 st.markdown("**プラス側**")
-                adjust_30k = st.number_input("+30000ライン調整", -5, 5, 0, 1, key="adj_30k")
-                adjust_20k = st.number_input("+20000ライン調整", -5, 5, 0, 1, key="adj_20k")
-                adjust_10k = st.number_input("+10000ライン調整", -5, 5, 0, 1, key="adj_10k")
+                adjust_30k = st.number_input("+30000ライン調整", -5, 5, -1, 1, key="adj_30k")
+                adjust_20k = st.number_input("+20000ライン調整", -5, 5, -2, 1, key="adj_20k")
+                adjust_10k = st.number_input("+10000ライン調整", -5, 5, -1, 1, key="adj_10k")
             
             with col2:
                 st.markdown("**マイナス側**")
                 adjust_0 = st.number_input("0ライン調整", -5, 5, 0, 1, key="adj_0")
-                adjust_minus_10k = st.number_input("-10000ライン調整", -5, 5, 0, 1, key="adj_minus_10k")
-                adjust_minus_20k = st.number_input("-20000ライン調整", -5, 5, 1, 1, key="adj_minus_20k")  # デフォルト1
-                adjust_minus_30k = st.number_input("-30000ライン調整", -5, 5, 0, 1, key="adj_minus_30k")
+                adjust_minus_10k = st.number_input("-10000ライン調整", -5, 5, 1, 1, key="adj_minus_10k")
+                adjust_minus_20k = st.number_input("-20000ライン調整", -5, 5, 1, 1, key="adj_minus_20k")
+                adjust_minus_30k = st.number_input("-30000ライン調整", -5, 5, 2, 1, key="adj_minus_30k")
         
         # 切り抜き処理
         st.markdown("### ✂️ 切り抜き結果")
         
         # 画像処理
-        with st.spinner('画像を処理中...'):")
+        with st.spinner('画像を処理中...'):
             
             # 画像を読み込み
             image = Image.open(uploaded_file)
