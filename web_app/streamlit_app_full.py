@@ -72,27 +72,8 @@ with main_container:
     if uploaded_file:
         st.success(f"✅ 画像がアップロードされました: {uploaded_file.name}")
         
-        # グリッドライン調整UI
-        with st.expander("⚙️ グリッドライン位置調整", expanded=False):
-            st.markdown("各グリッドラインの位置を微調整できます（ピクセル単位）")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("**プラス側**")
-                adjust_30k = st.number_input("+30000ライン調整", -5, 5, -1, 1, key="adj_30k")
-                adjust_20k = st.number_input("+20000ライン調整", -5, 5, -2, 1, key="adj_20k")
-                adjust_10k = st.number_input("+10000ライン調整", -5, 5, -1, 1, key="adj_10k")
-            
-            with col2:
-                st.markdown("**マイナス側**")
-                adjust_0 = st.number_input("0ライン調整", -5, 5, 0, 1, key="adj_0")
-                adjust_minus_10k = st.number_input("-10000ライン調整", -5, 5, 1, 1, key="adj_minus_10k")
-                adjust_minus_20k = st.number_input("-20000ライン調整", -5, 5, 1, 1, key="adj_minus_20k")
-                adjust_minus_30k = st.number_input("-30000ライン調整", -5, 5, 2, 1, key="adj_minus_30k")
-        
         # 切り抜き処理
-        st.markdown("### ✂️ 切り抜き結果")
+        st.markdown("### ✂️ 解析結果")
         
         # 画像処理
         with st.spinner('画像を処理中...'):
@@ -158,44 +139,44 @@ with main_container:
             # スケール計算（上下246,247pxで±30000）
             scale = 30000 / 246  # 約121.95玉/px
             
-            # グリッドライン描画
+            # グリッドライン描画（固定値）
             # +30000ライン（最上部）
-            y_30k = 0 + st.session_state.get('adj_30k', 0)
+            y_30k = -1  # 固定調整値
             cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
             cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
             
             # +20000ライン
-            y_20k = int(zero_line_in_crop - (20000 / scale)) + st.session_state.get('adj_20k', 0)
+            y_20k = int(zero_line_in_crop - (20000 / scale)) - 2  # 固定調整値
             if 0 < y_20k < crop_height:
                 cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (128, 128, 128), 1)
                 cv2.putText(cropped_img, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
             
             # +10000ライン
-            y_10k = int(zero_line_in_crop - (10000 / scale)) + st.session_state.get('adj_10k', 0)
+            y_10k = int(zero_line_in_crop - (10000 / scale)) - 1  # 固定調整値
             if 0 < y_10k < crop_height:
                 cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (128, 128, 128), 1)
                 cv2.putText(cropped_img, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
             
             # 0ライン
-            y_0 = int(zero_line_in_crop) + st.session_state.get('adj_0', 0)
+            y_0 = int(zero_line_in_crop)  # 調整なし
             if 0 < y_0 < crop_height:
                 cv2.line(cropped_img, (0, y_0), (cropped_img.shape[1], y_0), (255, 0, 0), 2)
                 cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
             
             # -10000ライン
-            y_minus_10k = int(zero_line_in_crop + (10000 / scale)) + st.session_state.get('adj_minus_10k', 0)
+            y_minus_10k = int(zero_line_in_crop + (10000 / scale)) + 1  # 固定調整値
             if 0 < y_minus_10k < crop_height:
                 cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (128, 128, 128), 1)
                 cv2.putText(cropped_img, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
             
             # -20000ライン
-            y_minus_20k = int(zero_line_in_crop + (20000 / scale)) + st.session_state.get('adj_minus_20k', 1)  # デフォルト1px下
+            y_minus_20k = int(zero_line_in_crop + (20000 / scale)) + 1  # 固定調整値
             if 0 < y_minus_20k < crop_height:
                 cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (128, 128, 128), 1)
                 cv2.putText(cropped_img, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
             
             # -30000ライン（最下部）
-            y_minus_30k = crop_height - 1 + st.session_state.get('adj_minus_30k', 0)
+            y_minus_30k = crop_height - 1 + 2  # 固定調整値
             y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
             cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
             cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
@@ -276,45 +257,68 @@ with main_container:
                 max_y = int(zero_line_in_crop - (max_val / analyzer.scale))
                 if 0 <= max_y < overlay_img.shape[0]:
                     cv2.line(overlay_img, (0, max_y), (overlay_img.shape[1], max_y), (0, 255, 255), 1)
-                    # 背景付きテキスト
+                    # 背景付きテキスト（白背景、濃い黄色文字）
                     text = f'MAX: {int(max_val):,}'
-                    cv2.rectangle(overlay_img, (10, max_y - 25), (150, max_y - 5), (0, 0, 0), -1)
+                    cv2.rectangle(overlay_img, (10, max_y - 25), (150, max_y - 5), (255, 255, 255), -1)
                     cv2.putText(overlay_img, text, (15, max_y - 10), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 150, 150), 2, cv2.LINE_AA)
                 
                 # 最低値ライン
                 min_y = int(zero_line_in_crop - (min_val / analyzer.scale))
                 if 0 <= min_y < overlay_img.shape[0]:
                     cv2.line(overlay_img, (0, min_y), (overlay_img.shape[1], min_y), (255, 0, 255), 1)
-                    # 背景付きテキスト
+                    # 背景付きテキスト（白背景、濃いマゼンタ文字）
                     text = f'MIN: {int(min_val):,}'
-                    cv2.rectangle(overlay_img, (10, min_y + 5), (150, min_y + 25), (0, 0, 0), -1)
+                    cv2.rectangle(overlay_img, (10, min_y + 5), (150, min_y + 25), (255, 255, 255), -1)
                     cv2.putText(overlay_img, text, (15, min_y + 20), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1, cv2.LINE_AA)
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 0, 150), 2, cv2.LINE_AA)
                 
                 # 現在値ライン
                 current_y = int(zero_line_in_crop - (current_val / analyzer.scale))
                 if 0 <= current_y < overlay_img.shape[0]:
                     cv2.line(overlay_img, (overlay_img.shape[1] - 50, current_y), (overlay_img.shape[1], current_y), (255, 255, 0), 2)
-                    # 背景付きテキスト
+                    # 背景付きテキスト（白背景、濃いシアン文字）
                     text = f'CURRENT: {int(current_val):,}'
                     text_width = 160
                     cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 10, current_y - 25), 
-                                 (overlay_img.shape[1] - 10, current_y - 5), (0, 0, 0), -1)
+                                 (overlay_img.shape[1] - 10, current_y - 5), (255, 255, 255), -1)
                     cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, current_y - 10), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1, cv2.LINE_AA)
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 0), 2, cv2.LINE_AA)
                 
-                # 初当たり値ライン
+                # 初当たり値（垂直線と横線）
                 if first_hit_x is not None:
-                    first_hit_y = int(zero_line_in_crop - (first_hit_val / analyzer.scale))
-                    if 0 <= first_hit_y < overlay_img.shape[0]:
-                        # 縦線を描画
-                        cv2.line(overlay_img, (first_hit_x, 0), (first_hit_x, overlay_img.shape[0]), (0, 255, 0), 1)
-                        # 背景付きテキスト
+                    # 初当たりのx座標を取得
+                    first_hit_x_coord = None
+                    for i, (x, value) in enumerate(graph_data_points):
+                        if value > 0:
+                            first_hit_x_coord = x
+                            break
+                    
+                    if first_hit_x_coord is not None:
+                        first_hit_y = int(zero_line_in_crop - (first_hit_val / analyzer.scale))
+                        
+                        # 垂直線を描画（初当たり位置）
+                        cv2.line(overlay_img, (first_hit_x_coord, 0), (first_hit_x_coord, overlay_img.shape[0]), (155, 48, 255), 2)
+                        
+                        # 横線も描画
+                        if 0 <= first_hit_y < overlay_img.shape[0]:
+                            cv2.line(overlay_img, (0, first_hit_y), (overlay_img.shape[1], first_hit_y), (155, 48, 255), 1)
+                        
+                        # 背景付きテキスト（白背景、紫文字）
                         text = f'FIRST HIT: {int(first_hit_val):,}'
-                        cv2.rectangle(overlay_img, (first_hit_x + 5, 10), (first_hit_x + 165, 30), (0, 0, 0), -1)
-                        cv2.putText(overlay_img, text, (first_hit_x + 10, 25), 
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
+                        text_y = 30
+                        if first_hit_x_coord < overlay_img.shape[1] // 2:
+                            # 左側の場合は右にテキスト配置
+                            cv2.rectangle(overlay_img, (first_hit_x_coord + 5, text_y - 20), 
+                                         (first_hit_x_coord + 165, text_y), (255, 255, 255), -1)
+                            cv2.putText(overlay_img, text, (first_hit_x_coord + 10, text_y - 5), 
+                                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 2, cv2.LINE_AA)
+                        else:
+                            # 右側の場合は左にテキスト配置
+                            cv2.rectangle(overlay_img, (first_hit_x_coord - 165, text_y - 20), 
+                                         (first_hit_x_coord - 5, text_y), (255, 255, 255), -1)
+                            cv2.putText(overlay_img, text, (first_hit_x_coord - 160, text_y - 5), 
+                                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 2, cv2.LINE_AA)
                 
                 # 画像を横幅いっぱいで表示
                 st.image(overlay_img, use_column_width=True)
@@ -325,34 +329,6 @@ with main_container:
                 # 解析失敗時は元画像を表示
                 st.image(cropped_img, use_column_width=True)
                 st.warning("⚠️ グラフデータを検出できませんでした")
-        
-        # 画像情報とダウンロード
-        col1, col2, col3 = st.columns([2, 1, 1])
-        
-        with col1:
-            st.info(f"📐 サイズ: {cropped_img.shape[1]}×{cropped_img.shape[0]}px")
-        
-        with col2:
-            # グリッドライン表示/非表示トグル
-            show_grid = st.checkbox("グリッドラインを表示", value=True, key="show_grid")
-            if not show_grid:
-                # グリッドラインなしの画像を再生成
-                cropped_img_no_grid = img_array[int(top):int(bottom), int(left):int(right)].copy()
-                st.rerun()
-        
-        with col3:
-            # ダウンロードボタン
-            cropped_pil = Image.fromarray(cropped_img)
-            buf = io.BytesIO()
-            cropped_pil.save(buf, format='PNG')
-            byte_im = buf.getvalue()
-            
-            st.download_button(
-                label="⬇️ ダウンロード",
-                data=byte_im,
-                file_name=f"cropped_{uploaded_file.name}",
-                mime="image/png"
-            )
         
         # 詳細解析セクション
         if graph_data_points:
@@ -376,62 +352,6 @@ with main_container:
             
             with col5:
                 st.metric("検出色", dominant_color)
-            
-            # グラフを可視化
-            st.markdown("#### 📊 解析結果グラフ")
-            
-            import matplotlib.pyplot as plt
-            import matplotlib
-            matplotlib.use('Agg')
-            
-            # 日本語フォント設定
-            if platform.system() == 'Darwin':  # macOS
-                plt.rcParams['font.family'] = 'Hiragino Sans GB'
-            else:
-                plt.rcParams['font.family'] = ['DejaVu Sans', 'sans-serif']
-            
-            fig, ax = plt.subplots(figsize=(12, 6))
-            
-            # グラフをプロット
-            x_values = [x for x, _ in graph_data_points]
-            ax.plot(x_values, graph_values, linewidth=2, color='green')
-            
-            # グリッドラインを追加
-            ax.axhline(y=0, color='blue', linestyle='-', linewidth=2, alpha=0.7)
-            ax.axhline(y=10000, color='gray', linestyle='--', alpha=0.5)
-            ax.axhline(y=20000, color='gray', linestyle='--', alpha=0.5)
-            ax.axhline(y=30000, color='gray', linestyle='--', alpha=0.5)
-            ax.axhline(y=-10000, color='gray', linestyle='--', alpha=0.5)
-            ax.axhline(y=-20000, color='gray', linestyle='--', alpha=0.5)
-            ax.axhline(y=-30000, color='gray', linestyle='--', alpha=0.5)
-            
-            # 軸の設定
-            ax.set_ylim(-35000, 35000)
-            ax.set_xlabel('X座標（ピクセル）')
-            ax.set_ylabel('収支（玉）')
-            ax.set_title('パチンコ収支グラフ解析結果')
-            ax.grid(True, alpha=0.3)
-            
-            # Y軸のフォーマット
-            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
-            
-            plt.tight_layout()
-            st.pyplot(fig)
-            
-            # データをダウンロード可能にする
-            st.markdown("#### 💾 データダウンロード")
-            
-            # CSVデータを作成
-            csv_data = "X座標,収支（玉）\n"
-            for i, value in enumerate(graph_values):
-                csv_data += f"{i},{value}\n"
-            
-            st.download_button(
-                label="📄 CSVファイルをダウンロード",
-                data=csv_data,
-                file_name=f"graph_data_{uploaded_file.name.split('.')[0]}.csv",
-                mime="text/csv"
-            )
         
     else:
         # アップロード前の表示
