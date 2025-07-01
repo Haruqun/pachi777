@@ -625,6 +625,97 @@ if uploaded_files:
                     
                     ocr_html += '</div>'
                     st.markdown(ocr_html, unsafe_allow_html=True)
+                    
+                    # グラフ解析値とOCR値の比較（グラフ最大値が存在する場合のみ）
+                    if ocr.get('graph_max') and result.get('max_val') is not None:
+                        try:
+                            ocr_max = int(ocr['graph_max'])
+                            graph_max = result['max_val']
+                            
+                            # 差分計算
+                            difference = graph_max - ocr_max
+                            
+                            # 一致率計算（OCR値を基準とした誤差率）
+                            if ocr_max != 0:
+                                match_rate = (1 - abs(difference) / abs(ocr_max)) * 100
+                            else:
+                                match_rate = 100 if difference == 0 else 0
+                            
+                            # 比較結果の表示
+                            st.markdown("""
+                            <style>
+                            .comparison-card {
+                                background-color: #f8f9fa;
+                                padding: 15px;
+                                border-radius: 10px;
+                                margin-top: 10px;
+                                border: 1px solid #dee2e6;
+                            }
+                            .comparison-title {
+                                color: #495057;
+                                font-weight: bold;
+                                margin-bottom: 10px;
+                            }
+                            .comparison-item {
+                                display: flex;
+                                justify-content: space-between;
+                                padding: 5px 0;
+                                border-bottom: 1px solid #e9ecef;
+                            }
+                            .comparison-item:last-child {
+                                border-bottom: none;
+                            }
+                            .comparison-label {
+                                color: #6c757d;
+                                font-weight: 500;
+                            }
+                            .comparison-value {
+                                font-weight: bold;
+                            }
+                            .match-good {
+                                color: #28a745;
+                            }
+                            .match-warning {
+                                color: #ffc107;
+                            }
+                            .match-bad {
+                                color: #dc3545;
+                            }
+                            </style>
+                            """, unsafe_allow_html=True)
+                            
+                            # 一致率に応じた色分け
+                            if match_rate >= 95:
+                                rate_class = "match-good"
+                            elif match_rate >= 80:
+                                rate_class = "match-warning"
+                            else:
+                                rate_class = "match-bad"
+                            
+                            comparison_html = f'''
+                            <div class="comparison-card">
+                                <div class="comparison-title">🔍 解析精度チェック</div>
+                                <div class="comparison-item">
+                                    <span class="comparison-label">グラフ解析値</span>
+                                    <span class="comparison-value">{graph_max:,}玉</span>
+                                </div>
+                                <div class="comparison-item">
+                                    <span class="comparison-label">OCR検出値</span>
+                                    <span class="comparison-value">{ocr_max:,}玉</span>
+                                </div>
+                                <div class="comparison-item">
+                                    <span class="comparison-label">差分</span>
+                                    <span class="comparison-value">{difference:+,}玉</span>
+                                </div>
+                                <div class="comparison-item">
+                                    <span class="comparison-label">一致率</span>
+                                    <span class="comparison-value {rate_class}">{match_rate:.1f}%</span>
+                                </div>
+                            </div>
+                            '''
+                            st.markdown(comparison_html, unsafe_allow_html=True)
+                        except (ValueError, TypeError):
+                            pass
             else:
                 st.warning("⚠️ グラフデータを検出できませんでした")
             
