@@ -384,25 +384,18 @@ if uploaded_files:
         with col2:
             st.markdown("**解析結果**")
             st.image(result['overlay_image'], use_column_width=True)
-        
-        # 成功時は統計情報を表示
-        if result['success']:
-            metrics_cols = st.columns(5)
-            with metrics_cols[0]:
-                st.metric("最高値", f"{result['max_val']:,}玉")
-            with metrics_cols[1]:
-                st.metric("最低値", f"{result['min_val']:,}玉")
-            with metrics_cols[2]:
-                st.metric("現在値", f"{result['current_val']:,}玉")
-            with metrics_cols[3]:
-                if result['first_hit_val'] is not None:
-                    st.metric("初当たり", f"{result['first_hit_val']:,}玉")
-                else:
-                    st.metric("初当たり", "なし")
-            with metrics_cols[4]:
-                st.metric("検出色", result['dominant_color'])
-        else:
-            st.warning("⚠️ グラフデータを検出できませんでした")
+            
+            # 成功時は統計情報を表示（解析結果の下に縦に並べる）
+            if result['success']:
+                st.markdown(f"""
+                **最高値**: {result['max_val']:,}玉  
+                **最低値**: {result['min_val']:,}玉  
+                **現在値**: {result['current_val']:,}玉  
+                **初当たり**: {f"{result['first_hit_val']:,}玉" if result['first_hit_val'] is not None else "なし"}  
+                **検出色**: {result['dominant_color']}
+                """)
+            else:
+                st.warning("⚠️ グラフデータを検出できませんでした")
         
         # 区切り線
         if idx < len(analysis_results) - 1:
