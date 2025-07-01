@@ -114,8 +114,33 @@ def extract_site7_data(image):
         # グラフ領域の直下を重点的に探す（画像の中央付近）
         graph_bottom_section = adjusted[int(height * 0.55):int(height * 0.75), :]
         
-        # 通常のOCRで全体のテキストを取得
-        graph_bottom_text = pytesseract.image_to_string(graph_bottom_section, lang='jpn')
+        # カーニング問題に対処するための前処理
+        # 1. 画像を拡大（文字間隔を広げる）
+        scale_factor = 2
+        scaled_section = cv2.resize(graph_bottom_section, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_CUBIC)
+        
+        # 2. モルフォロジー変換で文字を少し太くする
+        kernel = np.ones((2,2), np.uint8)
+        processed_section = cv2.morphologyEx(scaled_section, cv2.MORPH_CLOSE, kernel)
+        
+        # 複数のOCR設定を試す
+        ocr_configs = [
+            '',  # デフォルト設定
+            '--psm 7',  # 単一行のテキストとして扱う
+            '--psm 8',  # 単一単語として扱う
+            '--psm 11',  # スパースなテキスト
+        ]
+        
+        graph_bottom_text = ""
+        for config in ocr_configs:
+            try:
+                temp_text = pytesseract.image_to_string(processed_section, lang='jpn', config=config)
+                graph_bottom_text += " " + temp_text
+            except:
+                pass
+        
+        # 元の画像でも試す
+        graph_bottom_text += " " + pytesseract.image_to_string(graph_bottom_section, lang='jpn')
         
         # 「最大値：」というラベルが付いた数値を優先的に探す
         # 複数のパターンで試行
