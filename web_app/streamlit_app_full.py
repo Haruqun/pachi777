@@ -12,6 +12,8 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 from web_analyzer import WebCompatibleAnalyzer
 import platform
+import pytesseract
+import re
 
 # ページ設定
 st.set_page_config(
@@ -19,6 +21,85 @@ st.set_page_config(
     page_icon="🎰",
     layout="wide"
 )
+
+def extract_site7_data(image):
+    """site7の画像からOCRでデータを抽出"""
+    try:
+        # 画像をグレースケールに変換
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        else:
+            gray = image
+        
+        # OCRの前処理
+        # コントラストを上げる
+        alpha = 1.5  # コントラスト制御
+        beta = 0     # 明度制御
+        adjusted = cv2.convertScaleAbs(gray, alpha=alpha, beta=beta)
+        
+        # OCR実行（日本語対応）
+        text = pytesseract.image_to_string(adjusted, lang='jpn')
+        
+        # 抽出したいデータのパターン定義
+        data = {
+            'machine_name': None,
+            'machine_number': None,
+            'total_start': None,
+            'jackpot_count': None,
+            'first_hit_count': None,
+            'current_start': None,
+            'jackpot_probability': None,
+            'max_payout': None
+        }
+        
+        # 機種名の抽出（最初の長い文字列）
+        lines = text.split('\n')
+        for line in lines:
+            if 'Re' in line or 'パチ' in line or '番台' in line:
+                if not data['machine_name'] and len(line) > 5:
+                    data['machine_name'] = line.strip()
+                if '番台' in line and '【' in line:
+                    data['machine_number'] = line.strip()
+        
+        # 数値データの抽出
+        # 累計スタート
+        start_match = re.search(r'(\d{3,4})\s*スタート', text)
+        if start_match:
+            data['total_start'] = start_match.group(1)
+        
+        # 大当り回数
+        jackpot_match = re.search(r'(\d+)\s*回\s*大当り', text)
+        if not jackpot_match:
+            jackpot_match = re.search(r'大当り回数\s*(\d+)', text)
+        if jackpot_match:
+            data['jackpot_count'] = jackpot_match.group(1)
+        
+        # 初当り回数
+        first_hit_match = re.search(r'初当り回数\s*(\d+)', text)
+        if not first_hit_match:
+            first_hit_match = re.search(r'(\d+)\s*回.*初当り', text)
+        if first_hit_match:
+            data['first_hit_count'] = first_hit_match.group(1)
+        
+        # 現在のスタート
+        current_start_match = re.search(r'スタート\s*(\d{2,3})(?!\d)', text)
+        if current_start_match:
+            data['current_start'] = current_start_match.group(1)
+        
+        # 大当り確率
+        prob_match = re.search(r'1/(\d{2,3})', text)
+        if prob_match:
+            data['jackpot_probability'] = f"1/{prob_match.group(1)}"
+        
+        # 最高出玉
+        max_payout_match = re.search(r'(\d{3,5})\s*(?:玉|出玉|最高)', text)
+        if max_payout_match:
+            data['max_payout'] = max_payout_match.group(1)
+        
+        return data
+    except Exception as e:
+        st.warning(f"OCRエラー: {str(e)}")
+        return None
 
 
 # ファイルアップローダー（一番最初に表示）
@@ -53,6 +134,9 @@ if uploaded_files:
         image = Image.open(uploaded_file)
         img_array = np.array(image)
         height, width = img_array.shape[:2]
+        
+        # OCRでデータ抽出を試みる
+        ocr_data = extract_site7_data(img_array)
         
         # Pattern3: Zero Line Based の自動検出
         hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
@@ -339,7 +423,8 @@ if uploaded_files:
                     'min_val': int(min_val),
                     'current_val': int(current_val),
                     'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
-                    'dominant_color': dominant_color
+                    'dominant_color': dominant_color,
+                    'ocr_data': ocr_data  # OCRデータを追加
                 })
             else:
                 # 解析失敗時
@@ -348,7 +433,8 @@ if uploaded_files:
                     'original_image': img_array,  # 元画像を保存
                     'cropped_image': cropped_img,
                     'overlay_image': cropped_img,  # 解析失敗時は切り抜き画像を使用
-                    'success': False
+                    'success': False,
+                    'ocr_data': ocr_data  # OCRデータを追加
                 })
     
     # プログレスバーを完了
@@ -445,6 +531,68 @@ if uploaded_files:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+                
+                # OCRデータがある場合は表示
+                if result.get('ocr_data'):
+                    ocr = result['ocr_data']
+                    st.markdown("""
+                    <style>
+                    .ocr-card {
+                        background-color: #e8f4f8;
+                        padding: 15px;
+                        border-radius: 10px;
+                        margin-top: 10px;
+                        border: 1px solid #bee5eb;
+                    }
+                    .ocr-title {
+                        color: #17a2b8;
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                    }
+                    .ocr-item {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 5px 0;
+                        border-bottom: 1px solid #d1ecf1;
+                    }
+                    .ocr-item:last-child {
+                        border-bottom: none;
+                    }
+                    .ocr-label {
+                        color: #0c5460;
+                        font-weight: 500;
+                    }
+                    .ocr-value {
+                        font-weight: bold;
+                        color: #0c5460;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+                    
+                    ocr_html = '<div class="ocr-card"><div class="ocr-title">📱 site7データ</div>'
+                    
+                    # 機種情報
+                    if ocr.get('machine_name'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎮 機種名</span><span class="ocr-value">{ocr["machine_name"]}</span></div>'
+                    if ocr.get('machine_number'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">🔢 台番号</span><span class="ocr-value">{ocr["machine_number"]}</span></div>'
+                    
+                    # 遊技データ
+                    if ocr.get('total_start'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎲 累計スタート</span><span class="ocr-value">{ocr["total_start"]}</span></div>'
+                    if ocr.get('jackpot_count'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎊 大当り回数</span><span class="ocr-value">{ocr["jackpot_count"]}回</span></div>'
+                    if ocr.get('first_hit_count'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎯 初当り回数</span><span class="ocr-value">{ocr["first_hit_count"]}回</span></div>'
+                    if ocr.get('current_start'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">📊 スタート</span><span class="ocr-value">{ocr["current_start"]}</span></div>'
+                    if ocr.get('jackpot_probability'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">📈 大当り確率</span><span class="ocr-value">{ocr["jackpot_probability"]}</span></div>'
+                    if ocr.get('max_payout'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">💰 最高出玉</span><span class="ocr-value">{ocr["max_payout"]}玉</span></div>'
+                    
+                    ocr_html += '</div>'
+                    st.markdown(ocr_html, unsafe_allow_html=True)
             else:
                 st.warning("⚠️ グラフデータを検出できませんでした")
             
