@@ -842,14 +842,6 @@ if uploaded_files:
                     f"{len(success_results)}台",
                     f"成功率 {len(success_results)/len(analysis_results)*100:.0f}%"
                 )
-            
-            # 最高/最低の詳細
-            with st.expander("📈 詳細統計"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.info(f"**最高収支台**: {max_result['name']}\n収支: {max_result['current_val'] * 4:+,}円 ({max_result['current_val']:+,}玉)")
-                with col2:
-                    st.warning(f"**最低収支台**: {min_result['name']}\n収支: {min_result['current_val'] * 4:+,}円 ({min_result['current_val']:+,}玉)")
     
     # データフレーム作成
     table_data = []
@@ -902,21 +894,6 @@ if uploaded_files:
             mime="text/csv",
             help="Excel等で開けるCSV形式でダウンロード"
         )
-        
-        # コピー用のテキスト生成（タブ区切り）
-        with st.expander("📋 表データをコピー"):
-            # ヘッダー行
-            tsv_text = '\t'.join(display_columns) + '\n'
-            # データ行
-            for _, row in df[display_columns].iterrows():
-                tsv_text += '\t'.join(str(v) for v in row.values) + '\n'
-            
-            st.text_area(
-                "Excel等に貼り付け可能なタブ区切りデータ",
-                value=tsv_text,
-                height=200,
-                help="このテキストをコピーしてExcel等に貼り付けできます"
-            )
     
 else:
     # アップロード前の表示
