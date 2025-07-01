@@ -111,47 +111,18 @@ def extract_site7_data(image):
                     break
         
         # グラフの最大値を探す（「最大値：」または「最大値:」のパターン）
-        max_value_match = re.search(r'最大値\s*[:：]\s*(\d+)', text)
+        # グラフ領域の直下を重点的に探す（画像の中央付近）
+        graph_bottom_section = adjusted[int(height * 0.55):int(height * 0.75), :]
+        graph_bottom_text = pytesseract.image_to_string(graph_bottom_section, lang='jpn')
+        
+        # まずグラフ下部から探す
+        max_value_match = re.search(r'最大値\s*[:：]\s*(\d+)', graph_bottom_text)
         if not max_value_match:
-            # 下部テキストからも探す
-            max_value_match = re.search(r'最大値\s*[:：]\s*(\d+)', bottom_text)
+            # 次に全体テキストから探す（ただし最高出玉と混同しないよう注意）
+            max_value_match = re.search(r'最大値\s*[:：]\s*(\d+)(?!.*最高出玉)', text)
         
         if max_value_match:
             data['graph_max'] = max_value_match.group(1)
-        else:
-            # 「最大値」が見つからない場合、グラフ付近の数値を探す
-            # グラフの中央から下部にかけての領域をOCR
-            middle_section = adjusted[int(height * 0.4):int(height * 0.8), :]
-            middle_text = pytesseract.image_to_string(middle_section, lang='jpn')
-            
-            # 30,000付近の数値を探す（Y軸の最大値として一般的）
-            patterns = [
-                r'(\d{5})',  # 5桁の数値（例：30000, 20100）
-                r'(\d{1,2})[,，](\d{3})',  # カンマ区切り（例：30,000）
-                r'(\d{4})'   # 4桁の数値（例：5000）
-            ]
-            
-            all_texts = [text, bottom_text, middle_text]
-            for txt in all_texts:
-                for pattern in patterns:
-                    matches = re.findall(pattern, txt)
-                    if matches:
-                        for match in matches:
-                            if isinstance(match, tuple):
-                                # カンマ区切りの場合
-                                value = int(match[0]) * 1000 + int(match[1])
-                            else:
-                                # 連続した数字の場合
-                                value = int(match)
-                            
-                            # グラフの最大値として妥当な範囲（5000〜50000）
-                            if 5000 <= value <= 50000 and value % 100 == 0:
-                                data['graph_max'] = str(value)
-                                break
-                        if data['graph_max']:
-                            break
-                if data['graph_max']:
-                    break
         
         return data
     except Exception as e:
