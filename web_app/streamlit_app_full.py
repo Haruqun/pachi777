@@ -913,6 +913,54 @@ if uploaded_files:
             if 0 < y_minus_20k < crop_height:
                 cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (128, 128, 128), 1)
                 cv2.putText(cropped_img, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+            
+            # 元画像にもグリッドラインを追加
+            img_with_grid = img_array.copy()
+            
+            # 元画像での座標に変換（切り抜き前の座標系）
+            # +30000ライン（元画像座標）
+            y_30k_orig = int(top + y_30k)
+            if 0 <= y_30k_orig < height:
+                cv2.line(img_with_grid, (0, y_30k_orig), (width, y_30k_orig), (128, 128, 128), 2)
+                cv2.putText(img_with_grid, '+30000', (10, max(20, y_30k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
+            
+            # -30000ライン（元画像座標）
+            y_minus_30k_orig = int(top + y_minus_30k)
+            if 0 <= y_minus_30k_orig < height:
+                cv2.line(img_with_grid, (0, y_minus_30k_orig), (width, y_minus_30k_orig), (128, 128, 128), 2)
+                cv2.putText(img_with_grid, '-30000', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
+            
+            # +20000ライン（元画像座標）
+            y_20k_orig = int(top + y_20k)
+            if 0 <= y_20k_orig < height:
+                cv2.line(img_with_grid, (0, y_20k_orig), (width, y_20k_orig), (128, 128, 128), 1)
+                cv2.putText(img_with_grid, '+20000', (10, y_20k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
+            
+            # +10000ライン（元画像座標）
+            y_10k_orig = int(top + y_10k)
+            if 0 <= y_10k_orig < height:
+                cv2.line(img_with_grid, (0, y_10k_orig), (width, y_10k_orig), (128, 128, 128), 1)
+                cv2.putText(img_with_grid, '+10000', (10, y_10k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
+            
+            # 0ライン（元画像座標）
+            if 0 <= zero_line_y < height:
+                cv2.line(img_with_grid, (0, zero_line_y), (width, zero_line_y), (255, 0, 0), 2)
+                cv2.putText(img_with_grid, '0', (10, zero_line_y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
+            
+            # -10000ライン（元画像座標）
+            y_minus_10k_orig = int(top + y_minus_10k)
+            if 0 <= y_minus_10k_orig < height:
+                cv2.line(img_with_grid, (0, y_minus_10k_orig), (width, y_minus_10k_orig), (128, 128, 128), 1)
+                cv2.putText(img_with_grid, '-10000', (10, y_minus_10k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
+            
+            # -20000ライン（元画像座標）
+            y_minus_20k_orig = int(top + y_minus_20k)
+            if 0 <= y_minus_20k_orig < height:
+                cv2.line(img_with_grid, (0, y_minus_20k_orig), (width, y_minus_20k_orig), (128, 128, 128), 1)
+                cv2.putText(img_with_grid, '-20000', (10, y_minus_20k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
+            
+            # 切り抜き範囲を示す枠線を追加（オプション）
+            cv2.rectangle(img_with_grid, (int(left), int(top)), (int(right), int(bottom)), (0, 255, 0), 2)
 
             # 解析を自動実行
             detail_text.text(f'📊 {uploaded_file.name} のグラフデータを解析中...')
@@ -1101,7 +1149,7 @@ if uploaded_files:
                     # 結果を保存
                     analysis_results.append({
                         'name': uploaded_file.name,
-                        'original_image': img_array,  # 元画像を保存
+                        'original_image': img_with_grid,  # グリッド付き元画像を保存
                         'cropped_image': cropped_img,  # 切り抜き画像
                         'overlay_image': overlay_img,  # オーバーレイ画像
                         'success': True,
@@ -1116,7 +1164,7 @@ if uploaded_files:
                     # 解析失敗時
                     analysis_results.append({
                         'name': uploaded_file.name,
-                        'original_image': img_array,  # 元画像を保存
+                        'original_image': img_with_grid,  # グリッド付き元画像を保存
                         'cropped_image': cropped_img,
                         'overlay_image': cropped_img,  # 解析失敗時は切り抜き画像を使用
                         'success': False,
