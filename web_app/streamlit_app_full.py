@@ -122,12 +122,12 @@ default_settings = {
     'left_margin': 125,
     'right_margin': 125,
     # グリッドライン調整値
-    'grid_30k_offset': -1,      # +30000ライン
-    'grid_20k_offset': -2,      # +20000ライン  
-    'grid_10k_offset': -1,      # +10000ライン
-    'grid_minus_10k_offset': 1, # -10000ライン
-    'grid_minus_20k_offset': 1, # -20000ライン
-    'grid_minus_30k_offset': 2  # -30000ライン
+    'grid_30k_offset': 0,       # +30000ライン（最上部）
+    'grid_20k_offset': 0,       # +20000ライン  
+    'grid_10k_offset': 0,       # +10000ライン
+    'grid_minus_10k_offset': 0, # -10000ライン
+    'grid_minus_20k_offset': 0, # -20000ライン
+    'grid_minus_30k_offset': 0  # -30000ライン（最下部）
 }
 
 # セッションステートの初期化（エキスパンダーより前に行う）
@@ -282,36 +282,36 @@ with st.expander("⚙️ 画像解析の調整設定"):
     with grid_col1:
         grid_30k_offset = st.number_input(
             "+30,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_30k_offset', -1),
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_30k_offset', 0),
             step=1, help="上端の+30,000ラインの位置調整"
         )
         grid_20k_offset = st.number_input(
             "+20,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_20k_offset', -2),
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_20k_offset', 0),
             step=1, help="+20,000ラインの位置調整"
         )
     
     with grid_col2:
         grid_10k_offset = st.number_input(
             "+10,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_10k_offset', -1),
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_10k_offset', 0),
             step=1, help="+10,000ラインの位置調整"
         )
         grid_minus_10k_offset = st.number_input(
             "-10,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_10k_offset', 1),
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_10k_offset', 0),
             step=1, help="-10,000ラインの位置調整"
         )
     
     with grid_col3:
         grid_minus_20k_offset = st.number_input(
             "-20,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_20k_offset', 1),
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_20k_offset', 0),
             step=1, help="-20,000ラインの位置調整"
         )
         grid_minus_30k_offset = st.number_input(
             "-30,000ライン調整",
-            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_30k_offset', 2),
+            min_value=-10, max_value=10, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
             step=1, help="下端の-30,000ラインの位置調整"
         )
     
@@ -354,23 +354,25 @@ with st.expander("⚙️ 画像解析の調整設定"):
         # オーバーレイ画像を作成
         overlay_img = img_array.copy()
         
-        # 検索範囲を可視化（半透明の緑）
+        # 検索範囲を可視化（濃い緑の枠線）
+        cv2.rectangle(overlay_img, (100, search_start), (width-100, search_end), (0, 255, 0), 3)
+        # 半透明の緑で塗りつぶし
         overlay = overlay_img.copy()
         cv2.rectangle(overlay, (100, search_start), (width-100, search_end), (0, 255, 0), -1)
-        overlay_img = cv2.addWeighted(overlay_img, 0.7, overlay, 0.3, 0)
+        overlay_img = cv2.addWeighted(overlay_img, 0.8, overlay, 0.2, 0)
         
         # 検出したゼロラインを描画（赤）
         cv2.line(overlay_img, (0, zero_line_y), (width, zero_line_y), (255, 0, 0), 3)
         cv2.putText(overlay_img, f'Zero Line (score: {best_score:.3f})', (10, zero_line_y - 10), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
         
-        # 切り抜き範囲を描画（青）
-        cv2.rectangle(overlay_img, (left, int(top)), (right, int(bottom)), (0, 0, 255), 3)
+        # 切り抜き範囲を描画（濃い青）
+        cv2.rectangle(overlay_img, (left, int(top)), (right, int(bottom)), (0, 0, 255), 4)
         
-        # オレンジバーの位置を表示（オレンジ）
-        cv2.line(overlay_img, (0, orange_bottom), (width, orange_bottom), (255, 165, 0), 2)
+        # オレンジバーの位置を表示（濃いオレンジ）
+        cv2.line(overlay_img, (0, orange_bottom), (width, orange_bottom), (255, 140, 0), 3)
         cv2.putText(overlay_img, 'Orange Bar', (10, orange_bottom + 30), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 165, 0), 2)
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 140, 0), 2)
         
         # プレビューを表示
         col_preview, col_cropped = st.columns(2)
@@ -390,41 +392,41 @@ with st.expander("⚙️ 画像解析の調整設定"):
             # グリッドラインを追加（調整値付き）
             scale = 122.0
             
-            # +30000ライン
-            y_30k = grid_30k_offset
+            # +30000ライン（最上部付近）
+            y_30k = 0 + grid_30k_offset  # 最上部を基準に調整
             if 0 <= y_30k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_30k), (cropped_preview.shape[1], y_30k), (128, 128, 128), 2)
-                cv2.putText(cropped_preview, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
+                cv2.line(cropped_preview, (0, y_30k), (cropped_preview.shape[1], y_30k), (0, 150, 0), 3)
+                cv2.putText(cropped_preview, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 100, 0), 2)
             
             # +20000ライン
             y_20k = int(zero_in_crop - (20000 / scale)) + grid_20k_offset
             if 0 < y_20k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_20k), (cropped_preview.shape[1], y_20k), (128, 128, 128), 1)
-                cv2.putText(cropped_preview, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+                cv2.line(cropped_preview, (0, y_20k), (cropped_preview.shape[1], y_20k), (100, 100, 100), 2)
+                cv2.putText(cropped_preview, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
             
             # +10000ライン
             y_10k = int(zero_in_crop - (10000 / scale)) + grid_10k_offset
             if 0 < y_10k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_10k), (cropped_preview.shape[1], y_10k), (128, 128, 128), 1)
-                cv2.putText(cropped_preview, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+                cv2.line(cropped_preview, (0, y_10k), (cropped_preview.shape[1], y_10k), (100, 100, 100), 2)
+                cv2.putText(cropped_preview, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
             
             # -10000ライン
             y_minus_10k = int(zero_in_crop + (10000 / scale)) + grid_minus_10k_offset
             if 0 < y_minus_10k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_minus_10k), (cropped_preview.shape[1], y_minus_10k), (128, 128, 128), 1)
-                cv2.putText(cropped_preview, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+                cv2.line(cropped_preview, (0, y_minus_10k), (cropped_preview.shape[1], y_minus_10k), (100, 100, 100), 2)
+                cv2.putText(cropped_preview, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
             
             # -20000ライン
             y_minus_20k = int(zero_in_crop + (20000 / scale)) + grid_minus_20k_offset
             if 0 < y_minus_20k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_minus_20k), (cropped_preview.shape[1], y_minus_20k), (128, 128, 128), 1)
-                cv2.putText(cropped_preview, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+                cv2.line(cropped_preview, (0, y_minus_20k), (cropped_preview.shape[1], y_minus_20k), (100, 100, 100), 2)
+                cv2.putText(cropped_preview, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
             
             # -30000ライン
-            y_minus_30k = min(cropped_preview.shape[0] - 1, cropped_preview.shape[0] - 1 + grid_minus_30k_offset)
+            y_minus_30k = cropped_preview.shape[0] - 1 + grid_minus_30k_offset  # 最下部基準
             if 0 <= y_minus_30k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_minus_30k), (cropped_preview.shape[1], y_minus_30k), (128, 128, 128), 2)
-                cv2.putText(cropped_preview, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
+                cv2.line(cropped_preview, (0, y_minus_30k), (cropped_preview.shape[1], y_minus_30k), (150, 0, 0), 3)
+                cv2.putText(cropped_preview, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 0, 0), 2)
             
             st.image(cropped_preview, use_column_width=True)
         
@@ -434,78 +436,7 @@ with st.expander("⚙️ 画像解析の調整設定"):
         
         # ビジュアル調整モード
         if adjustment_mode == "ビジュアル調整":
-            st.markdown("#### 🎯 矢印キーで範囲を調整")
-            st.info("💡 ヒント: 画像をクリックして、矢印キーで調整できます")
-            
-            # キーボード操作のJavaScript
-            st.markdown("""
-            <script>
-            document.addEventListener('keydown', function(e) {
-                let updated = false;
-                const settings = JSON.parse(localStorage.getItem('pachi777_temp_settings') || '{}');
-                
-                switch(e.key) {
-                    case 'ArrowUp':
-                        if (e.shiftKey) {
-                            // Shift+Up: 上端を上げる
-                            settings.crop_top = Math.min(500, (settings.crop_top || 246) + 5);
-                            updated = true;
-                        } else if (e.ctrlKey) {
-                            // Ctrl+Up: 下端を上げる
-                            settings.crop_bottom = Math.max(100, (settings.crop_bottom || 247) - 5);
-                            updated = true;
-                        }
-                        break;
-                    case 'ArrowDown':
-                        if (e.shiftKey) {
-                            // Shift+Down: 上端を下げる
-                            settings.crop_top = Math.max(100, (settings.crop_top || 246) - 5);
-                            updated = true;
-                        } else if (e.ctrlKey) {
-                            // Ctrl+Down: 下端を下げる
-                            settings.crop_bottom = Math.min(500, (settings.crop_bottom || 247) + 5);
-                            updated = true;
-                        }
-                        break;
-                    case 'ArrowLeft':
-                        if (e.shiftKey) {
-                            // Shift+Left: 左余白を減らす
-                            settings.left_margin = Math.max(0, (settings.left_margin || 125) - 25);
-                            updated = true;
-                        }
-                        break;
-                    case 'ArrowRight':
-                        if (e.shiftKey) {
-                            // Shift+Right: 右余白を減らす
-                            settings.right_margin = Math.max(0, (settings.right_margin || 125) - 25);
-                            updated = true;
-                        }
-                        break;
-                }
-                
-                if (updated) {
-                    e.preventDefault();
-                    localStorage.setItem('pachi777_temp_settings', JSON.stringify(settings));
-                    // Force reload to update the UI
-                    window.location.reload();
-                }
-            });
-            </script>
-            """, unsafe_allow_html=True)
-            
-            # 操作説明
-            st.markdown("##### ⌨️ キーボード操作")
-            st.markdown("""
-            - **Shift + ↑** : 上端を上げる（切り抜き範囲を広げる）
-            - **Shift + ↓** : 上端を下げる（切り抜き範囲を狭める）
-            - **Ctrl + ↑** : 下端を上げる（切り抜き範囲を狭める）
-            - **Ctrl + ↓** : 下端を下げる（切り抜き範囲を広げる）
-            - **Shift + ←** : 左余白を減らす
-            - **Shift + →** : 右余白を減らす
-            """)
-            
-            # 微調整ボタン（代替手段）
-            st.markdown("#### または、ボタンで調整")
+            st.markdown("#### 🎯 ボタンで範囲を調整")
             
             # 切り抜き範囲の調整
             adjust_cols = st.columns(4)
@@ -791,18 +722,19 @@ if uploaded_files:
         
         # グリッドライン描画（設定値を使用）
         # +30000ライン（最上部）
-        y_30k = settings.get('grid_30k_offset', -1)
-        cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
-        cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
+        y_30k = 0 + settings.get('grid_30k_offset', 0)  # 最上部基準
+        if 0 <= y_30k < crop_height:
+            cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
+            cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
         
         # +20000ライン
-        y_20k = int(zero_line_in_crop - (20000 / scale)) + settings.get('grid_20k_offset', -2)
+        y_20k = int(zero_line_in_crop - (20000 / scale)) + settings.get('grid_20k_offset', 0)
         if 0 < y_20k < crop_height:
             cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
         
         # +10000ライン
-        y_10k = int(zero_line_in_crop - (10000 / scale)) + settings.get('grid_10k_offset', -1)
+        y_10k = int(zero_line_in_crop - (10000 / scale)) + settings.get('grid_10k_offset', 0)
         if 0 < y_10k < crop_height:
             cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
@@ -814,19 +746,19 @@ if uploaded_files:
             cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
         
         # -10000ライン
-        y_minus_10k = int(zero_line_in_crop + (10000 / scale)) + settings.get('grid_minus_10k_offset', 1)
+        y_minus_10k = int(zero_line_in_crop + (10000 / scale)) + settings.get('grid_minus_10k_offset', 0)
         if 0 < y_minus_10k < crop_height:
             cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
         
         # -20000ライン
-        y_minus_20k = int(zero_line_in_crop + (20000 / scale)) + settings.get('grid_minus_20k_offset', 1)
+        y_minus_20k = int(zero_line_in_crop + (20000 / scale)) + settings.get('grid_minus_20k_offset', 0)
         if 0 < y_minus_20k < crop_height:
             cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (128, 128, 128), 1)
             cv2.putText(cropped_img, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
         
         # -30000ライン（最下部）
-        y_minus_30k = crop_height - 1 + settings.get('grid_minus_30k_offset', 2)
+        y_minus_30k = crop_height - 1 + settings.get('grid_minus_30k_offset', 0)
         y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
         cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
         cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
