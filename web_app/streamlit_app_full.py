@@ -114,45 +114,29 @@ def extract_site7_data(image):
         # グラフ領域の直下を重点的に探す（画像の中央付近）
         graph_bottom_section = adjusted[int(height * 0.55):int(height * 0.75), :]
         
-        # OCRの設定を調整（より正確な数値認識のため）
-        custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789最大値：:, '
-        graph_bottom_text = pytesseract.image_to_string(graph_bottom_section, lang='jpn', config=custom_config)
+        # 通常のOCRで全体のテキストを取得
+        graph_bottom_text = pytesseract.image_to_string(graph_bottom_section, lang='jpn')
         
-        # より柔軟なパターンで最大値を探す
-        patterns = [
-            r'最大値\s*[:：]\s*(\d+)',
-            r'最大値\s*[:：]\s*(\d{1,2})\s*(\d{3,4})',  # 分割された数字
-            r'(\d{5})\s*(?=\s|$)',  # 5桁の独立した数字
-            r'(\d{4,5})',  # 4-5桁の数字
-        ]
+        # 「最大値：」というラベルが付いた数値を優先的に探す
+        max_value_match = re.search(r'最大値\s*[:：]\s*(\d+)', graph_bottom_text)
         
-        max_value_found = False
-        for pattern in patterns:
-            max_value_match = re.search(pattern, graph_bottom_text)
-            if max_value_match:
-                if len(max_value_match.groups()) == 2:
-                    # 分割された数字の場合
-                    data['graph_max'] = max_value_match.group(1) + max_value_match.group(2)
-                else:
-                    value = max_value_match.group(1)
-                    # 妥当性チェック（4-5桁で100の倍数）
-                    if value.isdigit() and len(value) >= 4 and int(value) % 100 == 0:
+        if max_value_match:
+            data['graph_max'] = max_value_match.group(1)
+        else:
+            # 見つからない場合は全体テキストから探す（ただし30,000のような軸ラベルを除外）
+            all_numbers = re.findall(r'(\d{4,5})', text)
+            
+            # 「最大値」の近くにある数値を探す
+            max_label_pos = text.find('最大値')
+            if max_label_pos != -1:
+                # 最大値ラベルの後の100文字以内で数値を探す
+                nearby_text = text[max_label_pos:max_label_pos + 100]
+                nearby_match = re.search(r'[:：]\s*(\d{4,5})', nearby_text)
+                if nearby_match:
+                    value = nearby_match.group(1)
+                    # 30000, 20000, 10000のような軸ラベルを除外
+                    if value not in ['30000', '20000', '10000', '00000']:
                         data['graph_max'] = value
-                        max_value_found = True
-                        break
-        
-        # グラフ下部で見つからない場合、全体テキストから再度探す
-        if not max_value_found:
-            for pattern in patterns:
-                max_value_match = re.search(pattern, text)
-                if max_value_match and '最大値' in text[max(0, max_value_match.start()-10):max_value_match.start()+10]:
-                    if len(max_value_match.groups()) == 2:
-                        data['graph_max'] = max_value_match.group(1) + max_value_match.group(2)
-                    else:
-                        value = max_value_match.group(1)
-                        if value.isdigit() and len(value) >= 4 and int(value) % 100 == 0:
-                            data['graph_max'] = value
-                            break
         
         return data
     except Exception as e:
