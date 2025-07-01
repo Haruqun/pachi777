@@ -19,7 +19,13 @@ import re
 
 # 日本語フォント設定
 if platform.system() == 'Darwin':  # macOS
-    plt.rcParams['font.family'] = 'Hiragino Sans'
+    plt.rcParams['font.family'] = 'Hiragino Sans GB'
+else:
+    # Windows/Linuxの場合
+    plt.rcParams['font.family'] = ['DejaVu Sans', 'sans-serif']
+
+# 日本語が正しく表示されるようにfallbackも設定
+plt.rcParams['font.sans-serif'] = ['Hiragino Sans GB', 'Arial Unicode MS', 'Noto Sans CJK JP', 'DejaVu Sans']
 
 class ProfessionalGraphReport:
     def __init__(self):
@@ -438,14 +444,14 @@ class ProfessionalGraphReport:
     
     def process_all_images(self):
         """全画像を処理"""
-        cropped_pattern = "graphs/manual_crop/cropped/*_graph_only.png"
+        cropped_pattern = "../graphs/manual_crop/cropped/*_graph_only.png"
         cropped_files = glob.glob(cropped_pattern)
         
         print(f"🎨 プロフェッショナル分析開始: {len(cropped_files)}枚")
         
         for cropped_file in cropped_files:
             base_name = Path(cropped_file).stem.replace('_graph_only', '')
-            original_file = f"graphs/original/{base_name}.jpg"
+            original_file = f"../graphs/original/{base_name}.jpg"
             
             if not Path(original_file).exists():
                 continue
@@ -1799,8 +1805,11 @@ if __name__ == "__main__":
     print("\\n" + "=" * 60)
     print(f"✅ プロフェッショナル分析完了")
     print(f"📊 処理画像数: {len(results)}")
-    successful = [r for r in results if r['data_points_count'] > 0]
-    print(f"🎯 データ抽出成功: {len(successful)} ({len(successful)/len(results)*100:.1f}%)")
+    if results:
+        successful = [r for r in results if r['data_points_count'] > 0]
+        print(f"🎯 データ抽出成功: {len(successful)} ({len(successful)/len(results)*100:.1f}%)")
+    else:
+        print("⚠️ 処理する画像が見つかりませんでした")
     
     # プロフェッショナルレポート生成
     analyzer.generate_ultimate_professional_report()
