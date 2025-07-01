@@ -498,5 +498,7 @@ st.markdown("---")
 st.markdown(f"""
 🎰 パチンコグラフ解析システム v2.0  
 更新日: {datetime.now().strftime('%Y/%m/%d')}  
+Produced by PPタウン  
+Created by [fivenine-design.com](https://fivenine-design.com)  
 Made with ❤️ using Streamlit
 """)
