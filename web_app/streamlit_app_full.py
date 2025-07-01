@@ -131,8 +131,8 @@ def extract_site7_data(image):
             max_value_match = re.search(pattern, graph_bottom_text)
             if max_value_match:
                 value = max_value_match.group(1)
-                # 3桁以上の数値であることを確認（60のような短い値を除外）
-                if len(value) >= 3:
+                # 3桁以上で100の倍数であることを確認
+                if len(value) >= 3 and value.isdigit() and int(value) % 100 == 0:
                     data['graph_max'] = value
                     max_value_found = True
                     break
@@ -143,8 +143,10 @@ def extract_site7_data(image):
                 max_value_match = re.search(pattern, text)
                 if max_value_match:
                     value = max_value_match.group(1)
-                    # 3桁以上で、軸ラベルでないことを確認
-                    if len(value) >= 3 and value not in ['30000', '20000', '10000', '000']:
+                    # 3桁以上で、100の倍数で、軸ラベルでないことを確認
+                    if (len(value) >= 3 and value.isdigit() and 
+                        int(value) % 100 == 0 and 
+                        value not in ['30000', '20000', '10000', '000']):
                         data['graph_max'] = value
                         max_value_found = True
                         break
@@ -165,8 +167,9 @@ def extract_site7_data(image):
                     number_match = re.search(r'(\d{3,5})', nearby_text)
                     if number_match:
                         value = number_match.group(1)
-                        # 軸ラベルでないことを確認
-                        if value not in ['30000', '20000', '10000', '000']:
+                        # 軸ラベルでないことを確認し、妥当な値であることを確認
+                        if (value not in ['30000', '20000', '10000', '000'] and 
+                            int(value) >= 100 and int(value) % 10 == 0):
                             data['graph_max'] = value
         
         return data
