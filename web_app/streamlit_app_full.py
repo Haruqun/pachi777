@@ -156,9 +156,7 @@ if not st.session_state.authenticated:
     
     /* ログインカード */
     .login-card {
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        background: transparent;
         padding: 48px;
         max-width: 400px;
         margin: 0 auto;
@@ -248,6 +246,7 @@ if not st.session_state.authenticated:
         color: #666;
         font-size: 14px;
         line-height: 1.8;
+        text-align: center;
     }
     
     .login-footer a {
