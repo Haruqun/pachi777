@@ -338,9 +338,10 @@ try:
     if os.path.exists(preset_file):
         with open(preset_file, 'rb') as f:
             saved_data = pickle.load(f)
-            if 'presets' in saved_data and not st.session_state.saved_presets:
+            if 'presets' in saved_data:
                 st.session_state.saved_presets = saved_data['presets']
-            if 'current' in saved_data and st.session_state.settings == default_settings:
+            if 'current' in saved_data:
+                # 現在の設定がデフォルトか、保存された設定より古い場合は更新
                 st.session_state.settings = saved_data['current']
 except Exception as e:
     # 読み込みエラーは無視
@@ -832,6 +833,16 @@ if uploaded_files:
                 st.session_state.settings = default_settings.copy()
             else:
                 st.session_state.settings = st.session_state.saved_presets[selected_preset].copy()
+            
+            # デバッグ情報を表示
+            with st.expander("🔍 適用された設定値", expanded=False):
+                st.code(f"検索開始: {st.session_state.settings.get('search_start_offset', 50)}")
+                st.code(f"検索終了: {st.session_state.settings.get('search_end_offset', 400)}")
+                st.code(f"上切り抜き: {st.session_state.settings.get('crop_top', 246)}")
+                st.code(f"下切り抜き: {st.session_state.settings.get('crop_bottom', 247)}")
+                st.code(f"+30kライン調整: {st.session_state.settings.get('grid_30k_offset', 0)}")
+                st.code(f"-30kライン調整: {st.session_state.settings.get('grid_minus_30k_offset', 0)}")
+            
             st.success(f"✅ '{selected_preset}' を適用しました")
             st.rerun()
     
@@ -909,7 +920,13 @@ if uploaded_files:
                 'crop_top': 246,
                 'crop_bottom': 247,
                 'left_margin': 125,
-                'right_margin': 125
+                'right_margin': 125,
+                'grid_30k_offset': 0,
+                'grid_20k_offset': 0,
+                'grid_10k_offset': 0,
+                'grid_minus_10k_offset': 0,
+                'grid_minus_20k_offset': 0,
+                'grid_minus_30k_offset': 0
             })
 
             # 検索範囲（設定値を使用）
