@@ -118,23 +118,25 @@ with main_container:
             
             # 切り抜き範囲を赤い四角で表示
             if crop_width > 0 and crop_height > 0:
-                # OpenCVで四角を描画
-                cv2.rectangle(display_img, (left, top), (right, bottom), (255, 0, 0), 3)
+                # OpenCVで四角を描画（整数に変換）
+                cv2.rectangle(display_img, (int(left), int(top)), (int(right), int(bottom)), (255, 0, 0), 3)
                 
                 # 切り抜き範囲外を半透明にする
                 overlay = display_img.copy()
+                # 整数に変換
+                t, b, l, r = int(top), int(bottom), int(left), int(right)
                 # 上部
-                if top > 0:
-                    overlay[0:top, :] = (overlay[0:top, :] * 0.3).astype(np.uint8)
+                if t > 0:
+                    overlay[0:t, :] = (overlay[0:t, :] * 0.3).astype(np.uint8)
                 # 下部
-                if bottom < height:
-                    overlay[bottom:height, :] = (overlay[bottom:height, :] * 0.3).astype(np.uint8)
+                if b < height:
+                    overlay[b:height, :] = (overlay[b:height, :] * 0.3).astype(np.uint8)
                 # 左部
-                if left > 0:
-                    overlay[top:bottom, 0:left] = (overlay[top:bottom, 0:left] * 0.3).astype(np.uint8)
+                if l > 0:
+                    overlay[t:b, 0:l] = (overlay[t:b, 0:l] * 0.3).astype(np.uint8)
                 # 右部
-                if right < width:
-                    overlay[top:bottom, right:width] = (overlay[top:bottom, right:width] * 0.3).astype(np.uint8)
+                if r < width:
+                    overlay[t:b, r:width] = (overlay[t:b, r:width] * 0.3).astype(np.uint8)
                 
                 display_img = overlay
             
@@ -235,12 +237,12 @@ with main_container:
             num_col1, num_col2 = st.columns(2)
             
             with num_col1:
-                new_top = st.number_input("上端 (px)", 0, height, top, step=10, key="num_top")
-                new_left = st.number_input("左端 (px)", 0, width, left, step=10, key="num_left")
+                new_top = st.number_input("上端 (px)", 0.0, float(height), float(top), step=1.0, format="%.1f", key="num_top")
+                new_left = st.number_input("左端 (px)", 0.0, float(width), float(left), step=1.0, format="%.1f", key="num_left")
             
             with num_col2:
-                new_bottom = st.number_input("下端 (px)", 0, height, bottom, step=10, key="num_bottom")
-                new_right = st.number_input("右端 (px)", 0, width, right, step=10, key="num_right")
+                new_bottom = st.number_input("下端 (px)", 0.0, float(height), float(bottom), step=1.0, format="%.1f", key="num_bottom")
+                new_right = st.number_input("右端 (px)", 0.0, float(width), float(right), step=1.0, format="%.1f", key="num_right")
             
             # 値が変更されたら更新
             if new_top != top or new_bottom != bottom or new_left != left or new_right != right:
@@ -259,8 +261,8 @@ with main_container:
         st.markdown("### 👁️ 切り抜きプレビュー")
         
         if crop_width > 0 and crop_height > 0:
-            # 切り抜き実行
-            cropped_img = img_array[top:bottom, left:right]
+            # 切り抜き実行（整数に変換）
+            cropped_img = img_array[int(top):int(bottom), int(left):int(right)]
             
             # プレビュー表示
             preview_cols = st.columns([2, 3, 2])
