@@ -275,6 +275,59 @@ with main_container:
                     with col4:
                         st.metric("検出色", dominant_color)
                     
+                    # オーバーレイ画像を作成
+                    st.markdown("#### 🎯 解析結果オーバーレイ")
+                    
+                    # グリッドライン付きの画像をコピー
+                    overlay_img = cropped_img.copy()
+                    
+                    # 検出されたグラフラインを描画
+                    prev_x = None
+                    prev_y = None
+                    
+                    # 色の設定（検出色に応じて変更）
+                    color_map = {
+                        'green': (0, 255, 0),
+                        'red': (0, 0, 255),
+                        'blue': (255, 0, 0),
+                        'yellow': (0, 255, 255),
+                        'cyan': (255, 255, 0),
+                        'magenta': (255, 0, 255),
+                        'orange': (0, 165, 255),
+                        'pink': (203, 192, 255),
+                        'purple': (255, 0, 255)
+                    }
+                    draw_color = color_map.get(dominant_color, (0, 255, 0))
+                    
+                    # グラフポイントを描画
+                    for x, value in graph_data_points:
+                        # Y座標を計算（0ラインからの相対位置）
+                        y = int(zero_line_in_crop - (value / analyzer.scale))
+                        
+                        # 画像範囲内かチェック
+                        if 0 <= y < overlay_img.shape[0] and 0 <= x < overlay_img.shape[1]:
+                            # 点を描画（より見やすくするため）
+                            cv2.circle(overlay_img, (int(x), y), 2, draw_color, -1)
+                            
+                            # 線で接続
+                            if prev_x is not None and prev_y is not None:
+                                cv2.line(overlay_img, (int(prev_x), int(prev_y)), (int(x), y), draw_color, 2)
+                            
+                            prev_x = x
+                            prev_y = y
+                    
+                    # 解析情報を画像に追加
+                    info_y = 30
+                    cv2.putText(overlay_img, f'Max: {int(max_val):,}', (overlay_img.shape[1] - 150, info_y), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                    cv2.putText(overlay_img, f'Min: {int(min_val):,}', (overlay_img.shape[1] - 150, info_y + 20), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                    cv2.putText(overlay_img, f'Current: {int(current_val):,}', (overlay_img.shape[1] - 150, info_y + 40), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                    
+                    # オーバーレイ画像を表示
+                    st.image(overlay_img, use_column_width=True)
+                    
                     # グラフを可視化
                     st.markdown("#### 📊 解析結果グラフ")
                     
@@ -285,7 +338,7 @@ with main_container:
                     fig, ax = plt.subplots(figsize=(12, 6))
                     
                     # グラフをプロット
-                    x_values = list(range(len(graph_values)))
+                    x_values = [x for x, _ in graph_data_points]
                     ax.plot(x_values, graph_values, linewidth=2, color='green')
                     
                     # グリッドラインを追加
