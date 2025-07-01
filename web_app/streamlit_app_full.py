@@ -437,17 +437,17 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     # 設定の保存
     st.markdown("### 💾 設定の保存")
     
-    # プリセット名入力と保存
-    save_col1, save_col2, save_col3 = st.columns([2, 1, 1])
+    # プリセット名入力
+    preset_name = st.text_input(
+        "プリセット名",
+        placeholder="例: iPhone15用、S__シリーズ用",
+        help="保存する設定の名前を入力してください"
+    )
+    
+    # ボタン用のカラムレイアウト
+    save_col1, save_col2 = st.columns([1, 1])
     
     with save_col1:
-        preset_name = st.text_input(
-            "プリセット名",
-            placeholder="例: iPhone15用、S__シリーズ用",
-            help="保存する設定の名前を入力してください"
-        )
-    
-    with save_col2:
         if st.button("💾 プリセットを保存", type="primary", use_container_width=True):
             if preset_name:
                 # セッションステートから現在の値を取得
@@ -495,8 +495,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             else:
                 st.error("プリセット名を入力してください")
     
-    with save_col3:
-        if st.button("🔄 デフォルトに戻す"):
+    with save_col2:
+        if st.button("🔄 デフォルトに戻す", use_container_width=True):
             st.session_state.settings = default_settings.copy()
             st.rerun()
     
