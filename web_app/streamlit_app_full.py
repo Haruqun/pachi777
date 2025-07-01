@@ -145,23 +145,99 @@ if 'authenticated' not in st.session_state:
 
 # パスワード認証
 if not st.session_state.authenticated:
-    st.markdown("## 🔐 認証が必要です")
+    # カスタムスタイルの適用
+    st.markdown("""
+    <style>
+    .auth-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 60px 40px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        margin: 50px auto;
+        max-width: 500px;
+    }
+    .auth-title {
+        text-align: center;
+        color: white;
+        font-size: 36px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    .auth-subtitle {
+        text-align: center;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 18px;
+        margin-bottom: 40px;
+    }
+    .app-icon {
+        text-align: center;
+        font-size: 72px;
+        margin-bottom: 20px;
+        animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    .auth-footer {
+        text-align: center;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 14px;
+        margin-top: 30px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # 中央配置のコンテナ
+    col1, col2, col3 = st.columns([1, 3, 1])
+    
     with col2:
-        password = st.text_input(
-            "パスワードを入力してください",
-            type="password",
-            placeholder="パスワードを入力"
-        )
+        # 認証フォームコンテナ
+        st.markdown("""
+        <div class="auth-container">
+            <div class="app-icon">🎰</div>
+            <h1 class="auth-title">パチンコグラフ解析</h1>
+            <p class="auth-subtitle">システムにアクセスするには認証が必要です</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        if st.button("ログイン", type="primary", use_container_width=True):
-            if password == "059":
-                st.session_state.authenticated = True
-                st.success("✅ 認証に成功しました")
-                st.rerun()
-            else:
-                st.error("❌ パスワードが正しくありません")
+        # パスワード入力フォーム
+        with st.form("auth_form", clear_on_submit=False):
+            st.markdown("### 🔐 パスワード認証")
+            password = st.text_input(
+                "パスワード",
+                type="password",
+                placeholder="パスワードを入力してください",
+                label_visibility="collapsed"
+            )
+            
+            # ボタンを中央に配置
+            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+            with col_btn2:
+                submitted = st.form_submit_button(
+                    "ログイン", 
+                    type="primary", 
+                    use_container_width=True
+                )
+            
+            if submitted:
+                if password == "059":
+                    st.session_state.authenticated = True
+                    st.success("✅ 認証に成功しました！")
+                    st.balloons()
+                    st.rerun()
+                else:
+                    st.error("❌ パスワードが正しくありません")
+        
+        # フッター情報
+        st.markdown("""
+        <div class="auth-footer">
+            <p>© 2025 パチンコグラフ解析システム v2.0</p>
+            <p>Powered by ファイブナインデザイン</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # 認証されていない場合はここで処理を終了
     st.stop()
