@@ -116,6 +116,13 @@ with main_container:
             # 切り抜き範囲を描画した画像を作成
             display_img = img_array.copy()
             
+            # 0ラインを表示（設定されている場合）
+            if 'zero_line' in st.session_state:
+                zero_y = int(st.session_state.zero_line)
+                cv2.line(display_img, (0, zero_y), (width, zero_y), (0, 255, 0), 2)
+                cv2.putText(display_img, "0 Line", (10, zero_y - 10), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            
             # 切り抜き範囲を赤い四角で表示
             if crop_width > 0 and crop_height > 0:
                 # OpenCVで四角を描画（整数に変換）
@@ -230,26 +237,106 @@ with main_container:
                     st.session_state.right = width - margin
                     st.rerun()
             
-            # 数値入力で切り抜き範囲を指定
-            st.markdown("**手動調整**")
+            # 0ライン基準の手動調整
+            st.markdown("**手動調整（0ライン基準）**")
             
-            # 2列レイアウトで数値入力
-            num_col1, num_col2 = st.columns(2)
+            # まず0ラインを検出または手動設定
+            zero_line_y = st.number_input(
+                "0ライン位置 (px)", 
+                0.0, 
+                float(height), 
+                float(st.session_state.get('zero_line', height/2)), 
+                step=1.0, 
+                format="%.1f",
+                key="zero_line_input",
+                help="グラフの0ラインの位置を指定してください"
+            )
             
-            with num_col1:
-                new_top = st.number_input("上端 (px)", 0.0, float(height), float(top), step=1.0, format="%.1f", key="num_top")
-                new_left = st.number_input("左端 (px)", 0.0, float(width), float(left), step=1.0, format="%.1f", key="num_left")
+            # 0ライン検出ボタン
+            if st.button("0ラインを自動検出", use_container_width=True):
+                # Pattern3の0ライン検出ロジック
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+                hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+                
+                # オレンジバー検出
+                orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
+                orange_bottom = 150
+                for y in range(height//2):
+                    if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
+                        orange_bottom = y
+                        break
+                
+                # 0ライン検出
+                search_start = orange_bottom + 50
+                search_end = min(height - 100, orange_bottom + 400)
+                best_score = 0
+                detected_zero = (search_start + search_end) // 2
+                
+                for y in range(search_start, search_end):
+                    row = gray[y, 100:width-100]
+                    darkness = 1.0 - (np.mean(row) / 255.0)
+                    uniformity = 1.0 - (np.std(row) / 128.0)
+                    score = darkness * 0.5 + uniformity * 0.5
+                    if score > best_score:
+                        best_score = score
+                        detected_zero = y
+                
+                st.session_state.zero_line = detected_zero
+                st.rerun()
             
-            with num_col2:
-                new_bottom = st.number_input("下端 (px)", 0.0, float(height), float(bottom), step=1.0, format="%.1f", key="num_bottom")
-                new_right = st.number_input("右端 (px)", 0.0, float(width), float(right), step=1.0, format="%.1f", key="num_right")
+            # 0ラインからの範囲指定
+            st.markdown("**切り抜き範囲**")
+            
+            # 上下の範囲
+            pixels_above = st.number_input(
+                "0ラインから上方向 (px)", 
+                0.0, 
+                float(height), 
+                250.0, 
+                step=10.0, 
+                format="%.1f",
+                key="pixels_above",
+                help="0ラインから上に何ピクセル含めるか"
+            )
+            
+            pixels_below = st.number_input(
+                "0ラインから下方向 (px)", 
+                0.0, 
+                float(height), 
+                250.0, 
+                step=10.0, 
+                format="%.1f",
+                key="pixels_below",
+                help="0ラインから下に何ピクセル含めるか"
+            )
+            
+            # 左右の余白
+            horizontal_margin = st.number_input(
+                "左右の余白 (px)", 
+                0.0, 
+                float(width/2), 
+                100.0, 
+                step=10.0, 
+                format="%.1f",
+                key="horizontal_margin",
+                help="左右の端から除外するピクセル数"
+            )
+            
+            # 新しい切り抜き範囲を計算
+            new_top = max(0, zero_line_y - pixels_above)
+            new_bottom = min(height, zero_line_y + pixels_below)
+            new_left = horizontal_margin
+            new_right = width - horizontal_margin
             
             # 値が変更されたら更新
-            if new_top != top or new_bottom != bottom or new_left != left or new_right != right:
+            if (new_top != top or new_bottom != bottom or 
+                new_left != left or new_right != right or
+                zero_line_y != st.session_state.get('zero_line', height/2)):
                 st.session_state.top = new_top
                 st.session_state.bottom = new_bottom
                 st.session_state.left = new_left
                 st.session_state.right = new_right
+                st.session_state.zero_line = zero_line_y
                 st.rerun()
             
             if crop_width > 0 and crop_height > 0:
