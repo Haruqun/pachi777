@@ -87,15 +87,17 @@ with main_container:
         img_array = np.array(image)
         height, width = img_array.shape[:2]
         
-        # 初期値を設定
+        # 初期値を設定（浮動小数点として）
         if 'top' not in st.session_state:
-            st.session_state.top = 0
+            st.session_state.top = 0.0
         if 'bottom' not in st.session_state:
-            st.session_state.bottom = height
+            st.session_state.bottom = float(height)
         if 'left' not in st.session_state:
-            st.session_state.left = 0
+            st.session_state.left = 0.0
         if 'right' not in st.session_state:
-            st.session_state.right = width
+            st.session_state.right = float(width)
+        if 'zero_line' not in st.session_state:
+            st.session_state.zero_line = float(height) / 2.0
         
         # 現在の値を取得
         top = st.session_state.get('top', 0)
@@ -328,10 +330,13 @@ with main_container:
             new_left = horizontal_margin
             new_right = width - horizontal_margin
             
-            # 値が変更されたら更新
-            if (new_top != top or new_bottom != bottom or 
-                new_left != left or new_right != right or
-                zero_line_y != st.session_state.get('zero_line', height/2)):
+            # 値が変更されたら更新（小数点の誤差を考慮）
+            epsilon = 0.01  # 許容誤差
+            if (abs(new_top - top) > epsilon or 
+                abs(new_bottom - bottom) > epsilon or 
+                abs(new_left - left) > epsilon or 
+                abs(new_right - right) > epsilon or
+                abs(zero_line_y - st.session_state.get('zero_line', height/2)) > epsilon):
                 st.session_state.top = new_top
                 st.session_state.bottom = new_bottom
                 st.session_state.left = new_left
