@@ -163,31 +163,11 @@ if not st.session_state.authenticated:
         text-align: center;
     }
     
-    /* アイコン */
-    .login-icon {
-        font-size: 64px;
-        margin-bottom: 24px;
-        display: inline-block;
-        animation: bounce 2s infinite;
-    }
-    
-    @keyframes bounce {
-        0%, 20%, 50%, 80%, 100% {
-            transform: translateY(0);
-        }
-        40% {
-            transform: translateY(-10px);
-        }
-        60% {
-            transform: translateY(-5px);
-        }
-    }
-    
     /* タイトル */
     .login-title {
         font-size: 28px;
         font-weight: 700;
-        color: #1a1a1a;
+        color: #ffffff;
         margin-bottom: 8px;
         line-height: 1.2;
     }
@@ -195,7 +175,7 @@ if not st.session_state.authenticated:
     /* サブタイトル */
     .login-subtitle {
         font-size: 16px;
-        color: #666;
+        color: #cccccc;
         margin-bottom: 32px;
         line-height: 1.5;
     }
@@ -242,15 +222,15 @@ if not st.session_state.authenticated:
     .login-footer {
         margin-top: 48px;
         padding-top: 24px;
-        border-top: 1px solid #e0e0e0;
-        color: #666;
+        border-top: 1px solid #444;
+        color: #aaa;
         font-size: 14px;
         line-height: 1.8;
         text-align: center;
     }
     
     .login-footer a {
-        color: #667eea;
+        color: #8899ff;
         text-decoration: none;
     }
     
@@ -268,7 +248,6 @@ if not st.session_state.authenticated:
     with col2:
         st.markdown("""
         <div class="login-card">
-            <div class="login-icon">🎰</div>
             <h1 class="login-title">パチンコグラフ解析</h1>
             <p class="login-subtitle">認証が必要です</p>
         </div>
