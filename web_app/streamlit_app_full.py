@@ -231,19 +231,8 @@ if uploaded_files:
                 prev_x = None
                 prev_y = None
                 
-                # 色の設定（検出色に応じて変更）
-                color_map = {
-                        'green': (0, 255, 0),
-                        'red': (0, 0, 255),
-                        'blue': (255, 0, 0),
-                        'yellow': (0, 255, 255),
-                        'cyan': (255, 255, 0),
-                        'magenta': (255, 0, 255),
-                        'orange': (0, 165, 255),
-                        'pink': (203, 192, 255),
-                        'purple': (255, 0, 255)
-                }
-                draw_color = color_map.get(dominant_color, (0, 255, 0))
+                # 緑色で統一（見やすさ重視）
+                draw_color = (0, 255, 0)  # 緑色固定
                 
                 # グラフポイントを描画
                 for x, value in graph_data_points:
