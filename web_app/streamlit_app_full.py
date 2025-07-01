@@ -255,36 +255,47 @@ with main_container:
             )
             
             # 0ライン検出ボタン
-            if st.button("0ラインを自動検出", use_container_width=True):
-                # Pattern3の0ライン検出ロジック
-                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-                hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
-                
-                # オレンジバー検出
-                orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
-                orange_bottom = 150
-                for y in range(height//2):
-                    if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
-                        orange_bottom = y
-                        break
-                
-                # 0ライン検出
-                search_start = orange_bottom + 50
-                search_end = min(height - 100, orange_bottom + 400)
-                best_score = 0
-                detected_zero = (search_start + search_end) // 2
-                
-                for y in range(search_start, search_end):
-                    row = gray[y, 100:width-100]
-                    darkness = 1.0 - (np.mean(row) / 255.0)
-                    uniformity = 1.0 - (np.std(row) / 128.0)
-                    score = darkness * 0.5 + uniformity * 0.5
-                    if score > best_score:
-                        best_score = score
-                        detected_zero = y
-                
-                st.session_state.zero_line = detected_zero
-                st.rerun()
+            if st.button("0ラインを自動検出（切り抜き範囲内）", use_container_width=True):
+                # 現在の切り抜き範囲内でのみ0ラインを検出
+                if crop_width > 0 and crop_height > 0:
+                    # 切り抜き範囲の画像を取得
+                    cropped_for_detection = img_array[int(top):int(bottom), int(left):int(right)]
+                    gray_cropped = cv2.cvtColor(cropped_for_detection, cv2.COLOR_RGB2GRAY)
+                    
+                    # 切り抜き範囲内で0ライン検出
+                    crop_height_int = gray_cropped.shape[0]
+                    best_score = 0
+                    detected_zero_in_crop = crop_height_int // 2  # デフォルトは中央
+                    
+                    # 切り抜き範囲の中央付近を重点的に探索
+                    search_start = max(crop_height_int // 4, 0)
+                    search_end = min(crop_height_int * 3 // 4, crop_height_int)
+                    
+                    for y in range(search_start, search_end):
+                        if y < gray_cropped.shape[0]:
+                            # 左右の余白を除いた中央部分を評価
+                            margin = 20
+                            if gray_cropped.shape[1] > margin * 2:
+                                row = gray_cropped[y, margin:-margin]
+                            else:
+                                row = gray_cropped[y, :]
+                            
+                            # 暗い水平線を探す
+                            darkness = 1.0 - (np.mean(row) / 255.0)
+                            uniformity = 1.0 - (np.std(row) / 128.0)
+                            score = darkness * 0.5 + uniformity * 0.5
+                            
+                            if score > best_score:
+                                best_score = score
+                                detected_zero_in_crop = y
+                    
+                    # 元画像での座標に変換
+                    detected_zero = int(top) + detected_zero_in_crop
+                    st.session_state.zero_line = float(detected_zero)
+                    st.success(f"0ラインを検出しました: {detected_zero:.1f}px")
+                    st.rerun()
+                else:
+                    st.error("先に切り抜き範囲を設定してください")
             
             # 0ラインからの範囲指定
             st.markdown("**切り抜き範囲**")
