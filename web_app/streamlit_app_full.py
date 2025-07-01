@@ -87,6 +87,26 @@ with main_container:
         img_array = np.array(image)
         height, width = img_array.shape[:2]
         
+        # 初期値を設定
+        if 'top' not in st.session_state:
+            st.session_state.top = 0
+        if 'bottom' not in st.session_state:
+            st.session_state.bottom = height
+        if 'left' not in st.session_state:
+            st.session_state.left = 0
+        if 'right' not in st.session_state:
+            st.session_state.right = width
+        
+        # 現在の値を取得
+        top = st.session_state.get('top', 0)
+        bottom = st.session_state.get('bottom', height)
+        left = st.session_state.get('left', 0)
+        right = st.session_state.get('right', width)
+        
+        # 切り抜きサイズを計算
+        crop_width = right - left
+        crop_height = bottom - top
+        
         # 2列レイアウト
         col1, col2 = st.columns([1, 1])
         
@@ -170,14 +190,24 @@ with main_container:
             
             # スライダーで切り抜き範囲を指定
             st.markdown("**手動調整**")
-            top = st.slider("上端位置", 0, height, st.session_state.get('top', 0), key="top")
-            bottom = st.slider("下端位置", 0, height, st.session_state.get('bottom', height), key="bottom")
-            left = st.slider("左端位置", 0, width, st.session_state.get('left', 0), key="left")
-            right = st.slider("右端位置", 0, width, st.session_state.get('right', width), key="right")
+            new_top = st.slider("上端位置", 0, height, top, key="slider_top")
+            new_bottom = st.slider("下端位置", 0, height, bottom, key="slider_bottom")
+            new_left = st.slider("左端位置", 0, width, left, key="slider_left")
+            new_right = st.slider("右端位置", 0, width, right, key="slider_right")
             
-            # 切り抜きサイズを表示
-            crop_width = right - left
-            crop_height = bottom - top
+            # 値が変更されたら更新
+            if new_top != top:
+                st.session_state.top = new_top
+                st.rerun()
+            if new_bottom != bottom:
+                st.session_state.bottom = new_bottom
+                st.rerun()
+            if new_left != left:
+                st.session_state.left = new_left
+                st.rerun()
+            if new_right != right:
+                st.session_state.right = new_right
+                st.rerun()
             
             if crop_width > 0 and crop_height > 0:
                 st.info(f"切り抜きサイズ: {crop_width}×{crop_height}px")
