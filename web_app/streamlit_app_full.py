@@ -122,13 +122,19 @@ with st.expander("⚙️ 画像解析の調整設定"):
     default_settings = {
         'search_start_offset': 50,
         'search_end_offset': 400,
-        'img_search_start_offset': 200,
-        'img_search_end_offset': 800,
         'crop_top': 246,
         'crop_bottom': 247,
         'left_margin': 125,
         'right_margin': 125
     }
+    
+    # テスト画像のアップロード
+    test_image = st.file_uploader(
+        "🖼️ テスト用画像をアップロード",
+        type=['jpg', 'jpeg', 'png'],
+        help="調整用の画像を1枚アップロードしてください",
+        key="test_image"
+    )
     
     # LocalStorageとの連携用JavaScript
     st.markdown("""
@@ -158,35 +164,53 @@ with st.expander("⚙️ 画像解析の調整設定"):
     </script>
     """, unsafe_allow_html=True)
     
+    # 設定値の初期化
+    if test_image:
+        # 画像を読み込み
+        img_array = np.array(Image.open(test_image).convert('RGB'))
+        height, width = img_array.shape[:2]
+        
+        # オレンジバーを検出
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
+        orange_bottom = 0
+        
+        for y in range(height//2):
+            if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
+                orange_bottom = y
+        
+        if orange_bottom > 0:
+            for y in range(orange_bottom, min(orange_bottom + 100, height)):
+                if np.sum(orange_mask[y, :]) < width * 0.1 * 255:
+                    orange_bottom = y
+                    break
+        else:
+            orange_bottom = 150
+        
+        # グレースケール変換
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        
+        st.info(f"画像サイズ: {width}x{height}px")
+    
+    # 設定用の入力フィールド
+    st.markdown("### 🔍 ゼロライン検索設定")
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("**通常画像の設定**")
         search_start_offset = st.number_input(
-            "ゼロライン検索開始位置（オレンジバーから）",
-            min_value=0, max_value=500, value=default_settings['search_start_offset'],
+            "検索開始位置（オレンジバーから）",
+            min_value=0, max_value=800, value=default_settings['search_start_offset'],
             step=10, help="オレンジバーから何ピクセル下から検索を開始するか"
-        )
-        search_end_offset = st.number_input(
-            "ゼロライン検索終了位置（オレンジバーから）",
-            min_value=100, max_value=1000, value=default_settings['search_end_offset'],
-            step=50, help="オレンジバーから何ピクセル下まで検索するか"
         )
     
     with col2:
-        st.markdown("**IMG_0xxx.PNG用の設定**")
-        img_search_start_offset = st.number_input(
-            "ゼロライン検索開始位置（IMG用）",
-            min_value=0, max_value=500, value=default_settings['img_search_start_offset'],
-            step=10, help="IMG_0xxx.PNG用の検索開始位置"
-        )
-        img_search_end_offset = st.number_input(
-            "ゼロライン検索終了位置（IMG用）",
-            min_value=100, max_value=1200, value=default_settings['img_search_end_offset'],
-            step=50, help="IMG_0xxx.PNG用の検索終了位置"
+        search_end_offset = st.number_input(
+            "検索終了位置（オレンジバーから）",
+            min_value=100, max_value=1200, value=default_settings['search_end_offset'],
+            step=50, help="オレンジバーから何ピクセル下まで検索するか"
         )
     
-    st.markdown("**切り抜きサイズの設定**")
+    st.markdown("### ✂️ 切り抜きサイズの設定")
     col3, col4 = st.columns(2)
     
     with col3:
@@ -213,18 +237,97 @@ with st.expander("⚙️ 画像解析の調整設定"):
             step=25, help="右側から何ピクセル除外するか"
         )
     
+    # リアルタイムプレビュー
+    if test_image:
+        st.markdown("### 🖼️ リアルタイムプレビュー")
+        
+        # 現在の設定で切り抜き処理を実行
+        search_start = orange_bottom + search_start_offset
+        search_end = min(height - 100, orange_bottom + search_end_offset)
+        
+        # ゼロライン検出
+        best_score = 0
+        zero_line_y = (search_start + search_end) // 2
+        
+        for y in range(search_start, search_end):
+            row = gray[y, 100:width-100]
+            darkness = 1.0 - (np.mean(row) / 255.0)
+            uniformity = 1.0 - (np.std(row) / 128.0)
+            score = darkness * 0.5 + uniformity * 0.5
+            
+            if score > best_score:
+                best_score = score
+                zero_line_y = y
+        
+        # 切り抜き
+        top = max(0, zero_line_y - crop_top)
+        bottom = min(height, zero_line_y + crop_bottom)
+        left = left_margin
+        right = width - right_margin
+        
+        # オーバーレイ画像を作成
+        overlay_img = img_array.copy()
+        
+        # 検索範囲を可視化（半透明の緑）
+        overlay = overlay_img.copy()
+        cv2.rectangle(overlay, (100, search_start), (width-100, search_end), (0, 255, 0), -1)
+        overlay_img = cv2.addWeighted(overlay_img, 0.7, overlay, 0.3, 0)
+        
+        # 検出したゼロラインを描画（赤）
+        cv2.line(overlay_img, (0, zero_line_y), (width, zero_line_y), (255, 0, 0), 3)
+        cv2.putText(overlay_img, f'Zero Line (score: {best_score:.3f})', (10, zero_line_y - 10), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+        
+        # 切り抜き範囲を描画（青）
+        cv2.rectangle(overlay_img, (left, int(top)), (right, int(bottom)), (0, 0, 255), 3)
+        
+        # オレンジバーの位置を表示（オレンジ）
+        cv2.line(overlay_img, (0, orange_bottom), (width, orange_bottom), (255, 165, 0), 2)
+        cv2.putText(overlay_img, 'Orange Bar', (10, orange_bottom + 30), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 165, 0), 2)
+        
+        # プレビューを表示
+        col_preview, col_cropped = st.columns(2)
+        
+        with col_preview:
+            st.caption("元画像（調整範囲を表示）")
+            st.image(overlay_img, use_column_width=True)
+        
+        with col_cropped:
+            st.caption("切り抜き結果")
+            cropped_preview = img_array[int(top):int(bottom), int(left):int(right)].copy()
+            
+            # グリッドラインを追加
+            zero_in_crop = zero_line_y - top
+            cv2.line(cropped_preview, (0, int(zero_in_crop)), (cropped_preview.shape[1], int(zero_in_crop)), (255, 0, 0), 2)
+            
+            # ±30000のライン
+            scale = 122.0
+            for val, color in [(30000, (128, 128, 128)), (-30000, (128, 128, 128))]:
+                y_offset = int(val / scale)
+                y_pos = int(zero_in_crop - y_offset)
+                if 0 <= y_pos < cropped_preview.shape[0]:
+                    cv2.line(cropped_preview, (0, y_pos), (cropped_preview.shape[1], y_pos), color, 2)
+            
+            st.image(cropped_preview, use_column_width=True)
+        
+        # 情報表示
+        st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
+        st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
+    
     # 設定を保存するボタン
-    if st.button("💾 設定を保存", type="primary"):
-        settings = {
-            'search_start_offset': search_start_offset,
-            'search_end_offset': search_end_offset,
-            'img_search_start_offset': img_search_start_offset,
-            'img_search_end_offset': img_search_end_offset,
-            'crop_top': crop_top,
-            'crop_bottom': crop_bottom,
-            'left_margin': left_margin,
-            'right_margin': right_margin
-        }
+    col_save, col_reset = st.columns(2)
+    
+    with col_save:
+        if st.button("💾 設定を保存", type="primary", use_container_width=True):
+            settings = {
+                'search_start_offset': search_start_offset,
+                'search_end_offset': search_end_offset,
+                'crop_top': crop_top,
+                'crop_bottom': crop_bottom,
+                'left_margin': left_margin,
+                'right_margin': right_margin
+            }
         
         # JavaScriptで保存
         st.markdown(f"""
@@ -250,8 +353,6 @@ if 'settings' not in st.session_state:
     st.session_state.settings = {
         'search_start_offset': search_start_offset,
         'search_end_offset': search_end_offset,
-        'img_search_start_offset': img_search_start_offset,
-        'img_search_end_offset': img_search_end_offset,
         'crop_top': crop_top,
         'crop_bottom': crop_bottom,
         'left_margin': left_margin,
@@ -320,7 +421,7 @@ if uploaded_files:
         # ゼロライン検出
         gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
         
-        # IMG_0xxx.PNGシリーズの検出
+        # IMG_0xxx.PNGシリーズの検出（H案の自動調整）
         is_img_series = False
         if height > 2400 and height < 2700:
             if orange_bottom < 1000:  # オレンジバーが上部にある
@@ -334,8 +435,6 @@ if uploaded_files:
         settings = st.session_state.get('settings', {
             'search_start_offset': 50,
             'search_end_offset': 400,
-            'img_search_start_offset': 200,
-            'img_search_end_offset': 800,
             'crop_top': 246,
             'crop_bottom': 247,
             'left_margin': 125,
@@ -343,19 +442,17 @@ if uploaded_files:
         })
         
         if is_img_series:
-            # IMG_0xxx.PNG用の拡張検索範囲
-            search_start = orange_bottom + settings['img_search_start_offset']
-            search_end = min(height - 300, orange_bottom + settings['img_search_end_offset'])
-            # IMG_0xxx.PNG用のスケール（±30000固定）
-            crop_top_offset = settings['crop_top']
-            crop_bottom_offset = settings['crop_bottom']
+            # IMG_0xxx.PNG用の拡張検索範囲（H案：自動で拡張）
+            search_start = orange_bottom + 200  # より下から開始
+            search_end = min(height - 300, orange_bottom + 800)  # より広い範囲
         else:
-            # 通常の検索範囲
+            # 通常の検索範囲（設定値を使用）
             search_start = orange_bottom + settings['search_start_offset']
             search_end = min(height - 100, orange_bottom + settings['search_end_offset'])
-            # 通常のスケール（±30000）
-            crop_top_offset = settings['crop_top']
-            crop_bottom_offset = settings['crop_bottom']
+        
+        # 共通の切り抜きサイズ（±30000）
+        crop_top_offset = settings['crop_top']
+        crop_bottom_offset = settings['crop_bottom']
         
         best_score = 0
         zero_line_y = (search_start + search_end) // 2
