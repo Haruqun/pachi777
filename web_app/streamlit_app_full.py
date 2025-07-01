@@ -369,17 +369,7 @@ if uploaded_files:
     # 結果をグリッド表示
     st.markdown("### 📊 解析結果一覧")
     
-    # 元画像を折りたたみ可能に
-    with st.expander("📷 元画像を表示"):
-        # 元画像を2列で表示
-        cols = st.columns(2)
-        for idx, result in enumerate(analysis_results):
-            with cols[idx % 2]:
-                st.markdown(f"**{idx + 1}. {result['name']}**")
-                st.image(result['original_image'], use_column_width=True)
-    
     # 解析結果を2列で表示
-    st.markdown("### 🎯 解析結果")
     cols = st.columns(2)
     
     for idx, result in enumerate(analysis_results):
@@ -389,6 +379,10 @@ if uploaded_files:
             
             # 解析結果画像
             st.image(result['overlay_image'], use_column_width=True)
+            
+            # 元画像を折りたたみ可能に
+            with st.expander("📷 元画像を表示"):
+                st.image(result['original_image'], use_column_width=True)
             
             # 成功時は統計情報を表示（解析結果の下に縦に並べる）
             if result['success']:
