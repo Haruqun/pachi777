@@ -95,8 +95,8 @@ def extract_site7_data(image):
         max_payout_patterns = [
             r'最高出玉\s*(\d{3,5})',
             r'(\d{3,5})\s*最高',
-            r'出玉\s*(\d{3,5})',
-            r'(\d{4,5})(?=\s|$)'  # 4-5桁の独立した数字（最後の手段）
+            r'出玉\s*(\d{3,5})'
+            # 最後の手段のパターンを削除（誤検出を防ぐため）
         ]
         
         for pattern in max_payout_patterns:
@@ -549,7 +549,7 @@ if uploaded_files:
                 """, unsafe_allow_html=True)
                 
                 # OCRデータがある場合は表示
-                if result.get('ocr_data'):
+                if result.get('ocr_data') and any(result['ocr_data'].values()):
                     ocr = result['ocr_data']
                     st.markdown("""
                     <style>
