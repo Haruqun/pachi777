@@ -90,7 +90,7 @@ class WebCompatibleAnalyzer:
             pass
     
     def crop_graph_area(self, image_path):
-        """グラフ領域の切り抜き（production版と同じロジック）"""
+        """グラフ領域の切り抜き（Pattern3: Zero Line Based）"""
         img = cv2.imread(image_path)
         if img is None:
             print(f"Error: Could not read image {image_path}")
@@ -109,80 +109,57 @@ class WebCompatibleAnalyzer:
             if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
                 orange_bottom = y
         
-        if orange_bottom == 0:
-            print(f"Warning: Could not detect orange bar in {image_path}")
-            # デフォルト値を使用
-            orange_bottom = int(height * 0.1)
-        
-        # 2. Y軸ラベル領域を推定
-        y_label_top = orange_bottom + 50  # デフォルト
-        search_area = gray[orange_bottom+20:min(orange_bottom+200, height), :width//3]
-        
-        if search_area.size > 0:
-            for y in range(search_area.shape[0]):
-                row_variance = np.var(search_area[y, :])
-                if row_variance > 500:  # テキストがある
-                    y_label_top = orange_bottom + 20 + y
+        # オレンジバーの下端を正確に見つける
+        if orange_bottom > 0:
+            for y in range(orange_bottom, min(orange_bottom + 100, height)):
+                if np.sum(orange_mask[y, :]) < width * 0.1 * 255:
+                    orange_bottom = y
                     break
-        
-        # 3. グラフの境界を定義（production版と同じ設定）
-        # オレンジバーの下から適切な位置を計算
-        graph_top = orange_bottom + 100  # オレンジバーの下100pxから開始
-        graph_left = 120  # 左マージン
-        graph_right = width - 150  # 右マージン
-        
-        # 境界チェック
-        graph_top = max(0, graph_top)
-        graph_left = max(0, graph_left)
-        graph_right = min(width, graph_right)
-        
-        # 4. ゼロラインを検出
-        if graph_top < height and graph_right > graph_left:
-            graph_region = gray[graph_top:min(graph_top+600, height), graph_left:graph_right]
-            
-            best_zero_y = 250  # デフォルト
-            if graph_region.size > 0:
-                best_score = -1
-                
-                for y in range(100, min(500, graph_region.shape[0]-100)):
-                    if y < graph_region.shape[0]:
-                        row = graph_region[y, :]
-                        darkness = 1.0 - (np.mean(row) / 255.0)
-                        uniformity = 1.0 - (np.std(row) / 128.0)
-                        score = darkness * 0.5 + uniformity * 0.5
-                        
-                        if score > best_score:
-                            best_score = score
-                            best_zero_y = y
         else:
-            best_zero_y = 250
+            # デフォルト値を使用
+            orange_bottom = 150
         
-        # 5. グラフの下端を決定
-        # 適切なサイズになるように調整
-        graph_bottom = graph_top + 500  # 約500pxの高さ
-        graph_bottom = min(graph_bottom, height)
+        # 2. ゼロライン検出（Pattern3の核心部分）
+        search_start = orange_bottom + 50
+        search_end = min(height - 100, orange_bottom + 400)
         
-        # 6. 切り抜き
+        best_score = 0
+        zero_line_y = (search_start + search_end) // 2
+        
+        for y in range(search_start, search_end):
+            row = gray[y, 100:width-100]
+            # 暗い水平線を探す
+            darkness = 1.0 - (np.mean(row) / 255.0)
+            uniformity = 1.0 - (np.std(row) / 128.0)
+            score = darkness * 0.5 + uniformity * 0.5
+            
+            if score > best_score:
+                best_score = score
+                zero_line_y = y
+        
+        # 3. ゼロラインから上下に拡張（Pattern3のアプローチ）
+        graph_top = max(orange_bottom + 20, zero_line_y - 250)
+        graph_bottom = min(height - 50, zero_line_y + 250)
+        graph_left = 100
+        graph_right = width - 100
+        
+        # 4. 切り抜き
         if graph_bottom > graph_top and graph_right > graph_left:
             cropped = img[graph_top:graph_bottom, graph_left:graph_right]
             
-            # サイズチェック
-            if cropped.shape[0] > 10 and cropped.shape[1] > 10:
-                # 最適サイズ（689×558px）にリサイズ
-                target_width = 689
-                target_height = 558
-                cropped = cv2.resize(cropped, (target_width, target_height), interpolation=cv2.INTER_CUBIC)
-                
-                # ゼロライン位置を更新（リサイズ後）
-                resize_ratio = target_height / (graph_bottom - graph_top)
-                self.zero_y = int(best_zero_y * resize_ratio)
-                
-                # BGRフォーマットを確認（OpenCVのデフォルト）
-                if len(cropped.shape) == 3 and cropped.shape[2] == 3:
-                    return cropped
-                else:
-                    print(f"Warning: Unexpected image format after crop: {cropped.shape}")
-                    return None
+            # 保存用：オリジナルサイズで保存
+            cropped_path = os.path.join(self.work_dir, f"cropped_{os.path.basename(image_path)}")
+            cv2.imwrite(cropped_path, cropped)
+            
+            # ゼロライン位置を相対座標で保存
+            self.zero_y = zero_line_y - graph_top
+            
+            # BGRフォーマットを確認
+            if len(cropped.shape) == 3 and cropped.shape[2] == 3:
+                return cropped
+            else:
+                print(f"Warning: Unexpected image format after crop: {cropped.shape}")
+                return None
         
         print(f"Warning: Invalid crop dimensions for {image_path}")
         return None
