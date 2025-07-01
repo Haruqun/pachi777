@@ -145,111 +145,166 @@ if 'authenticated' not in st.session_state:
 
 # パスワード認証
 if not st.session_state.authenticated:
-    # カスタムスタイルの適用
+    # モダンなログイン画面のスタイル
     st.markdown("""
     <style>
-    .stApp > main {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
+    /* メインコンテナを中央配置 */
+    .main > div {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
     }
-    .auth-container {
-        background: transparent;
-        padding: 60px 40px;
-        margin: 50px auto;
-        max-width: 500px;
+    
+    /* ログインカード */
+    .login-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        padding: 48px;
+        max-width: 400px;
+        margin: 0 auto;
         text-align: center;
     }
-    .auth-title {
-        text-align: center;
-        color: white;
-        font-size: 36px;
+    
+    /* アイコン */
+    .login-icon {
+        font-size: 64px;
+        margin-bottom: 24px;
+        display: inline-block;
+        animation: bounce 2s infinite;
+    }
+    
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-10px);
+        }
+        60% {
+            transform: translateY(-5px);
+        }
+    }
+    
+    /* タイトル */
+    .login-title {
+        font-size: 28px;
         font-weight: 700;
-        margin-bottom: 10px;
+        color: #1a1a1a;
+        margin-bottom: 8px;
+        line-height: 1.2;
     }
-    .auth-subtitle {
-        text-align: center;
+    
+    /* サブタイトル */
+    .login-subtitle {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 32px;
+        line-height: 1.5;
+    }
+    
+    /* フォームスタイル */
+    .stTextInput > div > div > input {
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        padding: 12px 16px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+    }
+    
+    .stTextInput > div > div > input:focus {
+        border-color: #667eea;
+        outline: none;
+    }
+    
+    /* ボタンスタイル */
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        font-size: 18px;
-        margin-bottom: 40px;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+        width: 100%;
     }
-    .app-icon {
-        text-align: center;
-        font-size: 72px;
-        margin-bottom: 20px;
-        animation: pulse 2s ease-in-out infinite;
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
     }
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
+    
+    /* エラーメッセージ */
+    .stAlert {
+        border-radius: 8px;
+        margin-top: 16px;
     }
-    .auth-footer {
-        text-align: center;
+    
+    /* フッター */
+    .login-footer {
+        margin-top: 48px;
+        padding-top: 24px;
+        border-top: 1px solid #e0e0e0;
         color: #666;
         font-size: 14px;
-        margin-top: 30px;
+        line-height: 1.8;
     }
-    .stForm {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 30px;
-        border-radius: 10px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+    
+    .login-footer a {
+        color: #667eea;
+        text-decoration: none;
+    }
+    
+    .login-footer a:hover {
+        text-decoration: underline;
     }
     </style>
     """, unsafe_allow_html=True)
     
-    # 中央配置のコンテナ
-    col1, col2, col3 = st.columns([1, 3, 1])
+    # スペーサー
+    st.markdown("<br><br>", unsafe_allow_html=True)
     
+    # ログインカード
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        # 認証フォームコンテナ
         st.markdown("""
-        <div class="auth-container">
-            <div class="app-icon">🎰</div>
-            <h1 class="auth-title">パチンコグラフ解析</h1>
-            <p class="auth-subtitle">システムにアクセスするには認証が必要です</p>
+        <div class="login-card">
+            <div class="login-icon">🎰</div>
+            <h1 class="login-title">パチンコグラフ解析</h1>
+            <p class="login-subtitle">認証が必要です</p>
         </div>
         """, unsafe_allow_html=True)
         
-        # パスワード入力フォーム
-        with st.form("auth_form", clear_on_submit=False):
-            st.markdown("### 🔐 パスワード認証")
-            password = st.text_input(
-                "パスワード",
-                type="password",
-                placeholder="パスワードを入力してください",
-                label_visibility="collapsed"
-            )
-            
-            # ボタンを中央に配置
-            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-            with col_btn2:
-                submitted = st.form_submit_button(
-                    "ログイン", 
-                    type="primary", 
-                    use_container_width=True
-                )
-            
-            if submitted:
-                if password == "059":
-                    st.session_state.authenticated = True
-                    st.success("✅ 認証に成功しました！")
-                    st.balloons()
-                    st.rerun()
-                else:
-                    st.error("❌ パスワードが正しくありません")
+        # スペース
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        # フッター情報（メインページと同じ）
-        st.markdown("---")
+        # パスワード入力
+        password = st.text_input(
+            "パスワード",
+            type="password",
+            placeholder="パスワードを入力",
+            label_visibility="collapsed",
+            key="password_input"
+        )
+        
+        # ログインボタン
+        if st.button("ログイン", type="primary", use_container_width=True):
+            if password == "059":
+                st.session_state.authenticated = True
+                st.success("✅ ログインしました")
+                st.rerun()
+            else:
+                st.error("❌ パスワードが違います")
+        
+        # フッター
         st.markdown(f"""
-        🎰 パチンコグラフ解析システム v2.0  
-        更新日: {datetime.now().strftime('%Y/%m/%d')}  
-        Produced by [PPタウン](https://pp-town.com/)  
-        Created by [fivenine-design.com](https://fivenine-design.com)
-        """)
+        <div class="login-footer">
+            パチンコグラフ解析システム v2.0<br>
+            更新日: {datetime.now().strftime('%Y/%m/%d')}<br>
+            Produced by <a href="https://pp-town.com/" target="_blank">PPタウン</a><br>
+            Created by <a href="https://fivenine-design.com" target="_blank">fivenine-design.com</a>
+        </div>
+        """, unsafe_allow_html=True)
     
     # 認証されていない場合はここで処理を終了
     st.stop()
