@@ -140,6 +140,32 @@ if 'saved_presets' not in st.session_state:
 if 'show_adjustment' not in st.session_state:
     st.session_state.show_adjustment = False
 
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+# パスワード認証
+if not st.session_state.authenticated:
+    st.markdown("## 🔐 認証が必要です")
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        password = st.text_input(
+            "パスワードを入力してください",
+            type="password",
+            placeholder="パスワードを入力"
+        )
+        
+        if st.button("ログイン", type="primary", use_container_width=True):
+            if password == "059":
+                st.session_state.authenticated = True
+                st.success("✅ 認証に成功しました")
+                st.rerun()
+            else:
+                st.error("❌ パスワードが正しくありません")
+    
+    # 認証されていない場合はここで処理を終了
+    st.stop()
+
 # プリセットをファイルから読み込み
 try:
     import pickle
@@ -505,17 +531,16 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         if test_image:
             with main_col2:
                 st.markdown("### 🗑️ プリセットの削除")
-                delete_col1, delete_col2 = st.columns([2, 1])
                 
-                with delete_col1:
-                    preset_to_delete = st.selectbox(
-                        "削除するプリセット",
-                        list(st.session_state.saved_presets.keys()),
-                        key="delete_preset"
-                    )
+                # プリセット選択（全幅）
+                preset_to_delete = st.selectbox(
+                    "削除するプリセット",
+                    list(st.session_state.saved_presets.keys()),
+                    key="delete_preset"
+                )
                 
-                with delete_col2:
-                    if st.button("🗑️ 削除", type="secondary", use_container_width=True):
+                # 削除ボタン
+                if st.button("🗑️ 削除", type="secondary", use_container_width=True):
                         if preset_to_delete:
                             del st.session_state.saved_presets[preset_to_delete]
                             
@@ -537,17 +562,16 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             st.rerun()
         else:
             st.markdown("### 🗑️ プリセットの削除")
-            delete_col1, delete_col2 = st.columns([2, 1])
             
-            with delete_col1:
-                preset_to_delete = st.selectbox(
-                    "削除するプリセット",
-                    list(st.session_state.saved_presets.keys()),
-                    key="delete_preset"
-                )
+            # プリセット選択（全幅）
+            preset_to_delete = st.selectbox(
+                "削除するプリセット",
+                list(st.session_state.saved_presets.keys()),
+                key="delete_preset"
+            )
             
-            with delete_col2:
-                if st.button("🗑️ 削除", type="secondary", use_container_width=True):
+            # 削除ボタン
+            if st.button("🗑️ 削除", type="secondary", use_container_width=True):
                     if preset_to_delete:
                         del st.session_state.saved_presets[preset_to_delete]
                         
