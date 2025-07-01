@@ -93,7 +93,7 @@ with main_container:
             
             # Pattern3: Zero Line Based の自動検出
             hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
-            orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255])
+            orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
             orange_bottom = 0
             
             # オレンジバーの検出
