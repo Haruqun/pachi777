@@ -355,8 +355,8 @@ if uploaded_files:
                                 slope = abs(change) / x_diff_spins
                                 debug_info.append(f"change={change:.1f}, spins={x_diff_spins:.1f}, slope={slope:.1f}")
                                 
-                                # 妥当な範囲の値のみ使用（8～30球/回転に拡大）
-                                if 8 <= slope <= 30:
+                                # 妥当な範囲の値のみ使用（5～35球/回転に拡大）
+                                if 5 <= slope <= 35:
                                     slopes.append(slope)
                         
                         if slopes and len(slopes) >= 2:  # 最低2つのサンプル
@@ -724,7 +724,7 @@ if uploaded_files:
                     # デバッグ用：検出情報を表示
                     if debug_info:
                         experimental_html += f'<div style="font-size: 0.7em; color: #856404; margin-top: 5px;">デバッグ: {"; ".join(debug_info[:3])}</div>'
-                        experimental_html += f'<div style="font-size: 0.7em; color: #856404;">検出された傾き: {len(debug_info)}個 / 有効: {len(slopes)}個</div>'
+                        experimental_html += f'<div style="font-size: 0.7em; color: #856404;">検出された傾き: {len(debug_info)}個 / 有効: {len(slopes)}個 (範囲: 5-35球/回転)</div>'
                         
                         # JSON形式のデバッグ情報を生成
                         debug_json = {
