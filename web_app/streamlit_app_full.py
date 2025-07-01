@@ -306,7 +306,7 @@ with main_container:
                 0.0, 
                 float(height), 
                 250.0, 
-                step=10.0, 
+                step=1.0, 
                 format="%.1f",
                 key="pixels_above",
                 help="0ラインから上に何ピクセル含めるか"
@@ -317,7 +317,7 @@ with main_container:
                 0.0, 
                 float(height), 
                 250.0, 
-                step=10.0, 
+                step=1.0, 
                 format="%.1f",
                 key="pixels_below",
                 help="0ラインから下に何ピクセル含めるか"
@@ -329,7 +329,7 @@ with main_container:
                 0.0, 
                 float(width/2), 
                 100.0, 
-                step=10.0, 
+                step=1.0, 
                 format="%.1f",
                 key="horizontal_margin",
                 help="左右の端から除外するピクセル数"
