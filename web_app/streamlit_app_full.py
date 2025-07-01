@@ -406,7 +406,7 @@ with main_container:
                     text = f'MAX: {int(max_val):,}'
                     cv2.rectangle(overlay_img, (10, max_y - 25), (150, max_y - 5), (255, 255, 255), -1)
                     cv2.putText(overlay_img, text, (15, max_y - 10), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 150, 150), 2, cv2.LINE_AA)
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 150, 150), 1, cv2.LINE_AA)
                 
                 # 最低値ライン
                 min_y = int(zero_line_in_crop - (min_val / analyzer.scale))
@@ -416,7 +416,7 @@ with main_container:
                     text = f'MIN: {int(min_val):,}'
                     cv2.rectangle(overlay_img, (10, min_y + 5), (150, min_y + 25), (255, 255, 255), -1)
                     cv2.putText(overlay_img, text, (15, min_y + 20), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 0, 150), 2, cv2.LINE_AA)
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 0, 150), 1, cv2.LINE_AA)
                 
                 # 現在値ライン
                 current_y = int(zero_line_in_crop - (current_val / analyzer.scale))
@@ -428,7 +428,7 @@ with main_container:
                     cv2.rectangle(overlay_img, (overlay_img.shape[1] - text_width - 10, current_y - 25), 
                                  (overlay_img.shape[1] - 10, current_y - 5), (255, 255, 255), -1)
                     cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 5, current_y - 10), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 0), 2, cv2.LINE_AA)
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 0), 1, cv2.LINE_AA)
                 
                 # 初当たり値（垂直線と横線）
                 if first_hit_x is not None:
@@ -457,13 +457,13 @@ with main_container:
                             cv2.rectangle(overlay_img, (first_hit_x_coord + 5, text_y - 20), 
                                          (first_hit_x_coord + 165, text_y), (255, 255, 255), -1)
                             cv2.putText(overlay_img, text, (first_hit_x_coord + 10, text_y - 5), 
-                                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 2, cv2.LINE_AA)
+                                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 1, cv2.LINE_AA)
                         else:
                             # 右側の場合は左にテキスト配置
                             cv2.rectangle(overlay_img, (first_hit_x_coord - 165, text_y - 20), 
                                          (first_hit_x_coord - 5, text_y), (255, 255, 255), -1)
                             cv2.putText(overlay_img, text, (first_hit_x_coord - 160, text_y - 5), 
-                                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 2, cv2.LINE_AA)
+                                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 1, cv2.LINE_AA)
                 
                 # 画像を横幅いっぱいで表示
                 st.image(overlay_img, use_column_width=True)
