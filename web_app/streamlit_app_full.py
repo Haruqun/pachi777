@@ -149,24 +149,23 @@ if not st.session_state.authenticated:
     st.markdown("""
     <style>
     .auth-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: transparent;
         padding: 60px 40px;
         border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        border: 2px solid #e0e0e0;
         margin: 50px auto;
         max-width: 500px;
     }
     .auth-title {
         text-align: center;
-        color: white;
+        color: #333;
         font-size: 36px;
         font-weight: 700;
         margin-bottom: 10px;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
     }
     .auth-subtitle {
         text-align: center;
-        color: rgba(255, 255, 255, 0.9);
+        color: #666;
         font-size: 18px;
         margin-bottom: 40px;
     }
@@ -183,7 +182,7 @@ if not st.session_state.authenticated:
     }
     .auth-footer {
         text-align: center;
-        color: rgba(255, 255, 255, 0.7);
+        color: #666;
         font-size: 14px;
         margin-top: 30px;
     }
@@ -231,13 +230,14 @@ if not st.session_state.authenticated:
                 else:
                     st.error("❌ パスワードが正しくありません")
         
-        # フッター情報
-        st.markdown("""
-        <div class="auth-footer">
-            <p>© 2025 パチンコグラフ解析システム v2.0</p>
-            <p>Powered by ファイブナインデザイン</p>
-        </div>
-        """, unsafe_allow_html=True)
+        # フッター情報（メインページと同じ）
+        st.markdown("---")
+        st.markdown(f"""
+        🎰 パチンコグラフ解析システム v2.0  
+        更新日: {datetime.now().strftime('%Y/%m/%d')}  
+        Produced by [PPタウン](https://pp-town.com/)  
+        Created by [fivenine-design.com](https://fivenine-design.com)
+        """)
     
     # 認証されていない場合はここで処理を終了
     st.stop()
