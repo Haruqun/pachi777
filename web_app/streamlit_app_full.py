@@ -334,7 +334,7 @@ if uploaded_files:
                     x_diff = graph_data_points[i][0] - graph_data_points[i-1][0]
                     
                     # 下降中（通常時）で、x軸の差分がある場合
-                    if change < -10 and x_diff > 5:  # ノイズを除外
+                    if change < -5 and x_diff > 2:  # ノイズを除外（条件を緩和）
                         # 傾き = 球数変化 / 回転数変化
                         slope = abs(change) / x_diff
                         # 妥当な範囲の値のみ使用（10～30球/回転）
@@ -649,43 +649,47 @@ if uploaded_files:
                     st.markdown(ocr_html, unsafe_allow_html=True)
                 
                 # 実験的機能：総使用球数と投資効率の表示
+                st.markdown("""
+                <style>
+                .experimental-card {
+                    background-color: #fff3cd;
+                    padding: 15px;
+                    border-radius: 10px;
+                    margin-top: 10px;
+                    border: 1px solid #ffeaa7;
+                }
+                .experimental-title {
+                    color: #856404;
+                    font-weight: bold;
+                    margin-bottom: 10px;
+                }
+                .experimental-item {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 5px 0;
+                    border-bottom: 1px solid #ffeaa7;
+                }
+                .experimental-item:last-child {
+                    border-bottom: none;
+                }
+                .experimental-label {
+                    color: #856404;
+                    font-weight: 500;
+                }
+                .experimental-value {
+                    font-weight: bold;
+                    color: #856404;
+                }
+                .experimental-error {
+                    color: #856404;
+                    font-style: italic;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                experimental_html = '<div class="experimental-card"><div class="experimental-title">🧪 実験的機能</div>'
+                
                 if result.get('balls_per_spin') is not None:
-                    st.markdown("""
-                    <style>
-                    .experimental-card {
-                        background-color: #fff3cd;
-                        padding: 15px;
-                        border-radius: 10px;
-                        margin-top: 10px;
-                        border: 1px solid #ffeaa7;
-                    }
-                    .experimental-title {
-                        color: #856404;
-                        font-weight: bold;
-                        margin-bottom: 10px;
-                    }
-                    .experimental-item {
-                        display: flex;
-                        justify-content: space-between;
-                        padding: 5px 0;
-                        border-bottom: 1px solid #ffeaa7;
-                    }
-                    .experimental-item:last-child {
-                        border-bottom: none;
-                    }
-                    .experimental-label {
-                        color: #856404;
-                        font-weight: 500;
-                    }
-                    .experimental-value {
-                        font-weight: bold;
-                        color: #856404;
-                    }
-                    </style>
-                    """, unsafe_allow_html=True)
-                    
-                    experimental_html = '<div class="experimental-card"><div class="experimental-title">🧪 実験的機能</div>'
-                    
                     experimental_html += f'<div class="experimental-item"><span class="experimental-label">🎯 1回転あたり消費球数</span><span class="experimental-value">{result["balls_per_spin"]:.1f}玉/回転</span></div>'
                     
                     if result.get('total_used_balls') is not None:
@@ -696,8 +700,12 @@ if uploaded_files:
                         experimental_html += f'<div class="experimental-item"><span class="experimental-label">💹 投資効率</span><span class="experimental-value">{result["investment_efficiency"]:+.1f}%</span></div>'
                     
                     experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ グラフの下降部分から推定した値です</div>'
-                    experimental_html += '</div>'
-                    st.markdown(experimental_html, unsafe_allow_html=True)
+                else:
+                    experimental_html += '<div class="experimental-error">消費球数を推定できませんでした</div>'
+                    experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ グラフの下降部分が少ないため計算できません</div>'
+                
+                experimental_html += '</div>'
+                st.markdown(experimental_html, unsafe_allow_html=True)
             else:
                 st.warning("⚠️ グラフデータを検出できませんでした")
             
