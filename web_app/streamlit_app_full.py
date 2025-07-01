@@ -99,6 +99,90 @@ with main_container:
         if 'zero_line' not in st.session_state:
             st.session_state.zero_line = float(height) / 2.0
         
+        # 新しい画像の場合、自動検出を実行
+        current_file_key = f"{selected_file.name}_{selected_file.size}"
+        if 'last_processed_file' not in st.session_state or st.session_state.last_processed_file != current_file_key:
+            st.session_state.last_processed_file = current_file_key
+            
+            # Pattern3: Zero Line Based の自動検出
+            hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+            orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
+            orange_bottom = 0
+            
+            # オレンジバーの検出
+            for y in range(height//2):
+                if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
+                    orange_bottom = y
+            
+            # オレンジバーの下端を正確に見つける
+            if orange_bottom > 0:
+                for y in range(orange_bottom, min(orange_bottom + 100, height)):
+                    if np.sum(orange_mask[y, :]) < width * 0.1 * 255:
+                        orange_bottom = y
+                        break
+            else:
+                orange_bottom = 150
+            
+            # ゼロライン検出
+            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            search_start = orange_bottom + 50
+            search_end = min(height - 100, orange_bottom + 400)
+            
+            best_score = 0
+            zero_line_y = (search_start + search_end) // 2
+            
+            for y in range(search_start, search_end):
+                row = gray[y, 100:width-100]
+                darkness = 1.0 - (np.mean(row) / 255.0)
+                uniformity = 1.0 - (np.std(row) / 128.0)
+                score = darkness * 0.5 + uniformity * 0.5
+                
+                if score > best_score:
+                    best_score = score
+                    zero_line_y = y
+            
+            # 自動検出結果を設定
+            st.session_state.top = float(max(orange_bottom + 20, zero_line_y - 250))
+            st.session_state.bottom = float(min(height - 50, zero_line_y + 250))
+            st.session_state.left = 100.0
+            st.session_state.right = float(width - 100)
+            st.session_state.zero_line = float(zero_line_y)
+            
+            # 切り抜き範囲内で0ラインを再検出
+            if st.session_state.bottom > st.session_state.top and st.session_state.right > st.session_state.left:
+                cropped_for_detection = img_array[int(st.session_state.top):int(st.session_state.bottom), 
+                                                 int(st.session_state.left):int(st.session_state.right)]
+                gray_cropped = cv2.cvtColor(cropped_for_detection, cv2.COLOR_RGB2GRAY)
+                
+                crop_height_int = gray_cropped.shape[0]
+                best_score = 0
+                detected_zero_in_crop = crop_height_int // 2
+                
+                search_start = max(crop_height_int // 4, 0)
+                search_end = min(crop_height_int * 3 // 4, crop_height_int)
+                
+                for y in range(search_start, search_end):
+                    if y < gray_cropped.shape[0]:
+                        margin = 20
+                        if gray_cropped.shape[1] > margin * 2:
+                            row = gray_cropped[y, margin:-margin]
+                        else:
+                            row = gray_cropped[y, :]
+                        
+                        darkness = 1.0 - (np.mean(row) / 255.0)
+                        uniformity = 1.0 - (np.std(row) / 128.0)
+                        score = darkness * 0.5 + uniformity * 0.5
+                        
+                        if score > best_score:
+                            best_score = score
+                            detected_zero_in_crop = y
+                
+                # 元画像での座標に変換して更新
+                detected_zero = int(st.session_state.top) + detected_zero_in_crop
+                st.session_state.zero_line = float(detected_zero)
+            
+            st.success("✅ 自動検出が完了しました")
+        
         # 現在の値を取得
         top = st.session_state.get('top', 0)
         bottom = st.session_state.get('bottom', height)
