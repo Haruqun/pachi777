@@ -324,60 +324,6 @@ if uploaded_files:
                 if first_hit_val > 0:
                     first_hit_val = 0
                 
-                # 実験的機能：1回転あたりの消費球数を推定
-                balls_per_spin = None
-                total_used_balls_estimated = None
-                investment_efficiency = None
-                slopes = []  # ここで初期化
-                debug_info = []  # ここで初期化
-                
-                # グラフから累計スタートを推定（横軸の最大値）
-                if graph_data_points:
-                    try:
-                        # グラフの横軸の最大値（ピクセル）
-                        max_x_pixel = max(x for x, _ in graph_data_points)
-                        
-                        # 累計スタートの推定
-                        if ocr_data and ocr_data.get('total_start'):
-                            # OCRで取得した累計スタート
-                            total_starts = int(ocr_data['total_start'])
-                            # 横軸のスケール（回転数/ピクセル）を計算
-                            x_scale = total_starts / max_x_pixel if max_x_pixel > 0 else 0
-                        else:
-                            # OCRデータがない場合は、グラフの幅から推定
-                            # 一般的に1日の稼働で3000-5000回転程度と仮定
-                            # グラフの幅（ピクセル）から推定
-                            estimated_starts = int(max_x_pixel * 10)  # 暫定的に10回転/ピクセルと仮定
-                            total_starts = min(5000, max(1000, estimated_starts))  # 1000-5000の範囲に制限
-                            x_scale = 10  # 固定スケール
-                        
-                        for i in range(1, len(graph_data_points)):
-                            change = graph_data_points[i][1] - graph_data_points[i-1][1]
-                            x_diff_pixel = graph_data_points[i][0] - graph_data_points[i-1][0]
-                            
-                            # 実際の回転数差分に変換
-                            x_diff_spins = x_diff_pixel * x_scale
-                            
-                            # 下降中（通常時）で、回転数差分がある場合
-                            if change < -10 and x_diff_spins > 0.5:  # ノイズを除外
-                                # 傾き = 球数変化 / 回転数変化
-                                slope = abs(change) / x_diff_spins
-                                debug_info.append(f"change={change:.1f}, spins={x_diff_spins:.1f}, slope={slope:.1f}")
-                                
-                                # 妥当な範囲の値のみ使用（5～35球/回転に拡大）
-                                if 5 <= slope <= 35:
-                                    slopes.append(slope)
-                        
-                        if slopes and len(slopes) >= 2:  # 最低2つのサンプル
-                            # 中央値を使用（外れ値の影響を減らす）
-                            balls_per_spin = np.median(slopes)
-                            total_used_balls_estimated = int(total_starts * balls_per_spin)
-                            # 投資効率 = 現在値 / 総使用球数 * 100
-                            if total_used_balls_estimated > 0:
-                                investment_efficiency = (current_val / total_used_balls_estimated) * 100
-                    except (ValueError, TypeError):
-                        pass
-                
                 # オーバーレイ画像を作成
                 overlay_img = cropped_img.copy()
                     
@@ -494,10 +440,7 @@ if uploaded_files:
                     'current_val': int(current_val),
                     'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
                     'dominant_color': dominant_color,
-                    'ocr_data': ocr_data,  # OCRデータを追加
-                    'balls_per_spin': balls_per_spin,  # 1回転あたりの消費球数
-                    'total_used_balls': total_used_balls_estimated,  # 推定総使用球数
-                    'investment_efficiency': investment_efficiency  # 投資効率
+                    'ocr_data': ocr_data  # OCRデータを追加
                 })
             else:
                 # 解析失敗時
@@ -670,100 +613,6 @@ if uploaded_files:
                     ocr_html += '</div>'
                     st.markdown(ocr_html, unsafe_allow_html=True)
                 
-                # 実験的機能：総使用球数と投資効率の表示（一時的に非表示）
-                if False:  # 実験的機能を一時的に無効化
-                    st.markdown("""
-                <style>
-                .experimental-card {
-                    background-color: #fff3cd;
-                    padding: 15px;
-                    border-radius: 10px;
-                    margin-top: 10px;
-                    border: 1px solid #ffeaa7;
-                }
-                .experimental-title {
-                    color: #856404;
-                    font-weight: bold;
-                    margin-bottom: 10px;
-                }
-                .experimental-item {
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 5px 0;
-                    border-bottom: 1px solid #ffeaa7;
-                }
-                .experimental-item:last-child {
-                    border-bottom: none;
-                }
-                .experimental-label {
-                    color: #856404;
-                    font-weight: 500;
-                }
-                .experimental-value {
-                    font-weight: bold;
-                    color: #856404;
-                }
-                .experimental-error {
-                    color: #856404;
-                    font-style: italic;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-                
-                experimental_html = '<div class="experimental-card"><div class="experimental-title">🧪 実験的機能</div>'
-                
-                if result.get('balls_per_spin') is not None:
-                    experimental_html += f'<div class="experimental-item"><span class="experimental-label">🎯 1回転あたり消費球数</span><span class="experimental-value">{result["balls_per_spin"]:.1f}玉/回転</span></div>'
-                    
-                    if result.get('total_used_balls') is not None:
-                        experimental_html += f'<div class="experimental-item"><span class="experimental-label">⚪ 推定総使用球数</span><span class="experimental-value">{result["total_used_balls"]:,}玉</span></div>'
-                    
-                    if result.get('investment_efficiency') is not None:
-                        efficiency_class = "positive" if result['investment_efficiency'] > 0 else ("negative" if result['investment_efficiency'] < 0 else "zero")
-                        experimental_html += f'<div class="experimental-item"><span class="experimental-label">💹 投資効率</span><span class="experimental-value">{result["investment_efficiency"]:+.1f}%</span></div>'
-                    
-                    experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ グラフの下降部分から推定した値です</div>'
-                else:
-                    experimental_html += '<div class="experimental-error">消費球数を推定できませんでした</div>'
-                    # 失敗の原因を特定
-                    if not graph_data_points:
-                        experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ グラフデータが検出できません</div>'
-                    elif slopes and len(slopes) >= 2:
-                        # 十分な傾きがあるのに失敗した場合
-                        experimental_html += f'<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ 計算エラーが発生しました（有効データ: {len(slopes)}個）</div>'
-                    elif 'slopes' in locals():
-                        experimental_html += f'<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ 有効なデータが不足しています（検出数: {len(slopes)}個、最低2個必要）</div>'
-                    else:
-                        experimental_html += '<div style="font-size: 0.8em; color: #856404; margin-top: 10px;">※ データの解析に失敗しました</div>'
-                    
-                    # デバッグ用：検出情報を表示
-                    if debug_info:
-                        experimental_html += f'<div style="font-size: 0.7em; color: #856404; margin-top: 5px;">デバッグ: {"; ".join(debug_info[:3])}</div>'
-                        experimental_html += f'<div style="font-size: 0.7em; color: #856404;">検出された傾き: {len(debug_info)}個 / 有効: {len(slopes)}個 (範囲: 5-35球/回転)</div>'
-                        
-                        # JSON形式のデバッグ情報を生成
-                        debug_json = {
-                            "file": result['name'],
-                            "total_detected": len(debug_info),
-                            "valid_slopes": len(slopes),
-                            "slopes": slopes[:5] if slopes else [],  # 最初の5個
-                            "samples": []
-                        }
-                        
-                        # 最初の3つのサンプルを構造化
-                        for info in debug_info[:3]:
-                            parts = info.split(", ")
-                            sample = {}
-                            for part in parts:
-                                key, value = part.split("=")
-                                sample[key] = float(value)
-                            debug_json["samples"].append(sample)
-                        
-                        # JSON文字列として表示（コピーしやすいように）
-                        experimental_html += f'<div style="font-size: 0.7em; color: #856404; margin-top: 5px;">JSON: <code style="font-family: monospace; background: #f5f5f5; padding: 2px;">{json.dumps(debug_json, ensure_ascii=False)}</code></div>'
-                
-                    experimental_html += '</div>'
-                    st.markdown(experimental_html, unsafe_allow_html=True)
             else:
                 st.warning("⚠️ グラフデータを検出できませんでした")
             
@@ -777,32 +626,6 @@ if uploaded_files:
     success_count = sum(1 for r in analysis_results if r['success'])
     st.info(f"📈 総画像数: {len(analysis_results)}枚 | ✅ 成功: {success_count}枚 | ⚠️ 失敗: {len(analysis_results) - success_count}枚")
     
-    # 実験的機能の失敗データを収集（一時的に非表示）
-    if False:  # 実験的機能を一時的に無効化
-        failed_estimations = []
-        for result in analysis_results:
-            if result.get('success') and result.get('balls_per_spin') is None:
-                # OCRデータがある場合のみ
-                if result.get('ocr_data') and result['ocr_data'].get('total_start'):
-                    failed_data = {
-                        "file": result['name'],
-                        "total_start": result['ocr_data'].get('total_start'),
-                        "current_val": result.get('current_val'),
-                        "max_val": result.get('max_val'),
-                        "min_val": result.get('min_val')
-                    }
-                    failed_estimations.append(failed_data)
-        
-        # 失敗データがある場合、一括コピー用のセクションを表示
-        if failed_estimations:
-            st.markdown("### 🔧 実験的機能デバッグ情報")
-            with st.expander(f"消費球数を推定できなかった画像 ({len(failed_estimations)}件)"):
-                # JSON形式で表示
-                failed_json = json.dumps(failed_estimations, ensure_ascii=False, indent=2)
-                st.code(failed_json, language='json')
-                
-                # コピーボタン
-                st.markdown("👆 上記のJSONデータをコピーして、開発者に送信してください")
     
     # 結果を表形式で表示
     st.markdown("### 📊 解析結果（表形式）")
