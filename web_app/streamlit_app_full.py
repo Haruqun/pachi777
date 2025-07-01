@@ -148,27 +148,67 @@ with main_container:
             st.markdown("**プリセット**")
             preset_cols = st.columns(3)
             
+            # ボタンの説明
+            with st.expander("プリセットの説明", expanded=False):
+                st.markdown("""
+                - **自動検出**: グラフのゼロラインを検出し、上下250pxずつの範囲を選択
+                - **全体**: 画像全体を選択
+                - **中央部分**: 上下左右50pxの余白を除いた範囲を選択
+                """)
+            
             with preset_cols[0]:
                 if st.button("自動検出", use_container_width=True):
-                    # Pattern3のロジックを使用
-                    # オレンジバー検出（簡易版）
+                    # Pattern3: Zero Line Based の完全な実装
+                    
+                    # 1. オレンジバー検出
                     hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
                     orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
-                    orange_bottom = 150  # デフォルト
+                    orange_bottom = 0
+                    
+                    # オレンジバーの最下端を検出
                     for y in range(height//2):
                         if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
                             orange_bottom = y
-                            break
                     
-                    # ゼロライン検出（簡易版）
+                    # オレンジバーの下端を正確に見つける
+                    if orange_bottom > 0:
+                        for y in range(orange_bottom, min(orange_bottom + 100, height)):
+                            if np.sum(orange_mask[y, :]) < width * 0.1 * 255:
+                                orange_bottom = y
+                                break
+                    else:
+                        # デフォルト値
+                        orange_bottom = 150
+                    
+                    # 2. ゼロライン検出（Pattern3の核心部分）
                     gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-                    zero_line_y = orange_bottom + 300  # デフォルト
+                    search_start = orange_bottom + 50
+                    search_end = min(height - 100, orange_bottom + 400)
                     
-                    # 切り抜き範囲設定
-                    st.session_state.top = max(0, zero_line_y - 250)
-                    st.session_state.bottom = min(height, zero_line_y + 250)
+                    best_score = 0
+                    zero_line_y = (search_start + search_end) // 2
+                    
+                    for y in range(search_start, search_end):
+                        # 中央付近の行を評価（左右の余白を除く）
+                        row = gray[y, 100:width-100]
+                        
+                        # 暗い水平線を探す
+                        darkness = 1.0 - (np.mean(row) / 255.0)  # 暗さ
+                        uniformity = 1.0 - (np.std(row) / 128.0)  # 均一性
+                        
+                        # 暗くて均一な線ほどスコアが高い
+                        score = darkness * 0.5 + uniformity * 0.5
+                        
+                        if score > best_score:
+                            best_score = score
+                            zero_line_y = y
+                    
+                    # 3. ゼロラインから上下に拡張（Pattern3のアプローチ）
+                    st.session_state.top = max(orange_bottom + 20, zero_line_y - 250)
+                    st.session_state.bottom = min(height - 50, zero_line_y + 250)
                     st.session_state.left = 100
                     st.session_state.right = width - 100
+                    
                     st.rerun()
             
             with preset_cols[1]:
