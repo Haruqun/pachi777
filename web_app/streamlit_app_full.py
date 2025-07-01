@@ -40,11 +40,6 @@ def extract_site7_data(image):
         # 全体のOCR実行（日本語対応）
         text = pytesseract.image_to_string(adjusted, lang='jpn')
         
-        # グラフ下部の最大値を取得するため、画像の下部1/4のみを別途OCR
-        height = image.shape[0]
-        bottom_section = adjusted[int(height * 0.75):height, :]
-        bottom_text = pytesseract.image_to_string(bottom_section, lang='jpn')
-        
         # 抽出したいデータのパターン定義
         data = {
             'machine_number': None,
