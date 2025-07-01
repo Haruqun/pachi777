@@ -135,14 +135,63 @@ with main_container:
             right = width - 125  # 左右の余白125px
             
             # 切り抜き実行
-            cropped_img = img_array[int(top):int(bottom), int(left):int(right)]
+            cropped_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
+            
+            # グリッドラインを追加
+            # 切り抜き画像の高さは493px（246+247）
+            # 最上部が+30000、最下部が-30000なので、60000の範囲を493pxで表現
+            # 1pxあたり約121.7玉
+            crop_height = cropped_img.shape[0]
+            zero_line_in_crop = zero_line_y - top  # 切り抜き画像内での0ライン位置
+            
+            # スケール計算（上下246,247pxで±30000）
+            scale = 30000 / 246  # 約121.95玉/px
+            
+            # グリッドライン描画
+            # +30000ライン（最上部）
+            cv2.line(cropped_img, (0, 0), (cropped_img.shape[1], 0), (128, 128, 128), 2)
+            cv2.putText(cropped_img, '+30000', (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
+            
+            # +20000ライン
+            y_20k = int(zero_line_in_crop - (20000 / scale))
+            if 0 < y_20k < crop_height:
+                cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (128, 128, 128), 1)
+                cv2.putText(cropped_img, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+            
+            # +10000ライン
+            y_10k = int(zero_line_in_crop - (10000 / scale))
+            if 0 < y_10k < crop_height:
+                cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (128, 128, 128), 1)
+                cv2.putText(cropped_img, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+            
+            # 0ライン
+            y_0 = int(zero_line_in_crop)
+            if 0 < y_0 < crop_height:
+                cv2.line(cropped_img, (0, y_0), (cropped_img.shape[1], y_0), (255, 0, 0), 2)
+                cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+            
+            # -10000ライン
+            y_minus_10k = int(zero_line_in_crop + (10000 / scale))
+            if 0 < y_minus_10k < crop_height:
+                cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (128, 128, 128), 1)
+                cv2.putText(cropped_img, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+            
+            # -20000ライン
+            y_minus_20k = int(zero_line_in_crop + (20000 / scale))
+            if 0 < y_minus_20k < crop_height:
+                cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (128, 128, 128), 1)
+                cv2.putText(cropped_img, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+            
+            # -30000ライン（最下部）
+            cv2.line(cropped_img, (0, crop_height - 1), (cropped_img.shape[1], crop_height - 1), (128, 128, 128), 2)
+            cv2.putText(cropped_img, '-30000', (10, crop_height - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
             
             # 切り抜き結果を保存
             cropped_images.append({
                 'name': uploaded_file.name,
                 'image': cropped_img,
                 'size': (cropped_img.shape[1], cropped_img.shape[0]),
-                'zero_line': zero_line_y - top  # 切り抜き画像内での0ライン位置
+                'zero_line': zero_line_in_crop
             })
         
         # プログレスバーを完了状態に
