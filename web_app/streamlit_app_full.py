@@ -807,6 +807,50 @@ if uploaded_files:
     # 結果を表形式で表示
     st.markdown("### 📊 解析結果（表形式）")
     
+    # 統計情報を計算して表示
+    if analysis_results:
+        success_results = [r for r in analysis_results if r.get('success')]
+        if success_results:
+            # 統計情報の計算
+            total_balance = sum(r['current_val'] for r in success_results)
+            total_balance_yen = total_balance * 4
+            avg_balance = total_balance / len(success_results)
+            avg_balance_yen = avg_balance * 4
+            max_result = max(success_results, key=lambda x: x['current_val'])
+            min_result = min(success_results, key=lambda x: x['current_val'])
+            
+            # 統計情報を3列で表示
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric(
+                    "合計収支",
+                    f"{total_balance_yen:+,}円",
+                    f"{total_balance:+,}玉"
+                )
+            
+            with col2:
+                st.metric(
+                    "平均収支",
+                    f"{avg_balance_yen:+,.0f}円",
+                    f"{avg_balance:+,.0f}玉"
+                )
+            
+            with col3:
+                st.metric(
+                    "解析台数",
+                    f"{len(success_results)}台",
+                    f"成功率 {len(success_results)/len(analysis_results)*100:.0f}%"
+                )
+            
+            # 最高/最低の詳細
+            with st.expander("📈 詳細統計"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.info(f"**最高収支台**: {max_result['name']}\n収支: {max_result['current_val'] * 4:+,}円 ({max_result['current_val']:+,}玉)")
+                with col2:
+                    st.warning(f"**最低収支台**: {min_result['name']}\n収支: {min_result['current_val'] * 4:+,}円 ({min_result['current_val']:+,}玉)")
+    
     # データフレーム作成
     table_data = []
     for idx, result in enumerate(analysis_results):
@@ -818,14 +862,13 @@ if uploaded_files:
                 '最低値': f"{result['min_val']:,}",
                 '現在値': f"{result['current_val']:,}",
                 '初当たり': f"{result['first_hit_val']:,}" if result['first_hit_val'] is not None else "-",
-                '収支': f"{result['current_val']:+,}",
+                '収支(円)': f"{result['current_val'] * 4:+,}",
             }
             
             # OCRデータがある場合は追加
             if result.get('ocr_data'):
                 ocr = result['ocr_data']
                 row.update({
-                    '台番号': ocr.get('machine_number', '-'),
                     '累計スタート': ocr.get('total_start', '-'),
                     '大当り回数': f"{ocr.get('jackpot_count')}回" if ocr.get('jackpot_count') else '-',
                     '初当り回数': f"{ocr.get('first_hit_count')}回" if ocr.get('first_hit_count') else '-',
@@ -839,8 +882,8 @@ if uploaded_files:
         df = pd.DataFrame(table_data)
         
         # 表示する列を選択（存在する列のみ）
-        display_columns = ['番号', 'ファイル名', '台番号', '累計スタート', '大当り回数', 
-                          '最高値', '最低値', '現在値', '初当たり', '収支']
+        display_columns = ['番号', 'ファイル名', '累計スタート', '大当り回数', 
+                          '最高値', '最低値', '現在値', '初当たり', '収支(円)']
         display_columns = [col for col in display_columns if col in df.columns]
         
         # データフレームを表示
@@ -866,17 +909,31 @@ if uploaded_files:
         
         # Excelダウンロード
         with col2:
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='解析結果')
-            
-            st.download_button(
-                label="📊 Excel ダウンロード",
-                data=buffer.getvalue(),
-                file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                help="Excel形式でダウンロード"
-            )
+            try:
+                buffer = io.BytesIO()
+                with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                    df.to_excel(writer, index=False, sheet_name='解析結果')
+                
+                st.download_button(
+                    label="📊 Excel ダウンロード",
+                    data=buffer.getvalue(),
+                    file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    help="Excel形式でダウンロード"
+                )
+            except ImportError:
+                # xlsxwriterがインストールされていない場合は、openpyxlを使用
+                buffer = io.BytesIO()
+                df.to_excel(buffer, index=False, sheet_name='解析結果', engine='openpyxl')
+                buffer.seek(0)
+                
+                st.download_button(
+                    label="📊 Excel ダウンロード",
+                    data=buffer.getvalue(),
+                    file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    help="Excel形式でダウンロード"
+                )
         
         # コピー用のテキスト生成（タブ区切り）
         with st.expander("📋 表データをコピー"):
