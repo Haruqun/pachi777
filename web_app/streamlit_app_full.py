@@ -729,6 +729,99 @@ if uploaded_files:
     success_count = sum(1 for r in analysis_results if r['success'])
     st.info(f"📈 総画像数: {len(analysis_results)}枚 | ✅ 成功: {success_count}枚 | ⚠️ 失敗: {len(analysis_results) - success_count}枚")
     
+    # 一致率の統計情報を計算
+    match_stats = {
+        'under_10k': {'count': 0, 'total_rate': 0},
+        'under_20k': {'count': 0, 'total_rate': 0},
+        'under_30k': {'count': 0, 'total_rate': 0},
+        'over_30k': {'count': 0, 'total_rate': 0}
+    }
+    
+    for result in analysis_results:
+        if result.get('success') and result.get('ocr_data') and result['ocr_data'].get('graph_max'):
+            try:
+                ocr_max = int(result['ocr_data']['graph_max'])
+                graph_max = result['max_val']
+                
+                # 差分計算
+                difference = graph_max - ocr_max
+                
+                # 一致率計算
+                if ocr_max != 0:
+                    match_rate = (1 - abs(difference) / abs(ocr_max)) * 100
+                else:
+                    match_rate = 100 if difference == 0 else 0
+                
+                # カテゴリ分け
+                if ocr_max < 10000:
+                    match_stats['under_10k']['count'] += 1
+                    match_stats['under_10k']['total_rate'] += match_rate
+                elif ocr_max < 20000:
+                    match_stats['under_20k']['count'] += 1
+                    match_stats['under_20k']['total_rate'] += match_rate
+                elif ocr_max < 30000:
+                    match_stats['under_30k']['count'] += 1
+                    match_stats['under_30k']['total_rate'] += match_rate
+                else:
+                    match_stats['over_30k']['count'] += 1
+                    match_stats['over_30k']['total_rate'] += match_rate
+            except (ValueError, TypeError):
+                pass
+    
+    # 一致率統計の表示
+    if any(stats['count'] > 0 for stats in match_stats.values()):
+        st.markdown("### 📊 一致率統計（グラフ最大値別）")
+        
+        cols = st.columns(4)
+        
+        # 10,000未満
+        with cols[0]:
+            if match_stats['under_10k']['count'] > 0:
+                avg_rate = match_stats['under_10k']['total_rate'] / match_stats['under_10k']['count']
+                st.metric(
+                    "10,000未満",
+                    f"{avg_rate:.1f}%",
+                    f"{match_stats['under_10k']['count']}件"
+                )
+            else:
+                st.metric("10,000未満", "-", "0件")
+        
+        # 20,000未満
+        with cols[1]:
+            if match_stats['under_20k']['count'] > 0:
+                avg_rate = match_stats['under_20k']['total_rate'] / match_stats['under_20k']['count']
+                st.metric(
+                    "10,000～20,000",
+                    f"{avg_rate:.1f}%",
+                    f"{match_stats['under_20k']['count']}件"
+                )
+            else:
+                st.metric("10,000～20,000", "-", "0件")
+        
+        # 30,000未満
+        with cols[2]:
+            if match_stats['under_30k']['count'] > 0:
+                avg_rate = match_stats['under_30k']['total_rate'] / match_stats['under_30k']['count']
+                st.metric(
+                    "20,000～30,000",
+                    f"{avg_rate:.1f}%",
+                    f"{match_stats['under_30k']['count']}件"
+                )
+            else:
+                st.metric("20,000～30,000", "-", "0件")
+        
+        # 30,000以上
+        with cols[3]:
+            if match_stats['over_30k']['count'] > 0:
+                avg_rate = match_stats['over_30k']['total_rate'] / match_stats['over_30k']['count']
+                st.metric(
+                    "30,000以上",
+                    f"{avg_rate:.1f}%",
+                    f"{match_stats['over_30k']['count']}件"
+                )
+            else:
+                st.metric("30,000以上", "-", "0件")
+    
 else:
     # アップロード前の表示
     st.info("👆 上のボタンから画像をアップロードしてください")
