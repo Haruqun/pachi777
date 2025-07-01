@@ -20,139 +20,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Tailwind風カスタムCSS
-st.markdown("""
-<style>
-    /* グローバルスタイル */
-    .stApp {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        min-height: 100vh;
-    }
-    
-    /* メインコンテナ */
-    .main > div {
-        padding: 2rem;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    
-    /* タイトル */
-    h1 {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 800;
-        text-align: center;
-        margin-bottom: 0.5rem !important;
-    }
-    
-    /* サブタイトル */
-    h3 {
-        color: #4a5568;
-        font-weight: 600;
-        margin-top: 2rem;
-        margin-bottom: 1rem;
-    }
-    
-    /* カードスタイル */
-    .stExpander {
-        background: white;
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        margin-bottom: 1rem;
-        border: none;
-    }
-    
-    /* ファイルアップローダー */
-    .stFileUploader {
-        background: white;
-        padding: 2rem;
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border: 2px dashed #cbd5e0;
-        transition: all 0.3s ease;
-    }
-    
-    .stFileUploader:hover {
-        border-color: #667eea;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    }
-    
-    /* メトリックス */
-    [data-testid="metric-container"] {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        transition: transform 0.2s ease;
-    }
-    
-    [data-testid="metric-container"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    }
-    
-    /* メトリックラベル */
-    [data-testid="metric-container"] label {
-        color: #718096;
-        font-size: 0.875rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    
-    /* メトリック値 */
-    [data-testid="metric-container"] > div:nth-child(2) {
-        font-size: 1.875rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    /* 成功メッセージ */
-    .stSuccess {
-        background-color: #f0fdf4;
-        border: 1px solid #86efac;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        color: #166534;
-        font-weight: 500;
-    }
-    
-    /* 警告メッセージ */
-    .stWarning {
-        background-color: #fef3c7;
-        border: 1px solid #fcd34d;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        color: #92400e;
-        font-weight: 500;
-    }
-    
-    /* スピナー */
-    .stSpinner > div {
-        color: #667eea;
-    }
-    
-    /* 区切り線 */
-    hr {
-        border: none;
-        height: 1px;
-        background: linear-gradient(to right, transparent, #cbd5e0, transparent);
-        margin: 2rem 0;
-    }
-    
-    /* フッター */
-    .footer-text {
-        color: #718096;
-        font-size: 0.875rem;
-        text-align: center;
-        margin-top: 3rem;
-        padding: 2rem;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # ファイルアップローダー（一番最初に表示）
 uploaded_files = st.file_uploader(
@@ -166,12 +33,7 @@ if uploaded_files:
     st.success(f"✅ {len(uploaded_files)}枚の画像がアップロードされました")
     
     # 解析結果セクション
-    st.markdown("""
-    <h3 style="color: #4a5568; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">
-        <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🎯</span> 
-        解析結果
-    </h3>
-    """, unsafe_allow_html=True)
+    st.markdown("### 🎯 解析結果")
     
     # プログレスバー
     progress_bar = st.progress(0)
@@ -186,114 +48,114 @@ if uploaded_files:
         progress = (idx + 1) / len(uploaded_files)
         progress_bar.progress(progress)
         status_text.text(f'処理中... ({idx + 1}/{len(uploaded_files)})')
-            
-            # 画像を読み込み
-            image = Image.open(uploaded_file)
-            img_array = np.array(image)
-            height, width = img_array.shape[:2]
-            
-            # Pattern3: Zero Line Based の自動検出
-            hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
-            orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
-            orange_bottom = 0
-            
-            # オレンジバーの検出
-            for y in range(height//2):
-                if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
+        
+        # 画像を読み込み
+        image = Image.open(uploaded_file)
+        img_array = np.array(image)
+        height, width = img_array.shape[:2]
+        
+        # Pattern3: Zero Line Based の自動検出
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
+        orange_bottom = 0
+        
+        # オレンジバーの検出
+        for y in range(height//2):
+            if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
+                orange_bottom = y
+        
+        # オレンジバーの下端を正確に見つける
+        if orange_bottom > 0:
+            for y in range(orange_bottom, min(orange_bottom + 100, height)):
+                if np.sum(orange_mask[y, :]) < width * 0.1 * 255:
                     orange_bottom = y
+                    break
+        else:
+            orange_bottom = 150
+        
+        # ゼロライン検出
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        search_start = orange_bottom + 50
+        search_end = min(height - 100, orange_bottom + 400)
+        
+        best_score = 0
+        zero_line_y = (search_start + search_end) // 2
+        
+        for y in range(search_start, search_end):
+            row = gray[y, 100:width-100]
+            darkness = 1.0 - (np.mean(row) / 255.0)
+            uniformity = 1.0 - (np.std(row) / 128.0)
+            score = darkness * 0.5 + uniformity * 0.5
             
-            # オレンジバーの下端を正確に見つける
-            if orange_bottom > 0:
-                for y in range(orange_bottom, min(orange_bottom + 100, height)):
-                    if np.sum(orange_mask[y, :]) < width * 0.1 * 255:
-                        orange_bottom = y
-                        break
-            else:
-                orange_bottom = 150
-            
-            # ゼロライン検出
-            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-            search_start = orange_bottom + 50
-            search_end = min(height - 100, orange_bottom + 400)
-            
-            best_score = 0
-            zero_line_y = (search_start + search_end) // 2
-            
-            for y in range(search_start, search_end):
-                row = gray[y, 100:width-100]
-                darkness = 1.0 - (np.mean(row) / 255.0)
-                uniformity = 1.0 - (np.std(row) / 128.0)
-                score = darkness * 0.5 + uniformity * 0.5
-                
-                if score > best_score:
-                    best_score = score
-                    zero_line_y = y
-            
-            # 切り抜き範囲を設定（最終調整値）
-            top = max(0, zero_line_y - 246)  # 0ラインから上246px
-            bottom = min(height, zero_line_y + 247)  # 0ラインから下247px
-            left = 125  # 左右の余白125px
-            right = width - 125  # 左右の余白125px
-            
-            # 切り抜き実行
-            cropped_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
-            
-            # グリッドラインを追加
-            # 切り抜き画像の高さは493px（246+247）
-            # 最上部が+30000、最下部が-30000なので、60000の範囲を493pxで表現
-            # 1pxあたり約121.7玉
-            crop_height = cropped_img.shape[0]
-            zero_line_in_crop = zero_line_y - top  # 切り抜き画像内での0ライン位置
-            
-            # スケール計算（上下246,247pxで±30000）
-            scale = 30000 / 246  # 約121.95玉/px
-            
-            # グリッドライン描画（固定値）
-            # +30000ライン（最上部）
-            y_30k = -1  # 固定調整値
-            cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
-            cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
-            
-            # +20000ライン
-            y_20k = int(zero_line_in_crop - (20000 / scale)) - 2  # 固定調整値
-            if 0 < y_20k < crop_height:
-                cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (128, 128, 128), 1)
-                cv2.putText(cropped_img, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
-            
-            # +10000ライン
-            y_10k = int(zero_line_in_crop - (10000 / scale)) - 1  # 固定調整値
-            if 0 < y_10k < crop_height:
-                cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (128, 128, 128), 1)
-                cv2.putText(cropped_img, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
-            
-            # 0ライン
-            y_0 = int(zero_line_in_crop)  # 調整なし
-            if 0 < y_0 < crop_height:
-                cv2.line(cropped_img, (0, y_0), (cropped_img.shape[1], y_0), (255, 0, 0), 2)
-                cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
-            
-            # -10000ライン
-            y_minus_10k = int(zero_line_in_crop + (10000 / scale)) + 1  # 固定調整値
-            if 0 < y_minus_10k < crop_height:
-                cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (128, 128, 128), 1)
-                cv2.putText(cropped_img, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
-            
-            # -20000ライン
-            y_minus_20k = int(zero_line_in_crop + (20000 / scale)) + 1  # 固定調整値
-            if 0 < y_minus_20k < crop_height:
-                cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (128, 128, 128), 1)
-                cv2.putText(cropped_img, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
-            
-            # -30000ライン（最下部）
-            y_minus_30k = crop_height - 1 + 2  # 固定調整値
-            y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
-            cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
-            cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
-            
-            # 解析を自動実行
-            with st.spinner(f"グラフを解析中... ({idx + 1}/{len(uploaded_files)})"):
-                # アナライザーを初期化
-                analyzer = WebCompatibleAnalyzer()
+            if score > best_score:
+                best_score = score
+                zero_line_y = y
+        
+        # 切り抜き範囲を設定（最終調整値）
+        top = max(0, zero_line_y - 246)  # 0ラインから上246px
+        bottom = min(height, zero_line_y + 247)  # 0ラインから下247px
+        left = 125  # 左右の余白125px
+        right = width - 125  # 左右の余白125px
+        
+        # 切り抜き実行
+        cropped_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
+        
+        # グリッドラインを追加
+        # 切り抜き画像の高さは493px（246+247）
+        # 最上部が+30000、最下部が-30000なので、60000の範囲を493pxで表現
+        # 1pxあたり約121.7玉
+        crop_height = cropped_img.shape[0]
+        zero_line_in_crop = zero_line_y - top  # 切り抜き画像内での0ライン位置
+        
+        # スケール計算（上下246,247pxで±30000）
+        scale = 30000 / 246  # 約121.95玉/px
+        
+        # グリッドライン描画（固定値）
+        # +30000ライン（最上部）
+        y_30k = -1  # 固定調整値
+        cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
+        cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
+        
+        # +20000ライン
+        y_20k = int(zero_line_in_crop - (20000 / scale)) - 2  # 固定調整値
+        if 0 < y_20k < crop_height:
+            cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (128, 128, 128), 1)
+            cv2.putText(cropped_img, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+        
+        # +10000ライン
+        y_10k = int(zero_line_in_crop - (10000 / scale)) - 1  # 固定調整値
+        if 0 < y_10k < crop_height:
+            cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (128, 128, 128), 1)
+            cv2.putText(cropped_img, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+        
+        # 0ライン
+        y_0 = int(zero_line_in_crop)  # 調整なし
+        if 0 < y_0 < crop_height:
+            cv2.line(cropped_img, (0, y_0), (cropped_img.shape[1], y_0), (255, 0, 0), 2)
+            cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+        
+        # -10000ライン
+        y_minus_10k = int(zero_line_in_crop + (10000 / scale)) + 1  # 固定調整値
+        if 0 < y_minus_10k < crop_height:
+            cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (128, 128, 128), 1)
+            cv2.putText(cropped_img, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+        
+        # -20000ライン
+        y_minus_20k = int(zero_line_in_crop + (20000 / scale)) + 1  # 固定調整値
+        if 0 < y_minus_20k < crop_height:
+            cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (128, 128, 128), 1)
+            cv2.putText(cropped_img, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
+        
+        # -30000ライン（最下部）
+        y_minus_30k = crop_height - 1 + 2  # 固定調整値
+        y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
+        cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
+        cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 2)
+        
+        # 解析を自動実行
+        with st.spinner(f"グラフを解析中... ({idx + 1}/{len(uploaded_files)})"):
+            # アナライザーを初期化
+            analyzer = WebCompatibleAnalyzer()
                 
                 # グリッドラインなしの画像を使用
                 analysis_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
@@ -490,93 +352,75 @@ if uploaded_files:
                         'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
                         'dominant_color': dominant_color
                     })
-                else:
-                    # 解析失敗時
-                    analysis_results.append({
-                        'name': uploaded_file.name,
-                        'original_image': img_array,  # 元画像を保存
-                        'cropped_image': cropped_img,
-                        'overlay_image': cropped_img,  # 解析失敗時は切り抜き画像を使用
-                        'success': False
-                    })
-        
-        # プログレスバーを完了
-        progress_bar.progress(1.0)
-        status_text.text('✅ 全ての画像の処理が完了しました！')
-        
-        # 結果をグリッド表示
-        st.markdown("""
-        <h3 style="color: #4a5568; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">
-            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📊</span> 
-            解析結果一覧
-        </h3>
-        """, unsafe_allow_html=True)
-        
-        # 各画像を表示
-        for idx, result in enumerate(analysis_results):
-            # カードスタイルのコンテナ
-            st.markdown(f"""
-            <div style="background: white; padding: 1.5rem; border-radius: 0.75rem; 
-                        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
-                        margin-bottom: 2rem;">
-                <h4 style="color: #4a5568; margin-bottom: 1rem; font-weight: 600;">
-                    {idx + 1}. {result['name']}
-                </h4>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # 元画像と解析結果を並べて表示
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("**元画像**")
-                st.image(result['original_image'], use_column_width=True)
-            
-            with col2:
-                st.markdown("**解析結果**")
-                st.image(result['overlay_image'], use_column_width=True)
-            
-            # 成功時は統計情報を表示
-            if result['success']:
-                metrics_cols = st.columns(5)
-                with metrics_cols[0]:
-                    st.metric("最高値", f"{result['max_val']:,}玉")
-                with metrics_cols[1]:
-                    st.metric("最低値", f"{result['min_val']:,}玉")
-                with metrics_cols[2]:
-                    st.metric("現在値", f"{result['current_val']:,}玉")
-                with metrics_cols[3]:
-                    if result['first_hit_val'] is not None:
-                        st.metric("初当たり", f"{result['first_hit_val']:,}玉")
-                    else:
-                        st.metric("初当たり", "なし")
-                with metrics_cols[4]:
-                    st.metric("検出色", result['dominant_color'])
             else:
-                st.warning("⚠️ グラフデータを検出できませんでした")
-            
-            # 区切り線
-            if idx < len(analysis_results) - 1:
-                st.markdown("---")
+                # 解析失敗時
+                analysis_results.append({
+                    'name': uploaded_file.name,
+                    'original_image': img_array,  # 元画像を保存
+                    'cropped_image': cropped_img,
+                    'overlay_image': cropped_img,  # 解析失敗時は切り抜き画像を使用
+                    'success': False
+                })
+    
+    # プログレスバーを完了
+    progress_bar.progress(1.0)
+    status_text.text('✅ 全ての画像の処理が完了しました！')
+    
+    # 結果をグリッド表示
+    st.markdown("### 📊 解析結果一覧")
+    
+    # 各画像を表示
+    for idx, result in enumerate(analysis_results):
+        # 画像名を表示
+        st.markdown(f"#### {idx + 1}. {result['name']}")
         
-        # サマリー情報
+        # 元画像と解析結果を並べて表示
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**元画像**")
+            st.image(result['original_image'], use_column_width=True)
+        
+        with col2:
+            st.markdown("**解析結果**")
+            st.image(result['overlay_image'], use_column_width=True)
+        
+        # 成功時は統計情報を表示
+        if result['success']:
+            metrics_cols = st.columns(5)
+            with metrics_cols[0]:
+                st.metric("最高値", f"{result['max_val']:,}玉")
+            with metrics_cols[1]:
+                st.metric("最低値", f"{result['min_val']:,}玉")
+            with metrics_cols[2]:
+                st.metric("現在値", f"{result['current_val']:,}玉")
+            with metrics_cols[3]:
+                if result['first_hit_val'] is not None:
+                    st.metric("初当たり", f"{result['first_hit_val']:,}玉")
+                else:
+                    st.metric("初当たり", "なし")
+            with metrics_cols[4]:
+                st.metric("検出色", result['dominant_color'])
+        else:
+            st.warning("⚠️ グラフデータを検出できませんでした")
+        
+        # 区切り線
+        if idx < len(analysis_results) - 1:
+            st.markdown("---")
+        
+    # サマリー情報
+    st.markdown("### 📋 解析サマリー")
+    
+    success_count = sum(1 for r in analysis_results if r['success'])
+    st.info(f"📈 総画像数: {len(analysis_results)}枚 | ✅ 成功: {success_count}枚 | ⚠️ 失敗: {len(analysis_results) - success_count}枚")
+    
+else:
+    # アップロード前の表示
+    st.info("👆 上のボタンから画像をアップロードしてください")
+    
+    # 使い方
+    with st.expander("💡 使い方"):
         st.markdown("""
-        <h3 style="color: #4a5568; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">
-            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📋</span> 
-            解析サマリー
-        </h3>
-        """, unsafe_allow_html=True)
-        
-        success_count = sum(1 for r in analysis_results if r['success'])
-        st.info(f"📈 総画像数: {len(analysis_results)}枚 | ✅ 成功: {success_count}枚 | ⚠️ 失敗: {len(analysis_results) - success_count}枚")
-        
-    else:
-        # アップロード前の表示
-        st.info("👆 上のボタンから画像をアップロードしてください")
-        
-        # 使い方
-        with st.expander("💡 使い方"):
-            st.markdown("""
             1. **「Browse files」ボタン**をクリック
             2. **グラフ画像を選択**（複数選択可）
             3. **自動的に切り抜きと解析が実行されます**
@@ -591,37 +435,24 @@ if uploaded_files:
             - 左右125pxの余白を除外
             """)
 
-# 機能紹介カード
+# 機能紹介
 st.markdown("---")
-st.markdown("""
-<div style="background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-top: 3rem; margin-bottom: 2rem;">
-    <h4 style="color: #4a5568; margin-bottom: 1rem; font-weight: 600;">🚀 主な機能</h4>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
-        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
-            <span style="font-size: 1.5rem;">📈</span>
-            <h5 style="margin: 0.5rem 0; color: #2d3748;">AIグラフ解析</h5>
-            <p style="color: #718096; font-size: 0.875rem;">AIがグラフを自動認識し、正確なデータを抽出</p>
-        </div>
-        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
-            <span style="font-size: 1.5rem;">✂️</span>
-            <h5 style="margin: 0.5rem 0; color: #2d3748;">自動切り抜き</h5>
-            <p style="color: #718096; font-size: 0.875rem;">グラフ領域を自動検出して最適化</p>
-        </div>
-        <div style="padding: 1rem; background: #f7fafc; border-radius: 0.5rem;">
-            <span style="font-size: 1.5rem;">💡</span>
-            <h5 style="margin: 0.5rem 0; color: #2d3748;">統計分析</h5>
-            <p style="color: #718096; font-size: 0.875rem;">最高値、最低値、初当たり等を瞬時に計算</p>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("### 🚀 主な機能")
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.markdown("#### 📈 AIグラフ解析")
+    st.markdown("AIがグラフを自動認識し、正確なデータを抽出")
+with col2:
+    st.markdown("#### ✂️ 自動切り抜き")
+    st.markdown("グラフ領域を自動検出して最適化")
+with col3:
+    st.markdown("#### 💡 統計分析")
+    st.markdown("最高値、最低値、初当たり等を瞬時に計算")
 
 # フッター
-st.markdown("""
-<div class="footer-text">
-    <hr style="margin-bottom: 2rem;"/>
-    <p style="margin: 0;">🎰 パチンコグラフ解析システム v2.0</p>
-    <p style="margin: 0.5rem 0; color: #a0aec0;">更新日: {}</p>
-    <p style="margin: 0.5rem 0; font-size: 0.75rem; color: #cbd5e0;">Made with ❤️ using Streamlit</p>
-</div>
-""".format(datetime.now().strftime('%Y/%m/%d')), unsafe_allow_html=True)
+st.markdown("---")
+st.markdown(f"""
+🎰 パチンコグラフ解析システム v2.0  
+更新日: {datetime.now().strftime('%Y/%m/%d')}  
+Made with ❤️ using Streamlit
+""")
