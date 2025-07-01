@@ -215,29 +215,9 @@ with main_container:
             # グラフデータを抽出
             graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
             
-            # 完全なグラフデータを作成（欠損部分を0で埋める）
             if graph_data_points:
-                # 最大X座標を取得
-                max_x = max(x for x, _ in graph_data_points)
-                
-                # 全X座標に対する値の辞書を作成
-                value_dict = {x: value for x, value in graph_data_points}
-                
-                # 0から最大X座標まで、2ピクセルステップで完全なデータを作成
-                complete_graph_data = []
-                complete_graph_values = []
-                
-                for x in range(0, max_x + 1, 2):
-                    if x in value_dict:
-                        value = value_dict[x]
-                    else:
-                        # 前後の値から補間または0を設定
-                        value = 0
-                    complete_graph_data.append((x, value))
-                    complete_graph_values.append(value)
-                
-                graph_data_points = complete_graph_data
-                graph_values = complete_graph_values
+                # データポイントから値のみを抽出
+                graph_values = [value for x, value in graph_data_points]
                 
                 # 統計情報を計算
                 max_val = max(graph_values)
