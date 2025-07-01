@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 from PIL import Image
 import io
+from web_analyzer import WebCompatibleAnalyzer
 
 # ページ設定
 st.set_page_config(
@@ -228,6 +229,101 @@ with main_container:
                 file_name=f"cropped_{uploaded_file.name}",
                 mime="image/png"
             )
+        
+        # グラフ解析セクション
+        st.markdown("---")
+        st.markdown("### 📈 グラフ解析")
+        
+        # 解析ボタン
+        if st.button("🔍 グラフを解析する", use_container_width=True):
+            with st.spinner("グラフを解析中..."):
+                # アナライザーを初期化
+                analyzer = WebCompatibleAnalyzer()
+                
+                # グリッドラインなしの画像を使用
+                analysis_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
+                
+                # 0ラインの位置を設定
+                analyzer.zero_y = zero_line_in_crop
+                analyzer.scale = 30000 / 246  # スケール設定
+                
+                # グラフデータを抽出
+                graph_values, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
+                
+                if graph_values:
+                    # 解析結果を表示
+                    st.success("✅ グラフ解析が完了しました！")
+                    
+                    # 統計情報を表示
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        max_val = max(graph_values)
+                        st.metric("最高値", f"{max_val:,}玉")
+                    
+                    with col2:
+                        min_val = min(graph_values)
+                        st.metric("最低値", f"{min_val:,}玉")
+                    
+                    with col3:
+                        current_val = graph_values[-1] if graph_values else 0
+                        st.metric("現在値", f"{current_val:,}玉")
+                    
+                    with col4:
+                        st.metric("検出色", dominant_color)
+                    
+                    # グラフを可視化
+                    st.markdown("#### 📊 解析結果グラフ")
+                    
+                    import matplotlib.pyplot as plt
+                    import matplotlib
+                    matplotlib.use('Agg')
+                    
+                    fig, ax = plt.subplots(figsize=(12, 6))
+                    
+                    # グラフをプロット
+                    x_values = list(range(len(graph_values)))
+                    ax.plot(x_values, graph_values, linewidth=2, color='green')
+                    
+                    # グリッドラインを追加
+                    ax.axhline(y=0, color='blue', linestyle='-', linewidth=2, alpha=0.7)
+                    ax.axhline(y=10000, color='gray', linestyle='--', alpha=0.5)
+                    ax.axhline(y=20000, color='gray', linestyle='--', alpha=0.5)
+                    ax.axhline(y=30000, color='gray', linestyle='--', alpha=0.5)
+                    ax.axhline(y=-10000, color='gray', linestyle='--', alpha=0.5)
+                    ax.axhline(y=-20000, color='gray', linestyle='--', alpha=0.5)
+                    ax.axhline(y=-30000, color='gray', linestyle='--', alpha=0.5)
+                    
+                    # 軸の設定
+                    ax.set_ylim(-35000, 35000)
+                    ax.set_xlabel('X座標（ピクセル）')
+                    ax.set_ylabel('収支（玉）')
+                    ax.set_title('パチンコ収支グラフ解析結果')
+                    ax.grid(True, alpha=0.3)
+                    
+                    # Y軸のフォーマット
+                    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+                    
+                    plt.tight_layout()
+                    st.pyplot(fig)
+                    
+                    # データをダウンロード可能にする
+                    st.markdown("#### 💾 データダウンロード")
+                    
+                    # CSVデータを作成
+                    csv_data = "X座標,収支（玉）\n"
+                    for i, value in enumerate(graph_values):
+                        csv_data += f"{i},{value}\n"
+                    
+                    st.download_button(
+                        label="📄 CSVファイルをダウンロード",
+                        data=csv_data,
+                        file_name=f"graph_data_{uploaded_file.name.split('.')[0]}.csv",
+                        mime="text/csv"
+                    )
+                    
+                else:
+                    st.error("グラフデータを検出できませんでした。画像の品質を確認してください。")
         
     else:
         # アップロード前の表示
