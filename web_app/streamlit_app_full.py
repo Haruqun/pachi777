@@ -853,6 +853,9 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             avg_adjustment_minus_30k = int(np.mean([c['adjustment_minus_30k'] for c in corrections]))
                             avg_correction_factor = np.mean([c['correction_factor'] for c in corrections])
                             
+                            # セッションステートに保存
+                            st.session_state.avg_correction_factor = avg_correction_factor
+                            
                             # 入力値のサマリーを表示
                             st.markdown("---")
                             st.markdown("#### 📊 調整計算結果")
@@ -1508,6 +1511,10 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     # 現在の設定を取得
                     settings = save_settings()
                     
+                    # 補正係数があれば追加
+                    if 'avg_correction_factor' in st.session_state:
+                        settings['correction_factor'] = st.session_state.avg_correction_factor
+                    
                     # プリセットに保存
                     st.session_state.saved_presets[preset_name] = settings.copy()
                     # 現在の設定も更新
@@ -1871,8 +1878,9 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         crop_height = cropped_img.shape[0]
         zero_line_in_crop = zero_line_y - top  # 切り抜き画像内での0ライン位置
         
-        # スケール計算（上下246,247pxで±30000）
-        scale = 30000 / 246  # 約121.95玉/px
+        # スケール計算（調整されたグリッドラインに基づく）
+        # 注意：この変数はグリッドライン描画にのみ使用され、実際の解析には使用されない
+        scale = 30000 / 246  # グリッドライン描画用のデフォルト値
         
         # グリッドライン描画（設定値を使用）
         # +30000ライン（最上部）
@@ -2050,6 +2058,16 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             max_val = max(graph_values)
             min_val = min(graph_values)
             current_val = graph_values[-1] if graph_values else 0
+            
+            # 補正係数を適用（プリセットに含まれている場合）
+            correction_factor = settings.get('correction_factor', 1.0)
+            if correction_factor != 1.0:
+                # 補正を適用
+                max_val = max_val * correction_factor
+                min_val = min_val * correction_factor
+                current_val = current_val * correction_factor
+                # グラフ値も更新（初当たり検出用）
+                graph_values = [v * correction_factor for v in graph_values]
 
             # 最大値が30,000を超える場合は30,000にクリップ
             if max_val > 30000:
