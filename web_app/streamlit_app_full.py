@@ -17,6 +17,8 @@ import re
 import json
 import pandas as pd
 import time
+import hashlib
+import secrets
 
 # ページ設定
 st.set_page_config(
@@ -124,7 +126,13 @@ default_settings = {
     'right_margin': 125,
     # グリッドライン調整値
     'grid_30k_offset': 0,       # +30000ライン（最上部）
-    'grid_minus_30k_offset': 0  # -30000ライン（最下部）
+    'grid_minus_30k_offset': 0, # -30000ライン（最下部）
+    # 実験的機能用（非表示）
+    'grid_20k_offset': 0,       # +20000ライン
+    'grid_10k_offset': 0,       # +10000ライン
+    'grid_minus_10k_offset': 0, # -10000ライン
+    'grid_minus_20k_offset': 0, # -20000ライン
+    'use_nonlinear_scale': False  # 非線形スケールを使用
 }
 
 # セッションステートの初期化（エキスパンダーより前に行う）
@@ -146,7 +154,90 @@ if 'current_preset_name' not in st.session_state:
 if 'uploaded_file_names' not in st.session_state:
     st.session_state.uploaded_file_names = []
 
-# Cookieからのログイン状態確認は一時的に無効化
+# セッショントークンの生成と検証
+def generate_session_token():
+    """セッショントークンを生成"""
+    return secrets.token_urlsafe(32)
+
+def verify_session_token(token):
+    """セッショントークンを検証（簡易実装）"""
+    # 実際の実装では、サーバー側でトークンを管理すべきですが、
+    # 簡易実装として、トークンの形式チェックのみ行います
+    return token and len(token) > 20
+
+# JavaScriptでCookieを扱うヘルパー関数
+def cookie_manager():
+    """Cookie管理用のJavaScriptコード"""
+    return """
+    <script>
+    // Cookieを設定
+    function setCookie(name, value, days) {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + (value || "") + expires + "; path=/";
+    }
+    
+    // Cookieを取得
+    function getCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i = 0; i < ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+    
+    // Cookieを削除
+    function eraseCookie(name) {
+        document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    }
+    
+    // Streamlitとの通信
+    function sendToStreamlit(data) {
+        window.parent.postMessage({
+            type: 'streamlit:setComponentValue',
+            data: data
+        }, '*');
+    }
+    
+    // ページ読み込み時にセッショントークンをチェック
+    window.addEventListener('load', function() {
+        var token = getCookie('pachi777_session');
+        if (token) {
+            // セッショントークンが存在する場合、Streamlitに通知
+            var checkTokenElement = document.getElementById('check-session-token');
+            if (checkTokenElement) {
+                checkTokenElement.value = token;
+                checkTokenElement.dispatchEvent(new Event('change'));
+            }
+        }
+    });
+    </script>
+    """
+
+# セッショントークンチェック用の隠しフィールド
+if 'session_token_checked' not in st.session_state:
+    st.session_state.session_token_checked = False
+
+if not st.session_state.authenticated and not st.session_state.session_token_checked:
+    # Cookie管理用のJavaScriptを挿入
+    st.markdown(cookie_manager(), unsafe_allow_html=True)
+    
+    # 隠しフィールドでセッショントークンをチェック
+    token_check = st.text_input("", key="check-session-token", label_visibility="hidden")
+    if token_check and verify_session_token(token_check):
+        st.session_state.authenticated = True
+        st.session_state.session_token = token_check
+        st.session_state.session_token_checked = True
+        st.rerun()
+    else:
+        st.session_state.session_token_checked = True
 
 # パスワード認証
 if not st.session_state.authenticated:
@@ -266,6 +357,8 @@ if not st.session_state.authenticated:
             if st.session_state.password_input == "059":
                 st.session_state.authenticated = True
                 st.session_state.login_success = True
+                # セッショントークンを生成
+                st.session_state.session_token = generate_session_token()
             else:
                 st.session_state.login_error = True
         
@@ -286,7 +379,15 @@ if not st.session_state.authenticated:
         # ログイン成功時の処理
         if st.session_state.get('login_success', False):
             st.success("✅ ログインしました")
+            # Cookieを設定するJavaScriptを実行
+            if 'session_token' in st.session_state:
+                st.markdown(f"""
+                <script>
+                setCookie('pachi777_session', '{st.session_state.session_token}', 30);
+                </script>
+                """, unsafe_allow_html=True)
             st.session_state.login_success = False
+            time.sleep(0.5)  # Cookieが設定されるまで少し待機
             st.rerun()
         
         # ログインエラー時の処理
@@ -306,6 +407,9 @@ if not st.session_state.authenticated:
     
     # 認証されていない場合はここで処理を終了
     st.stop()
+
+# 認証済みの場合もCookie管理用のJavaScriptを挿入（ログアウト用）
+st.markdown(cookie_manager(), unsafe_allow_html=True)
 
 # プリセット保存用のファイルパスを設定
 # Streamlit Cloudでも動作するように、書き込み可能なディレクトリを使用
@@ -510,10 +614,11 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 )
             
             # 中間ライン用のダミー変数を設定（他のコードで参照されるため）
-            grid_20k_offset = 0
-            grid_10k_offset = 0
-            grid_minus_10k_offset = 0
-            grid_minus_20k_offset = 0
+            if not st.session_state.settings.get('use_nonlinear_scale', False):
+                grid_20k_offset = 0
+                grid_10k_offset = 0
+                grid_minus_10k_offset = 0
+                grid_minus_20k_offset = 0
             
             # 最大値アライメント機能を統合
             if test_image:
@@ -657,6 +762,63 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             st.success("✅ 検出値と実際の値が一致しています")
                 else:
                     st.warning("グラフデータを検出できませんでした")
+            
+            # 実験的機能
+            st.markdown("#### 🧪 実験的機能：非線形スケール対応")
+            with st.expander("‼️ 高度な設定（注意して使用してください）", expanded=False):
+                st.warning("⚠️ これらは実験的な機能です。通常の解析には影響しません。")
+                
+                # 非線形スケールの有効化
+                use_nonlinear = st.checkbox(
+                    "📏 非線形スケールを使用",
+                    value=st.session_state.settings.get('use_nonlinear_scale', False),
+                    help="グラフが線形でない場合に有効にしてください",
+                    key="use_nonlinear_checkbox"
+                )
+                
+                if use_nonlinear:
+                    st.info("📊 中間ラインを使用して、各区間で個別にスケールを計算します")
+                    
+                    # 中間ラインの調整
+                    st.markdown("**中間ライン調整**")
+                    col1_mid, col2_mid = st.columns(2)
+                    
+                    with col1_mid:
+                        grid_20k_offset = st.number_input(
+                            "+20,000ライン調整",
+                            min_value=-50, max_value=50, 
+                            value=st.session_state.settings.get('grid_20k_offset', 0),
+                            step=1, help="+20,000ラインの位置調整"
+                        )
+                        grid_10k_offset = st.number_input(
+                            "+10,000ライン調整",
+                            min_value=-50, max_value=50, 
+                            value=st.session_state.settings.get('grid_10k_offset', 0),
+                            step=1, help="+10,000ラインの位置調整"
+                        )
+                    
+                    with col2_mid:
+                        grid_minus_10k_offset = st.number_input(
+                            "-10,000ライン調整",
+                            min_value=-50, max_value=50, 
+                            value=st.session_state.settings.get('grid_minus_10k_offset', 0),
+                            step=1, help="-10,000ラインの位置調整"
+                        )
+                        grid_minus_20k_offset = st.number_input(
+                            "-20,000ライン調整",
+                            min_value=-50, max_value=50, 
+                            value=st.session_state.settings.get('grid_minus_20k_offset', 0),
+                            step=1, help="-20,000ラインの位置調整"
+                        )
+                    
+                    # プレビューに中間ラインを表示するための更新
+                    st.session_state.settings['grid_20k_offset'] = grid_20k_offset
+                    st.session_state.settings['grid_10k_offset'] = grid_10k_offset
+                    st.session_state.settings['grid_minus_10k_offset'] = grid_minus_10k_offset
+                    st.session_state.settings['grid_minus_20k_offset'] = grid_minus_20k_offset
+                    st.session_state.settings['use_nonlinear_scale'] = True
+                else:
+                    st.session_state.settings['use_nonlinear_scale'] = False
     
     
     # リアルタイムプレビュー
@@ -724,6 +886,36 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             cv2.line(overlay_img, (0, y_minus_30k_orig), (width, y_minus_30k_orig), (128, 128, 128), 2)
             cv2.putText(overlay_img, '-30000', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
         
+        # 実験的機能：中間ラインを表示
+        if st.session_state.settings.get('use_nonlinear_scale', False):
+            # +20000ライン
+            y_20k_in_crop = zero_in_crop - (20000 / 30000) * distance_to_plus_30k + st.session_state.settings.get('grid_20k_offset', 0)
+            y_20k_orig = int(top + y_20k_in_crop)
+            if 0 <= y_20k_orig < height:
+                cv2.line(overlay_img, (0, y_20k_orig), (width, y_20k_orig), (100, 150, 100), 2)
+                cv2.putText(overlay_img, '+20000', (10, max(20, y_20k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (50, 100, 50), 2)
+            
+            # +10000ライン
+            y_10k_in_crop = zero_in_crop - (10000 / 30000) * distance_to_plus_30k + st.session_state.settings.get('grid_10k_offset', 0)
+            y_10k_orig = int(top + y_10k_in_crop)
+            if 0 <= y_10k_orig < height:
+                cv2.line(overlay_img, (0, y_10k_orig), (width, y_10k_orig), (100, 150, 100), 2)
+                cv2.putText(overlay_img, '+10000', (10, max(20, y_10k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (50, 100, 50), 2)
+            
+            # -10000ライン
+            y_minus_10k_in_crop = zero_in_crop + (10000 / 30000) * distance_to_minus_30k + st.session_state.settings.get('grid_minus_10k_offset', 0)
+            y_minus_10k_orig = int(top + y_minus_10k_in_crop)
+            if 0 <= y_minus_10k_orig < height:
+                cv2.line(overlay_img, (0, y_minus_10k_orig), (width, y_minus_10k_orig), (150, 100, 100), 2)
+                cv2.putText(overlay_img, '-10000', (10, max(10, y_minus_10k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 50, 50), 2)
+            
+            # -20000ライン
+            y_minus_20k_in_crop = zero_in_crop + (20000 / 30000) * distance_to_minus_30k + st.session_state.settings.get('grid_minus_20k_offset', 0)
+            y_minus_20k_orig = int(top + y_minus_20k_in_crop)
+            if 0 <= y_minus_20k_orig < height:
+                cv2.line(overlay_img, (0, y_minus_20k_orig), (width, y_minus_20k_orig), (150, 100, 100), 2)
+                cv2.putText(overlay_img, '-20000', (10, max(10, y_minus_20k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 50, 50), 2)
+        
         # ゼロラインから±30000ラインまでの距離を計算（切り抜き内での計算）
         zero_in_crop = zero_line_y - top
         distance_to_plus_30k = zero_in_crop - grid_30k_offset
@@ -756,6 +948,31 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 cv2.line(cropped_preview, (0, y_minus_30k), (cropped_preview.shape[1], y_minus_30k), (150, 0, 0), 3)
                 cv2.putText(cropped_preview, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 0, 0), 2)
             
+            # 実験的機能：中間ラインを表示（切り抜き画像内）
+            if st.session_state.settings.get('use_nonlinear_scale', False):
+                # +20000ライン
+                y_20k_crop = int(zero_in_crop - (20000 / 30000) * (zero_in_crop - y_30k) + st.session_state.settings.get('grid_20k_offset', 0))
+                if 0 <= y_20k_crop < cropped_preview.shape[0]:
+                    cv2.line(cropped_preview, (0, y_20k_crop), (cropped_preview.shape[1], y_20k_crop), (100, 150, 100), 2)
+                    cv2.putText(cropped_preview, '+20000', (10, max(20, y_20k_crop + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 100, 50), 2)
+                
+                # +10000ライン
+                y_10k_crop = int(zero_in_crop - (10000 / 30000) * (zero_in_crop - y_30k) + st.session_state.settings.get('grid_10k_offset', 0))
+                if 0 <= y_10k_crop < cropped_preview.shape[0]:
+                    cv2.line(cropped_preview, (0, y_10k_crop), (cropped_preview.shape[1], y_10k_crop), (100, 150, 100), 2)
+                    cv2.putText(cropped_preview, '+10000', (10, max(20, y_10k_crop + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 100, 50), 2)
+                
+                # -10000ライン
+                y_minus_10k_crop = int(zero_in_crop + (10000 / 30000) * (y_minus_30k - zero_in_crop) + st.session_state.settings.get('grid_minus_10k_offset', 0))
+                if 0 <= y_minus_10k_crop < cropped_preview.shape[0]:
+                    cv2.line(cropped_preview, (0, y_minus_10k_crop), (cropped_preview.shape[1], y_minus_10k_crop), (150, 100, 100), 2)
+                    cv2.putText(cropped_preview, '-10000', (10, max(10, y_minus_10k_crop - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (100, 50, 50), 2)
+                
+                # -20000ライン
+                y_minus_20k_crop = int(zero_in_crop + (20000 / 30000) * (y_minus_30k - zero_in_crop) + st.session_state.settings.get('grid_minus_20k_offset', 0))
+                if 0 <= y_minus_20k_crop < cropped_preview.shape[0]:
+                    cv2.line(cropped_preview, (0, y_minus_20k_crop), (cropped_preview.shape[1], y_minus_20k_crop), (150, 100, 100), 2)
+                    cv2.putText(cropped_preview, '-20000', (10, max(10, y_minus_20k_crop - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (100, 50, 50), 2)
             
             # 最大値の位置を赤線で表示
             if 'max_value_position' in st.session_state:
@@ -782,7 +999,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     if test_image:
         # test_imageがある場合、入力値から直接設定を作成
         def save_settings():
-            return {
+            settings = {
                 'search_start_offset': search_start_offset,
                 'search_end_offset': search_end_offset,
                 'crop_top': crop_top,
@@ -792,6 +1009,16 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 'grid_30k_offset': grid_30k_offset,
                 'grid_minus_30k_offset': grid_minus_30k_offset
             }
+            # 実験的機能の設定も含める
+            if st.session_state.settings.get('use_nonlinear_scale', False):
+                settings.update({
+                    'grid_20k_offset': st.session_state.settings.get('grid_20k_offset', 0),
+                    'grid_10k_offset': st.session_state.settings.get('grid_10k_offset', 0),
+                    'grid_minus_10k_offset': st.session_state.settings.get('grid_minus_10k_offset', 0),
+                    'grid_minus_20k_offset': st.session_state.settings.get('grid_minus_20k_offset', 0),
+                    'use_nonlinear_scale': True
+                })
+            return settings
     else:
         # test_imageがない場合、セッションステートから取得
         def save_settings():
@@ -1254,6 +1481,35 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
         cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
 
+        # 実験的機能：中間ラインも描画
+        if settings.get('use_nonlinear_scale', False):
+            # +20000ライン
+            y_20k = int(zero_line_in_crop - (20000 / 30000) * (zero_line_in_crop - y_30k) + settings.get('grid_20k_offset', 0))
+            if 0 <= y_20k < crop_height:
+                cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (100, 150, 100), 1)
+                cv2.putText(cropped_img, '+20000', (10, max(20, y_20k + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 100, 50), 1)
+            
+            # +10000ライン
+            y_10k = int(zero_line_in_crop - (10000 / 30000) * (zero_line_in_crop - y_30k) + settings.get('grid_10k_offset', 0))
+            if 0 <= y_10k < crop_height:
+                cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (100, 150, 100), 1)
+                cv2.putText(cropped_img, '+10000', (10, max(20, y_10k + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 100, 50), 1)
+            
+            # -10000ライン
+            y_minus_10k = int(zero_line_in_crop + (10000 / 30000) * (y_minus_30k - zero_line_in_crop) + settings.get('grid_minus_10k_offset', 0))
+            if 0 <= y_minus_10k < crop_height:
+                cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (150, 100, 100), 1)
+                cv2.putText(cropped_img, '-10000', (10, max(10, y_minus_10k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 50, 50), 1)
+            
+            # -20000ライン
+            y_minus_20k = int(zero_line_in_crop + (20000 / 30000) * (y_minus_30k - zero_line_in_crop) + settings.get('grid_minus_20k_offset', 0))
+            if 0 <= y_minus_20k < crop_height:
+                cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (150, 100, 100), 1)
+                cv2.putText(cropped_img, '-20000', (10, max(10, y_minus_20k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 50, 50), 1)
+        else:
+            # ダミー値（他のコードとの互換性のため）
+            y_20k = y_10k = y_minus_10k = y_minus_20k = 0
+        
         # ゼロラインから±30000ラインまでの距離を計算
         distance_to_plus_30k = zero_line_in_crop - y_30k
         distance_to_minus_30k = y_minus_30k - zero_line_in_crop
@@ -1908,6 +2164,14 @@ with footer_col1:
 
 with footer_col3:
     if st.button("🚪 ログアウト", key="logout_button"):
-        # Cookie削除は一時的に無効化
+        # Cookieを削除
+        st.markdown("""
+        <script>
+        eraseCookie('pachi777_session');
+        </script>
+        """, unsafe_allow_html=True)
         st.session_state.authenticated = False
+        if 'session_token' in st.session_state:
+            del st.session_state.session_token
+        time.sleep(0.3)
         st.rerun()
