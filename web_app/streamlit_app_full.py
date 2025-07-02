@@ -689,28 +689,33 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         # テスト解析を実行
         analyzer = WebCompatibleAnalyzer()
         
-        # 現在の設定で解析実行
-        current_settings = {
-            'search_start_offset': search_start_offset,
-            'search_end_offset': search_end_offset,
-            'crop_top': crop_top,
-            'crop_bottom': crop_bottom,
-            'left_margin': left_margin,
-            'right_margin': right_margin,
-            'grid_30k_offset': grid_30k_offset,
-            'grid_20k_offset': grid_20k_offset,
-            'grid_10k_offset': grid_10k_offset,
-            'grid_minus_10k_offset': grid_minus_10k_offset,
-            'grid_minus_20k_offset': grid_minus_20k_offset,
-            'grid_minus_30k_offset': grid_minus_30k_offset
-        }
+        # 現在の設定を取得（セッションステートの値を優先）
+        current_settings = st.session_state.settings.copy()
+        
+        # テスト機能用に画像を再度切り抜き（セッションステートの設定を使用）
+        # ゼロライン検出
+        test_search_start = orange_bottom + current_settings['search_start_offset']
+        test_search_end = min(height - 100, orange_bottom + current_settings['search_end_offset'])
+        
+        test_zero_line_y = zero_line_y  # リアルタイムプレビューで検出したゼロラインを使用
+        
+        # 切り抜き
+        test_top = max(0, test_zero_line_y - current_settings['crop_top'])
+        test_bottom = min(height, test_zero_line_y + current_settings['crop_bottom'])
+        test_left = current_settings['left_margin']
+        test_right = width - current_settings['right_margin']
+        
+        # グリッドライン調整値も適用
+        test_zero_in_crop = test_zero_line_y - test_top
+        test_distance_to_plus_30k = test_zero_in_crop - current_settings['grid_30k_offset']
+        test_distance_to_minus_30k = (test_bottom - test_top - 1 + current_settings['grid_minus_30k_offset']) - test_zero_in_crop
         
         # カスタム設定で解析
-        analyzer.zero_y = zero_in_crop
-        analyzer.scale = 30000 / distance_to_plus_30k if distance_to_plus_30k > 0 else 122
+        analyzer.zero_y = test_zero_in_crop
+        analyzer.scale = 30000 / test_distance_to_plus_30k if test_distance_to_plus_30k > 0 else 122
         
         # 切り抜き画像で解析
-        cropped_for_analysis = img_array[int(top):int(bottom), int(left):int(right)]
+        cropped_for_analysis = img_array[int(test_top):int(test_bottom), int(test_left):int(test_right)]
         # BGRに変換（OpenCVの標準形式）
         cropped_bgr = cv2.cvtColor(cropped_for_analysis, cv2.COLOR_RGB2BGR)
         
@@ -726,7 +731,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             max_index = analysis['max_index']
             if max_index < len(data_points):
                 max_x, max_y_value = data_points[max_index]
-                max_y_pixel = int(zero_in_crop - (max_y_value / analyzer.scale))
+                max_y_pixel = int(test_zero_in_crop - (max_y_value / analyzer.scale))
                 # 最大値の位置に赤い横線を引く
                 cv2.line(marked_image, (0, max_y_pixel), (marked_image.shape[1], max_y_pixel), (255, 0, 0), 2)
                 # 最大値のラベルを追加
@@ -764,22 +769,22 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     if max_index < len(data_points):
                         max_x, max_y_value = data_points[max_index]
                         # 画像座標系での最大値のY座標（0が上、heightが下）
-                        max_y_pixel = int(zero_in_crop - (max_y_value / analyzer.scale))
+                        max_y_pixel = int(test_zero_in_crop - (max_y_value / analyzer.scale))
                         
                         # 実際の最大値に基づいて新しいスケールを計算
                         # max_y_pixelから0ラインまでの距離がvisual_max玉に相当
-                        actual_distance = zero_in_crop - max_y_pixel
+                        actual_distance = test_zero_in_crop - max_y_pixel
                         if actual_distance > 0:
                             new_scale = visual_max / actual_distance
                             
                             # 新しい+30000ラインの位置を計算
                             new_30k_distance = 30000 / new_scale
-                            current_30k_distance = zero_in_crop - grid_30k_offset
+                            current_30k_distance = test_zero_in_crop - current_settings['grid_30k_offset']
                             adjustment_30k = int(current_30k_distance - new_30k_distance)
                             
                             # 新しい-30000ラインの位置を計算
                             new_minus_30k_distance = 30000 / new_scale
-                            current_minus_30k_distance = (cropped_for_analysis.shape[0] - 1 + grid_minus_30k_offset) - zero_in_crop
+                            current_minus_30k_distance = (cropped_for_analysis.shape[0] - 1 + current_settings['grid_minus_30k_offset']) - test_zero_in_crop
                             adjustment_minus_30k = int(new_minus_30k_distance - current_minus_30k_distance)
                             
                             st.write("### 🎯 自動調整の推奨値")
@@ -799,12 +804,12 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             # 自動適用ボタン
                             if st.button("🔧 推奨値を自動適用", type="secondary"):
                                 # セッションステートに新しい値を設定
-                                st.session_state.settings['grid_30k_offset'] = grid_30k_offset + adjustment_30k
-                                st.session_state.settings['grid_20k_offset'] = grid_20k_offset + int(adjustment_30k * 2/3)
-                                st.session_state.settings['grid_10k_offset'] = grid_10k_offset + int(adjustment_30k * 1/3)
-                                st.session_state.settings['grid_minus_10k_offset'] = grid_minus_10k_offset + int(adjustment_minus_30k * 1/3)
-                                st.session_state.settings['grid_minus_20k_offset'] = grid_minus_20k_offset + int(adjustment_minus_30k * 2/3)
-                                st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + adjustment_minus_30k
+                                st.session_state.settings['grid_30k_offset'] = current_settings['grid_30k_offset'] + adjustment_30k
+                                st.session_state.settings['grid_20k_offset'] = current_settings['grid_20k_offset'] + int(adjustment_30k * 2/3)
+                                st.session_state.settings['grid_10k_offset'] = current_settings['grid_10k_offset'] + int(adjustment_30k * 1/3)
+                                st.session_state.settings['grid_minus_10k_offset'] = current_settings['grid_minus_10k_offset'] + int(adjustment_minus_30k * 1/3)
+                                st.session_state.settings['grid_minus_20k_offset'] = current_settings['grid_minus_20k_offset'] + int(adjustment_minus_30k * 2/3)
+                                st.session_state.settings['grid_minus_30k_offset'] = current_settings['grid_minus_30k_offset'] + adjustment_minus_30k
                                 
                                 st.success("✅ 推奨値を適用しました！画面が更新されます...")
                                 time.sleep(1)
