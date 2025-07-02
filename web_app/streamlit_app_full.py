@@ -446,12 +446,16 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
     
     # テスト画像のアップロード（最初に表示）
-    test_image = st.file_uploader(
+    test_images = st.file_uploader(
         "🖼️ テスト用画像をアップロード",
         type=['jpg', 'jpeg', 'png'],
-        help="調整用の画像を1枚アップロードしてください",
-        key="test_image"
+        help="調整用の画像を複数アップロードできます。複数枚の場合は統計的に処理されます",
+        key="test_images",
+        accept_multiple_files=True
     )
+    
+    # 単一画像の場合の互換性のため
+    test_image = test_images[0] if test_images else None
     
     # 画像がアップロードされた場合のみプリセット選択を表示
     if test_image:
@@ -621,12 +625,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 grid_minus_20k_offset = 0
             
             # 最大値アライメント機能を統合
-            if test_image:
+            if test_images:
                 st.markdown("#### 🎯 最大値アライメントで自動調整")
-                st.caption("グラフの実際の最大値を入力すると、最適なグリッドライン位置を自動計算します")
+                st.caption(f"アップロードされた{len(test_images)}枚の画像から最適なグリッドライン位置を自動計算します")
                 
-                # 現在の画像で解析を実行
-                analyzer_align = WebCompatibleAnalyzer()
+                # 複数画像の解析結果を保存
+                all_detections = []
+                all_max_positions = []
                 
                 # 現在の設定を取得（入力フィールドの値を使用）
                 current_settings_align = {
@@ -640,126 +645,195 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     'grid_minus_30k_offset': grid_minus_30k_offset
                 }
                 
-                # ゼロライン検出（最大値アライメント用）
-                align_search_start = orange_bottom + search_start_offset
-                align_search_end = min(height - 100, orange_bottom + search_end_offset)
-                
-                # ゼロライン検出
-                align_best_score = 0
-                align_zero_line_y = (align_search_start + align_search_end) // 2
-                
-                for y in range(align_search_start, align_search_end):
-                    row = gray[y, 100:width-100]
-                    darkness = 1.0 - (np.mean(row) / 255.0)
-                    uniformity = 1.0 - (np.std(row) / 128.0)
-                    score = darkness * 0.5 + uniformity * 0.5
+                # 各画像を解析
+                for img_idx, test_img in enumerate(test_images):
+                    # 画像を読み込み
+                    img_array_tmp = np.array(Image.open(test_img).convert('RGB'))
+                    height_tmp, width_tmp = img_array_tmp.shape[:2]
                     
-                    if score > align_best_score:
-                        align_best_score = score
-                        align_zero_line_y = y
-                
-                # 切り抜き
-                align_top = max(0, align_zero_line_y - crop_top)
-                align_bottom = min(height, align_zero_line_y + crop_bottom)
-                align_left = left_margin
-                align_right = width - right_margin
-                
-                # グリッドライン調整値も適用（現在の入力値を使用）
-                align_zero_in_crop = align_zero_line_y - align_top
-                align_distance_to_plus_30k = align_zero_in_crop - grid_30k_offset
-                align_distance_to_minus_30k = (align_bottom - align_top - 1 + grid_minus_30k_offset) - align_zero_in_crop
-                
-                # カスタム設定で解析
-                analyzer_align.zero_y = align_zero_in_crop
-                analyzer_align.scale = 30000 / align_distance_to_plus_30k if align_distance_to_plus_30k > 0 else 122
-                
-                # 切り抜き画像で解析
-                cropped_for_align = img_array[int(align_top):int(align_bottom), int(align_left):int(align_right)]
-                # BGRに変換（OpenCVの標準形式）
-                cropped_bgr_align = cv2.cvtColor(cropped_for_align, cv2.COLOR_RGB2BGR)
-                
-                # 解析実行（画像データを直接渡す）
-                data_points_align, color_align, detected_zero_align = analyzer_align.extract_graph_data(cropped_bgr_align)
-                
-                if data_points_align:
-                    analysis_align = analyzer_align.analyze_values(data_points_align)
-                    detected_max_align = analysis_align['max_value']
+                    # オレンジバーを検出
+                    hsv_tmp = cv2.cvtColor(img_array_tmp, cv2.COLOR_RGB2HSV)
+                    orange_mask_tmp = cv2.inRange(hsv_tmp, np.array([10, 100, 100]), np.array([30, 255, 255]))
+                    orange_bottom_tmp = 0
                     
-                    # 検出値と実際の値を横並びで表示
-                    col1_align, col2_align, col3_align = st.columns([2, 2, 1])
-                    with col1_align:
-                        st.info(f"🔍 検出値: **{detected_max_align:,}玉**")
+                    for y in range(height_tmp//2):
+                        if np.sum(orange_mask_tmp[y, :]) > width_tmp * 0.3 * 255:
+                            orange_bottom_tmp = y
                     
-                    with col2_align:
-                        visual_max_align = st.number_input(
-                            "実際の最大値を入力",
-                            min_value=0,
-                            max_value=50000,
-                            value=detected_max_align,
-                            step=100,
-                            help="グラフ画像を見て確認した最高値",
-                            key="visual_max_alignment",
-                            label_visibility="visible"
-                        )
+                    if orange_bottom_tmp > 0:
+                        for y in range(orange_bottom_tmp, min(orange_bottom_tmp + 100, height_tmp)):
+                            if np.sum(orange_mask_tmp[y, :]) < width_tmp * 0.1 * 255:
+                                orange_bottom_tmp = y
+                                break
+                    else:
+                        orange_bottom_tmp = 150
                     
-                    with col3_align:
-                        if visual_max_align > 0 and detected_max_align > 0:
-                            correction_factor = visual_max_align / detected_max_align
-                            if abs(correction_factor - 1.0) > 0.001:
-                                st.metric("補正率", f"{correction_factor:.2f}x")
+                    # グレースケール変換
+                    gray_tmp = cv2.cvtColor(img_array_tmp, cv2.COLOR_RGB2GRAY)
                     
-                    if visual_max_align > 0 and detected_max_align > 0:
+                    # 現在の画像で解析を実行
+                    analyzer_align = WebCompatibleAnalyzer()
+                    
+                    # ゼロライン検出（最大値アライメント用）
+                    align_search_start = orange_bottom_tmp + search_start_offset
+                    align_search_end = min(height_tmp - 100, orange_bottom_tmp + search_end_offset)
+                    
+                    # ゼロライン検出
+                    align_best_score = 0
+                    align_zero_line_y = (align_search_start + align_search_end) // 2
+                    
+                    for y in range(align_search_start, align_search_end):
+                        row = gray_tmp[y, 100:width_tmp-100]
+                        darkness = 1.0 - (np.mean(row) / 255.0)
+                        uniformity = 1.0 - (np.std(row) / 128.0)
+                        score = darkness * 0.5 + uniformity * 0.5
                         
-                        # 最大値の位置を取得（常に実行）
+                        if score > align_best_score:
+                            align_best_score = score
+                            align_zero_line_y = y
+                    
+                    # 切り抜き
+                    align_top = max(0, align_zero_line_y - crop_top)
+                    align_bottom = min(height_tmp, align_zero_line_y + crop_bottom)
+                    align_left = left_margin
+                    align_right = width_tmp - right_margin
+                    
+                    # グリッドライン調整値も適用（現在の入力値を使用）
+                    align_zero_in_crop = align_zero_line_y - align_top
+                    align_distance_to_plus_30k = align_zero_in_crop - grid_30k_offset
+                    align_distance_to_minus_30k = (align_bottom - align_top - 1 + grid_minus_30k_offset) - align_zero_in_crop
+                    
+                    # カスタム設定で解析
+                    analyzer_align.zero_y = align_zero_in_crop
+                    analyzer_align.scale = 30000 / align_distance_to_plus_30k if align_distance_to_plus_30k > 0 else 122
+                    
+                    # 切り抜き画像で解析
+                    cropped_for_align = img_array_tmp[int(align_top):int(align_bottom), int(align_left):int(align_right)]
+                    # BGRに変換（OpenCVの標準形式）
+                    cropped_bgr_align = cv2.cvtColor(cropped_for_align, cv2.COLOR_RGB2BGR)
+                    
+                    # 解析実行（画像データを直接渡す）
+                    data_points_align, color_align, detected_zero_align = analyzer_align.extract_graph_data(cropped_bgr_align)
+                    
+                    if data_points_align:
+                        analysis_align = analyzer_align.analyze_values(data_points_align)
+                        detected_max_align = analysis_align['max_value']
+                        
+                        # 最大値の位置を取得
                         max_index = analysis_align['max_index']
                         if max_index < len(data_points_align):
                             max_x, max_y_value = data_points_align[max_index]
                             # 画像座標系での最大値のY座標
                             max_y_pixel = int(align_zero_in_crop - (max_y_value / analyzer_align.scale))
                             
-                            # 最大値の位置をセッションステートに保存
-                            st.session_state['max_value_position'] = {
+                            all_detections.append({
+                                'detected_max': detected_max_align,
+                                'max_y_pixel': max_y_pixel,
+                                'zero_in_crop': align_zero_in_crop,
+                                'crop_height': cropped_for_align.shape[0],
+                                'image_name': test_img.name
+                            })
+                            
+                            all_max_positions.append({
                                 'x': int(max_x),
                                 'y': max_y_pixel,
                                 'value': max_y_value
-                            }
+                            })
+                
+                if all_detections:
+                    # 統計情報を計算
+                    detected_maxes = [d['detected_max'] for d in all_detections]
+                    avg_detected_max = int(np.mean(detected_maxes))
+                    median_detected_max = int(np.median(detected_maxes))
+                    
+                    # 検出結果を表示
+                    st.markdown("##### 📊 検出結果")
+                    if len(all_detections) > 1:
+                        detection_cols = st.columns(3)
+                        with detection_cols[0]:
+                            st.metric("平均値", f"{avg_detected_max:,}玉")
+                        with detection_cols[1]:
+                            st.metric("中央値", f"{median_detected_max:,}玉")
+                        with detection_cols[2]:
+                            st.metric("検出画像数", f"{len(all_detections)}/{len(test_images)}枚")
                         
-                        if abs(correction_factor - 1.0) > 0.001:
-                                
-                                # 実際の最大値に基づいて新しいスケールを計算
-                                actual_distance = align_zero_in_crop - max_y_pixel
+                        # 個別の検出値を表示
+                        with st.expander("📋 個別の検出値を表示"):
+                            for detection in all_detections:
+                                st.write(f"• {detection['image_name']}: **{detection['detected_max']:,}玉**")
+                    else:
+                        st.info(f"🔍 検出値: **{detected_maxes[0]:,}玉**")
+                    
+                    # 実際の値の入力
+                    visual_max_align = st.number_input(
+                        "実際の最大値を入力",
+                        min_value=0,
+                        max_value=50000,
+                        value=median_detected_max if len(all_detections) > 1 else detected_maxes[0],
+                        step=100,
+                        help="グラフ画像を見て確認した最高値",
+                        key="visual_max_alignment",
+                        label_visibility="visible"
+                    )
+                    
+                    if visual_max_align > 0:
+                        # 各画像での補正率を計算
+                        corrections = []
+                        for detection in all_detections:
+                            if detection['detected_max'] > 0:
+                                correction_factor = visual_max_align / detection['detected_max']
+                                actual_distance = detection['zero_in_crop'] - detection['max_y_pixel']
                                 if actual_distance > 0:
                                     new_scale = visual_max_align / actual_distance
                                     
                                     # 新しい+30000ラインの位置を計算
                                     new_30k_distance = 30000 / new_scale
-                                    current_30k_distance = align_zero_in_crop - current_settings_align['grid_30k_offset']
+                                    current_30k_distance = detection['zero_in_crop'] - current_settings_align['grid_30k_offset']
                                     adjustment_30k = int(current_30k_distance - new_30k_distance)
                                     
                                     # 新しい-30000ラインの位置を計算
                                     new_minus_30k_distance = 30000 / new_scale
-                                    current_minus_30k_distance = (cropped_for_align.shape[0] - 1 + current_settings_align['grid_minus_30k_offset']) - align_zero_in_crop
+                                    current_minus_30k_distance = (detection['crop_height'] - 1 + current_settings_align['grid_minus_30k_offset']) - detection['zero_in_crop']
                                     adjustment_minus_30k = int(new_minus_30k_distance - current_minus_30k_distance)
                                     
-                                    # 推奨調整値を表示
-                                    st.markdown("#### 📊 推奨調整値")
-                                    col_adj1, col_adj2 = st.columns(2)
-                                    with col_adj1:
-                                        st.info(f"**+30,000ライン:** {grid_30k_offset}px → {grid_30k_offset + adjustment_30k}px (調整: {adjustment_30k:+d}px)")
-                                    with col_adj2:
-                                        st.info(f"**-30,000ライン:** {grid_minus_30k_offset}px → {grid_minus_30k_offset + adjustment_minus_30k}px (調整: {adjustment_minus_30k:+d}px)")
+                                    corrections.append({
+                                        'adjustment_30k': adjustment_30k,
+                                        'adjustment_minus_30k': adjustment_minus_30k,
+                                        'correction_factor': correction_factor
+                                    })
+                        
+                        if corrections:
+                            # 平均調整値を計算
+                            avg_adjustment_30k = int(np.mean([c['adjustment_30k'] for c in corrections]))
+                            avg_adjustment_minus_30k = int(np.mean([c['adjustment_minus_30k'] for c in corrections]))
+                            avg_correction_factor = np.mean([c['correction_factor'] for c in corrections])
+                            
+                            if abs(avg_correction_factor - 1.0) > 0.001:
+                                # 推奨調整値を表示
+                                st.markdown("#### 📊 推奨調整値")
+                                st.info(f"補正率: **{avg_correction_factor:.2f}x** （{len(corrections)}枚の画像から計算）")
+                                
+                                col_adj1, col_adj2 = st.columns(2)
+                                with col_adj1:
+                                    st.info(f"**+30,000ライン:** {grid_30k_offset}px → {grid_30k_offset + avg_adjustment_30k}px (調整: {avg_adjustment_30k:+d}px)")
+                                with col_adj2:
+                                    st.info(f"**-30,000ライン:** {grid_minus_30k_offset}px → {grid_minus_30k_offset + avg_adjustment_minus_30k}px (調整: {avg_adjustment_minus_30k:+d}px)")
+                                
+                                # 自動適用ボタン
+                                if st.button("🔧 推奨値を自動適用", type="secondary", key="apply_max_alignment"):
+                                    # セッションステートに新しい値を設定（現在の入力値に調整を加える）
+                                    st.session_state.settings['grid_30k_offset'] = grid_30k_offset + avg_adjustment_30k
+                                    st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + avg_adjustment_minus_30k
                                     
-                                    # 自動適用ボタン
-                                    if st.button("🔧 推奨値を自動適用", type="secondary", key="apply_max_alignment"):
-                                        # セッションステートに新しい値を設定（現在の入力値に調整を加える）
-                                        st.session_state.settings['grid_30k_offset'] = grid_30k_offset + adjustment_30k
-                                        st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + adjustment_minus_30k
-                                        
-                                        st.success("✅ 推奨値を適用しました！画面が更新されます...")
-                                        time.sleep(1)
-                                        st.rerun()
-                        else:
-                            st.success("✅ 検出値と実際の値が一致しています")
+                                    # 最初の画像の最大値位置を保存（非線形スケール用）
+                                    if all_max_positions:
+                                        st.session_state['max_value_position'] = all_max_positions[0]
+                                    
+                                    st.success("✅ 推奨値を適用しました！画面が更新されます...")
+                                    time.sleep(1)
+                                    st.rerun()
+                            else:
+                                st.success("✅ 検出値と実際の値が一致しています")
                 else:
                     st.warning("グラフデータを検出できませんでした")
             
@@ -827,10 +901,17 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         # 最大値がどの区間にあるかを判定して自動調整
                         if max_val < 10000:
                             # 0-10000区間を最適化
+                            # 最初の画像のゼロライン位置を使用（まだプレビューが計算されていない場合）
+                            if 'zero_in_crop' not in locals():
+                                # デフォルト値を使用（一般的な切り抜き後のゼロライン位置）
+                                zero_in_crop_tmp = 246  # crop_topのデフォルト値
+                            else:
+                                zero_in_crop_tmp = zero_in_crop
+                            
                             # 理論的な10000ラインの位置
-                            theoretical_10k_y = zero_in_crop - (10000 / max_val) * (zero_in_crop - max_y)
+                            theoretical_10k_y = zero_in_crop_tmp - (10000 / max_val) * (zero_in_crop_tmp - max_y)
                             # 現在の10000ラインの位置
-                            current_10k_y = zero_in_crop - (10000 / 30000) * (zero_in_crop - grid_30k_offset)
+                            current_10k_y = zero_in_crop_tmp - (10000 / 30000) * (zero_in_crop_tmp - grid_30k_offset)
                             # 調整値を計算
                             adjustment = int(theoretical_10k_y - current_10k_y)
                             st.session_state.settings['grid_10k_offset'] = adjustment
@@ -838,8 +919,15 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             
                         elif max_val < 20000:
                             # 10000-20000区間を最適化
-                            theoretical_20k_y = zero_in_crop - (20000 / max_val) * (zero_in_crop - max_y)
-                            current_20k_y = zero_in_crop - (20000 / 30000) * (zero_in_crop - grid_30k_offset)
+                            # 最初の画像のゼロライン位置を使用（まだプレビューが計算されていない場合）
+                            if 'zero_in_crop' not in locals():
+                                # デフォルト値を使用（一般的な切り抜き後のゼロライン位置）
+                                zero_in_crop_tmp = 246  # crop_topのデフォルト値
+                            else:
+                                zero_in_crop_tmp = zero_in_crop
+                            
+                            theoretical_20k_y = zero_in_crop_tmp - (20000 / max_val) * (zero_in_crop_tmp - max_y)
+                            current_20k_y = zero_in_crop_tmp - (20000 / 30000) * (zero_in_crop_tmp - grid_30k_offset)
                             adjustment = int(theoretical_20k_y - current_20k_y)
                             st.session_state.settings['grid_20k_offset'] = adjustment
                             st.success(f"✅ +20,000ラインを{adjustment:+d}px調整しました（最大値: {max_val:,}玉）")
