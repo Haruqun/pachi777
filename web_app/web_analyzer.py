@@ -61,6 +61,54 @@ class WebCompatibleAnalyzer:
         
         self.results = []
         self.setup_font()
+        
+        # 非線形スケール用の設定
+        self.use_nonlinear_scale = False
+        self.scale_points = None  # [(y_position, value), ...]
+    
+    def set_nonlinear_scale(self, scale_points):
+        """非線形スケールを設定
+        scale_points: [(y_position, value), ...] の形式で、各グリッドラインの位置と値のペア
+        """
+        self.use_nonlinear_scale = True
+        self.scale_points = sorted(scale_points, key=lambda x: x[0])  # Y位置でソート
+    
+    def calculate_value_nonlinear(self, y_pixel):
+        """非線形スケールを使用してY座標から値を計算"""
+        if not self.use_nonlinear_scale or not self.scale_points:
+            # 通常の線形計算
+            return (self.zero_y - y_pixel) * self.scale
+        
+        # 非線形補間
+        # y_pixelがどの区間にあるかを判定
+        for i in range(len(self.scale_points) - 1):
+            y1, val1 = self.scale_points[i]
+            y2, val2 = self.scale_points[i + 1]
+            
+            if y1 <= y_pixel <= y2 or y2 <= y_pixel <= y1:
+                # この区間で線形補間
+                if y1 != y2:
+                    ratio = (y_pixel - y1) / (y2 - y1)
+                    return val1 + ratio * (val2 - val1)
+        
+        # 範囲外の場合は最も近い区間で外挿
+        if y_pixel < min(self.scale_points, key=lambda x: x[0])[0]:
+            # 最上部より上
+            y1, val1 = self.scale_points[0]
+            y2, val2 = self.scale_points[1]
+            if y1 != y2:
+                scale = (val2 - val1) / (y2 - y1)
+                return val1 + (y_pixel - y1) * scale
+        else:
+            # 最下部より下
+            y1, val1 = self.scale_points[-2]
+            y2, val2 = self.scale_points[-1]
+            if y1 != y2:
+                scale = (val2 - val1) / (y2 - y1)
+                return val2 + (y_pixel - y2) * scale
+        
+        # フォールバック
+        return (self.zero_y - y_pixel) * self.scale
     
     def setup_font(self):
         """フォント設定"""
@@ -285,7 +333,11 @@ class WebCompatibleAnalyzer:
                     
                     if len(colored_pixels) > 0:
                         avg_y = np.mean(colored_pixels)
-                        value = (detected_zero - avg_y) * self.scale
+                        # 非線形スケールを使用する場合
+                        if self.use_nonlinear_scale:
+                            value = self.calculate_value_nonlinear(avg_y)
+                        else:
+                            value = (detected_zero - avg_y) * self.scale
                         # 値を±30,000の範囲にクリップ
                         value = max(-30000, min(30000, value))
                         data_points.append((x, value))

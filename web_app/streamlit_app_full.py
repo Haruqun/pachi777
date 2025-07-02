@@ -816,6 +816,99 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 st.session_state.settings['grid_minus_10k_offset'] = grid_minus_10k_offset
                 st.session_state.settings['grid_minus_20k_offset'] = grid_minus_20k_offset
                 st.session_state.settings['use_nonlinear_scale'] = True
+                
+                # 自動調整機能
+                st.markdown("#### 🎯 区間別自動調整")
+                if st.button("🔧 最大値に基づいて中間ラインを自動調整", type="secondary"):
+                    if 'max_value_position' in st.session_state:
+                        max_val = st.session_state['max_value_position']['value']
+                        max_y = st.session_state['max_value_position']['y']
+                        
+                        # 最大値がどの区間にあるかを判定して自動調整
+                        if max_val < 10000:
+                            # 0-10000区間を最適化
+                            # 理論的な10000ラインの位置
+                            theoretical_10k_y = zero_in_crop - (10000 / max_val) * (zero_in_crop - max_y)
+                            # 現在の10000ラインの位置
+                            current_10k_y = zero_in_crop - (10000 / 30000) * (zero_in_crop - grid_30k_offset)
+                            # 調整値を計算
+                            adjustment = int(theoretical_10k_y - current_10k_y)
+                            st.session_state.settings['grid_10k_offset'] = adjustment
+                            st.success(f"✅ +10,000ラインを{adjustment:+d}px調整しました（最大値: {max_val:,}玉）")
+                            
+                        elif max_val < 20000:
+                            # 10000-20000区間を最適化
+                            theoretical_20k_y = zero_in_crop - (20000 / max_val) * (zero_in_crop - max_y)
+                            current_20k_y = zero_in_crop - (20000 / 30000) * (zero_in_crop - grid_30k_offset)
+                            adjustment = int(theoretical_20k_y - current_20k_y)
+                            st.session_state.settings['grid_20k_offset'] = adjustment
+                            st.success(f"✅ +20,000ラインを{adjustment:+d}px調整しました（最大値: {max_val:,}玉）")
+                            
+                        else:
+                            # 20000-30000区間を最適化（既存の+30000調整を使用）
+                            st.info("💡 この区間は通常の最大値アライメント機能で調整してください")
+                        
+                        time.sleep(0.5)
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ まず画像を解析して最大値を検出してください")
+                
+                # 調整後の抽出結果確認
+                st.markdown("#### 📊 調整後の抽出結果確認")
+                st.info("非線形スケールを使用すると、各区間で個別のスケールが適用されます。")
+                
+                # 区間ごとのスケール表示
+                if st.checkbox("📏 区間ごとのスケールを表示", key="show_section_scales"):
+                    if test_image and 'zero_in_crop' in locals() and zero_in_crop is not None:
+                        # 切り抜き画像の高さを計算
+                        crop_height = bottom - top
+                        
+                        # 各グリッドラインの位置を計算
+                        y_30k = 0 + grid_30k_offset
+                        y_20k = int(zero_in_crop - (20000 / 30000) * (zero_in_crop - y_30k) + st.session_state.settings.get('grid_20k_offset', 0))
+                        y_10k = int(zero_in_crop - (10000 / 30000) * (zero_in_crop - y_30k) + st.session_state.settings.get('grid_10k_offset', 0))
+                        y_minus_10k = int(zero_in_crop + (10000 / 30000) * ((crop_height - 1 + grid_minus_30k_offset) - zero_in_crop) + st.session_state.settings.get('grid_minus_10k_offset', 0))
+                        y_minus_20k = int(zero_in_crop + (20000 / 30000) * ((crop_height - 1 + grid_minus_30k_offset) - zero_in_crop) + st.session_state.settings.get('grid_minus_20k_offset', 0))
+                        y_minus_30k = crop_height - 1 + grid_minus_30k_offset
+                        
+                        # 各区間のスケールを計算
+                        st.markdown("**各区間のスケール:**")
+                        
+                        # +20000〜+30000区間
+                        if y_30k != y_20k:
+                            scale_30k_20k = 10000 / abs(y_30k - y_20k)
+                            st.write(f"• +20,000〜+30,000区間: **{scale_30k_20k:.1f}** 玉/ピクセル")
+                        
+                        # +10000〜+20000区間
+                        if y_20k != y_10k:
+                            scale_20k_10k = 10000 / abs(y_20k - y_10k)
+                            st.write(f"• +10,000〜+20,000区間: **{scale_20k_10k:.1f}** 玉/ピクセル")
+                        
+                        # 0〜+10000区間
+                        if y_10k != zero_in_crop:
+                            scale_10k_0 = 10000 / abs(y_10k - zero_in_crop)
+                            st.write(f"• 0〜+10,000区間: **{scale_10k_0:.1f}** 玉/ピクセル")
+                        
+                        # 0〜-10000区間
+                        if zero_in_crop != y_minus_10k:
+                            scale_0_minus10k = 10000 / abs(zero_in_crop - y_minus_10k)
+                            st.write(f"• 0〜-10,000区間: **{scale_0_minus10k:.1f}** 玉/ピクセル")
+                        
+                        # -10000〜-20000区間
+                        if y_minus_10k != y_minus_20k:
+                            scale_minus10k_minus20k = 10000 / abs(y_minus_10k - y_minus_20k)
+                            st.write(f"• -10,000〜-20,000区間: **{scale_minus10k_minus20k:.1f}** 玉/ピクセル")
+                        
+                        # -20000〜-30000区間
+                        if y_minus_20k != y_minus_30k:
+                            scale_minus20k_minus30k = 10000 / abs(y_minus_20k - y_minus_30k)
+                            st.write(f"• -20,000〜-30,000区間: **{scale_minus20k_minus30k:.1f}** 玉/ピクセル")
+                        
+                        # 線形スケールとの比較
+                        linear_scale = 30000 / ((zero_in_crop - y_30k + y_minus_30k - zero_in_crop) / 2)
+                        st.write(f"\n参考: 線形スケール（平均）: **{linear_scale:.1f}** 玉/ピクセル")
+                    else:
+                        st.info("画像をアップロードして解析してください")
             else:
                 st.session_state.settings['use_nonlinear_scale'] = False
     
@@ -1565,17 +1658,39 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         distance_to_plus_30k_adjusted = zero_line_in_crop - y_30k_adjusted
         distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_line_in_crop
         
-        # より正確なスケール計算（調整後の距離を使用）
-        if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
-            # 上下の平均距離を使用
-            avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
-            analyzer.scale = 30000 / avg_distance_adjusted
+        # 非線形スケールを使用する場合
+        if settings.get('use_nonlinear_scale', False):
+            # 各グリッドラインのY座標と値のペアを作成
+            scale_points = [
+                (y_30k, 30000),
+                (y_20k, 20000) if 'y_20k' in locals() else None,
+                (y_10k, 10000) if 'y_10k' in locals() else None,
+                (zero_line_in_crop, 0),
+                (y_minus_10k, -10000) if 'y_minus_10k' in locals() else None,
+                (y_minus_20k, -20000) if 'y_minus_20k' in locals() else None,
+                (y_minus_30k, -30000)
+            ]
+            # Noneを除外
+            scale_points = [p for p in scale_points if p is not None]
+            analyzer.set_nonlinear_scale(scale_points)
+            
+            # デバッグ情報を追加
+            if uploaded_file.name in ["IMG_0165.PNG", "IMG_0174.PNG", "IMG_0177.PNG"]:
+                st.write("🔬 非線形スケール設定:")
+                for y, val in scale_points:
+                    st.write(f"  Y={int(y)}px → {val:+,}玉")
         else:
-            # フォールバック（調整前の値を使用）
-            distance_to_top = zero_line_in_crop
-            distance_to_bottom = crop_height - zero_line_in_crop
-            avg_distance = (distance_to_top + distance_to_bottom) / 2
-            analyzer.scale = 30000 / avg_distance
+            # 通常の線形スケール計算
+            if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
+                # 上下の平均距離を使用
+                avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
+                analyzer.scale = 30000 / avg_distance_adjusted
+            else:
+                # フォールバック（調整前の値を使用）
+                distance_to_top = zero_line_in_crop
+                distance_to_bottom = crop_height - zero_line_in_crop
+                avg_distance = (distance_to_top + distance_to_bottom) / 2
+                analyzer.scale = 30000 / avg_distance
         
         # グラフデータを抽出
         graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
