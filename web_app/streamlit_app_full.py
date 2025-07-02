@@ -902,13 +902,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     grid_20k_offset = st.number_input(
                         "+20,000ライン調整",
                         min_value=-50, max_value=50, 
-                        value=st.session_state.settings.get('grid_20k_offset', 0),
+                        value=max(-50, min(50, st.session_state.settings.get('grid_20k_offset', 0))),
                         step=1, help="+20,000ラインの位置調整"
                     )
                     grid_10k_offset = st.number_input(
                         "+10,000ライン調整",
                         min_value=-50, max_value=50, 
-                        value=st.session_state.settings.get('grid_10k_offset', 0),
+                        value=max(-50, min(50, st.session_state.settings.get('grid_10k_offset', 0))),
                         step=1, help="+10,000ラインの位置調整"
                     )
                     
@@ -916,13 +916,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     grid_minus_10k_offset = st.number_input(
                         "-10,000ライン調整",
                         min_value=-50, max_value=50, 
-                        value=st.session_state.settings.get('grid_minus_10k_offset', 0),
+                        value=max(-50, min(50, st.session_state.settings.get('grid_minus_10k_offset', 0))),
                         step=1, help="-10,000ラインの位置調整"
                     )
                     grid_minus_20k_offset = st.number_input(
                         "-20,000ライン調整",
                         min_value=-50, max_value=50, 
-                        value=st.session_state.settings.get('grid_minus_20k_offset', 0),
+                        value=max(-50, min(50, st.session_state.settings.get('grid_minus_20k_offset', 0))),
                         step=1, help="-20,000ラインの位置調整"
                     )
                     
@@ -954,10 +954,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             theoretical_10k_y = zero_in_crop_tmp - (10000 / max_val) * (zero_in_crop_tmp - max_y)
                             # 現在の10000ラインの位置
                             current_10k_y = zero_in_crop_tmp - (10000 / 30000) * (zero_in_crop_tmp - grid_30k_offset)
-                            # 調整値を計算
+                            # 調整値を計算（範囲内に制限）
                             adjustment = int(theoretical_10k_y - current_10k_y)
-                            st.session_state.settings['grid_10k_offset'] = adjustment
-                            st.success(f"✅ +10,000ラインを{adjustment:+d}px調整しました（最大値: {max_val:,}玉）")
+                            adjustment_clamped = max(-50, min(50, adjustment))
+                            st.session_state.settings['grid_10k_offset'] = adjustment_clamped
+                            if adjustment != adjustment_clamped:
+                                st.warning(f"⚠️ 調整値が範囲外のため、{adjustment:+d}px → {adjustment_clamped:+d}px に制限されました")
+                            st.success(f"✅ +10,000ラインを{adjustment_clamped:+d}px調整しました（最大値: {max_val:,}玉）")
                             
                         elif max_val < 20000:
                             # 10000-20000区間を最適化
@@ -971,8 +974,11 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             theoretical_20k_y = zero_in_crop_tmp - (20000 / max_val) * (zero_in_crop_tmp - max_y)
                             current_20k_y = zero_in_crop_tmp - (20000 / 30000) * (zero_in_crop_tmp - grid_30k_offset)
                             adjustment = int(theoretical_20k_y - current_20k_y)
-                            st.session_state.settings['grid_20k_offset'] = adjustment
-                            st.success(f"✅ +20,000ラインを{adjustment:+d}px調整しました（最大値: {max_val:,}玉）")
+                            adjustment_clamped = max(-50, min(50, adjustment))
+                            st.session_state.settings['grid_20k_offset'] = adjustment_clamped
+                            if adjustment != adjustment_clamped:
+                                st.warning(f"⚠️ 調整値が範囲外のため、{adjustment:+d}px → {adjustment_clamped:+d}px に制限されました")
+                            st.success(f"✅ +20,000ラインを{adjustment_clamped:+d}px調整しました（最大値: {max_val:,}玉）")
                             
                         else:
                             # 20000-30000区間を最適化（既存の+30000調整を使用）
