@@ -747,44 +747,71 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     median_detected_max = int(np.median(detected_maxes))
                     
                     # 検出結果を表示
-                    st.markdown("##### 📊 検出結果")
+                    st.markdown("##### 📊 検出結果と実際の値の入力")
+                    
+                    # 各画像に対して個別に実際の値を入力
+                    visual_max_values = []
+                    
                     if len(all_detections) > 1:
+                        # 統計情報を表示
                         detection_cols = st.columns(3)
                         with detection_cols[0]:
-                            st.metric("平均値", f"{avg_detected_max:,}玉")
+                            st.metric("検出平均値", f"{avg_detected_max:,}玉")
                         with detection_cols[1]:
-                            st.metric("中央値", f"{median_detected_max:,}玉")
+                            st.metric("検出中央値", f"{median_detected_max:,}玉")
                         with detection_cols[2]:
                             st.metric("検出画像数", f"{len(all_detections)}/{len(test_images)}枚")
                         
-                        # 個別の検出値を表示（チェックボックスで表示/非表示）
-                        if st.checkbox("📋 個別の検出値を表示", key="show_individual_detections"):
-                            for detection in all_detections:
-                                st.caption(f"• {detection['image_name']}: **{detection['detected_max']:,}玉**")
+                        st.markdown("---")
+                        st.markdown("##### 🎯 各画像の実際の最大値を入力")
+                        st.caption("各画像を確認して、実際の最大値を入力してください")
+                        
+                        # 各画像に対して入力フィールドを作成
+                        cols_per_row = 2
+                        for i, detection in enumerate(all_detections):
+                            if i % cols_per_row == 0:
+                                cols = st.columns(cols_per_row)
+                            
+                            with cols[i % cols_per_row]:
+                                st.markdown(f"**{detection['image_name']}**")
+                                st.caption(f"検出値: {detection['detected_max']:,}玉")
+                                visual_max = st.number_input(
+                                    "実際の最大値",
+                                    min_value=0,
+                                    max_value=50000,
+                                    value=detection['detected_max'],
+                                    step=100,
+                                    help=f"{detection['image_name']}の実際の最高値",
+                                    key=f"visual_max_{i}",
+                                    label_visibility="visible"
+                                )
+                                visual_max_values.append(visual_max)
                     else:
-                        st.info(f"🔍 検出値: **{detected_maxes[0]:,}玉**")
+                        # 単一画像の場合
+                        detection = all_detections[0]
+                        st.info(f"🔍 検出値: **{detection['detected_max']:,}玉**")
+                        
+                        visual_max = st.number_input(
+                            "実際の最大値を入力",
+                            min_value=0,
+                            max_value=50000,
+                            value=detection['detected_max'],
+                            step=100,
+                            help="グラフ画像を見て確認した最高値",
+                            key="visual_max_single",
+                            label_visibility="visible"
+                        )
+                        visual_max_values.append(visual_max)
                     
-                    # 実際の値の入力
-                    visual_max_align = st.number_input(
-                        "実際の最大値を入力",
-                        min_value=0,
-                        max_value=50000,
-                        value=median_detected_max if len(all_detections) > 1 else detected_maxes[0],
-                        step=100,
-                        help="グラフ画像を見て確認した最高値",
-                        key="visual_max_alignment",
-                        label_visibility="visible"
-                    )
-                    
-                    if visual_max_align > 0:
+                    if any(v > 0 for v in visual_max_values):
                         # 各画像での補正率を計算
                         corrections = []
-                        for detection in all_detections:
-                            if detection['detected_max'] > 0:
-                                correction_factor = visual_max_align / detection['detected_max']
+                        for i, (detection, visual_max) in enumerate(zip(all_detections, visual_max_values)):
+                            if detection['detected_max'] > 0 and visual_max > 0:
+                                correction_factor = visual_max / detection['detected_max']
                                 actual_distance = detection['zero_in_crop'] - detection['max_y_pixel']
                                 if actual_distance > 0:
-                                    new_scale = visual_max_align / actual_distance
+                                    new_scale = visual_max / actual_distance
                                     
                                     # 新しい+30000ラインの位置を計算
                                     new_30k_distance = 30000 / new_scale
@@ -808,10 +835,20 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             avg_adjustment_minus_30k = int(np.mean([c['adjustment_minus_30k'] for c in corrections]))
                             avg_correction_factor = np.mean([c['correction_factor'] for c in corrections])
                             
+                            # 入力値のサマリーを表示
+                            st.markdown("---")
+                            st.markdown("#### 📊 調整計算結果")
+                            
+                            # 各画像の補正率を表示
+                            if len(corrections) > 1:
+                                if st.checkbox("📋 各画像の補正率を表示", key="show_individual_corrections"):
+                                    for i, (detection, visual_max, correction) in enumerate(zip(all_detections[:len(corrections)], visual_max_values[:len(corrections)], corrections)):
+                                        if visual_max > 0:
+                                            st.caption(f"• {detection['image_name']}: 検出値 {detection['detected_max']:,}玉 → 実際 {visual_max:,}玉 (補正率 {correction['correction_factor']:.2f}x)")
+                            
                             if abs(avg_correction_factor - 1.0) > 0.001:
                                 # 推奨調整値を表示
-                                st.markdown("#### 📊 推奨調整値")
-                                st.info(f"補正率: **{avg_correction_factor:.2f}x** （{len(corrections)}枚の画像から計算）")
+                                st.info(f"平均補正率: **{avg_correction_factor:.2f}x** （{len(corrections)}枚の画像から計算）")
                                 
                                 col_adj1, col_adj2 = st.columns(2)
                                 with col_adj1:
