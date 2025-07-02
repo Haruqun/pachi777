@@ -266,11 +266,9 @@ if not st.session_state.authenticated:
         def handle_login():
             if st.session_state.password_input == "059":
                 st.session_state.authenticated = True
-                # Cookie設定は一時的に無効化
-                st.success("✅ ログインしました")
-                st.rerun()
+                st.session_state.login_success = True
             else:
-                st.error("❌ パスワードが違います")
+                st.session_state.login_error = True
         
         # パスワード入力（Enterキーでログイン可能）
         password = st.text_input(
@@ -285,6 +283,17 @@ if not st.session_state.authenticated:
         # ログインボタン
         if st.button("ログイン", type="primary", use_container_width=True):
             handle_login()
+        
+        # ログイン成功時の処理
+        if st.session_state.get('login_success', False):
+            st.success("✅ ログインしました")
+            st.session_state.login_success = False
+            st.rerun()
+        
+        # ログインエラー時の処理
+        if st.session_state.get('login_error', False):
+            st.error("❌ パスワードが違います")
+            st.session_state.login_error = False
         
         # フッター
         st.markdown(f"""
