@@ -1107,12 +1107,10 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         def save_settings():
             return st.session_state.settings.copy()
     
-    # 設定の保存の見出しを適切な場所に配置
+    # 設定の保存の見出しを適切な場所に配置（画像がある場合のみ表示）
     if test_image:
         with main_col2:
             st.markdown("### 💾 設定の保存")
-    else:
-        st.markdown("### 💾 設定の保存")
     
     # 設定の保存の内容（test_imageの有無で配置を変更）
     def render_save_settings():
@@ -1222,12 +1220,10 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 st.session_state.settings = default_settings.copy()
                 st.rerun()
     
-    # 設定の保存を描画
+    # 設定の保存を描画（画像がある場合のみ）
     if test_image:
         with main_col2:
             render_save_settings()
-    else:
-        render_save_settings()
     
     # プリセット削除セクション（設定の保存の直後に配置）
     if test_image:
@@ -1275,51 +1271,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         
                         st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
                         st.rerun()
-    else:
-        # test_imageがない場合は全幅で表示
-        # プリセット削除
-        if st.session_state.saved_presets:
-            st.markdown("### 🗑️ プリセットの削除")
-            
-            # 現在編集中のプリセットをデフォルトにする
-            default_delete_preset = None
-            if ('edit_preset_mode' in st.session_state and 
-                st.session_state.edit_preset_mode and 
-                'edit_preset_select' in st.session_state and
-                st.session_state.edit_preset_select != "新規作成"):
-                default_delete_preset = st.session_state.edit_preset_select
-            
-            # デフォルト値を見つける
-            preset_list = list(st.session_state.saved_presets.keys())
-            default_index = 0
-            if default_delete_preset and default_delete_preset in preset_list:
-                default_index = preset_list.index(default_delete_preset)
-            
-            # プリセット選択（全幅）
-            preset_to_delete = st.selectbox(
-                "削除するプリセット",
-                preset_list,
-                index=default_index,
-                key="delete_preset_noimg"
-            )
-            
-            # 削除ボタン
-            if st.button("🗑️ 削除", type="secondary", use_container_width=True):
-                if preset_to_delete:
-                    del st.session_state.saved_presets[preset_to_delete]
-                    
-                    # ファイルを更新
-                    try:
-                        all_presets = {
-                            'presets': st.session_state.saved_presets
-                        }
-                        with open(preset_file, 'wb') as f:
-                            pickle.dump(all_presets, f)
-                    except Exception as e:
-                        st.error(f"プリセットの削除に失敗しました: {str(e)}")
-                    
-                    st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
-                    st.rerun()
 
 
 # ファイルアップローダー（一番最初に表示）
