@@ -1279,31 +1279,25 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     # 実際の値が入力されている場合はそれを使用、そうでなければ検出値を使用
                     display_max_value = actual_max_value if actual_max_value is not None else max_val_detected
                     
-                    # Y座標を計算
+                    # グラフ上の実際の最大値のY座標（検出値ベース）
+                    max_y_in_crop = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
+                    
+                    # 表示する値は実際の値があればそれを使用
                     if actual_max_value and max_val_detected > 0:
-                        # 補正率を計算
                         correction_factor = actual_max_value / max_val_detected
-                        # 元の最大値のY座標
-                        max_y_original = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
-                        # 新しいスケールを計算
-                        actual_distance = zero_in_crop - max_y_original
-                        if actual_distance > 0:
-                            new_scale = actual_max_value / actual_distance
-                            max_y_in_crop = int(zero_in_crop - (actual_max_value / new_scale))
-                        else:
-                            max_y_in_crop = max_y_original
+                        display_value = actual_max_value
                     else:
-                        # 補正なし
-                        max_y_in_crop = int(zero_in_crop - (display_max_value / analyzer_preview.scale))
                         correction_factor = 1.0
+                        display_value = max_val_detected
                     
                     if 0 <= max_y_in_crop < cropped_preview.shape[0]:
-                        # 赤い水平線を描画
+                        # 赤い水平線を描画（グラフの最高点の高さ）
                         cv2.line(cropped_preview, (0, max_y_in_crop), (cropped_preview.shape[1], max_y_in_crop), (0, 0, 255), 3)
-                        # 最大値の点に円を描画
+                        # 最大値の点に円を描画（グラフ上の実際の位置）
                         cv2.circle(cropped_preview, (int(max_x), max_y_in_crop), 8, (0, 0, 255), -1)
-                        # ラベルを追加
-                        label_text = f"MAX: {int(display_max_value):,}"
+                        cv2.circle(cropped_preview, (int(max_x), max_y_in_crop), 10, (0, 0, 200), 2)
+                        # ラベルを追加（表示する値は実際の値）
+                        label_text = f"MAX: {int(display_value):,}"
                         cv2.putText(cropped_preview, label_text, (cropped_preview.shape[1] - 180, max_y_in_crop - 5), 
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
                     
