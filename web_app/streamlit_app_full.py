@@ -485,7 +485,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             st.caption("※ 各グリッドラインを個別に調整できます")
             
             # 最大値アライメント機能を統合
-            with st.expander("🎯 最大値アライメントで自動調整", expanded=False):
+            if test_image:
+                st.markdown("#### 🎯 最大値アライメントで自動調整")
                 st.caption("💡 使い方: グラフ画像を見て実際の最大値を入力すると、全てのグリッドラインが自動調整されます。")
                 
                 # 現在の画像で解析を実行
@@ -610,8 +611,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                         st.rerun()
                         else:
                             st.success("✅ 検出値と実際の値がほぼ一致しています！")
-                else:
-                    st.warning("グラフデータを検出できませんでした。")
+                    else:
+                        st.warning("グラフデータを検出できませんでした。")
             
             grid_col1, grid_col2, grid_col3 = st.columns(3)
             
