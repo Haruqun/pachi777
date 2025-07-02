@@ -757,10 +757,10 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         with detection_cols[2]:
                             st.metric("検出画像数", f"{len(all_detections)}/{len(test_images)}枚")
                         
-                        # 個別の検出値を表示
-                        with st.expander("📋 個別の検出値を表示"):
+                        # 個別の検出値を表示（チェックボックスで表示/非表示）
+                        if st.checkbox("📋 個別の検出値を表示", key="show_individual_detections"):
                             for detection in all_detections:
-                                st.write(f"• {detection['image_name']}: **{detection['detected_max']:,}玉**")
+                                st.caption(f"• {detection['image_name']}: **{detection['detected_max']:,}玉**")
                     else:
                         st.info(f"🔍 検出値: **{detected_maxes[0]:,}玉**")
                     
