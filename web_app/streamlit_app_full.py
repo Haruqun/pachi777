@@ -304,9 +304,9 @@ try:
             saved_data = pickle.load(f)
             if 'presets' in saved_data:
                 st.session_state.saved_presets = saved_data['presets']
-            if 'current' in saved_data:
-                # 現在の設定がデフォルトか、保存された設定より古い場合は更新
-                st.session_state.settings = saved_data['current']
+            # 'current'設定の読み込みを削除（デフォルト値を保持するため）
+            # if 'current' in saved_data:
+            #     st.session_state.settings = saved_data['current']
 except Exception as e:
     # 読み込みエラーは無視
     pass
@@ -871,7 +871,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     import os
                     preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
                     all_presets = {
-                        'current': settings,
                         'presets': st.session_state.saved_presets
                     }
                     with open(preset_file, 'wb') as f:
@@ -921,7 +920,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                 import os
                                 preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
                                 all_presets = {
-                                    'current': st.session_state.settings,
                                     'presets': st.session_state.saved_presets
                                 }
                                 with open(preset_file, 'wb') as f:
@@ -952,7 +950,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             import os
                             preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
                             all_presets = {
-                                'current': st.session_state.settings,
                                 'presets': st.session_state.saved_presets
                             }
                             with open(preset_file, 'wb') as f:
