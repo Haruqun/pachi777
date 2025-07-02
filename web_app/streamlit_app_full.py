@@ -1015,7 +1015,33 @@ uploaded_files = st.file_uploader(
 )
 
 if uploaded_files:
-    st.success(f"✅ {len(uploaded_files)}枚の画像がアップロードされました")
+    # 重複チェック
+    seen_names = {}
+    unique_files = []
+    duplicate_names = []
+    
+    for file in uploaded_files:
+        if file.name not in seen_names:
+            seen_names[file.name] = 1
+            unique_files.append(file)
+        else:
+            seen_names[file.name] += 1
+            if seen_names[file.name] == 2:  # 初めての重複
+                duplicate_names.append(file.name)
+    
+    # アップロード結果を表示
+    duplicate_count = sum(count - 1 for count in seen_names.values() if count > 1)
+    if duplicate_count > 0:
+        st.success(f"✅ {len(unique_files)}枚の画像がアップロードされました")
+        with st.expander(f"ℹ️ {duplicate_count}枚の重複ファイルをスキップしました", expanded=False):
+            for name in duplicate_names:
+                count = seen_names[name]
+                st.caption(f"• {name} ({count}回アップロード、1枚のみ使用)")
+    else:
+        st.success(f"✅ {len(unique_files)}枚の画像がアップロードされました")
+    
+    # 以降はunique_filesを使用
+    uploaded_files = unique_files
     
     # プリセット選択セクション（画像アップロード後に表示）
     st.markdown("### 📋 解析設定")
