@@ -845,17 +845,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             # セッションステートに保存
                             st.session_state.avg_correction_factor = avg_correction_factor
                             
-                            # 入力値のサマリーを表示
-                            st.markdown("---")
-                            st.markdown("#### 📊 調整計算結果")
-                            
-                            # 各画像の補正率を表示
-                            if len(corrections) > 1:
-                                if st.checkbox("📋 各画像の補正率を表示", key="show_individual_corrections"):
-                                    for i, (detection, visual_max, correction) in enumerate(zip(all_detections[:len(corrections)], visual_max_values[:len(corrections)], corrections)):
-                                        if visual_max > 0:
-                                            st.caption(f"• {detection['image_name']}: 検出値 {detection['detected_max']:,}玉 → 実際 {visual_max:,}玉 (補正率 {correction['correction_factor']:.2f}x)")
-                            
                             if abs(avg_correction_factor - 1.0) > 0.001:
                                 # 推奨調整値を表示
                                 st.info(f"平均補正率: **{avg_correction_factor:.2f}x** （{len(corrections)}枚の画像から計算）")
