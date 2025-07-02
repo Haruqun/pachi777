@@ -949,84 +949,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 st.session_state.settings['grid_minus_20k_offset'] = grid_minus_20k_offset
                 st.session_state.settings['use_nonlinear_scale'] = True
                 
-                # 自動調整機能
-                st.markdown("#### 🎯 区間別自動調整")
-                if st.button("🔧 最大値に基づいて中間ラインを自動調整", type="secondary"):
-                    # 複数画像の最大値情報を取得
-                    if all_detections and visual_max_values and any(v > 0 for v in visual_max_values):
-                        # 各画像の最大値情報を収集
-                        max_values_info = []
-                        for i, (detection, visual_max) in enumerate(zip(all_detections, visual_max_values)):
-                            if visual_max > 0:
-                                max_y_pixel = detection['max_y_pixel']
-                                zero_in_crop_tmp = detection['zero_in_crop']
-                                max_values_info.append({
-                                    'value': visual_max,
-                                    'y_pixel': max_y_pixel,
-                                    'zero_in_crop': zero_in_crop_tmp
-                                })
-                        
-                        if max_values_info:
-                            # 平均最大値を計算
-                            avg_max_val = np.mean([info['value'] for info in max_values_info])
-                            
-                            # 各画像で調整値を計算
-                            adjustments_10k = []
-                            adjustments_20k = []
-                            
-                            for info in max_values_info:
-                                max_val = info['value']
-                                max_y = info['y_pixel']
-                                zero_in_crop_tmp = info['zero_in_crop']
-                                
-                                # 現在の+30000ライン位置（切り抜き画像内）
-                                current_30k_y = 0 + grid_30k_offset
-                                
-                                if max_val < 10000:
-                                    # 0-10000区間を最適化
-                                    # 理論的な10000ラインの位置
-                                    theoretical_10k_y = zero_in_crop_tmp - (10000 / max_val) * (zero_in_crop_tmp - max_y)
-                                    # 現在の10000ラインの位置
-                                    current_10k_y = zero_in_crop_tmp - (10000 / 30000) * (zero_in_crop_tmp - current_30k_y)
-                                    # 調整値を計算
-                                    adjustment = int(theoretical_10k_y - current_10k_y)
-                                    adjustments_10k.append(adjustment)
-                                    
-                                elif max_val < 20000:
-                                    # 10000-20000区間を最適化
-                                    theoretical_20k_y = zero_in_crop_tmp - (20000 / max_val) * (zero_in_crop_tmp - max_y)
-                                    current_20k_y = zero_in_crop_tmp - (20000 / 30000) * (zero_in_crop_tmp - current_30k_y)
-                                    adjustment = int(theoretical_20k_y - current_20k_y)
-                                    adjustments_20k.append(adjustment)
-                            
-                            # 調整を適用
-                            if avg_max_val < 10000 and adjustments_10k:
-                                # +10000ラインを調整
-                                avg_adjustment = int(np.mean(adjustments_10k))
-                                adjustment_clamped = max(-100, min(100, avg_adjustment))
-                                st.session_state.settings['grid_10k_offset'] = adjustment_clamped
-                                if avg_adjustment != adjustment_clamped:
-                                    st.warning(f"⚠️ 調整値が範囲外のため、{avg_adjustment:+d}px → {adjustment_clamped:+d}px に制限されました")
-                                st.success(f"✅ +10,000ラインを{adjustment_clamped:+d}px調整しました（平均最大値: {int(avg_max_val):,}玉）")
-                                
-                            elif avg_max_val < 20000 and adjustments_20k:
-                                # +20000ラインを調整
-                                avg_adjustment = int(np.mean(adjustments_20k))
-                                adjustment_clamped = max(-100, min(100, avg_adjustment))
-                                st.session_state.settings['grid_20k_offset'] = adjustment_clamped
-                                if avg_adjustment != adjustment_clamped:
-                                    st.warning(f"⚠️ 調整値が範囲外のため、{avg_adjustment:+d}px → {adjustment_clamped:+d}px に制限されました")
-                                st.success(f"✅ +20,000ラインを{adjustment_clamped:+d}px調整しました（平均最大値: {int(avg_max_val):,}玉）")
-                            else:
-                                # 20000-30000区間
-                                st.info("💡 この区間は通常の最大値アライメント機能で調整してください")
-                            
-                            time.sleep(0.5)
-                            st.rerun()
-                        else:
-                            st.warning("⚠️ 実際の最大値を入力してください")
-                    else:
-                        st.warning("⚠️ まず画像を解析して最大値を検出してください")
+                # 調整のヒント
+                st.info("💡 ヒント: 切り抜き結果のオーバーレイを確認しながら、各ラインを手動で調整してください。")
                 
                 # 調整後の抽出結果確認
                 st.markdown("#### 📊 調整後の抽出結果確認")
