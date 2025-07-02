@@ -2055,19 +2055,27 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             graph_values = [value for x, value in graph_data_points]
 
             # 統計情報を計算
-            max_val = max(graph_values)
-            min_val = min(graph_values)
-            current_val = graph_values[-1] if graph_values else 0
+            max_val_original = max(graph_values)
+            min_val_original = min(graph_values)
+            current_val_original = graph_values[-1] if graph_values else 0
+            
+            # インデックスを保存
+            max_idx = graph_values.index(max_val_original)
+            min_idx = graph_values.index(min_val_original)
             
             # 補正係数を適用（プリセットに含まれている場合）
             correction_factor = settings.get('correction_factor', 1.0)
             if correction_factor != 1.0:
                 # 補正を適用
-                max_val = max_val * correction_factor
-                min_val = min_val * correction_factor
-                current_val = current_val * correction_factor
+                max_val = max_val_original * correction_factor
+                min_val = min_val_original * correction_factor
+                current_val = current_val_original * correction_factor
                 # グラフ値も更新（初当たり検出用）
                 graph_values = [v * correction_factor for v in graph_values]
+            else:
+                max_val = max_val_original
+                min_val = min_val_original
+                current_val = current_val_original
 
             # 最大値が30,000を超える場合は30,000にクリップ
             if max_val > 30000:
@@ -2185,12 +2193,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     prev_y = y
 
             # 最高値、最低値、初当たりの位置を見つける
-            # MAXが0に修正された場合は、元の最高値のインデックスを保持
-            if max_val == 0 and max(graph_values) < 0:
-                max_idx = graph_values.index(max(graph_values))
-            else:
-                max_idx = graph_values.index(max_val)
-            min_idx = graph_values.index(min_val)
+            # インデックスは既に上で取得済み
 
             # Y座標計算用の関数（非線形スケール対応）
             def calculate_y_from_value(val):
