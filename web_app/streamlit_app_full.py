@@ -495,23 +495,82 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 )
             
             # グリッドライン調整
-            st.markdown("### 📏 グリッドライン微調整")
-            st.caption("※ 各グリッドラインを個別に調整できます")
+            st.markdown("### 📏 グリッドライン調整")
+            
+            # グリッドライン手動調整
+            st.markdown("#### ⚙️ 手動調整")
+            st.caption("各グリッドラインの位置を個別に微調整できます（単位：ピクセル）")
+            
+            grid_col1, grid_col2, grid_col3 = st.columns(3)
+            
+            with grid_col1:
+                st.markdown("**プラス側**")
+                grid_30k_offset = st.number_input(
+                    "+30,000",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_30k_offset', 0),
+                    step=1, help="上端の+30,000ライン"
+                )
+                grid_20k_offset = st.number_input(
+                    "+20,000",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_20k_offset', 0),
+                    step=1
+                )
+                grid_10k_offset = st.number_input(
+                    "+10,000",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_10k_offset', 0),
+                    step=1
+                )
+            
+            with grid_col2:
+                st.markdown("**基準**")
+                st.info("🎯 0ライン（基準）")
+                st.caption("ゼロラインは自動検出されます")
+            
+            with grid_col3:
+                st.markdown("**マイナス側**")
+                grid_minus_10k_offset = st.number_input(
+                    "-10,000",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_10k_offset', 0),
+                    step=1
+                )
+                grid_minus_20k_offset = st.number_input(
+                    "-20,000",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_20k_offset', 0),
+                    step=1
+                )
+                grid_minus_30k_offset = st.number_input(
+                    "-30,000",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
+                    step=1, help="下端の-30,000ライン"
+                )
             
             # 最大値アライメント機能を統合
             if test_image:
-                st.markdown("#### 🎯 最大値アライメントで自動調整")
-                st.caption("💡 使い方: グラフ画像を見て実際の最大値を入力すると、全てのグリッドラインが自動調整されます。")
+                with st.expander("🎯 最大値アライメントで自動調整", expanded=True):
+                    st.caption("グラフの実際の最大値を入力すると、最適なグリッドライン位置を自動計算します")
                 
                 # 現在の画像で解析を実行
                 analyzer_align = WebCompatibleAnalyzer()
                 
-                # 現在の設定を取得
-                current_settings_align = st.session_state.settings.copy()
+                # 現在の設定を取得（入力フィールドの値を使用）
+                current_settings_align = {
+                    'search_start_offset': search_start_offset,
+                    'search_end_offset': search_end_offset,
+                    'crop_top': crop_top,
+                    'crop_bottom': crop_bottom,
+                    'left_margin': left_margin,
+                    'right_margin': right_margin,
+                    'grid_30k_offset': grid_30k_offset,
+                    'grid_20k_offset': grid_20k_offset,
+                    'grid_10k_offset': grid_10k_offset,
+                    'grid_minus_10k_offset': grid_minus_10k_offset,
+                    'grid_minus_20k_offset': grid_minus_20k_offset,
+                    'grid_minus_30k_offset': grid_minus_30k_offset
+                }
                 
                 # ゼロライン検出（最大値アライメント用）
-                align_search_start = orange_bottom + current_settings_align['search_start_offset']
-                align_search_end = min(height - 100, orange_bottom + current_settings_align['search_end_offset'])
+                align_search_start = orange_bottom + search_start_offset
+                align_search_end = min(height - 100, orange_bottom + search_end_offset)
                 
                 # ゼロライン検出
                 align_best_score = 0
@@ -528,15 +587,15 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         align_zero_line_y = y
                 
                 # 切り抜き
-                align_top = max(0, align_zero_line_y - current_settings_align['crop_top'])
-                align_bottom = min(height, align_zero_line_y + current_settings_align['crop_bottom'])
-                align_left = current_settings_align['left_margin']
-                align_right = width - current_settings_align['right_margin']
+                align_top = max(0, align_zero_line_y - crop_top)
+                align_bottom = min(height, align_zero_line_y + crop_bottom)
+                align_left = left_margin
+                align_right = width - right_margin
                 
-                # グリッドライン調整値も適用
+                # グリッドライン調整値も適用（現在の入力値を使用）
                 align_zero_in_crop = align_zero_line_y - align_top
-                align_distance_to_plus_30k = align_zero_in_crop - current_settings_align['grid_30k_offset']
-                align_distance_to_minus_30k = (align_bottom - align_top - 1 + current_settings_align['grid_minus_30k_offset']) - align_zero_in_crop
+                align_distance_to_plus_30k = align_zero_in_crop - grid_30k_offset
+                align_distance_to_minus_30k = (align_bottom - align_top - 1 + grid_minus_30k_offset) - align_zero_in_crop
                 
                 # カスタム設定で解析
                 analyzer_align.zero_y = align_zero_in_crop
@@ -554,24 +613,30 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     analysis_align = analyzer_align.analyze_values(data_points_align)
                     detected_max_align = analysis_align['max_value']
                     
-                    col1_align, col2_align = st.columns(2)
+                    # 検出値と実際の値を横並びで表示
+                    col1_align, col2_align, col3_align = st.columns([2, 2, 1])
                     with col1_align:
-                        st.metric("検出された最大値", f"{detected_max_align:,}玉")
+                        st.info(f"🔍 検出値: **{detected_max_align:,}玉**")
                     
                     with col2_align:
                         visual_max_align = st.number_input(
-                            "画像上の実際の最大値",
+                            "実際の最大値を入力",
                             min_value=0,
                             max_value=50000,
                             value=detected_max_align,
                             step=100,
-                            help="グラフ画像を見て、実際の最高値を入力してください",
-                            key="visual_max_alignment"
+                            help="グラフ画像を見て確認した最高値",
+                            key="visual_max_alignment",
+                            label_visibility="visible"
                         )
                     
+                    with col3_align:
+                        if visual_max_align > 0 and detected_max_align > 0:
+                            correction_factor = visual_max_align / detected_max_align
+                            if abs(correction_factor - 1.0) > 0.001:
+                                st.metric("補正率", f"{correction_factor:.2f}x")
+                    
                     if visual_max_align > 0 and detected_max_align > 0:
-                        correction_factor = visual_max_align / detected_max_align
-                        st.metric("補正係数", f"{correction_factor:.3f}")
                         
                         # 最大値の位置を取得（常に実行）
                         max_index = analysis_align['max_index']
@@ -604,75 +669,54 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                     current_minus_30k_distance = (cropped_for_align.shape[0] - 1 + current_settings_align['grid_minus_30k_offset']) - align_zero_in_crop
                                     adjustment_minus_30k = int(new_minus_30k_distance - current_minus_30k_distance)
                                     
-                                    st.write("### 🎯 自動調整の推奨値")
-                                    st.write("最大値の位置に基づいて、以下の調整を推奨します：")
-                                    
-                                    col_adj1, col_adj2 = st.columns(2)
-                                    with col_adj1:
-                                        st.write(f"**+30,000ライン調整:** `{adjustment_30k:+d}` px")
-                                        st.write(f"**+20,000ライン調整:** `{int(adjustment_30k * 2/3):+d}` px")
-                                        st.write(f"**+10,000ライン調整:** `{int(adjustment_30k * 1/3):+d}` px")
-                                    
-                                    with col_adj2:
-                                        st.write(f"**-10,000ライン調整:** `{int(adjustment_minus_30k * 1/3):+d}` px")
-                                        st.write(f"**-20,000ライン調整:** `{int(adjustment_minus_30k * 2/3):+d}` px")
-                                        st.write(f"**-30,000ライン調整:** `{adjustment_minus_30k:+d}` px")
+                                    # 推奨調整値をテーブル形式で表示
+                                    st.markdown("#### 📊 推奨調整値")
+                                    adj_data = {
+                                        'ライン': ['+30,000', '+20,000', '+10,000', '-10,000', '-20,000', '-30,000'],
+                                        '現在値': [
+                                            f"{grid_30k_offset}px",
+                                            f"{grid_20k_offset}px",
+                                            f"{grid_10k_offset}px",
+                                            f"{grid_minus_10k_offset}px",
+                                            f"{grid_minus_20k_offset}px",
+                                            f"{grid_minus_30k_offset}px"
+                                        ],
+                                        '推奨調整': [
+                                            f"{adjustment_30k:+d}px",
+                                            f"{int(adjustment_30k * 2/3):+d}px",
+                                            f"{int(adjustment_30k * 1/3):+d}px",
+                                            f"{int(adjustment_minus_30k * 1/3):+d}px",
+                                            f"{int(adjustment_minus_30k * 2/3):+d}px",
+                                            f"{adjustment_minus_30k:+d}px"
+                                        ],
+                                        '調整後': [
+                                            f"{grid_30k_offset + adjustment_30k}px",
+                                            f"{grid_20k_offset + int(adjustment_30k * 2/3)}px",
+                                            f"{grid_10k_offset + int(adjustment_30k * 1/3)}px",
+                                            f"{grid_minus_10k_offset + int(adjustment_minus_30k * 1/3)}px",
+                                            f"{grid_minus_20k_offset + int(adjustment_minus_30k * 2/3)}px",
+                                            f"{grid_minus_30k_offset + adjustment_minus_30k}px"
+                                        ]
+                                    }
+                                    st.dataframe(pd.DataFrame(adj_data), hide_index=True, use_container_width=True)
                                     
                                     # 自動適用ボタン
                                     if st.button("🔧 推奨値を自動適用", type="secondary", key="apply_max_alignment"):
-                                        # セッションステートに新しい値を設定
-                                        st.session_state.settings['grid_30k_offset'] = current_settings_align['grid_30k_offset'] + adjustment_30k
-                                        st.session_state.settings['grid_20k_offset'] = current_settings_align['grid_20k_offset'] + int(adjustment_30k * 2/3)
-                                        st.session_state.settings['grid_10k_offset'] = current_settings_align['grid_10k_offset'] + int(adjustment_30k * 1/3)
-                                        st.session_state.settings['grid_minus_10k_offset'] = current_settings_align['grid_minus_10k_offset'] + int(adjustment_minus_30k * 1/3)
-                                        st.session_state.settings['grid_minus_20k_offset'] = current_settings_align['grid_minus_20k_offset'] + int(adjustment_minus_30k * 2/3)
-                                        st.session_state.settings['grid_minus_30k_offset'] = current_settings_align['grid_minus_30k_offset'] + adjustment_minus_30k
+                                        # セッションステートに新しい値を設定（現在の入力値に調整を加える）
+                                        st.session_state.settings['grid_30k_offset'] = grid_30k_offset + adjustment_30k
+                                        st.session_state.settings['grid_20k_offset'] = grid_20k_offset + int(adjustment_30k * 2/3)
+                                        st.session_state.settings['grid_10k_offset'] = grid_10k_offset + int(adjustment_30k * 1/3)
+                                        st.session_state.settings['grid_minus_10k_offset'] = grid_minus_10k_offset + int(adjustment_minus_30k * 1/3)
+                                        st.session_state.settings['grid_minus_20k_offset'] = grid_minus_20k_offset + int(adjustment_minus_30k * 2/3)
+                                        st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + adjustment_minus_30k
                                         
                                         st.success("✅ 推奨値を適用しました！画面が更新されます...")
                                         time.sleep(1)
                                         st.rerun()
                         else:
-                            st.success("✅ 検出値と実際の値がほぼ一致しています！")
-                    else:
-                        st.warning("グラフデータを検出できませんでした。")
-            
-            grid_col1, grid_col2, grid_col3 = st.columns(3)
-            
-            with grid_col1:
-                grid_30k_offset = st.number_input(
-                    "+30,000ライン調整",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_30k_offset', 0),
-                    step=1, help="上端の+30,000ラインの位置調整"
-                )
-                grid_20k_offset = st.number_input(
-                    "+20,000ライン調整",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_20k_offset', 0),
-                    step=1, help="+20,000ラインの位置調整"
-                )
-            
-            with grid_col2:
-                grid_10k_offset = st.number_input(
-                    "+10,000ライン調整",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_10k_offset', 0),
-                    step=1, help="+10,000ラインの位置調整"
-                )
-                grid_minus_10k_offset = st.number_input(
-                    "-10,000ライン調整",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_10k_offset', 0),
-                    step=1, help="-10,000ラインの位置調整"
-                )
-            
-            with grid_col3:
-                grid_minus_20k_offset = st.number_input(
-                    "-20,000ライン調整",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_20k_offset', 0),
-                    step=1, help="-20,000ラインの位置調整"
-                )
-                grid_minus_30k_offset = st.number_input(
-                    "-30,000ライン調整",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
-                    step=1, help="下端の-30,000ラインの位置調整"
-                )
+                            st.success("✅ 検出値と実際の値が一致しています")
+                else:
+                    st.warning("グラフデータを検出できませんでした")
     
     
     # リアルタイムプレビュー
@@ -842,73 +886,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
             st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
         
-    # プリセット削除と設定の保存を同じ配置で表示
-    if test_image:
-        with main_col2:
-            # プリセット削除
-            if st.session_state.saved_presets:
-                st.markdown("### 🗑️ プリセットの削除")
-                
-                # プリセット選択（全幅）
-                preset_to_delete = st.selectbox(
-                    "削除するプリセット",
-                    list(st.session_state.saved_presets.keys()),
-                    key="delete_preset"
-                )
-                
-                # 削除ボタン
-                if st.button("🗑️ 削除", type="secondary", use_container_width=True):
-                    if preset_to_delete:
-                        del st.session_state.saved_presets[preset_to_delete]
-                        
-                        # ファイルを更新
-                        try:
-                            import pickle
-                            import os
-                            preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
-                            all_presets = {
-                                'presets': st.session_state.saved_presets
-                            }
-                            with open(preset_file, 'wb') as f:
-                                pickle.dump(all_presets, f)
-                        except:
-                            pass
-                        
-                        st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
-                        st.rerun()
-    else:
-        # test_imageがない場合は全幅で表示
-        # プリセット削除
-        if st.session_state.saved_presets:
-            st.markdown("### 🗑️ プリセットの削除")
-            
-            # プリセット選択（全幅）
-            preset_to_delete = st.selectbox(
-                "削除するプリセット",
-                list(st.session_state.saved_presets.keys()),
-                key="delete_preset_noimg"
-            )
-            
-            # 削除ボタン
-            if st.button("🗑️ 削除", type="secondary", use_container_width=True):
-                if preset_to_delete:
-                    del st.session_state.saved_presets[preset_to_delete]
-                    
-                    # ファイルを更新
-                    try:
-                        import pickle
-                        import os
-                        preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
-                        all_presets = {
-                            'presets': st.session_state.saved_presets
-                        }
-                        with open(preset_file, 'wb') as f:
-                            pickle.dump(all_presets, f)
-                    except:
-                        pass
-                    
-                    st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
-                    st.rerun()
+    # 設定の保存とプリセット削除を同じ配置で表示（順序を入れ替え）
     
     # 設定の保存セクション（全体で共通、保存ボタンだけ別）  
     # test_imageがある場合は変数を利用、ない場合はセッションステート利用
@@ -1041,6 +1019,104 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             render_save_settings()
     else:
         render_save_settings()
+    
+    # プリセット削除セクション（設定の保存の直後に配置）
+    if test_image:
+        with main_col2:
+            # プリセット削除
+            if st.session_state.saved_presets:
+                st.markdown("### 🗑️ プリセットの削除")
+                
+                # 現在編集中のプリセットをデフォルトにする
+                default_delete_preset = None
+                if ('edit_preset_mode' in st.session_state and 
+                    st.session_state.edit_preset_mode and 
+                    'edit_preset_select' in st.session_state and
+                    st.session_state.edit_preset_select != "新規作成"):
+                    default_delete_preset = st.session_state.edit_preset_select
+                
+                # デフォルト値を見つける
+                preset_list = list(st.session_state.saved_presets.keys())
+                default_index = 0
+                if default_delete_preset and default_delete_preset in preset_list:
+                    default_index = preset_list.index(default_delete_preset)
+                
+                # プリセット選択（全幅）
+                preset_to_delete = st.selectbox(
+                    "削除するプリセット",
+                    preset_list,
+                    index=default_index,
+                    key="delete_preset"
+                )
+                
+                # 削除ボタン
+                if st.button("🗑️ 削除", type="secondary", use_container_width=True):
+                    if preset_to_delete:
+                        del st.session_state.saved_presets[preset_to_delete]
+                        
+                        # ファイルを更新
+                        try:
+                            import pickle
+                            import os
+                            preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
+                            all_presets = {
+                                'presets': st.session_state.saved_presets
+                            }
+                            with open(preset_file, 'wb') as f:
+                                pickle.dump(all_presets, f)
+                        except:
+                            pass
+                        
+                        st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
+                        st.rerun()
+    else:
+        # test_imageがない場合は全幅で表示
+        # プリセット削除
+        if st.session_state.saved_presets:
+            st.markdown("### 🗑️ プリセットの削除")
+            
+            # 現在編集中のプリセットをデフォルトにする
+            default_delete_preset = None
+            if ('edit_preset_mode' in st.session_state and 
+                st.session_state.edit_preset_mode and 
+                'edit_preset_select' in st.session_state and
+                st.session_state.edit_preset_select != "新規作成"):
+                default_delete_preset = st.session_state.edit_preset_select
+            
+            # デフォルト値を見つける
+            preset_list = list(st.session_state.saved_presets.keys())
+            default_index = 0
+            if default_delete_preset and default_delete_preset in preset_list:
+                default_index = preset_list.index(default_delete_preset)
+            
+            # プリセット選択（全幅）
+            preset_to_delete = st.selectbox(
+                "削除するプリセット",
+                preset_list,
+                index=default_index,
+                key="delete_preset_noimg"
+            )
+            
+            # 削除ボタン
+            if st.button("🗑️ 削除", type="secondary", use_container_width=True):
+                if preset_to_delete:
+                    del st.session_state.saved_presets[preset_to_delete]
+                    
+                    # ファイルを更新
+                    try:
+                        import pickle
+                        import os
+                        preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
+                        all_presets = {
+                            'presets': st.session_state.saved_presets
+                        }
+                        with open(preset_file, 'wb') as f:
+                            pickle.dump(all_presets, f)
+                    except:
+                        pass
+                    
+                    st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
+                    st.rerun()
 
 
 # ファイルアップローダー（一番最初に表示）
