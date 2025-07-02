@@ -782,11 +782,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                     # 検出情報も保存
                                     st.session_state['preview_detection_info'] = detection
                                 
+                                # セッションステートから値を取得（なければデフォルト値を使用）
+                                default_val = st.session_state.get(f"visual_max_{i}", detection['detected_max'])
                                 visual_max = st.number_input(
                                     "実際の最大値",
                                     min_value=0,
                                     max_value=50000,
-                                    value=detection['detected_max'],
+                                    value=default_val,
                                     step=100,
                                     help=f"{detection['image_name']}の実際の最高値",
                                     key=f"visual_max_{i}",
@@ -798,11 +800,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         detection = all_detections[0]
                         st.info(f"🔍 検出値: **{detection['detected_max']:,}玉**")
                         
+                        # セッションステートから値を取得（なければデフォルト値を使用）
+                        default_val = st.session_state.get("visual_max_single", detection['detected_max'])
                         visual_max = st.number_input(
                             "実際の最大値を入力",
                             min_value=0,
                             max_value=50000,
-                            value=detection['detected_max'],
+                            value=default_val,
                             step=100,
                             help="グラフ画像を見て確認した最高値",
                             key="visual_max_single",
@@ -865,6 +869,11 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                 
                                 # 自動適用ボタン
                                 if st.button("🔧 推奨値を自動適用", type="secondary", key="apply_max_alignment"):
+                                    # 入力された実際の最大値を保存
+                                    for i, visual_max in enumerate(visual_max_values):
+                                        if i < len(all_detections):
+                                            st.session_state[f"visual_max_{i}"] = visual_max
+                                    
                                     # セッションステートに新しい値を設定（現在の入力値に調整を加える）
                                     st.session_state.settings['grid_30k_offset'] = grid_30k_offset + avg_adjustment_30k
                                     st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + avg_adjustment_minus_30k
