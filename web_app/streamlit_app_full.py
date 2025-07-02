@@ -1272,14 +1272,29 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 y_30k_adjusted = 0 + grid_30k_offset
                 y_minus_30k_adjusted = cropped_preview.shape[0] - 1 + grid_minus_30k_offset
                 
-                distance_to_plus_30k_adjusted = zero_in_crop - y_30k_adjusted
-                distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_in_crop
-                
-                if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
-                    avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
-                    analyzer_preview.scale = 30000 / avg_distance_adjusted
+                # 非線形スケールを使用する場合
+                if st.session_state.settings.get('use_nonlinear_scale', False):
+                    # 各グリッドラインのY座標と値のペアを作成
+                    scale_points = [
+                        (y_30k, 30000),
+                        (y_20k_crop if 'y_20k_crop' in locals() else int(zero_in_crop - (20000 / 30000) * (zero_in_crop - y_30k)), 20000),
+                        (y_10k_crop if 'y_10k_crop' in locals() else int(zero_in_crop - (10000 / 30000) * (zero_in_crop - y_30k)), 10000),
+                        (zero_in_crop, 0),
+                        (y_minus_10k_crop if 'y_minus_10k_crop' in locals() else int(zero_in_crop + (10000 / 30000) * (y_minus_30k - zero_in_crop)), -10000),
+                        (y_minus_20k_crop if 'y_minus_20k_crop' in locals() else int(zero_in_crop + (20000 / 30000) * (y_minus_30k - zero_in_crop)), -20000),
+                        (y_minus_30k, -30000)
+                    ]
+                    analyzer_preview.set_nonlinear_scale(scale_points)
                 else:
-                    analyzer_preview.scale = 122  # デフォルト
+                    # 線形スケールの場合
+                    distance_to_plus_30k_adjusted = zero_in_crop - y_30k_adjusted
+                    distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_in_crop
+                    
+                    if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
+                        avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
+                        analyzer_preview.scale = 30000 / avg_distance_adjusted
+                    else:
+                        analyzer_preview.scale = 122  # デフォルト
                 
                 # BGRに変換
                 cropped_bgr_preview = cv2.cvtColor(cropped_preview, cv2.COLOR_RGB2BGR)
