@@ -1987,9 +1987,30 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             max_idx = graph_values.index(max_val_original)
             min_idx = graph_values.index(min_val_original)
             
-            # 補正係数を適用（プリセットに含まれている場合）
-            correction_factor = settings.get('correction_factor', 1.0)
-            if correction_factor != 1.0:
+            # 最大値レンジに応じた補正を適用
+            # 非線形スケールを使用している場合のみ補正
+            if settings.get('use_nonlinear_scale', False):
+                # 最大値のレンジに応じた補正係数を計算
+                if max_val_original < 10000:
+                    # 0-10000区間: +10000ラインの調整が影響
+                    base_correction = 1.0
+                    # +10000ラインのオフセットに基づく補正
+                    offset = settings.get('grid_10k_offset', 0)
+                    if offset != 0:
+                        # オフセットがある場合、スケールの変化を考慮
+                        base_correction = 1.0 + (offset * 0.003)  # 1pxあたり0.3%の補正
+                    correction_factor = base_correction
+                elif max_val_original < 20000:
+                    # 10000-20000区間: +20000ラインの調整が影響
+                    base_correction = 1.0
+                    offset = settings.get('grid_20k_offset', 0)
+                    if offset != 0:
+                        base_correction = 1.0 + (offset * 0.002)  # 1pxあたり0.2%の補正
+                    correction_factor = base_correction
+                else:
+                    # 20000-30000区間: プリセットの補正係数を使用
+                    correction_factor = settings.get('correction_factor', 1.0)
+                
                 # 補正を適用
                 max_val = max_val_original * correction_factor
                 min_val = min_val_original * correction_factor
@@ -1997,9 +2018,17 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 # グラフ値も更新（初当たり検出用）
                 graph_values = [v * correction_factor for v in graph_values]
             else:
-                max_val = max_val_original
-                min_val = min_val_original
-                current_val = current_val_original
+                # 線形スケールの場合はプリセットの補正係数を使用
+                correction_factor = settings.get('correction_factor', 1.0)
+                if correction_factor != 1.0:
+                    max_val = max_val_original * correction_factor
+                    min_val = min_val_original * correction_factor
+                    current_val = current_val_original * correction_factor
+                    graph_values = [v * correction_factor for v in graph_values]
+                else:
+                    max_val = max_val_original
+                    min_val = min_val_original
+                    current_val = current_val_original
 
             # 最大値が30,000を超える場合は30,000にクリップ
             if max_val > 30000:
