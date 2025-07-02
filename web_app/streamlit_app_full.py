@@ -127,12 +127,6 @@ default_settings = {
     # グリッドライン調整値
     'grid_30k_offset': 0,       # +30000ライン（最上部）
     'grid_minus_30k_offset': 0, # -30000ライン（最下部）
-    # 実験的機能用（非表示）
-    'grid_20k_offset': 0,       # +20000ライン
-    'grid_10k_offset': 0,       # +10000ライン
-    'grid_minus_10k_offset': 0, # -10000ライン
-    'grid_minus_20k_offset': 0, # -20000ライン
-    'use_nonlinear_scale': False  # 非線形スケールを使用
 }
 
 # セッションステートの初期化（エキスパンダーより前に行う）
@@ -618,11 +612,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 )
             
             # 中間ライン用のダミー変数を設定（他のコードで参照されるため）
-            if not st.session_state.settings.get('use_nonlinear_scale', False):
-                grid_20k_offset = 0
-                grid_10k_offset = 0
-                grid_minus_10k_offset = 0
-                grid_minus_20k_offset = 0
             
             # 最大値アライメント機能を統合
             if test_images:
@@ -895,121 +884,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 else:
                     st.warning("グラフデータを検出できませんでした")
             
-            # 実験的機能
-            st.markdown("#### 🧪 実験的機能：非線形スケール対応")
-            st.warning("⚠️ これらは実験的な機能です。通常の解析には影響しません。")
-            
-            # 非線形スケールの有効化
-            use_nonlinear = st.checkbox(
-                "📏 非線形スケールを使用",
-                value=st.session_state.settings.get('use_nonlinear_scale', False),
-                help="グラフが線形でない場合に有効にしてください",
-                key="use_nonlinear_checkbox"
-            )
-            
-            if use_nonlinear:
-                st.info("📊 中間ラインを使用して、各区間で個別にスケールを計算します")
-                
-                # 中間ラインの調整
-                st.markdown("**中間ライン調整**")
-                col1_mid, col2_mid = st.columns(2)
-                    
-                with col1_mid:
-                    grid_20k_offset = st.number_input(
-                        "+20,000ライン調整",
-                        min_value=-100, max_value=100, 
-                        value=max(-100, min(100, st.session_state.settings.get('grid_20k_offset', 0))),
-                        step=1, help="+20,000ラインの位置調整"
-                    )
-                    grid_10k_offset = st.number_input(
-                        "+10,000ライン調整",
-                        min_value=-100, max_value=100, 
-                        value=max(-100, min(100, st.session_state.settings.get('grid_10k_offset', 0))),
-                        step=1, help="+10,000ラインの位置調整"
-                    )
-                    
-                with col2_mid:
-                    grid_minus_10k_offset = st.number_input(
-                        "-10,000ライン調整",
-                        min_value=-100, max_value=100, 
-                        value=max(-100, min(100, st.session_state.settings.get('grid_minus_10k_offset', 0))),
-                        step=1, help="-10,000ラインの位置調整"
-                    )
-                    grid_minus_20k_offset = st.number_input(
-                        "-20,000ライン調整",
-                        min_value=-100, max_value=100, 
-                        value=max(-100, min(100, st.session_state.settings.get('grid_minus_20k_offset', 0))),
-                        step=1, help="-20,000ラインの位置調整"
-                    )
-                    
-                # プレビューに中間ラインを表示するための更新
-                st.session_state.settings['grid_20k_offset'] = grid_20k_offset
-                st.session_state.settings['grid_10k_offset'] = grid_10k_offset
-                st.session_state.settings['grid_minus_10k_offset'] = grid_minus_10k_offset
-                st.session_state.settings['grid_minus_20k_offset'] = grid_minus_20k_offset
-                st.session_state.settings['use_nonlinear_scale'] = True
-                
-                # 調整のヒント
-                st.info("💡 ヒント: 切り抜き結果のオーバーレイを確認しながら、各ラインを手動で調整してください。")
-                
-                # 調整後の抽出結果確認
-                st.markdown("#### 📊 調整後の抽出結果確認")
-                st.info("非線形スケールを使用すると、各区間で個別のスケールが適用されます。")
-                
-                # 区間ごとのスケール表示
-                if st.checkbox("📏 区間ごとのスケールを表示", key="show_section_scales"):
-                    if test_image and 'zero_in_crop' in locals() and zero_in_crop is not None:
-                        # 切り抜き画像の高さを計算
-                        crop_height = bottom - top
-                        
-                        # 各グリッドラインの位置を計算
-                        y_30k = 0 + grid_30k_offset
-                        y_20k = int(zero_in_crop - (20000 / 30000) * (zero_in_crop - y_30k) + st.session_state.settings.get('grid_20k_offset', 0))
-                        y_10k = int(zero_in_crop - (10000 / 30000) * (zero_in_crop - y_30k) + st.session_state.settings.get('grid_10k_offset', 0))
-                        y_minus_10k = int(zero_in_crop + (10000 / 30000) * ((crop_height - 1 + grid_minus_30k_offset) - zero_in_crop) + st.session_state.settings.get('grid_minus_10k_offset', 0))
-                        y_minus_20k = int(zero_in_crop + (20000 / 30000) * ((crop_height - 1 + grid_minus_30k_offset) - zero_in_crop) + st.session_state.settings.get('grid_minus_20k_offset', 0))
-                        y_minus_30k = crop_height - 1 + grid_minus_30k_offset
-                        
-                        # 各区間のスケールを計算
-                        st.markdown("**各区間のスケール:**")
-                        
-                        # +20000〜+30000区間
-                        if y_30k != y_20k:
-                            scale_30k_20k = 10000 / abs(y_30k - y_20k)
-                            st.write(f"• +20,000〜+30,000区間: **{scale_30k_20k:.1f}** 玉/ピクセル")
-                        
-                        # +10000〜+20000区間
-                        if y_20k != y_10k:
-                            scale_20k_10k = 10000 / abs(y_20k - y_10k)
-                            st.write(f"• +10,000〜+20,000区間: **{scale_20k_10k:.1f}** 玉/ピクセル")
-                        
-                        # 0〜+10000区間
-                        if y_10k != zero_in_crop:
-                            scale_10k_0 = 10000 / abs(y_10k - zero_in_crop)
-                            st.write(f"• 0〜+10,000区間: **{scale_10k_0:.1f}** 玉/ピクセル")
-                        
-                        # 0〜-10000区間
-                        if zero_in_crop != y_minus_10k:
-                            scale_0_minus10k = 10000 / abs(zero_in_crop - y_minus_10k)
-                            st.write(f"• 0〜-10,000区間: **{scale_0_minus10k:.1f}** 玉/ピクセル")
-                        
-                        # -10000〜-20000区間
-                        if y_minus_10k != y_minus_20k:
-                            scale_minus10k_minus20k = 10000 / abs(y_minus_10k - y_minus_20k)
-                            st.write(f"• -10,000〜-20,000区間: **{scale_minus10k_minus20k:.1f}** 玉/ピクセル")
-                        
-                        # -20000〜-30000区間
-                        if y_minus_20k != y_minus_30k:
-                            scale_minus20k_minus30k = 10000 / abs(y_minus_20k - y_minus_30k)
-                            st.write(f"• -20,000〜-30,000区間: **{scale_minus20k_minus30k:.1f}** 玉/ピクセル")
-                        
-                        # 線形スケールとの比較
-                        linear_scale = 30000 / ((zero_in_crop - y_30k + y_minus_30k - zero_in_crop) / 2)
-                        st.write(f"\n参考: 線形スケール（平均）: **{linear_scale:.1f}** 玉/ピクセル")
-                    else:
-                        st.info("画像をアップロードして解析してください")
-            else:
-                st.session_state.settings['use_nonlinear_scale'] = False
     
     
     # リアルタイムプレビュー
@@ -1115,35 +989,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             cv2.line(overlay_img, (0, y_minus_30k_orig), (width_preview, y_minus_30k_orig), (128, 128, 128), 2)
             cv2.putText(overlay_img, '-30000', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
         
-        # 実験的機能：中間ラインを表示
-        if st.session_state.settings.get('use_nonlinear_scale', False):
-            # +20000ライン
-            y_20k_in_crop = zero_in_crop - (20000 / 30000) * distance_to_plus_30k + st.session_state.settings.get('grid_20k_offset', 0)
-            y_20k_orig = int(top + y_20k_in_crop)
-            if 0 <= y_20k_orig < height_preview:
-                cv2.line(overlay_img, (0, y_20k_orig), (width_preview, y_20k_orig), (100, 150, 100), 2)
-                cv2.putText(overlay_img, '+20000', (10, max(20, y_20k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (50, 100, 50), 2)
-            
-            # +10000ライン
-            y_10k_in_crop = zero_in_crop - (10000 / 30000) * distance_to_plus_30k + st.session_state.settings.get('grid_10k_offset', 0)
-            y_10k_orig = int(top + y_10k_in_crop)
-            if 0 <= y_10k_orig < height_preview:
-                cv2.line(overlay_img, (0, y_10k_orig), (width_preview, y_10k_orig), (100, 150, 100), 2)
-                cv2.putText(overlay_img, '+10000', (10, max(20, y_10k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (50, 100, 50), 2)
-            
-            # -10000ライン
-            y_minus_10k_in_crop = zero_in_crop + (10000 / 30000) * distance_to_minus_30k + st.session_state.settings.get('grid_minus_10k_offset', 0)
-            y_minus_10k_orig = int(top + y_minus_10k_in_crop)
-            if 0 <= y_minus_10k_orig < height_preview:
-                cv2.line(overlay_img, (0, y_minus_10k_orig), (width_preview, y_minus_10k_orig), (150, 100, 100), 2)
-                cv2.putText(overlay_img, '-10000', (10, max(10, y_minus_10k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 50, 50), 2)
-            
-            # -20000ライン
-            y_minus_20k_in_crop = zero_in_crop + (20000 / 30000) * distance_to_minus_30k + st.session_state.settings.get('grid_minus_20k_offset', 0)
-            y_minus_20k_orig = int(top + y_minus_20k_in_crop)
-            if 0 <= y_minus_20k_orig < height_preview:
-                cv2.line(overlay_img, (0, y_minus_20k_orig), (width_preview, y_minus_20k_orig), (150, 100, 100), 2)
-                cv2.putText(overlay_img, '-20000', (10, max(10, y_minus_20k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 50, 50), 2)
         
         # プレビューを左カラムに表示（縦に配置）
         with main_col1:
@@ -1173,31 +1018,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 cv2.line(cropped_preview, (0, y_minus_30k), (cropped_preview.shape[1], y_minus_30k), (150, 0, 0), 3)
                 cv2.putText(cropped_preview, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 0, 0), 2)
             
-            # 実験的機能：中間ラインを表示（切り抜き画像内）
-            if st.session_state.settings.get('use_nonlinear_scale', False):
-                # +20000ライン
-                y_20k_crop = int(zero_in_crop - (20000 / 30000) * (zero_in_crop - y_30k) + st.session_state.settings.get('grid_20k_offset', 0))
-                if 0 <= y_20k_crop < cropped_preview.shape[0]:
-                    cv2.line(cropped_preview, (0, y_20k_crop), (cropped_preview.shape[1], y_20k_crop), (100, 150, 100), 2)
-                    cv2.putText(cropped_preview, '+20000', (10, max(20, y_20k_crop + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 100, 50), 2)
-                
-                # +10000ライン
-                y_10k_crop = int(zero_in_crop - (10000 / 30000) * (zero_in_crop - y_30k) + st.session_state.settings.get('grid_10k_offset', 0))
-                if 0 <= y_10k_crop < cropped_preview.shape[0]:
-                    cv2.line(cropped_preview, (0, y_10k_crop), (cropped_preview.shape[1], y_10k_crop), (100, 150, 100), 2)
-                    cv2.putText(cropped_preview, '+10000', (10, max(20, y_10k_crop + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 100, 50), 2)
-                
-                # -10000ライン
-                y_minus_10k_crop = int(zero_in_crop + (10000 / 30000) * (y_minus_30k - zero_in_crop) + st.session_state.settings.get('grid_minus_10k_offset', 0))
-                if 0 <= y_minus_10k_crop < cropped_preview.shape[0]:
-                    cv2.line(cropped_preview, (0, y_minus_10k_crop), (cropped_preview.shape[1], y_minus_10k_crop), (150, 100, 100), 2)
-                    cv2.putText(cropped_preview, '-10000', (10, max(10, y_minus_10k_crop - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (100, 50, 50), 2)
-                
-                # -20000ライン
-                y_minus_20k_crop = int(zero_in_crop + (20000 / 30000) * (y_minus_30k - zero_in_crop) + st.session_state.settings.get('grid_minus_20k_offset', 0))
-                if 0 <= y_minus_20k_crop < cropped_preview.shape[0]:
-                    cv2.line(cropped_preview, (0, y_minus_20k_crop), (cropped_preview.shape[1], y_minus_20k_crop), (150, 100, 100), 2)
-                    cv2.putText(cropped_preview, '-20000', (10, max(10, y_minus_20k_crop - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (100, 50, 50), 2)
             
             # 選択された画像の実際の最大値を表示
             if 'preview_image_index' in st.session_state:
@@ -1211,29 +1031,15 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 y_30k_adjusted = 0 + grid_30k_offset
                 y_minus_30k_adjusted = cropped_preview.shape[0] - 1 + grid_minus_30k_offset
                 
-                # 非線形スケールを使用する場合
-                if st.session_state.settings.get('use_nonlinear_scale', False):
-                    # 各グリッドラインのY座標と値のペアを作成
-                    scale_points = [
-                        (y_30k, 30000),
-                        (y_20k_crop if 'y_20k_crop' in locals() else int(zero_in_crop - (20000 / 30000) * (zero_in_crop - y_30k)), 20000),
-                        (y_10k_crop if 'y_10k_crop' in locals() else int(zero_in_crop - (10000 / 30000) * (zero_in_crop - y_30k)), 10000),
-                        (zero_in_crop, 0),
-                        (y_minus_10k_crop if 'y_minus_10k_crop' in locals() else int(zero_in_crop + (10000 / 30000) * (y_minus_30k - zero_in_crop)), -10000),
-                        (y_minus_20k_crop if 'y_minus_20k_crop' in locals() else int(zero_in_crop + (20000 / 30000) * (y_minus_30k - zero_in_crop)), -20000),
-                        (y_minus_30k, -30000)
-                    ]
-                    analyzer_preview.set_nonlinear_scale(scale_points)
+                # 線形スケールのみ使用
+                distance_to_plus_30k_adjusted = zero_in_crop - y_30k_adjusted
+                distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_in_crop
+                
+                if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
+                    avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
+                    analyzer_preview.scale = 30000 / avg_distance_adjusted
                 else:
-                    # 線形スケールの場合
-                    distance_to_plus_30k_adjusted = zero_in_crop - y_30k_adjusted
-                    distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_in_crop
-                    
-                    if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
-                        avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
-                        analyzer_preview.scale = 30000 / avg_distance_adjusted
-                    else:
-                        analyzer_preview.scale = 122  # デフォルト
+                    analyzer_preview.scale = 122  # デフォルト
                 
                 # BGRに変換（グリッドラインなしの元画像を使用）
                 cropped_bgr_preview = cv2.cvtColor(cropped_preview_original, cv2.COLOR_RGB2BGR)
@@ -1256,44 +1062,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     # 実際の値が入力されている場合はそれを使用、そうでなければ検出値を使用
                     display_max_value = actual_max_value if actual_max_value is not None else max_val_detected
                     
-                    # グラフ上の実際の最大値のY座標（非線形スケール対応）
-                    if st.session_state.settings.get('use_nonlinear_scale', False) and hasattr(analyzer_preview, 'scale_points'):
-                        # 非線形スケールの場合、値からY座標を逆算
-                        max_y_in_crop = None
-                        for i in range(len(analyzer_preview.scale_points) - 1):
-                            y1, val1 = analyzer_preview.scale_points[i]
-                            y2, val2 = analyzer_preview.scale_points[i + 1]
-                            
-                            if val1 <= max_val_detected <= val2 or val2 <= max_val_detected <= val1:
-                                # この区間で線形補間
-                                if val2 != val1:
-                                    ratio = (max_val_detected - val1) / (val2 - val1)
-                                    max_y_in_crop = int(y1 + ratio * (y2 - y1))
-                                    break
-                        
-                        # 範囲外の場合
-                        if max_y_in_crop is None:
-                            if max_val_detected > max(p[1] for p in analyzer_preview.scale_points):
-                                # 最大値より大きい場合
-                                y1, val1 = analyzer_preview.scale_points[-2]
-                                y2, val2 = analyzer_preview.scale_points[-1]
-                                if val2 != val1:
-                                    scale = (y2 - y1) / (val2 - val1)
-                                    max_y_in_crop = int(y2 + scale * (max_val_detected - val2))
-                                else:
-                                    max_y_in_crop = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
-                            else:
-                                # 最小値より小さい場合
-                                y1, val1 = analyzer_preview.scale_points[0]
-                                y2, val2 = analyzer_preview.scale_points[1]
-                                if val2 != val1:
-                                    scale = (y2 - y1) / (val2 - val1)
-                                    max_y_in_crop = int(y1 + scale * (max_val_detected - val1))
-                                else:
-                                    max_y_in_crop = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
-                    else:
-                        # 線形スケールの場合
-                        max_y_in_crop = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
+                    # グラフ上の実際の最大値のY座標（線形スケール）
+                    max_y_in_crop = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
                     
                     # 表示する値は実際の値があればそれを使用
                     if actual_max_value and max_val_detected > 0:
@@ -1342,15 +1112,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 'grid_30k_offset': grid_30k_offset,
                 'grid_minus_30k_offset': grid_minus_30k_offset
             }
-            # 実験的機能の設定も含める
-            if st.session_state.settings.get('use_nonlinear_scale', False):
-                settings.update({
-                    'grid_20k_offset': st.session_state.settings.get('grid_20k_offset', 0),
-                    'grid_10k_offset': st.session_state.settings.get('grid_10k_offset', 0),
-                    'grid_minus_10k_offset': st.session_state.settings.get('grid_minus_10k_offset', 0),
-                    'grid_minus_20k_offset': st.session_state.settings.get('grid_minus_20k_offset', 0),
-                    'use_nonlinear_scale': True
-                })
             return settings
     else:
         # test_imageがない場合、セッションステートから取得
@@ -1819,34 +1580,6 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
         cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
 
-        # 実験的機能：中間ラインも描画
-        if settings.get('use_nonlinear_scale', False):
-            # +20000ライン
-            y_20k = int(zero_line_in_crop - (20000 / 30000) * (zero_line_in_crop - y_30k) + settings.get('grid_20k_offset', 0))
-            if 0 <= y_20k < crop_height:
-                cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (100, 150, 100), 1)
-                cv2.putText(cropped_img, '+20000', (10, max(20, y_20k + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 100, 50), 1)
-            
-            # +10000ライン
-            y_10k = int(zero_line_in_crop - (10000 / 30000) * (zero_line_in_crop - y_30k) + settings.get('grid_10k_offset', 0))
-            if 0 <= y_10k < crop_height:
-                cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (100, 150, 100), 1)
-                cv2.putText(cropped_img, '+10000', (10, max(20, y_10k + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 100, 50), 1)
-            
-            # -10000ライン
-            y_minus_10k = int(zero_line_in_crop + (10000 / 30000) * (y_minus_30k - zero_line_in_crop) + settings.get('grid_minus_10k_offset', 0))
-            if 0 <= y_minus_10k < crop_height:
-                cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (150, 100, 100), 1)
-                cv2.putText(cropped_img, '-10000', (10, max(10, y_minus_10k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 50, 50), 1)
-            
-            # -20000ライン
-            y_minus_20k = int(zero_line_in_crop + (20000 / 30000) * (y_minus_30k - zero_line_in_crop) + settings.get('grid_minus_20k_offset', 0))
-            if 0 <= y_minus_20k < crop_height:
-                cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (150, 100, 100), 1)
-                cv2.putText(cropped_img, '-20000', (10, max(10, y_minus_20k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 50, 50), 1)
-        else:
-            # ダミー値（他のコードとの互換性のため）
-            y_20k = y_10k = y_minus_10k = y_minus_20k = 0
         
         # ゼロラインから±30000ラインまでの距離を計算
         distance_to_plus_30k = zero_line_in_crop - y_30k
@@ -1904,39 +1637,17 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         distance_to_plus_30k_adjusted = zero_line_in_crop - y_30k_adjusted
         distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_line_in_crop
         
-        # 非線形スケールを使用する場合
-        if settings.get('use_nonlinear_scale', False):
-            # 各グリッドラインのY座標と値のペアを作成
-            scale_points = [
-                (y_30k, 30000),
-                (y_20k, 20000) if 'y_20k' in locals() else None,
-                (y_10k, 10000) if 'y_10k' in locals() else None,
-                (zero_line_in_crop, 0),
-                (y_minus_10k, -10000) if 'y_minus_10k' in locals() else None,
-                (y_minus_20k, -20000) if 'y_minus_20k' in locals() else None,
-                (y_minus_30k, -30000)
-            ]
-            # Noneを除外
-            scale_points = [p for p in scale_points if p is not None]
-            analyzer.set_nonlinear_scale(scale_points)
-            
-            # デバッグ情報を追加
-            if uploaded_file.name in ["IMG_0165.PNG", "IMG_0174.PNG", "IMG_0177.PNG"]:
-                st.write("🔬 非線形スケール設定:")
-                for y, val in scale_points:
-                    st.write(f"  Y={int(y)}px → {val:+,}玉")
+        # 通常の線形スケール計算
+        if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
+            # 上下の平均距離を使用
+            avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
+            analyzer.scale = 30000 / avg_distance_adjusted
         else:
-            # 通常の線形スケール計算
-            if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
-                # 上下の平均距離を使用
-                avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
-                analyzer.scale = 30000 / avg_distance_adjusted
-            else:
-                # フォールバック（調整前の値を使用）
-                distance_to_top = zero_line_in_crop
-                distance_to_bottom = crop_height - zero_line_in_crop
-                avg_distance = (distance_to_top + distance_to_bottom) / 2
-                analyzer.scale = 30000 / avg_distance
+            # フォールバック（調整前の値を使用）
+            distance_to_top = zero_line_in_crop
+            distance_to_bottom = crop_height - zero_line_in_crop
+            avg_distance = (distance_to_top + distance_to_bottom) / 2
+            analyzer.scale = 30000 / avg_distance
         
         # グラフデータを抽出
         graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
@@ -1957,21 +1668,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 sample_points = graph_data_points[::100][:10]  # 10点をサンプル表示
                 st.write("- サンプルデータ (x, 値):")
                 for x, val in sample_points:
-                    if settings.get('use_nonlinear_scale', False) and hasattr(analyzer, 'scale_points'):
-                        # 非線形スケールでY座標を計算
-                        y_pixel = None
-                        for i in range(len(analyzer.scale_points) - 1):
-                            y1, val1 = analyzer.scale_points[i]
-                            y2, val2 = analyzer.scale_points[i + 1]
-                            if val1 <= val <= val2 or val2 <= val <= val1:
-                                if val2 != val1:
-                                    ratio = (val - val1) / (val2 - val1)
-                                    y_pixel = int(y1 + ratio * (y2 - y1))
-                                    break
-                        if y_pixel is None:
-                            y_pixel = zero_line_in_crop - (val / analyzer.scale)  # フォールバック
-                    else:
-                        y_pixel = zero_line_in_crop - (val / analyzer.scale)
+                    y_pixel = zero_line_in_crop - (val / analyzer.scale)
                     st.write(f"  X={int(x)}, 値={int(val)}玉, Y座標={int(y_pixel)}px")
 
         if graph_data_points:
@@ -1987,48 +1684,20 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             max_idx = graph_values.index(max_val_original)
             min_idx = graph_values.index(min_val_original)
             
-            # 最大値レンジに応じた補正を適用
-            # 非線形スケールを使用している場合のみ補正
-            if settings.get('use_nonlinear_scale', False):
-                # 最大値のレンジに応じた補正係数を計算
-                if max_val_original < 10000:
-                    # 0-10000区間: +10000ラインの調整が影響
-                    base_correction = 1.0
-                    # +10000ラインのオフセットに基づく補正
-                    offset = settings.get('grid_10k_offset', 0)
-                    if offset != 0:
-                        # オフセットがある場合、スケールの変化を考慮
-                        base_correction = 1.0 + (offset * 0.003)  # 1pxあたり0.3%の補正
-                    correction_factor = base_correction
-                elif max_val_original < 20000:
-                    # 10000-20000区間: +20000ラインの調整が影響
-                    base_correction = 1.0
-                    offset = settings.get('grid_20k_offset', 0)
-                    if offset != 0:
-                        base_correction = 1.0 + (offset * 0.002)  # 1pxあたり0.2%の補正
-                    correction_factor = base_correction
-                else:
-                    # 20000-30000区間: プリセットの補正係数を使用
-                    correction_factor = settings.get('correction_factor', 1.0)
-                
-                # 補正を適用
+            # 補正係数の計算
+            correction_factor = settings.get('correction_factor', 1.0)
+            
+            # 補正を適用
+            if correction_factor != 1.0:
                 max_val = max_val_original * correction_factor
                 min_val = min_val_original * correction_factor
                 current_val = current_val_original * correction_factor
                 # グラフ値も更新（初当たり検出用）
                 graph_values = [v * correction_factor for v in graph_values]
             else:
-                # 線形スケールの場合はプリセットの補正係数を使用
-                correction_factor = settings.get('correction_factor', 1.0)
-                if correction_factor != 1.0:
-                    max_val = max_val_original * correction_factor
-                    min_val = min_val_original * correction_factor
-                    current_val = current_val_original * correction_factor
-                    graph_values = [v * correction_factor for v in graph_values]
-                else:
-                    max_val = max_val_original
-                    min_val = min_val_original
-                    current_val = current_val_original
+                max_val = max_val_original
+                min_val = min_val_original
+                current_val = current_val_original
 
             # 最大値が30,000を超える場合は30,000にクリップ
             if max_val > 30000:
@@ -2098,40 +1767,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
 
             # グラフポイントを描画
             for x, value in graph_data_points:
-                # Y座標を計算（非線形スケール対応）
-                if settings.get('use_nonlinear_scale', False) and hasattr(analyzer, 'scale_points'):
-                    # 非線形スケールの場合、値からY座標を逆算
-                    y = None
-                    for i in range(len(analyzer.scale_points) - 1):
-                        y1, val1 = analyzer.scale_points[i]
-                        y2, val2 = analyzer.scale_points[i + 1]
-                        
-                        if val1 <= value <= val2 or val2 <= value <= val1:
-                            # この区間で線形補間
-                            if val2 != val1:
-                                ratio = (value - val1) / (val2 - val1)
-                                y = int(y1 + ratio * (y2 - y1))
-                                break
-                    
-                    # 範囲外の場合
-                    if y is None:
-                        if value > max(p[1] for p in analyzer.scale_points):
-                            # 最大値より大きい場合
-                            y1, val1 = analyzer.scale_points[-2]
-                            y2, val2 = analyzer.scale_points[-1]
-                            if val2 != val1:
-                                scale = (y2 - y1) / (val2 - val1)
-                                y = int(y2 + scale * (value - val2))
-                        else:
-                            # 最小値より小さい場合
-                            y1, val1 = analyzer.scale_points[0]
-                            y2, val2 = analyzer.scale_points[1]
-                            if val2 != val1:
-                                scale = (y2 - y1) / (val2 - val1)
-                                y = int(y1 + scale * (value - val1))
-                else:
-                    # 線形スケールの場合（従来の計算）
-                    y = int(zero_line_in_crop - (value / analyzer.scale))
+                # Y座標を計算（線形スケール）
+                y = int(zero_line_in_crop - (value / analyzer.scale))
 
                 # 画像範囲内かチェック
                 if y is not None and 0 <= y < overlay_img.shape[0] and 0 <= x < overlay_img.shape[1]:
@@ -2148,35 +1785,9 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             # 最高値、最低値、初当たりの位置を見つける
             # インデックスは既に上で取得済み
 
-            # Y座標計算用の関数（非線形スケール対応）
+            # Y座標計算用の関数（線形スケール）
             def calculate_y_from_value(val):
-                if settings.get('use_nonlinear_scale', False) and hasattr(analyzer, 'scale_points'):
-                    # 非線形スケールの場合
-                    for i in range(len(analyzer.scale_points) - 1):
-                        y1, val1 = analyzer.scale_points[i]
-                        y2, val2 = analyzer.scale_points[i + 1]
-                        
-                        if val1 <= val <= val2 or val2 <= val <= val1:
-                            if val2 != val1:
-                                ratio = (val - val1) / (val2 - val1)
-                                return int(y1 + ratio * (y2 - y1))
-                    
-                    # 範囲外の場合
-                    if val > max(p[1] for p in analyzer.scale_points):
-                        y1, val1 = analyzer.scale_points[-2]
-                        y2, val2 = analyzer.scale_points[-1]
-                        if val2 != val1:
-                            scale = (y2 - y1) / (val2 - val1)
-                            return int(y2 + scale * (val - val2))
-                    else:
-                        y1, val1 = analyzer.scale_points[0]
-                        y2, val2 = analyzer.scale_points[1]
-                        if val2 != val1:
-                            scale = (y2 - y1) / (val2 - val1)
-                            return int(y1 + scale * (val - val1))
-                else:
-                    # 線形スケールの場合
-                    return int(zero_line_in_crop - (val / analyzer.scale))
+                return int(zero_line_in_crop - (val / analyzer.scale))
             
             # 横線を描画（最低値、最高値、現在値、初当たり値）
             # 最高値ライン（端から端まで）
