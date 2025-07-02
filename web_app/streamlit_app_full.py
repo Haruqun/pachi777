@@ -559,13 +559,21 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         correction_factor = visual_max_align / detected_max_align
                         st.metric("補正係数", f"{correction_factor:.3f}")
                         
+                        # 最大値の位置を取得（常に実行）
+                        max_index = analysis_align['max_index']
+                        if max_index < len(data_points_align):
+                            max_x, max_y_value = data_points_align[max_index]
+                            # 画像座標系での最大値のY座標
+                            max_y_pixel = int(align_zero_in_crop - (max_y_value / analyzer_align.scale))
+                            
+                            # 最大値の位置をセッションステートに保存
+                            st.session_state['max_value_position'] = {
+                                'x': int(max_x),
+                                'y': max_y_pixel,
+                                'value': max_y_value
+                            }
+                        
                         if abs(correction_factor - 1.0) > 0.001:
-                            # 最大値の位置を取得
-                            max_index = analysis_align['max_index']
-                            if max_index < len(data_points_align):
-                                max_x, max_y_value = data_points_align[max_index]
-                                # 画像座標系での最大値のY座標
-                                max_y_pixel = int(align_zero_in_crop - (max_y_value / analyzer_align.scale))
                                 
                                 # 実際の最大値に基づいて新しいスケールを計算
                                 actual_distance = align_zero_in_crop - max_y_pixel
@@ -801,6 +809,18 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             if 0 < y_minus_20k < cropped_preview.shape[0]:
                 cv2.line(cropped_preview, (0, y_minus_20k), (cropped_preview.shape[1], y_minus_20k), (100, 100, 100), 2)
                 cv2.putText(cropped_preview, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
+            
+            # 最大値の位置を赤線で表示
+            if 'max_value_position' in st.session_state:
+                max_pos = st.session_state['max_value_position']
+                max_y_in_crop = max_pos['y']
+                if 0 <= max_y_in_crop < cropped_preview.shape[0]:
+                    # 赤い水平線を描画
+                    cv2.line(cropped_preview, (0, max_y_in_crop), (cropped_preview.shape[1], max_y_in_crop), (0, 0, 255), 3)
+                    # ラベルを追加
+                    label_text = f"MAX: {max_pos['value']:.0f}"
+                    cv2.putText(cropped_preview, label_text, (cropped_preview.shape[1] - 150, max_y_in_crop - 5), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
             
             st.image(cropped_preview, use_column_width=True)
             
