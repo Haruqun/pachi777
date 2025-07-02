@@ -842,10 +842,11 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
             st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
         
-    # プリセット削除（test_imageがある場合は右カラム、ない場合は全幅）
-    if st.session_state.saved_presets:
-        if test_image:
-            with main_col2:
+    # プリセット削除と設定の保存を同じ配置で表示
+    if test_image:
+        with main_col2:
+            # プリセット削除
+            if st.session_state.saved_presets:
                 st.markdown("### 🗑️ プリセットの削除")
                 
                 # プリセット選択（全幅）
@@ -857,36 +858,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 
                 # 削除ボタン
                 if st.button("🗑️ 削除", type="secondary", use_container_width=True):
-                        if preset_to_delete:
-                            del st.session_state.saved_presets[preset_to_delete]
-                            
-                            # ファイルを更新
-                            try:
-                                import pickle
-                                import os
-                                preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
-                                all_presets = {
-                                    'presets': st.session_state.saved_presets
-                                }
-                                with open(preset_file, 'wb') as f:
-                                    pickle.dump(all_presets, f)
-                            except:
-                                pass
-                            
-                            st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
-                            st.rerun()
-        else:
-            st.markdown("### 🗑️ プリセットの削除")
-            
-            # プリセット選択（全幅）
-            preset_to_delete = st.selectbox(
-                "削除するプリセット",
-                list(st.session_state.saved_presets.keys()),
-                key="delete_preset"
-            )
-            
-            # 削除ボタン
-            if st.button("🗑️ 削除", type="secondary", use_container_width=True):
                     if preset_to_delete:
                         del st.session_state.saved_presets[preset_to_delete]
                         
@@ -905,119 +876,171 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         
                         st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
                         st.rerun()
-    
-    # 設定の保存
-    st.markdown("### 💾 設定の保存")
-    
-    # 既存のプリセットを編集する場合
-    if st.session_state.saved_presets:
-        edit_mode = st.checkbox("既存のプリセットを編集", key="edit_preset_mode")
-        
-        if edit_mode:
-            # 編集するプリセットを選択
-            selected_preset = st.selectbox(
-                "編集するプリセットを選択",
-                ["新規作成"] + list(st.session_state.saved_presets.keys()),
-                key="edit_preset_select"
+    else:
+        # test_imageがない場合は全幅で表示
+        # プリセット削除
+        if st.session_state.saved_presets:
+            st.markdown("### 🗑️ プリセットの削除")
+            
+            # プリセット選択（全幅）
+            preset_to_delete = st.selectbox(
+                "削除するプリセット",
+                list(st.session_state.saved_presets.keys()),
+                key="delete_preset_noimg"
             )
             
-            if selected_preset != "新規作成":
-                # 選択されたプリセット名を入力フィールドに設定
-                preset_name = st.text_input(
-                    "プリセット名",
-                    value=selected_preset,
-                    help="プリセット名を変更することもできます"
+            # 削除ボタン
+            if st.button("🗑️ 削除", type="secondary", use_container_width=True):
+                if preset_to_delete:
+                    del st.session_state.saved_presets[preset_to_delete]
+                    
+                    # ファイルを更新
+                    try:
+                        import pickle
+                        import os
+                        preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
+                        all_presets = {
+                            'presets': st.session_state.saved_presets
+                        }
+                        with open(preset_file, 'wb') as f:
+                            pickle.dump(all_presets, f)
+                    except:
+                        pass
+                    
+                    st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
+                    st.rerun()
+    
+    # 設定の保存セクション（全体で共通、保存ボタンだけ別）  
+    # test_imageがある場合は変数を利用、ない場合はセッションステート利用
+    if test_image:
+        # test_imageがある場合、入力値から直接設定を作成
+        def save_settings():
+            return {
+                'search_start_offset': search_start_offset,
+                'search_end_offset': search_end_offset,
+                'crop_top': crop_top,
+                'crop_bottom': crop_bottom,
+                'left_margin': left_margin,
+                'right_margin': right_margin,
+                'grid_30k_offset': grid_30k_offset,
+                'grid_20k_offset': grid_20k_offset,
+                'grid_10k_offset': grid_10k_offset,
+                'grid_minus_10k_offset': grid_minus_10k_offset,
+                'grid_minus_20k_offset': grid_minus_20k_offset,
+                'grid_minus_30k_offset': grid_minus_30k_offset
+            }
+    else:
+        # test_imageがない場合、セッションステートから取得
+        def save_settings():
+            return st.session_state.settings.copy()
+    
+    # 設定の保存の見出しを適切な場所に配置
+    if test_image:
+        with main_col2:
+            st.markdown("### 💾 設定の保存")
+    else:
+        st.markdown("### 💾 設定の保存")
+    
+    # 設定の保存の内容（test_imageの有無で配置を変更）
+    def render_save_settings():
+        # 既存のプリセットを編集する場合
+        if st.session_state.saved_presets:
+            edit_mode = st.checkbox("既存のプリセットを編集", key="edit_preset_mode")
+            
+            if edit_mode:
+                # 編集するプリセットを選択
+                selected_preset = st.selectbox(
+                    "編集するプリセットを選択",
+                    ["新規作成"] + list(st.session_state.saved_presets.keys()),
+                    key="edit_preset_select"
                 )
+                
+                if selected_preset != "新規作成":
+                    # 選択されたプリセット名を入力フィールドに設定
+                    preset_name = st.text_input(
+                        "プリセット名",
+                        value=selected_preset,
+                        help="プリセット名を変更することもできます"
+                    )
+                else:
+                    preset_name = st.text_input(
+                        "プリセット名",
+                        placeholder="例: iPhone15用、S__シリーズ用",
+                        help="保存する設定の名前を入力してください"
+                    )
             else:
+                # 新規作成モード
                 preset_name = st.text_input(
                     "プリセット名",
                     placeholder="例: iPhone15用、S__シリーズ用",
                     help="保存する設定の名前を入力してください"
                 )
         else:
-            # 新規作成モード
+            # プリセットがない場合は新規作成のみ
             preset_name = st.text_input(
                 "プリセット名",
                 placeholder="例: iPhone15用、S__シリーズ用",
                 help="保存する設定の名前を入力してください"
             )
-    else:
-        # プリセットがない場合は新規作成のみ
-        preset_name = st.text_input(
-            "プリセット名",
-            placeholder="例: iPhone15用、S__シリーズ用",
-            help="保存する設定の名前を入力してください"
-        )
-    
-    # ボタン用のカラムレイアウト
-    save_col1, save_col2 = st.columns([1, 1])
-    
-    with save_col1:
-        # 編集モードかどうかでボタンのラベルを変更
-        save_button_label = "💾 プリセットを更新" if (st.session_state.saved_presets and 
-                                                     'edit_preset_mode' in st.session_state and 
-                                                     st.session_state.edit_preset_mode and 
-                                                     'edit_preset_select' in st.session_state and
-                                                     st.session_state.edit_preset_select != "新規作成") else "💾 プリセットを保存"
         
-        if st.button(save_button_label, type="primary", use_container_width=True):
-            if preset_name:
-                # セッションステートから現在の値を取得
-                if test_image:
-                    # test_imageがある場合は入力フィールドから直接取得
-                    settings = {
-                        'search_start_offset': search_start_offset,
-                        'search_end_offset': search_end_offset,
-                        'crop_top': crop_top,
-                        'crop_bottom': crop_bottom,
-                        'left_margin': left_margin,
-                        'right_margin': right_margin,
-                        'grid_30k_offset': grid_30k_offset,
-                        'grid_20k_offset': grid_20k_offset,
-                        'grid_10k_offset': grid_10k_offset,
-                        'grid_minus_10k_offset': grid_minus_10k_offset,
-                        'grid_minus_20k_offset': grid_minus_20k_offset,
-                        'grid_minus_30k_offset': grid_minus_30k_offset
-                    }
+        # ボタン用のカラムレイアウト
+        save_col1, save_col2 = st.columns([1, 1])
+        
+        with save_col1:
+            # 編集モードかどうかでボタンのラベルを変更
+            save_button_label = "💾 プリセットを更新" if (st.session_state.saved_presets and 
+                                                         'edit_preset_mode' in st.session_state and 
+                                                         st.session_state.edit_preset_mode and 
+                                                         'edit_preset_select' in st.session_state and
+                                                         st.session_state.edit_preset_select != "新規作成") else "💾 プリセットを保存"
+            
+            if st.button(save_button_label, type="primary", use_container_width=True):
+                if preset_name:
+                    # 現在の設定を取得
+                    settings = save_settings()
+                    
+                    # プリセットに保存
+                    st.session_state.saved_presets[preset_name] = settings.copy()
+                    # 現在の設定も更新
+                    st.session_state.settings = settings
+                    
+                    # ファイルに保存
+                    try:
+                        import pickle
+                        import os
+                        preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
+                        all_presets = {
+                            'presets': st.session_state.saved_presets
+                        }
+                        with open(preset_file, 'wb') as f:
+                            pickle.dump(all_presets, f)
+                    except:
+                        pass
+                    
+                    # 編集モードかどうかでメッセージを変更
+                    if (st.session_state.saved_presets and 
+                        'edit_preset_mode' in st.session_state and 
+                        st.session_state.edit_preset_mode and 
+                        'edit_preset_select' in st.session_state and
+                        st.session_state.edit_preset_select != "新規作成"):
+                        st.success(f"✅ プリセット '{preset_name}' を更新しました")
+                    else:
+                        st.success(f"✅ プリセット '{preset_name}' を保存しました")
+                    st.rerun()
                 else:
-                    # test_imageがない場合はセッションステートから取得
-                    settings = st.session_state.settings.copy()
-                
-                # プリセットに保存
-                st.session_state.saved_presets[preset_name] = settings.copy()
-                # 現在の設定も更新
-                st.session_state.settings = settings
-                
-                # ファイルに保存
-                try:
-                    import pickle
-                    import os
-                    preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
-                    all_presets = {
-                        'presets': st.session_state.saved_presets
-                    }
-                    with open(preset_file, 'wb') as f:
-                        pickle.dump(all_presets, f)
-                except:
-                    pass
-                
-                # 編集モードかどうかでメッセージを変更
-                if (st.session_state.saved_presets and 
-                    'edit_preset_mode' in st.session_state and 
-                    st.session_state.edit_preset_mode and 
-                    'edit_preset_select' in st.session_state and
-                    st.session_state.edit_preset_select != "新規作成"):
-                    st.success(f"✅ プリセット '{preset_name}' を更新しました")
-                else:
-                    st.success(f"✅ プリセット '{preset_name}' を保存しました")
+                    st.error("プリセット名を入力してください")
+        
+        with save_col2:
+            if st.button("🔄 デフォルトに戻す", use_container_width=True):
+                st.session_state.settings = default_settings.copy()
                 st.rerun()
-            else:
-                st.error("プリセット名を入力してください")
     
-    with save_col2:
-        if st.button("🔄 デフォルトに戻す", use_container_width=True):
-            st.session_state.settings = default_settings.copy()
-            st.rerun()
+    # 設定の保存を描画
+    if test_image:
+        with main_col2:
+            render_save_settings()
+    else:
+        render_save_settings()
 
 
 # ファイルアップローダー（一番最初に表示）
