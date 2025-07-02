@@ -1389,7 +1389,7 @@ if uploaded_files:
                 graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
                 
                 # デバッグ情報を追加
-                if uploaded_file.name in ["IMG_0165.PNG", "IMG_0174.PNG"]:
+                if uploaded_file.name in ["IMG_0165.PNG", "IMG_0174.PNG", "IMG_0177.PNG"]:
                     st.write(f"🔍 デバッグ情報 - {uploaded_file.name}")
                     st.write(f"- ゼロライン位置（切り抜き内）: {zero_line_in_crop}px")
                     st.write(f"- 切り抜き画像の高さ: {crop_height}px")
@@ -1415,6 +1415,14 @@ if uploaded_files:
                     max_val = max(graph_values)
                     min_val = min(graph_values)
                     current_val = graph_values[-1] if graph_values else 0
+
+                    # 最大値が30,000を超える場合は30,000にクリップ
+                    if max_val > 30000:
+                        max_val = 30000
+                    
+                    # 最小値が-30,000を下回る場合は-30,000にクリップ
+                    if min_val < -30000:
+                        min_val = -30000
 
                     # MAXがマイナスの場合は0を表示
                     if max_val < 0:

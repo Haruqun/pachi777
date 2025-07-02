@@ -286,6 +286,8 @@ class WebCompatibleAnalyzer:
                     if len(colored_pixels) > 0:
                         avg_y = np.mean(colored_pixels)
                         value = (detected_zero - avg_y) * self.scale
+                        # 値を±30,000の範囲にクリップ
+                        value = max(-30000, min(30000, value))
                         data_points.append((x, value))
                 
                 if len(data_points) > max_points:
