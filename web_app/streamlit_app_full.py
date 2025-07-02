@@ -147,29 +147,8 @@ if 'authenticated' not in st.session_state:
 if 'current_preset_name' not in st.session_state:
     st.session_state.current_preset_name = 'デフォルト'
 
-# Cookieからログイン状態を確認
-if not st.session_state.authenticated:
-    # JavaScriptでCookieを読み込む
-    cookie_script = """
-    <script>
-    function getCookie(name) {
-        let value = "; " + document.cookie;
-        let parts = value.split("; " + name + "=");
-        if (parts.length == 2) return parts.pop().split(";").shift();
-        return null;
-    }
-    
-    const authToken = getCookie('pachi777_auth');
-    if (authToken === 'authenticated_059') {
-        window.parent.postMessage({type: 'streamlit:setComponentValue', value: true}, '*');
-    }
-    </script>
-    """
-    auth_from_cookie = components.html(cookie_script, height=0)
-    
-    if auth_from_cookie:
-        st.session_state.authenticated = True
-        st.rerun()
+# Cookieからのログイン状態確認は一時的に無効化
+# （streamlit.components.v1がビルドエラーを起こすため）
 
 # パスワード認証
 if not st.session_state.authenticated:
@@ -297,24 +276,8 @@ if not st.session_state.authenticated:
         if st.button("ログイン", type="primary", use_container_width=True):
             if password == "059":
                 st.session_state.authenticated = True
-                # Cookieを設定するJavaScript
-                set_cookie_script = """
-                <script>
-                function setCookie(name, value, days) {
-                    var expires = "";
-                    if (days) {
-                        var date = new Date();
-                        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-                        expires = "; expires=" + date.toUTCString();
-                    }
-                    document.cookie = name + "=" + (value || "") + expires + "; path=/";
-                }
-                setCookie('pachi777_auth', 'authenticated_059', 30); // 30日間有効
-                </script>
-                """
-                components.html(set_cookie_script, height=0)
+                # Cookie設定は一時的に無効化
                 st.success("✅ ログインしました")
-                time.sleep(1)  # Cookieが設定されるまで少し待つ
                 st.rerun()
             else:
                 st.error("❌ パスワードが違います")
@@ -1764,16 +1727,6 @@ with footer_col1:
 
 with footer_col3:
     if st.button("🚪 ログアウト", key="logout_button"):
-        # Cookieを削除するJavaScript
-        logout_script = """
-        <script>
-        function deleteCookie(name) {
-            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/';
-        }
-        deleteCookie('pachi777_auth');
-        </script>
-        """
-        components.html(logout_script, height=0)
+        # Cookie削除は一時的に無効化
         st.session_state.authenticated = False
-        time.sleep(0.5)
         st.rerun()
