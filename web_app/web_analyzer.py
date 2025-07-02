@@ -241,7 +241,14 @@ class WebCompatibleAnalyzer:
     
     def extract_graph_data(self, img):
         """グラフデータの抽出（production版と同じロジック）"""
-        if img is None or img.size == 0:
+        # 文字列（ファイルパス）が渡された場合は画像を読み込む
+        if isinstance(img, str):
+            img = cv2.imread(img)
+            if img is None:
+                return [], "なし", self.zero_y
+        
+        # numpy配列でない場合やサイズが0の場合
+        if img is None or not hasattr(img, 'shape') or img.size == 0:
             return [], "なし", self.zero_y
             
         height, width = img.shape[:2]
