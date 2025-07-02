@@ -459,36 +459,42 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 grid_30k_offset = st.number_input(
                     "+30,000ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_30k_offset', 0),
-                    step=1, help="上端の+30,000ラインの位置調整"
+                    step=1, help="上端の+30,000ラインの位置調整",
+                    key="grid_30k_offset_input"
                 )
                 grid_20k_offset = st.number_input(
                     "+20,000ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_20k_offset', 0),
-                    step=1, help="+20,000ラインの位置調整"
+                    step=1, help="+20,000ラインの位置調整",
+                    key="grid_20k_offset_input"
                 )
             
             with grid_col2:
                 grid_10k_offset = st.number_input(
                     "+10,000ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_10k_offset', 0),
-                    step=1, help="+10,000ラインの位置調整"
+                    step=1, help="+10,000ラインの位置調整",
+                    key="grid_10k_offset_input"
                 )
                 grid_minus_10k_offset = st.number_input(
                     "-10,000ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_10k_offset', 0),
-                    step=1, help="-10,000ラインの位置調整"
+                    step=1, help="-10,000ラインの位置調整",
+                    key="grid_minus_10k_offset_input"
                 )
             
             with grid_col3:
                 grid_minus_20k_offset = st.number_input(
                     "-20,000ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_20k_offset', 0),
-                    step=1, help="-20,000ラインの位置調整"
+                    step=1, help="-20,000ラインの位置調整",
+                    key="grid_minus_20k_offset_input"
                 )
                 grid_minus_30k_offset = st.number_input(
                     "-30,000ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
-                    step=1, help="下端の-30,000ラインの位置調整"
+                    step=1, help="下端の-30,000ラインの位置調整",
+                    key="grid_minus_30k_offset_input"
                 )
     
     # リアルタイムプレビュー
@@ -768,12 +774,21 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             # 自動適用ボタン
                             if st.button("🔧 推奨値を自動適用", type="secondary"):
                                 # セッションステートに新しい値を設定
-                                st.session_state.settings['grid_30k_offset'] = grid_30k_offset + adjustment_30k
-                                st.session_state.settings['grid_20k_offset'] = grid_20k_offset + int(adjustment_30k * 2/3)
-                                st.session_state.settings['grid_10k_offset'] = grid_10k_offset + int(adjustment_30k * 1/3)
-                                st.session_state.settings['grid_minus_10k_offset'] = grid_minus_10k_offset + int(adjustment_minus_30k * 1/3)
-                                st.session_state.settings['grid_minus_20k_offset'] = grid_minus_20k_offset + int(adjustment_minus_30k * 2/3)
-                                st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + adjustment_minus_30k
+                                new_values = {
+                                    'grid_30k_offset': grid_30k_offset + adjustment_30k,
+                                    'grid_20k_offset': grid_20k_offset + int(adjustment_30k * 2/3),
+                                    'grid_10k_offset': grid_10k_offset + int(adjustment_30k * 1/3),
+                                    'grid_minus_10k_offset': grid_minus_10k_offset + int(adjustment_minus_30k * 1/3),
+                                    'grid_minus_20k_offset': grid_minus_20k_offset + int(adjustment_minus_30k * 2/3),
+                                    'grid_minus_30k_offset': grid_minus_30k_offset + adjustment_minus_30k
+                                }
+                                
+                                # セッションステートの設定を更新
+                                for key, value in new_values.items():
+                                    st.session_state.settings[key] = value
+                                    # 入力フィールドのセッションステートも更新
+                                    st.session_state[f"{key}_input"] = value
+                                
                                 st.success("✅ 推奨値を適用しました！画面が更新されます...")
                                 time.sleep(1)
                                 st.rerun()
