@@ -765,60 +765,59 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             
             # 実験的機能
             st.markdown("#### 🧪 実験的機能：非線形スケール対応")
-            with st.expander("‼️ 高度な設定（注意して使用してください）", expanded=False):
-                st.warning("⚠️ これらは実験的な機能です。通常の解析には影響しません。")
+            st.warning("⚠️ これらは実験的な機能です。通常の解析には影響しません。")
+            
+            # 非線形スケールの有効化
+            use_nonlinear = st.checkbox(
+                "📏 非線形スケールを使用",
+                value=st.session_state.settings.get('use_nonlinear_scale', False),
+                help="グラフが線形でない場合に有効にしてください",
+                key="use_nonlinear_checkbox"
+            )
+            
+            if use_nonlinear:
+                st.info("📊 中間ラインを使用して、各区間で個別にスケールを計算します")
                 
-                # 非線形スケールの有効化
-                use_nonlinear = st.checkbox(
-                    "📏 非線形スケールを使用",
-                    value=st.session_state.settings.get('use_nonlinear_scale', False),
-                    help="グラフが線形でない場合に有効にしてください",
-                    key="use_nonlinear_checkbox"
-                )
-                
-                if use_nonlinear:
-                    st.info("📊 中間ラインを使用して、各区間で個別にスケールを計算します")
+                # 中間ラインの調整
+                st.markdown("**中間ライン調整**")
+                col1_mid, col2_mid = st.columns(2)
                     
-                    # 中間ラインの調整
-                    st.markdown("**中間ライン調整**")
-                    col1_mid, col2_mid = st.columns(2)
+                with col1_mid:
+                    grid_20k_offset = st.number_input(
+                        "+20,000ライン調整",
+                        min_value=-50, max_value=50, 
+                        value=st.session_state.settings.get('grid_20k_offset', 0),
+                        step=1, help="+20,000ラインの位置調整"
+                    )
+                    grid_10k_offset = st.number_input(
+                        "+10,000ライン調整",
+                        min_value=-50, max_value=50, 
+                        value=st.session_state.settings.get('grid_10k_offset', 0),
+                        step=1, help="+10,000ラインの位置調整"
+                    )
                     
-                    with col1_mid:
-                        grid_20k_offset = st.number_input(
-                            "+20,000ライン調整",
-                            min_value=-50, max_value=50, 
-                            value=st.session_state.settings.get('grid_20k_offset', 0),
-                            step=1, help="+20,000ラインの位置調整"
-                        )
-                        grid_10k_offset = st.number_input(
-                            "+10,000ライン調整",
-                            min_value=-50, max_value=50, 
-                            value=st.session_state.settings.get('grid_10k_offset', 0),
-                            step=1, help="+10,000ラインの位置調整"
-                        )
+                with col2_mid:
+                    grid_minus_10k_offset = st.number_input(
+                        "-10,000ライン調整",
+                        min_value=-50, max_value=50, 
+                        value=st.session_state.settings.get('grid_minus_10k_offset', 0),
+                        step=1, help="-10,000ラインの位置調整"
+                    )
+                    grid_minus_20k_offset = st.number_input(
+                        "-20,000ライン調整",
+                        min_value=-50, max_value=50, 
+                        value=st.session_state.settings.get('grid_minus_20k_offset', 0),
+                        step=1, help="-20,000ラインの位置調整"
+                    )
                     
-                    with col2_mid:
-                        grid_minus_10k_offset = st.number_input(
-                            "-10,000ライン調整",
-                            min_value=-50, max_value=50, 
-                            value=st.session_state.settings.get('grid_minus_10k_offset', 0),
-                            step=1, help="-10,000ラインの位置調整"
-                        )
-                        grid_minus_20k_offset = st.number_input(
-                            "-20,000ライン調整",
-                            min_value=-50, max_value=50, 
-                            value=st.session_state.settings.get('grid_minus_20k_offset', 0),
-                            step=1, help="-20,000ラインの位置調整"
-                        )
-                    
-                    # プレビューに中間ラインを表示するための更新
-                    st.session_state.settings['grid_20k_offset'] = grid_20k_offset
-                    st.session_state.settings['grid_10k_offset'] = grid_10k_offset
-                    st.session_state.settings['grid_minus_10k_offset'] = grid_minus_10k_offset
-                    st.session_state.settings['grid_minus_20k_offset'] = grid_minus_20k_offset
-                    st.session_state.settings['use_nonlinear_scale'] = True
-                else:
-                    st.session_state.settings['use_nonlinear_scale'] = False
+                # プレビューに中間ラインを表示するための更新
+                st.session_state.settings['grid_20k_offset'] = grid_20k_offset
+                st.session_state.settings['grid_10k_offset'] = grid_10k_offset
+                st.session_state.settings['grid_minus_10k_offset'] = grid_minus_10k_offset
+                st.session_state.settings['grid_minus_20k_offset'] = grid_minus_20k_offset
+                st.session_state.settings['use_nonlinear_scale'] = True
+            else:
+                st.session_state.settings['use_nonlinear_scale'] = False
     
     
     # リアルタイムプレビュー
