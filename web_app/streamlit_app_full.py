@@ -262,24 +262,29 @@ if not st.session_state.authenticated:
         # スペース
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # パスワード入力
-        password = st.text_input(
-            "パスワード",
-            type="password",
-            placeholder="パスワードを入力",
-            label_visibility="collapsed",
-            key="password_input"
-        )
-        
-        # ログインボタン
-        if st.button("ログイン", type="primary", use_container_width=True):
-            if password == "059":
+        # ログイン処理を関数化
+        def handle_login():
+            if st.session_state.password_input == "059":
                 st.session_state.authenticated = True
                 # Cookie設定は一時的に無効化
                 st.success("✅ ログインしました")
                 st.rerun()
             else:
                 st.error("❌ パスワードが違います")
+        
+        # パスワード入力（Enterキーでログイン可能）
+        password = st.text_input(
+            "パスワード",
+            type="password",
+            placeholder="パスワードを入力",
+            label_visibility="collapsed",
+            key="password_input",
+            on_change=handle_login
+        )
+        
+        # ログインボタン
+        if st.button("ログイン", type="primary", use_container_width=True):
+            handle_login()
         
         # フッター
         st.markdown(f"""
@@ -828,6 +833,70 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
             st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
         
+    # プリセット削除（test_imageがある場合は右カラム、ない場合は全幅）
+    if st.session_state.saved_presets:
+        if test_image:
+            with main_col2:
+                st.markdown("### 🗑️ プリセットの削除")
+                
+                # プリセット選択（全幅）
+                preset_to_delete = st.selectbox(
+                    "削除するプリセット",
+                    list(st.session_state.saved_presets.keys()),
+                    key="delete_preset"
+                )
+                
+                # 削除ボタン
+                if st.button("🗑️ 削除", type="secondary", use_container_width=True):
+                        if preset_to_delete:
+                            del st.session_state.saved_presets[preset_to_delete]
+                            
+                            # ファイルを更新
+                            try:
+                                import pickle
+                                import os
+                                preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
+                                all_presets = {
+                                    'presets': st.session_state.saved_presets
+                                }
+                                with open(preset_file, 'wb') as f:
+                                    pickle.dump(all_presets, f)
+                            except:
+                                pass
+                            
+                            st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
+                            st.rerun()
+        else:
+            st.markdown("### 🗑️ プリセットの削除")
+            
+            # プリセット選択（全幅）
+            preset_to_delete = st.selectbox(
+                "削除するプリセット",
+                list(st.session_state.saved_presets.keys()),
+                key="delete_preset"
+            )
+            
+            # 削除ボタン
+            if st.button("🗑️ 削除", type="secondary", use_container_width=True):
+                    if preset_to_delete:
+                        del st.session_state.saved_presets[preset_to_delete]
+                        
+                        # ファイルを更新
+                        try:
+                            import pickle
+                            import os
+                            preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
+                            all_presets = {
+                                'presets': st.session_state.saved_presets
+                            }
+                            with open(preset_file, 'wb') as f:
+                                pickle.dump(all_presets, f)
+                        except:
+                            pass
+                        
+                        st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
+                        st.rerun()
+    
     # 設定の保存
     st.markdown("### 💾 設定の保存")
     
@@ -940,70 +1009,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         if st.button("🔄 デフォルトに戻す", use_container_width=True):
             st.session_state.settings = default_settings.copy()
             st.rerun()
-    
-    # プリセット削除（test_imageがある場合は右カラム、ない場合は全幅）
-    if st.session_state.saved_presets:
-        if test_image:
-            with main_col2:
-                st.markdown("### 🗑️ プリセットの削除")
-                
-                # プリセット選択（全幅）
-                preset_to_delete = st.selectbox(
-                    "削除するプリセット",
-                    list(st.session_state.saved_presets.keys()),
-                    key="delete_preset"
-                )
-                
-                # 削除ボタン
-                if st.button("🗑️ 削除", type="secondary", use_container_width=True):
-                        if preset_to_delete:
-                            del st.session_state.saved_presets[preset_to_delete]
-                            
-                            # ファイルを更新
-                            try:
-                                import pickle
-                                import os
-                                preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
-                                all_presets = {
-                                    'presets': st.session_state.saved_presets
-                                }
-                                with open(preset_file, 'wb') as f:
-                                    pickle.dump(all_presets, f)
-                            except:
-                                pass
-                            
-                            st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
-                            st.rerun()
-        else:
-            st.markdown("### 🗑️ プリセットの削除")
-            
-            # プリセット選択（全幅）
-            preset_to_delete = st.selectbox(
-                "削除するプリセット",
-                list(st.session_state.saved_presets.keys()),
-                key="delete_preset"
-            )
-            
-            # 削除ボタン
-            if st.button("🗑️ 削除", type="secondary", use_container_width=True):
-                    if preset_to_delete:
-                        del st.session_state.saved_presets[preset_to_delete]
-                        
-                        # ファイルを更新
-                        try:
-                            import pickle
-                            import os
-                            preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
-                            all_presets = {
-                                'presets': st.session_state.saved_presets
-                            }
-                            with open(preset_file, 'wb') as f:
-                                pickle.dump(all_presets, f)
-                        except:
-                            pass
-                        
-                        st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
-                        st.rerun()
 
 
 # ファイルアップローダー（一番最初に表示）
