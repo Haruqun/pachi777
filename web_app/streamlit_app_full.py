@@ -316,6 +316,37 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     st.markdown("##### 端末ごとの調整設定")
     st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
     
+    # プリセット選択セクション
+    st.markdown("### 📋 プリセット選択")
+    
+    # 保存されたプリセット一覧
+    preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
+    
+    col_preset1, col_preset2 = st.columns([3, 1])
+    
+    with col_preset1:
+        selected_preset_adjustment = st.selectbox(
+            "設定プリセットを選択",
+            preset_names,
+            help="保存された設定を選択して適用します",
+            key="adjustment_preset_select"
+        )
+    
+    with col_preset2:
+        # プリセット適用ボタン
+        if st.button("📥 適用", use_container_width=True, key="apply_preset_adjustment"):
+            if selected_preset_adjustment == "デフォルト":
+                st.session_state.settings = default_settings.copy()
+            else:
+                st.session_state.settings = st.session_state.saved_presets[selected_preset_adjustment].copy()
+            
+            # 現在のプリセット名を保存
+            st.session_state.current_preset_name = selected_preset_adjustment
+            
+            st.success(f"✅ '{selected_preset_adjustment}' を適用しました")
+            st.rerun()
+    
+    st.divider()
     
     # テスト画像のアップロード（全幅で表示）
     test_image = st.file_uploader(
