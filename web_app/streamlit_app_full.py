@@ -124,10 +124,6 @@ default_settings = {
     'right_margin': 125,
     # グリッドライン調整値
     'grid_30k_offset': 0,       # +30000ライン（最上部）
-    'grid_20k_offset': 0,       # +20000ライン  
-    'grid_10k_offset': 0,       # +10000ライン
-    'grid_minus_10k_offset': 0, # -10000ライン
-    'grid_minus_20k_offset': 0, # -20000ライン
     'grid_minus_30k_offset': 0  # -30000ライン（最下部）
 }
 
@@ -499,55 +495,34 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             
             # グリッドライン手動調整
             st.markdown("#### ⚙️ 手動調整")
-            st.caption("各グリッドラインの位置を個別に微調整できます（単位：ピクセル）")
+            st.caption("±30,000ラインの位置を微調整できます（単位：ピクセル）")
             
-            grid_col1, grid_col2, grid_col3 = st.columns(3)
+            grid_col1, grid_col2 = st.columns(2)
             
             with grid_col1:
-                st.markdown("**プラス側**")
                 grid_30k_offset = st.number_input(
-                    "+30,000",
+                    "+30,000ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_30k_offset', 0),
-                    step=1, help="上端の+30,000ライン"
-                )
-                grid_20k_offset = st.number_input(
-                    "+20,000",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_20k_offset', 0),
-                    step=1
-                )
-                grid_10k_offset = st.number_input(
-                    "+10,000",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_10k_offset', 0),
-                    step=1
+                    step=1, help="上端の+30,000ラインの位置調整"
                 )
             
             with grid_col2:
-                st.markdown("**基準**")
-                st.info("🎯 0ライン（基準）")
-                st.caption("ゼロラインは自動検出されます")
-            
-            with grid_col3:
-                st.markdown("**マイナス側**")
-                grid_minus_10k_offset = st.number_input(
-                    "-10,000",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_10k_offset', 0),
-                    step=1
-                )
-                grid_minus_20k_offset = st.number_input(
-                    "-20,000",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_20k_offset', 0),
-                    step=1
-                )
                 grid_minus_30k_offset = st.number_input(
-                    "-30,000",
+                    "-30,000ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
-                    step=1, help="下端の-30,000ライン"
+                    step=1, help="下端の-30,000ラインの位置調整"
                 )
+            
+            # 中間ライン用のダミー変数を設定（他のコードで参照されるため）
+            grid_20k_offset = 0
+            grid_10k_offset = 0
+            grid_minus_10k_offset = 0
+            grid_minus_20k_offset = 0
             
             # 最大値アライメント機能を統合
             if test_image:
-                with st.expander("🎯 最大値アライメントで自動調整", expanded=True):
-                    st.caption("グラフの実際の最大値を入力すると、最適なグリッドライン位置を自動計算します")
+                st.markdown("#### 🎯 最大値アライメントで自動調整")
+                st.caption("グラフの実際の最大値を入力すると、最適なグリッドライン位置を自動計算します")
                 
                 # 現在の画像で解析を実行
                 analyzer_align = WebCompatibleAnalyzer()
@@ -561,10 +536,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     'left_margin': left_margin,
                     'right_margin': right_margin,
                     'grid_30k_offset': grid_30k_offset,
-                    'grid_20k_offset': grid_20k_offset,
-                    'grid_10k_offset': grid_10k_offset,
-                    'grid_minus_10k_offset': grid_minus_10k_offset,
-                    'grid_minus_20k_offset': grid_minus_20k_offset,
                     'grid_minus_30k_offset': grid_minus_30k_offset
                 }
                 
@@ -669,45 +640,18 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                     current_minus_30k_distance = (cropped_for_align.shape[0] - 1 + current_settings_align['grid_minus_30k_offset']) - align_zero_in_crop
                                     adjustment_minus_30k = int(new_minus_30k_distance - current_minus_30k_distance)
                                     
-                                    # 推奨調整値をテーブル形式で表示
+                                    # 推奨調整値を表示
                                     st.markdown("#### 📊 推奨調整値")
-                                    adj_data = {
-                                        'ライン': ['+30,000', '+20,000', '+10,000', '-10,000', '-20,000', '-30,000'],
-                                        '現在値': [
-                                            f"{grid_30k_offset}px",
-                                            f"{grid_20k_offset}px",
-                                            f"{grid_10k_offset}px",
-                                            f"{grid_minus_10k_offset}px",
-                                            f"{grid_minus_20k_offset}px",
-                                            f"{grid_minus_30k_offset}px"
-                                        ],
-                                        '推奨調整': [
-                                            f"{adjustment_30k:+d}px",
-                                            f"{int(adjustment_30k * 2/3):+d}px",
-                                            f"{int(adjustment_30k * 1/3):+d}px",
-                                            f"{int(adjustment_minus_30k * 1/3):+d}px",
-                                            f"{int(adjustment_minus_30k * 2/3):+d}px",
-                                            f"{adjustment_minus_30k:+d}px"
-                                        ],
-                                        '調整後': [
-                                            f"{grid_30k_offset + adjustment_30k}px",
-                                            f"{grid_20k_offset + int(adjustment_30k * 2/3)}px",
-                                            f"{grid_10k_offset + int(adjustment_30k * 1/3)}px",
-                                            f"{grid_minus_10k_offset + int(adjustment_minus_30k * 1/3)}px",
-                                            f"{grid_minus_20k_offset + int(adjustment_minus_30k * 2/3)}px",
-                                            f"{grid_minus_30k_offset + adjustment_minus_30k}px"
-                                        ]
-                                    }
-                                    st.dataframe(pd.DataFrame(adj_data), hide_index=True, use_container_width=True)
+                                    col_adj1, col_adj2 = st.columns(2)
+                                    with col_adj1:
+                                        st.info(f"**+30,000ライン:** {grid_30k_offset}px → {grid_30k_offset + adjustment_30k}px (調整: {adjustment_30k:+d}px)")
+                                    with col_adj2:
+                                        st.info(f"**-30,000ライン:** {grid_minus_30k_offset}px → {grid_minus_30k_offset + adjustment_minus_30k}px (調整: {adjustment_minus_30k:+d}px)")
                                     
                                     # 自動適用ボタン
                                     if st.button("🔧 推奨値を自動適用", type="secondary", key="apply_max_alignment"):
                                         # セッションステートに新しい値を設定（現在の入力値に調整を加える）
                                         st.session_state.settings['grid_30k_offset'] = grid_30k_offset + adjustment_30k
-                                        st.session_state.settings['grid_20k_offset'] = grid_20k_offset + int(adjustment_30k * 2/3)
-                                        st.session_state.settings['grid_10k_offset'] = grid_10k_offset + int(adjustment_30k * 1/3)
-                                        st.session_state.settings['grid_minus_10k_offset'] = grid_minus_10k_offset + int(adjustment_minus_30k * 1/3)
-                                        st.session_state.settings['grid_minus_20k_offset'] = grid_minus_20k_offset + int(adjustment_minus_30k * 2/3)
                                         st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + adjustment_minus_30k
                                         
                                         st.success("✅ 推奨値を適用しました！画面が更新されます...")
@@ -789,30 +733,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         distance_to_plus_30k = zero_in_crop - grid_30k_offset
         distance_to_minus_30k = (bottom - top - 1 + grid_minus_30k_offset) - zero_in_crop
         
-        # +20000ライン（元画像座標）
-        y_20k_orig = int(zero_line_y - (distance_to_plus_30k * 2 / 3) + grid_20k_offset)
-        if 0 <= y_20k_orig < height:
-            cv2.line(overlay_img, (0, y_20k_orig), (width, y_20k_orig), (128, 128, 128), 1)
-            cv2.putText(overlay_img, '+20000', (10, y_20k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
-        
-        # +10000ライン（元画像座標）
-        y_10k_orig = int(zero_line_y - (distance_to_plus_30k * 1 / 3) + grid_10k_offset)
-        if 0 <= y_10k_orig < height:
-            cv2.line(overlay_img, (0, y_10k_orig), (width, y_10k_orig), (128, 128, 128), 1)
-            cv2.putText(overlay_img, '+10000', (10, y_10k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
-        
-        # -10000ライン（元画像座標）
-        y_minus_10k_orig = int(zero_line_y + (distance_to_minus_30k * 1 / 3) + grid_minus_10k_offset)
-        if 0 <= y_minus_10k_orig < height:
-            cv2.line(overlay_img, (0, y_minus_10k_orig), (width, y_minus_10k_orig), (128, 128, 128), 1)
-            cv2.putText(overlay_img, '-10000', (10, y_minus_10k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
-        
-        # -20000ライン（元画像座標）
-        y_minus_20k_orig = int(zero_line_y + (distance_to_minus_30k * 2 / 3) + grid_minus_20k_offset)
-        if 0 <= y_minus_20k_orig < height:
-            cv2.line(overlay_img, (0, y_minus_20k_orig), (width, y_minus_20k_orig), (128, 128, 128), 1)
-            cv2.putText(overlay_img, '-20000', (10, y_minus_20k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
-        
         # プレビューを左カラムに表示（縦に配置）
         with main_col1:
             # 元画像（調整範囲を表示）
@@ -840,33 +760,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 cv2.line(cropped_preview, (0, y_minus_30k), (cropped_preview.shape[1], y_minus_30k), (150, 0, 0), 3)
                 cv2.putText(cropped_preview, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 0, 0), 2)
             
-            # ゼロラインから±30000ラインまでの距離を計算
-            distance_to_plus_30k = zero_in_crop - y_30k
-            distance_to_minus_30k = y_minus_30k - zero_in_crop
-            
-            # +20000ライン（+30000の2/3の位置 + 微調整）
-            y_20k = int(zero_in_crop - (distance_to_plus_30k * 2 / 3)) + grid_20k_offset
-            if 0 < y_20k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_20k), (cropped_preview.shape[1], y_20k), (100, 100, 100), 2)
-                cv2.putText(cropped_preview, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
-            
-            # +10000ライン（+30000の1/3の位置 + 微調整）
-            y_10k = int(zero_in_crop - (distance_to_plus_30k * 1 / 3)) + grid_10k_offset
-            if 0 < y_10k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_10k), (cropped_preview.shape[1], y_10k), (100, 100, 100), 2)
-                cv2.putText(cropped_preview, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
-            
-            # -10000ライン（-30000の1/3の位置 + 微調整）
-            y_minus_10k = int(zero_in_crop + (distance_to_minus_30k * 1 / 3)) + grid_minus_10k_offset
-            if 0 < y_minus_10k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_minus_10k), (cropped_preview.shape[1], y_minus_10k), (100, 100, 100), 2)
-                cv2.putText(cropped_preview, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
-            
-            # -20000ライン（-30000の2/3の位置 + 微調整）
-            y_minus_20k = int(zero_in_crop + (distance_to_minus_30k * 2 / 3)) + grid_minus_20k_offset
-            if 0 < y_minus_20k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_minus_20k), (cropped_preview.shape[1], y_minus_20k), (100, 100, 100), 2)
-                cv2.putText(cropped_preview, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 50, 50), 2)
             
             # 最大値の位置を赤線で表示
             if 'max_value_position' in st.session_state:
@@ -901,10 +794,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 'left_margin': left_margin,
                 'right_margin': right_margin,
                 'grid_30k_offset': grid_30k_offset,
-                'grid_20k_offset': grid_20k_offset,
-                'grid_10k_offset': grid_10k_offset,
-                'grid_minus_10k_offset': grid_minus_10k_offset,
-                'grid_minus_20k_offset': grid_minus_20k_offset,
                 'grid_minus_30k_offset': grid_minus_30k_offset
             }
     else:
