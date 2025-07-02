@@ -143,6 +143,9 @@ if 'authenticated' not in st.session_state:
 if 'current_preset_name' not in st.session_state:
     st.session_state.current_preset_name = 'デフォルト'
 
+if 'uploaded_file_names' not in st.session_state:
+    st.session_state.uploaded_file_names = []
+
 # Cookieからのログイン状態確認は一時的に無効化
 
 # パスワード認証
@@ -1013,7 +1016,8 @@ uploaded_files = st.file_uploader(
     "📤 グラフ画像をアップロード",
     type=['jpg', 'jpeg', 'png'],
     accept_multiple_files=True,
-    help="複数の画像を一度にアップロードできます（JPG, PNG形式）"
+    help="複数の画像を一度にアップロードできます（JPG, PNG形式）",
+    key="graph_uploader"
 )
 
 if uploaded_files:
@@ -1044,6 +1048,9 @@ if uploaded_files:
     
     # 以降はunique_filesを使用
     uploaded_files = unique_files
+    
+    # ファイル名をセッションステートに保存
+    st.session_state.uploaded_file_names = [f.name for f in uploaded_files]
     
     # プリセット選択セクション（画像アップロード後に表示）
     st.markdown("### 📋 解析設定")
@@ -1096,9 +1103,19 @@ if uploaded_files:
     if st.button("🚀 解析を開始", type="primary", use_container_width=True):
         st.session_state.start_analysis = True
         st.rerun()
+
+# ファイルがアップロードされたことがある場合、解析ボタンを常に表示
+elif st.session_state.uploaded_file_names:
+    st.info(f"💾 保存されたファイル: {', '.join(st.session_state.uploaded_file_names)}")
+    st.warning("⚠️ 設定を変更した後は、画像を再度アップロードしてください")
     
-    # 解析を実行
-    if 'start_analysis' in st.session_state and st.session_state.start_analysis:
+    # クリアボタン
+    if st.button("🗑️ ファイル情報をクリア", use_container_width=True):
+        st.session_state.uploaded_file_names = []
+        st.rerun()
+
+# 解析を実行
+if uploaded_files and 'start_analysis' in st.session_state and st.session_state.start_analysis:
         # 解析結果セクション
         st.markdown("### 🎯 解析結果")
         
