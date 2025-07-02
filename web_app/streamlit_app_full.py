@@ -946,17 +946,22 @@ if uploaded_files:
         progress_bar = st.progress(0)
         status_text = st.empty()
         detail_text = st.empty()
+        
+        # 初期メッセージを表示
+        status_text.text('🚀 解析を開始します...')
+        time.sleep(0.5)  # 少し待機してメッセージを見やすくする
 
         # 解析結果を格納
         analysis_results = []
 
         # 各画像を処理
         for idx, uploaded_file in enumerate(uploaded_files):
-            # 進捗更新
-            progress = (idx + 1) / len(uploaded_files)
-            progress_bar.progress(progress)
+            # 進捗更新（開始時）
+            progress_start = idx / len(uploaded_files)
+            progress_bar.progress(progress_start)
             status_text.text(f'処理中... ({idx + 1}/{len(uploaded_files)})')
             detail_text.text(f'📷 {uploaded_file.name} の画像を読み込み中...')
+            time.sleep(0.1)  # 視覚的フィードバックのため少し待機
 
             # 画像を読み込み
             image = Image.open(uploaded_file)
@@ -965,10 +970,12 @@ if uploaded_files:
 
             # OCRでデータ抽出を試みる
             detail_text.text(f'🔍 {uploaded_file.name} のOCR解析を実行中...')
+            time.sleep(0.1)  # 視覚的フィードバック
             ocr_data = extract_site7_data(img_array)
 
             # Pattern3: Zero Line Based の自動検出
             detail_text.text(f'📐 {uploaded_file.name} のグラフ領域を検出中...')
+            time.sleep(0.1)  # 視覚的フィードバック
             hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
             orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
             orange_bottom = 0
@@ -1354,6 +1361,10 @@ if uploaded_files:
                         'dominant_color': dominant_color,
                         'ocr_data': ocr_data  # OCRデータを追加
                     })
+                    
+                    # 各画像の処理完了時に進捗を更新
+                    progress_end = (idx + 1) / len(uploaded_files)
+                    progress_bar.progress(progress_end)
                 else:
                     # 解析失敗時
                     analysis_results.append({
@@ -1364,11 +1375,16 @@ if uploaded_files:
                         'success': False,
                         'ocr_data': ocr_data  # OCRデータを追加
                     })
+                
+                # 各画像の処理完了時に進捗を更新
+                progress_end = (idx + 1) / len(uploaded_files)
+                progress_bar.progress(progress_end)
 
         # プログレスバーを完了
         progress_bar.progress(1.0)
         status_text.text('✅ 全ての画像の処理が完了しました！')
         detail_text.empty()
+        time.sleep(1.0)  # 完了メッセージを表示する時間
         
         # Reset analysis state
         st.session_state.start_analysis = False
