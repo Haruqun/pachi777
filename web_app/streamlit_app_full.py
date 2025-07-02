@@ -775,6 +775,11 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             with cols[i % cols_per_row]:
                                 st.markdown(f"**{detection['image_name']}**")
                                 st.caption(f"検出値: {detection['detected_max']:,}玉")
+                                
+                                # プレビューボタン
+                                if st.button(f"🔍 画像を確認", key=f"preview_btn_{i}"):
+                                    st.session_state['preview_image_index'] = i
+                                
                                 visual_max = st.number_input(
                                     "実際の最大値",
                                     min_value=0,
@@ -1039,20 +1044,53 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     
     
     # リアルタイムプレビュー
-    if test_image:
+    if test_images:
         st.markdown("### 🖼️ リアルタイムプレビュー")
         
+        # プレビューする画像を決定（ボタンで選択されたもの、または最初の画像）
+        if 'preview_image_index' in st.session_state and st.session_state['preview_image_index'] < len(test_images):
+            selected_image_idx = st.session_state['preview_image_index']
+            selected_image = test_images[selected_image_idx]
+            if len(test_images) > 1:
+                st.info(f"📸 表示中: **{selected_image.name}**")
+        else:
+            selected_image = test_image
+            selected_image_idx = 0
+        
+        # 選択された画像を読み込み
+        img_array_preview = np.array(Image.open(selected_image).convert('RGB'))
+        height_preview, width_preview = img_array_preview.shape[:2]
+        
+        # オレンジバーを検出（選択された画像用）
+        hsv_preview = cv2.cvtColor(img_array_preview, cv2.COLOR_RGB2HSV)
+        orange_mask_preview = cv2.inRange(hsv_preview, np.array([10, 100, 100]), np.array([30, 255, 255]))
+        orange_bottom_preview = 0
+        
+        for y in range(height_preview//2):
+            if np.sum(orange_mask_preview[y, :]) > width_preview * 0.3 * 255:
+                orange_bottom_preview = y
+        
+        if orange_bottom_preview > 0:
+            for y in range(orange_bottom_preview, min(orange_bottom_preview + 100, height_preview)):
+                if np.sum(orange_mask_preview[y, :]) < width_preview * 0.1 * 255:
+                    orange_bottom_preview = y
+                    break
+        else:
+            orange_bottom_preview = 150
+        
+        # グレースケール変換
+        gray_preview = cv2.cvtColor(img_array_preview, cv2.COLOR_RGB2GRAY)
         
         # 現在の設定で切り抜き処理を実行
-        search_start = orange_bottom + search_start_offset
-        search_end = min(height - 100, orange_bottom + search_end_offset)
+        search_start = orange_bottom_preview + search_start_offset
+        search_end = min(height_preview - 100, orange_bottom_preview + search_end_offset)
         
         # ゼロライン検出
         best_score = 0
         zero_line_y = (search_start + search_end) // 2
         
         for y in range(search_start, search_end):
-            row = gray[y, 100:width-100]
+            row = gray_preview[y, 100:width_preview-100]
             darkness = 1.0 - (np.mean(row) / 255.0)
             uniformity = 1.0 - (np.std(row) / 128.0)
             score = darkness * 0.5 + uniformity * 0.5
@@ -1063,22 +1101,22 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         
         # 切り抜き
         top = max(0, zero_line_y - crop_top)
-        bottom = min(height, zero_line_y + crop_bottom)
+        bottom = min(height_preview, zero_line_y + crop_bottom)
         left = left_margin
-        right = width - right_margin
+        right = width_preview - right_margin
         
         # オーバーレイ画像を作成
-        overlay_img = img_array.copy()
+        overlay_img = img_array_preview.copy()
         
         # 検索範囲を可視化（濃い緑の枠線）
-        cv2.rectangle(overlay_img, (100, search_start), (width-100, search_end), (0, 255, 0), 3)
+        cv2.rectangle(overlay_img, (100, search_start), (width_preview-100, search_end), (0, 255, 0), 3)
         # 半透明の緑で塗りつぶし
         overlay = overlay_img.copy()
-        cv2.rectangle(overlay, (100, search_start), (width-100, search_end), (0, 255, 0), -1)
+        cv2.rectangle(overlay, (100, search_start), (width_preview-100, search_end), (0, 255, 0), -1)
         overlay_img = cv2.addWeighted(overlay_img, 0.8, overlay, 0.2, 0)
         
         # 検出したゼロラインを描画（赤）
-        cv2.line(overlay_img, (0, zero_line_y), (width, zero_line_y), (255, 0, 0), 3)
+        cv2.line(overlay_img, (0, zero_line_y), (width_preview, zero_line_y), (255, 0, 0), 3)
         cv2.putText(overlay_img, f'Zero Line (score: {best_score:.3f})', (10, zero_line_y - 10), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
         
@@ -1086,8 +1124,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         cv2.rectangle(overlay_img, (left, int(top)), (right, int(bottom)), (0, 0, 255), 4)
         
         # オレンジバーの位置を表示（濃いオレンジ）
-        cv2.line(overlay_img, (0, orange_bottom), (width, orange_bottom), (255, 140, 0), 3)
-        cv2.putText(overlay_img, 'Orange Bar', (10, orange_bottom + 30), 
+        cv2.line(overlay_img, (0, orange_bottom_preview), (width_preview, orange_bottom_preview), (255, 140, 0), 3)
+        cv2.putText(overlay_img, 'Orange Bar', (10, orange_bottom_preview + 30), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 140, 0), 2)
         
         # ゼロラインから±30000ラインまでの距離を計算（切り抜き内での計算）
@@ -1098,14 +1136,14 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         # グリッドラインを元画像にも追加
         # +30000ライン（元画像座標）
         y_30k_orig = int(top + grid_30k_offset)
-        if 0 <= y_30k_orig < height:
-            cv2.line(overlay_img, (0, y_30k_orig), (width, y_30k_orig), (128, 128, 128), 2)
+        if 0 <= y_30k_orig < height_preview:
+            cv2.line(overlay_img, (0, y_30k_orig), (width_preview, y_30k_orig), (128, 128, 128), 2)
             cv2.putText(overlay_img, '+30000', (10, max(20, y_30k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
         
         # -30000ライン（元画像座標）
         y_minus_30k_orig = int(bottom - 1 + grid_minus_30k_offset)
-        if 0 <= y_minus_30k_orig < height:
-            cv2.line(overlay_img, (0, y_minus_30k_orig), (width, y_minus_30k_orig), (128, 128, 128), 2)
+        if 0 <= y_minus_30k_orig < height_preview:
+            cv2.line(overlay_img, (0, y_minus_30k_orig), (width_preview, y_minus_30k_orig), (128, 128, 128), 2)
             cv2.putText(overlay_img, '-30000', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
         
         # 実験的機能：中間ラインを表示
@@ -1113,29 +1151,29 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             # +20000ライン
             y_20k_in_crop = zero_in_crop - (20000 / 30000) * distance_to_plus_30k + st.session_state.settings.get('grid_20k_offset', 0)
             y_20k_orig = int(top + y_20k_in_crop)
-            if 0 <= y_20k_orig < height:
-                cv2.line(overlay_img, (0, y_20k_orig), (width, y_20k_orig), (100, 150, 100), 2)
+            if 0 <= y_20k_orig < height_preview:
+                cv2.line(overlay_img, (0, y_20k_orig), (width_preview, y_20k_orig), (100, 150, 100), 2)
                 cv2.putText(overlay_img, '+20000', (10, max(20, y_20k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (50, 100, 50), 2)
             
             # +10000ライン
             y_10k_in_crop = zero_in_crop - (10000 / 30000) * distance_to_plus_30k + st.session_state.settings.get('grid_10k_offset', 0)
             y_10k_orig = int(top + y_10k_in_crop)
-            if 0 <= y_10k_orig < height:
-                cv2.line(overlay_img, (0, y_10k_orig), (width, y_10k_orig), (100, 150, 100), 2)
+            if 0 <= y_10k_orig < height_preview:
+                cv2.line(overlay_img, (0, y_10k_orig), (width_preview, y_10k_orig), (100, 150, 100), 2)
                 cv2.putText(overlay_img, '+10000', (10, max(20, y_10k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (50, 100, 50), 2)
             
             # -10000ライン
             y_minus_10k_in_crop = zero_in_crop + (10000 / 30000) * distance_to_minus_30k + st.session_state.settings.get('grid_minus_10k_offset', 0)
             y_minus_10k_orig = int(top + y_minus_10k_in_crop)
-            if 0 <= y_minus_10k_orig < height:
-                cv2.line(overlay_img, (0, y_minus_10k_orig), (width, y_minus_10k_orig), (150, 100, 100), 2)
+            if 0 <= y_minus_10k_orig < height_preview:
+                cv2.line(overlay_img, (0, y_minus_10k_orig), (width_preview, y_minus_10k_orig), (150, 100, 100), 2)
                 cv2.putText(overlay_img, '-10000', (10, max(10, y_minus_10k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 50, 50), 2)
             
             # -20000ライン
             y_minus_20k_in_crop = zero_in_crop + (20000 / 30000) * distance_to_minus_30k + st.session_state.settings.get('grid_minus_20k_offset', 0)
             y_minus_20k_orig = int(top + y_minus_20k_in_crop)
-            if 0 <= y_minus_20k_orig < height:
-                cv2.line(overlay_img, (0, y_minus_20k_orig), (width, y_minus_20k_orig), (150, 100, 100), 2)
+            if 0 <= y_minus_20k_orig < height_preview:
+                cv2.line(overlay_img, (0, y_minus_20k_orig), (width_preview, y_minus_20k_orig), (150, 100, 100), 2)
                 cv2.putText(overlay_img, '-20000', (10, max(10, y_minus_20k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 50, 50), 2)
         
         # プレビューを左カラムに表示（縦に配置）
@@ -1146,7 +1184,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             
             # 切り抜き結果（元画像の下に配置）
             st.markdown("#### 切り抜き結果")
-            cropped_preview = img_array[int(top):int(bottom), int(left):int(right)].copy()
+            cropped_preview = img_array_preview[int(top):int(bottom), int(left):int(right)].copy()
             
             # グリッドラインを追加
             zero_in_crop = zero_line_y - top
