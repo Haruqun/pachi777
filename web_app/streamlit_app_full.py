@@ -352,6 +352,24 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     </script>
     """, unsafe_allow_html=True)
     
+    # 編集モードで選択されたプリセットの設定値を読み込む
+    if ('edit_preset_mode' in st.session_state and 
+        st.session_state.edit_preset_mode and 
+        'edit_preset_select' in st.session_state and
+        st.session_state.edit_preset_select != "新規作成" and
+        st.session_state.edit_preset_select in st.session_state.saved_presets):
+        # 選択されたプリセットの設定値を読み込む
+        selected_preset_name = st.session_state.edit_preset_select
+        if 'last_edited_preset' not in st.session_state or st.session_state.last_edited_preset != selected_preset_name:
+            # 新しいプリセットが選択された場合のみ設定を更新
+            st.session_state.settings = st.session_state.saved_presets[selected_preset_name].copy()
+            st.session_state.last_edited_preset = selected_preset_name
+            st.rerun()
+    elif 'edit_preset_mode' in st.session_state and not st.session_state.edit_preset_mode:
+        # 編集モードが解除された場合、状態をリセット
+        if 'last_edited_preset' in st.session_state:
+            del st.session_state.last_edited_preset
+    
     # 設定値の初期化
     if test_image:
         # 画像を読み込み
@@ -713,18 +731,58 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     # 設定の保存
     st.markdown("### 💾 設定の保存")
     
-    # プリセット名入力
-    preset_name = st.text_input(
-        "プリセット名",
-        placeholder="例: iPhone15用、S__シリーズ用",
-        help="保存する設定の名前を入力してください"
-    )
+    # 既存のプリセットを編集する場合
+    if st.session_state.saved_presets:
+        edit_mode = st.checkbox("既存のプリセットを編集", key="edit_preset_mode")
+        
+        if edit_mode:
+            # 編集するプリセットを選択
+            selected_preset = st.selectbox(
+                "編集するプリセットを選択",
+                ["新規作成"] + list(st.session_state.saved_presets.keys()),
+                key="edit_preset_select"
+            )
+            
+            if selected_preset != "新規作成":
+                # 選択されたプリセット名を入力フィールドに設定
+                preset_name = st.text_input(
+                    "プリセット名",
+                    value=selected_preset,
+                    help="プリセット名を変更することもできます"
+                )
+            else:
+                preset_name = st.text_input(
+                    "プリセット名",
+                    placeholder="例: iPhone15用、S__シリーズ用",
+                    help="保存する設定の名前を入力してください"
+                )
+        else:
+            # 新規作成モード
+            preset_name = st.text_input(
+                "プリセット名",
+                placeholder="例: iPhone15用、S__シリーズ用",
+                help="保存する設定の名前を入力してください"
+            )
+    else:
+        # プリセットがない場合は新規作成のみ
+        preset_name = st.text_input(
+            "プリセット名",
+            placeholder="例: iPhone15用、S__シリーズ用",
+            help="保存する設定の名前を入力してください"
+        )
     
     # ボタン用のカラムレイアウト
     save_col1, save_col2 = st.columns([1, 1])
     
     with save_col1:
-        if st.button("💾 プリセットを保存", type="primary", use_container_width=True):
+        # 編集モードかどうかでボタンのラベルを変更
+        save_button_label = "💾 プリセットを更新" if (st.session_state.saved_presets and 
+                                                     'edit_preset_mode' in st.session_state and 
+                                                     st.session_state.edit_preset_mode and 
+                                                     'edit_preset_select' in st.session_state and
+                                                     st.session_state.edit_preset_select != "新規作成") else "💾 プリセットを保存"
+        
+        if st.button(save_button_label, type="primary", use_container_width=True):
             if preset_name:
                 # セッションステートから現在の値を取得
                 if test_image:
@@ -766,7 +824,15 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 except:
                     pass
                 
-                st.success(f"✅ プリセット '{preset_name}' を保存しました")
+                # 編集モードかどうかでメッセージを変更
+                if (st.session_state.saved_presets and 
+                    'edit_preset_mode' in st.session_state and 
+                    st.session_state.edit_preset_mode and 
+                    'edit_preset_select' in st.session_state and
+                    st.session_state.edit_preset_select != "新規作成"):
+                    st.success(f"✅ プリセット '{preset_name}' を更新しました")
+                else:
+                    st.success(f"✅ プリセット '{preset_name}' を保存しました")
                 st.rerun()
             else:
                 st.error("プリセット名を入力してください")
