@@ -783,7 +783,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                     st.session_state['preview_detection_info'] = detection
                                 
                                 # セッションステートから値を取得（なければデフォルト値を使用）
-                                default_val = st.session_state.get(f"visual_max_{i}", detection['detected_max'])
+                                # ウィジェットのキーとは別のキーを使用
+                                default_val = st.session_state.get(f"saved_visual_max_{i}", detection['detected_max'])
                                 visual_max = st.number_input(
                                     "実際の最大値",
                                     min_value=0,
@@ -794,6 +795,9 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                     key=f"visual_max_{i}",
                                     label_visibility="visible"
                                 )
+                                # 値が変更されたら保存
+                                if visual_max != default_val:
+                                    st.session_state[f"saved_visual_max_{i}"] = visual_max
                                 visual_max_values.append(visual_max)
                     else:
                         # 単一画像の場合
@@ -801,7 +805,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         st.info(f"🔍 検出値: **{detection['detected_max']:,}玉**")
                         
                         # セッションステートから値を取得（なければデフォルト値を使用）
-                        default_val = st.session_state.get("visual_max_single", detection['detected_max'])
+                        default_val = st.session_state.get("saved_visual_max_single", detection['detected_max'])
                         visual_max = st.number_input(
                             "実際の最大値を入力",
                             min_value=0,
@@ -812,6 +816,9 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             key="visual_max_single",
                             label_visibility="visible"
                         )
+                        # 値が変更されたら保存
+                        if visual_max != default_val:
+                            st.session_state["saved_visual_max_single"] = visual_max
                         visual_max_values.append(visual_max)
                     
                     if any(v > 0 for v in visual_max_values):
@@ -869,11 +876,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                 
                                 # 自動適用ボタン
                                 if st.button("🔧 推奨値を自動適用", type="secondary", key="apply_max_alignment"):
-                                    # 入力された実際の最大値を保存
-                                    for i, visual_max in enumerate(visual_max_values):
-                                        if i < len(all_detections):
-                                            st.session_state[f"visual_max_{i}"] = visual_max
-                                    
                                     # セッションステートに新しい値を設定（現在の入力値に調整を加える）
                                     st.session_state.settings['grid_30k_offset'] = grid_30k_offset + avg_adjustment_30k
                                     st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + avg_adjustment_minus_30k
