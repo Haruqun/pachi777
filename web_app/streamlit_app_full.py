@@ -779,6 +779,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                 # プレビューボタン
                                 if st.button(f"🔍 画像を確認", key=f"preview_btn_{i}"):
                                     st.session_state['preview_image_index'] = i
+                                    # 検出情報も保存
+                                    st.session_state['preview_detection_info'] = detection
                                 
                                 visual_max = st.number_input(
                                     "実際の最大値",
@@ -1235,17 +1237,80 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     cv2.line(cropped_preview, (0, y_minus_20k_crop), (cropped_preview.shape[1], y_minus_20k_crop), (150, 100, 100), 2)
                     cv2.putText(cropped_preview, '-20000', (10, max(10, y_minus_20k_crop - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (100, 50, 50), 2)
             
-            # 最大値の位置を赤線で表示
-            if 'max_value_position' in st.session_state:
-                max_pos = st.session_state['max_value_position']
-                max_y_in_crop = max_pos['y']
-                if 0 <= max_y_in_crop < cropped_preview.shape[0]:
-                    # 赤い水平線を描画
-                    cv2.line(cropped_preview, (0, max_y_in_crop), (cropped_preview.shape[1], max_y_in_crop), (0, 0, 255), 3)
-                    # ラベルを追加
-                    label_text = f"MAX: {max_pos['value']:.0f}"
-                    cv2.putText(cropped_preview, label_text, (cropped_preview.shape[1] - 150, max_y_in_crop - 5), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            # 選択された画像の実際の最大値を表示
+            if 'preview_image_index' in st.session_state:
+                preview_idx = st.session_state.get('preview_image_index', 0)
+                
+                # プレビュー用の解析を実行して最大値を検出
+                analyzer_preview = WebCompatibleAnalyzer()
+                analyzer_preview.zero_y = zero_in_crop
+                
+                # 調整されたグリッドライン位置に基づいてスケールを計算
+                y_30k_adjusted = 0 + grid_30k_offset
+                y_minus_30k_adjusted = cropped_preview.shape[0] - 1 + grid_minus_30k_offset
+                
+                distance_to_plus_30k_adjusted = zero_in_crop - y_30k_adjusted
+                distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_in_crop
+                
+                if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
+                    avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
+                    analyzer_preview.scale = 30000 / avg_distance_adjusted
+                else:
+                    analyzer_preview.scale = 122  # デフォルト
+                
+                # BGRに変換
+                cropped_bgr_preview = cv2.cvtColor(cropped_preview, cv2.COLOR_RGB2BGR)
+                
+                # グラフデータを抽出
+                data_points_preview, color_preview, _ = analyzer_preview.extract_graph_data(cropped_bgr_preview)
+                
+                if data_points_preview:
+                    # 最大値を検出
+                    values_preview = [value for x, value in data_points_preview]
+                    max_val_detected = max(values_preview)
+                    max_idx = values_preview.index(max_val_detected)
+                    max_x, _ = data_points_preview[max_idx]
+                    
+                    # 入力された実際の最大値を取得
+                    actual_max_value = None
+                    if f'visual_max_{preview_idx}' in st.session_state:
+                        actual_max_value = st.session_state[f'visual_max_{preview_idx}']
+                    
+                    # 実際の値が入力されている場合はそれを使用、そうでなければ検出値を使用
+                    display_max_value = actual_max_value if actual_max_value is not None else max_val_detected
+                    
+                    # Y座標を計算
+                    if actual_max_value and max_val_detected > 0:
+                        # 補正率を計算
+                        correction_factor = actual_max_value / max_val_detected
+                        # 元の最大値のY座標
+                        max_y_original = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
+                        # 新しいスケールを計算
+                        actual_distance = zero_in_crop - max_y_original
+                        if actual_distance > 0:
+                            new_scale = actual_max_value / actual_distance
+                            max_y_in_crop = int(zero_in_crop - (actual_max_value / new_scale))
+                        else:
+                            max_y_in_crop = max_y_original
+                    else:
+                        # 補正なし
+                        max_y_in_crop = int(zero_in_crop - (display_max_value / analyzer_preview.scale))
+                        correction_factor = 1.0
+                    
+                    if 0 <= max_y_in_crop < cropped_preview.shape[0]:
+                        # 赤い水平線を描画
+                        cv2.line(cropped_preview, (0, max_y_in_crop), (cropped_preview.shape[1], max_y_in_crop), (0, 0, 255), 3)
+                        # 最大値の点に円を描画
+                        cv2.circle(cropped_preview, (int(max_x), max_y_in_crop), 8, (0, 0, 255), -1)
+                        # ラベルを追加
+                        label_text = f"MAX: {int(display_max_value):,}"
+                        cv2.putText(cropped_preview, label_text, (cropped_preview.shape[1] - 180, max_y_in_crop - 5), 
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                    
+                    # 補正情報を表示
+                    if actual_max_value and abs(correction_factor - 1.0) > 0.01:
+                        info_text = f"🔍 検出値: {int(max_val_detected):,}玉 → 実際の値: {int(actual_max_value):,}玉 (補正率 x{correction_factor:.2f})"
+                        st.info(info_text)
             
             st.image(cropped_preview, use_column_width=True)
             
