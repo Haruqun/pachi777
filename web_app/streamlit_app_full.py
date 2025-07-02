@@ -16,7 +16,6 @@ import pytesseract
 import re
 import json
 import pandas as pd
-import streamlit.components.v1 as components
 import time
 
 # ページ設定
@@ -669,6 +668,93 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
             st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
         
+    # テスト機能：最大値アライメント
+    if test_image:
+        st.markdown("### 🧪 テスト機能: 最大値アライメント")
+        st.info("この機能は実験的なものです。読み取ったグラフの最高値と画像上の最高値を一致させることで精度向上を試みます。")
+        
+        with st.expander("最大値アライメント設定", expanded=False):
+            # テスト解析を実行
+            analyzer = WebCompatibleAnalyzer()
+            
+            # 現在の設定で解析実行
+            current_settings = {
+                'search_start_offset': search_start_offset,
+                'search_end_offset': search_end_offset,
+                'crop_top': crop_top,
+                'crop_bottom': crop_bottom,
+                'left_margin': left_margin,
+                'right_margin': right_margin,
+                'grid_30k_offset': grid_30k_offset,
+                'grid_20k_offset': grid_20k_offset,
+                'grid_10k_offset': grid_10k_offset,
+                'grid_minus_10k_offset': grid_minus_10k_offset,
+                'grid_minus_20k_offset': grid_minus_20k_offset,
+                'grid_minus_30k_offset': grid_minus_30k_offset
+            }
+            
+            # 画像を一時保存して解析
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+                Image.fromarray(img_array).save(tmp_file.name)
+                
+                # カスタム設定で解析
+                analyzer.zero_y = zero_in_crop
+                analyzer.scale = 30000 / distance_to_plus_30k if distance_to_plus_30k > 0 else 122
+                
+                # 切り抜き画像で解析
+                cropped_for_analysis = img_array[int(top):int(bottom), int(left):int(right)]
+                cv2.imwrite(tmp_file.name, cv2.cvtColor(cropped_for_analysis, cv2.COLOR_RGB2BGR))
+                
+                # 解析実行
+                data_points, color, detected_zero = analyzer.extract_graph_data(tmp_file.name)
+                
+                if data_points:
+                    analysis = analyzer.analyze_values(data_points)
+                    detected_max = analysis['max_value']
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("検出された最大値", f"{detected_max:,}玉")
+                    
+                    with col2:
+                        visual_max = st.number_input(
+                            "画像上の実際の最大値",
+                            min_value=0,
+                            max_value=50000,
+                            value=detected_max,
+                            step=100,
+                            help="グラフ画像を見て、実際の最高値を入力してください"
+                        )
+                    
+                    if visual_max > 0 and detected_max > 0:
+                        correction_factor = visual_max / detected_max
+                        st.metric("補正係数", f"{correction_factor:.3f}")
+                        
+                        if abs(correction_factor - 1.0) > 0.01:
+                            st.warning(f"検出値と実際の値に{abs(1-correction_factor)*100:.1f}%の差があります。")
+                            
+                            # 補正後のスケール計算
+                            corrected_scale = analyzer.scale * correction_factor
+                            st.info(f"推奨スケール: {corrected_scale:.1f} 玉/ピクセル (現在: {analyzer.scale:.1f})")
+                            
+                            # グリッドライン調整の提案
+                            if correction_factor > 1.0:
+                                st.write("📏 グラフが圧縮されている可能性があります。以下の調整を試してください：")
+                                st.write(f"- +30,000ライン調整: {int((1-correction_factor)*distance_to_plus_30k)}")
+                                st.write(f"- -30,000ライン調整: {int((correction_factor-1)*distance_to_minus_30k)}")
+                            else:
+                                st.write("📏 グラフが拡大されている可能性があります。以下の調整を試してください：")
+                                st.write(f"- +30,000ライン調整: {int((1-correction_factor)*distance_to_plus_30k)}")
+                                st.write(f"- -30,000ライン調整: {int((correction_factor-1)*distance_to_minus_30k)}")
+                        else:
+                            st.success("✅ 検出値と実際の値がほぼ一致しています！")
+                else:
+                    st.warning("グラフデータを検出できませんでした。")
+                
+                # 一時ファイルを削除
+                import os
+                os.unlink(tmp_file.name)
     
     # 設定の保存
     st.markdown("### 💾 設定の保存")
