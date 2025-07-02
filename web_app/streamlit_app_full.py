@@ -360,72 +360,52 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
         
         # プリセットボタンを横に並べる
-        preset_cols = st.columns(min(len(preset_names), 4))  # 最大4列
-        
-        for i, preset_name in enumerate(preset_names):
-            col_idx = i % len(preset_cols)
-            with preset_cols[col_idx]:
-                button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
-                if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
-                    if preset_name == "デフォルト":
-                        st.session_state.settings = default_settings.copy()
-                    else:
-                        st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
-                    
-                    # 現在のプリセット名を保存（編集モードで使用）
-                    st.session_state.current_preset_name = preset_name
-                    st.session_state.editing_preset_name = preset_name
-                    
-                    st.success(f"✅ '{preset_name}' の設定を読み込みました")
-                    time.sleep(0.5)
-                    st.rerun()
+        if len(preset_names) <= 4:
+            preset_cols = st.columns(len(preset_names))
+            # プリセットが4個以下の場合
+            for i, preset_name in enumerate(preset_names):
+                with preset_cols[i]:
+                    button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
+                    if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
+                        if preset_name == "デフォルト":
+                            st.session_state.settings = default_settings.copy()
+                        else:
+                            st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                        
+                        # 現在のプリセット名を保存（編集モードで使用）
+                        st.session_state.current_preset_name = preset_name
+                        st.session_state.editing_preset_name = preset_name
+                        
+                        st.success(f"✅ '{preset_name}' の設定を読み込みました")
+                        time.sleep(0.5)
+                        st.rerun()
+        else:
+            # 5個以上の場合は複数行に分ける
+            num_rows = (len(preset_names) + 3) // 4  # 4列で何行必要か
+            for row in range(num_rows):
+                cols = st.columns(4)
+                for col in range(4):
+                    idx = row * 4 + col
+                    if idx < len(preset_names):
+                        preset_name = preset_names[idx]
+                        with cols[col]:
+                            button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
+                            if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
+                                if preset_name == "デフォルト":
+                                    st.session_state.settings = default_settings.copy()
+                                else:
+                                    st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                                
+                                # 現在のプリセット名を保存（編集モードで使用）
+                                st.session_state.current_preset_name = preset_name
+                                st.session_state.editing_preset_name = preset_name
+                                
+                                st.success(f"✅ '{preset_name}' の設定を読み込みました")
+                                time.sleep(0.5)
+                                st.rerun()
         
         st.divider()
     
-    # LocalStorageとの連携用JavaScript
-    st.markdown("""
-    <script>
-    // LocalStorageから全設定を読み込む
-    function loadAllSettings() {
-        const allSettings = localStorage.getItem('pachi777_all_settings');
-        if (allSettings) {
-            return JSON.parse(allSettings);
-        }
-        return null;
-    }
-    
-    // ページ読み込み時に設定を復元
-    window.addEventListener('load', function() {
-        const savedData = loadAllSettings();
-        if (savedData) {
-            // Streamlitのセッションステートを更新するためのメッセージ
-            window.parent.postMessage({
-                type: 'streamlit:setComponentValue',
-                key: 'load_saved_settings',
-                value: savedData
-            }, '*');
-        }
-    });
-    </script>
-    """, unsafe_allow_html=True)
-    
-    # 編集モードで選択されたプリセットの設定値を読み込む
-    if ('edit_preset_mode' in st.session_state and 
-        st.session_state.edit_preset_mode and 
-        'edit_preset_select' in st.session_state and
-        st.session_state.edit_preset_select != "新規作成" and
-        st.session_state.edit_preset_select in st.session_state.saved_presets):
-        # 選択されたプリセットの設定値を読み込む
-        selected_preset_name = st.session_state.edit_preset_select
-        if 'last_edited_preset' not in st.session_state or st.session_state.last_edited_preset != selected_preset_name:
-            # 新しいプリセットが選択された場合のみ設定を更新
-            st.session_state.settings = st.session_state.saved_presets[selected_preset_name].copy()
-            st.session_state.last_edited_preset = selected_preset_name
-            st.rerun()
-    elif 'edit_preset_mode' in st.session_state and not st.session_state.edit_preset_mode:
-        # 編集モードが解除された場合、状態をリセット
-        if 'last_edited_preset' in st.session_state:
-            del st.session_state.last_edited_preset
     
     # 設定値の初期化
     if test_image:
@@ -1132,7 +1112,7 @@ elif st.session_state.uploaded_file_names:
         st.rerun()
 
 # 解析を実行
-if uploaded_files and 'start_analysis' in st.session_state and st.session_state.start_analysis:
+if uploaded_files and st.session_state.get('start_analysis', False):
     # 解析結果セクション
     st.markdown("### 🎯 解析結果")
     
@@ -1572,273 +1552,13 @@ if uploaded_files and 'start_analysis' in st.session_state and st.session_state.
         detail_text.empty()
         time.sleep(1.0)  # 完了メッセージを表示する時間
         
+        # 結果を保存
+        st.session_state.analysis_results = analysis_results
+        
         # Reset analysis state
         st.session_state.start_analysis = False
+        st.rerun()
 
-        # 結果をグリッド表示
-        st.markdown("### 📊 解析結果一覧")
-
-        # 解析結果を2列で表示
-        cols = st.columns(2)
-
-        for idx, result in enumerate(analysis_results):
-            with cols[idx % 2]:
-                # 台番号を優先表示、なければファイル名
-                if result.get('ocr_data') and result['ocr_data'].get('machine_number'):
-                    display_name = result['ocr_data']['machine_number']
-                else:
-                    display_name = result['name']
-                st.markdown(f"#### {idx + 1}. {display_name}")
-
-                # 解析結果画像
-                st.image(result['overlay_image'], use_column_width=True)
-
-                # 元画像を折りたたみ可能に
-                with st.expander("📷 元画像を表示"):
-                    st.image(result['original_image'], use_column_width=True)
-
-                # 成功時は統計情報を表示（解析結果の下に縦に並べる）
-                if result['success']:
-                    # 統計情報をカード風に表示
-                    st.markdown("""
-                    <style>
-                    .stat-card {
-                        background-color: #f0f2f6;
-                        padding: 15px;
-                        border-radius: 10px;
-                        margin-top: 10px;
-                    }
-                    .stat-item {
-                        display: flex;
-                        justify-content: space-between;
-                        padding: 5px 0;
-                        border-bottom: 1px solid #e0e0e0;
-                    }
-                    .stat-item:last-child {
-                        border-bottom: none;
-                    }
-                    .stat-label {
-                        color: #666;
-                        font-weight: 500;
-                    }
-                    .stat-value {
-                        font-weight: bold;
-                        color: #333;
-                    }
-                    .stat-value.positive {
-                        color: #28a745;
-                    }
-                    .stat-value.negative {
-                        color: #dc3545;
-                    }
-                    .stat-value.zero {
-                        color: #6c757d;
-                    }
-                    </style>
-                    """, unsafe_allow_html=True)
-
-                    # 値に応じて色分けするためのクラスを決定
-                    def get_value_class(val):
-                        if val > 0:
-                            return "positive"
-                        elif val < 0:
-                            return "negative"
-                        else:
-                            return "zero"
-
-                    first_hit_text = f"{result['first_hit_val']:,}玉" if result['first_hit_val'] is not None else "なし"
-                    first_hit_class = get_value_class(result['first_hit_val']) if result['first_hit_val'] is not None else ""
-
-                    st.markdown(f"""
-                    <div class="stat-card">
-                        <div class="stat-item">
-                            <span class="stat-label">📈 最高値</span>
-                            <span class="stat-value {get_value_class(result['max_val'])}">{result['max_val']:,}玉</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">📉 最低値</span>
-                            <span class="stat-value {get_value_class(result['min_val'])}">{result['min_val']:,}玉</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">🎯 現在値</span>
-                            <span class="stat-value {get_value_class(result['current_val'])}">{result['current_val']:,}玉</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">🎰 初当たり</span>
-                            <span class="stat-value {first_hit_class}">{first_hit_text}</span>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    # OCRデータがある場合は表示
-                    if result.get('ocr_data') and any(result['ocr_data'].values()):
-                        ocr = result['ocr_data']
-                        st.markdown("""
-                        <style>
-                        .ocr-card {
-                            background-color: #e8f4f8;
-                            padding: 15px;
-                            border-radius: 10px;
-                            margin-top: 10px;
-                            border: 1px solid #bee5eb;
-                        }
-                        .ocr-title {
-                            color: #17a2b8;
-                            font-weight: bold;
-                            margin-bottom: 10px;
-                        }
-                        .ocr-item {
-                            display: flex;
-                            justify-content: space-between;
-                            padding: 5px 0;
-                            border-bottom: 1px solid #d1ecf1;
-                        }
-                        .ocr-item:last-child {
-                            border-bottom: none;
-                        }
-                        .ocr-label {
-                            color: #0c5460;
-                            font-weight: 500;
-                        }
-                        .ocr-value {
-                            font-weight: bold;
-                            color: #0c5460;
-                        }
-                        </style>
-                        """, unsafe_allow_html=True)
-
-                        ocr_html = '<div class="ocr-card"><div class="ocr-title">📱 site7データ</div>'
-
-                        # 台番号
-                        if ocr.get('machine_number'):
-                            ocr_html += f'<div class="ocr-item"><span class="ocr-label">🔢 台番号</span><span class="ocr-value">{ocr["machine_number"]}</span></div>'
-
-                        # 遊技データ
-                        if ocr.get('total_start'):
-                            ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎲 累計スタート</span><span class="ocr-value">{ocr["total_start"]}</span></div>'
-                        if ocr.get('jackpot_count'):
-                            ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎊 大当り回数</span><span class="ocr-value">{ocr["jackpot_count"]}回</span></div>'
-                        if ocr.get('first_hit_count'):
-                            ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎯 初当り回数</span><span class="ocr-value">{ocr["first_hit_count"]}回</span></div>'
-                        if ocr.get('current_start'):
-                            ocr_html += f'<div class="ocr-item"><span class="ocr-label">📊 スタート</span><span class="ocr-value">{ocr["current_start"]}</span></div>'
-                        if ocr.get('jackpot_probability'):
-                            ocr_html += f'<div class="ocr-item"><span class="ocr-label">📈 大当り確率</span><span class="ocr-value">{ocr["jackpot_probability"]}</span></div>'
-                        if ocr.get('max_payout'):
-                            ocr_html += f'<div class="ocr-item"><span class="ocr-label">💰 最高出玉</span><span class="ocr-value">{ocr["max_payout"]}玉</span></div>'
-
-                        ocr_html += '</div>'
-                        st.markdown(ocr_html, unsafe_allow_html=True)
-
-                else:
-                    st.warning("⚠️ グラフデータを検出できませんでした")
-
-                # 区切り線（各列内で）
-                if idx < len(analysis_results) - 2:
-                    st.markdown("---")
-
-        # サマリー情報
-        st.markdown("### 📋 解析サマリー")
-
-        success_count = sum(1 for r in analysis_results if r['success'])
-        st.info(f"📈 総画像数: {len(analysis_results)}枚 | ✅ 成功: {success_count}枚 | ⚠️ 失敗: {len(analysis_results) - success_count}枚")
-
-
-        # 結果を表形式で表示
-        st.markdown("### 📊 解析結果（表形式）")
-
-        # 統計情報を計算して表示
-        if analysis_results:
-            success_results = [r for r in analysis_results if r.get('success')]
-            if success_results:
-                # 統計情報の計算
-                total_balance = sum(r['current_val'] for r in success_results)
-                total_balance_yen = total_balance * 4
-                avg_balance = total_balance / len(success_results)
-                avg_balance_yen = avg_balance * 4
-                max_result = max(success_results, key=lambda x: x['current_val'])
-                min_result = min(success_results, key=lambda x: x['current_val'])
-
-                # 統計情報を3列で表示
-                col1, col2, col3 = st.columns(3)
-
-                with col1:
-                    st.metric(
-                        "合計収支",
-                        f"{total_balance_yen:+,}円",
-                        f"{total_balance:+,}玉"
-                    )
-
-                with col2:
-                    st.metric(
-                        "平均収支",
-                        f"{avg_balance_yen:+,.0f}円",
-                        f"{avg_balance:+,.0f}玉"
-                    )
-
-                with col3:
-                    st.metric(
-                        "解析台数",
-                        f"{len(success_results)}台",
-                        f"成功率 {len(success_results)/len(analysis_results)*100:.0f}%"
-                    )
-
-        # データフレーム作成
-        table_data = []
-        for idx, result in enumerate(analysis_results):
-            if result.get('success'):
-                row = {
-                    '番号': idx + 1,
-                    'ファイル名': result['name'],
-                    '最高値': f"{result['max_val']:,}",
-                    '最低値': f"{result['min_val']:,}",
-                    '現在値': f"{result['current_val']:,}",
-                    '初当たり': f"{result['first_hit_val']:,}" if result['first_hit_val'] is not None else "-",
-                    '収支(円)': f"{result['current_val'] * 4:+,}",
-                }
-
-                # OCRデータがある場合は追加
-                if result.get('ocr_data'):
-                    ocr = result['ocr_data']
-                    row.update({
-                        '累計スタート': ocr.get('total_start', '-'),
-                        '大当り回数': f"{ocr.get('jackpot_count')}回" if ocr.get('jackpot_count') else '-',
-                        '初当り回数': f"{ocr.get('first_hit_count')}回" if ocr.get('first_hit_count') else '-',
-                        '確率': ocr.get('jackpot_probability', '-'),
-                        '最高出玉': f"{ocr.get('max_payout')}玉" if ocr.get('max_payout') else '-',
-                    })
-
-                table_data.append(row)
-
-        if table_data:
-            df = pd.DataFrame(table_data)
-
-            # 表示する列を選択（存在する列のみ）
-            display_columns = ['番号', 'ファイル名', '累計スタート', '大当り回数', 
-                              '最高値', '最低値', '現在値', '初当たり', '収支(円)']
-            display_columns = [col for col in display_columns if col in df.columns]
-
-            # データフレームを表示
-            st.dataframe(
-                df[display_columns],
-                use_container_width=True,
-                hide_index=True
-            )
-
-            # CSVダウンロード
-            csv = df.to_csv(index=False, encoding='utf-8-sig')
-            st.download_button(
-                label="📥 CSV ダウンロード",
-                data=csv,
-                file_name=f"pachi_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv",
-                help="Excel等で開けるCSV形式でダウンロード"
-            )
-
-else:
-    # アップロード前の表示
-    st.info("👆 上のボタンから画像をアップロードしてください")
-    
     # 使い方
     with st.expander("💡 使い方"):
         st.markdown("""
@@ -1903,6 +1623,278 @@ with st.expander("使い方と注意事項を確認する"):
     - スケール：120玉/ピクセル
     - 左右余白：125px除外
     """)
+
+# 解析結果を表示
+if 'analysis_results' in st.session_state and st.session_state.analysis_results:
+    analysis_results = st.session_state.analysis_results
+    
+    # 結果をグリッド表示
+    st.markdown("### 📊 解析結果一覧")
+
+    # 解析結果を2列で表示
+    cols = st.columns(2)
+
+    for idx, result in enumerate(analysis_results):
+        with cols[idx % 2]:
+            # 台番号を優先表示、なければファイル名
+            if result.get('ocr_data') and result['ocr_data'].get('machine_number'):
+                display_name = result['ocr_data']['machine_number']
+            else:
+                display_name = result['name']
+            st.markdown(f"#### {idx + 1}. {display_name}")
+
+            # 解析結果画像
+            st.image(result['overlay_image'], use_column_width=True)
+
+            # 元画像を折りたたみ可能に
+            with st.expander("📷 元画像を表示"):
+                st.image(result['original_image'], use_column_width=True)
+
+            # 成功時は統計情報を表示（解析結果の下に縦に並べる）
+            if result['success']:
+                # 統計情報をカード風に表示
+                st.markdown("""
+                <style>
+                .stat-card {
+                    background-color: #f0f2f6;
+                    padding: 15px;
+                    border-radius: 10px;
+                    margin-top: 10px;
+                }
+                .stat-item {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 5px 0;
+                    border-bottom: 1px solid #e0e0e0;
+                }
+                .stat-item:last-child {
+                    border-bottom: none;
+                }
+                .stat-label {
+                    color: #666;
+                    font-weight: 500;
+                }
+                .stat-value {
+                    font-weight: bold;
+                    color: #333;
+                }
+                .stat-value.positive {
+                    color: #28a745;
+                }
+                .stat-value.negative {
+                    color: #dc3545;
+                }
+                .stat-value.zero {
+                    color: #6c757d;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+
+                # 値に応じて色分けするためのクラスを決定
+                def get_value_class(val):
+                    if val > 0:
+                        return "positive"
+                    elif val < 0:
+                        return "negative"
+                    else:
+                        return "zero"
+
+                first_hit_text = f"{result['first_hit_val']:,}玉" if result['first_hit_val'] is not None else "なし"
+                first_hit_class = get_value_class(result['first_hit_val']) if result['first_hit_val'] is not None else ""
+
+                st.markdown(f"""
+                <div class="stat-card">
+                    <div class="stat-item">
+                        <span class="stat-label">📈 最高値</span>
+                        <span class="stat-value {get_value_class(result['max_val'])}">{result['max_val']:,}玉</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">📉 最低値</span>
+                        <span class="stat-value {get_value_class(result['min_val'])}">{result['min_val']:,}玉</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">🎯 現在値</span>
+                        <span class="stat-value {get_value_class(result['current_val'])}">{result['current_val']:,}玉</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">🎰 初当たり</span>
+                        <span class="stat-value {first_hit_class}">{first_hit_text}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # OCRデータがある場合は表示
+                if result.get('ocr_data') and any(result['ocr_data'].values()):
+                    ocr = result['ocr_data']
+                    st.markdown("""
+                    <style>
+                    .ocr-card {
+                        background-color: #e8f4f8;
+                        padding: 15px;
+                        border-radius: 10px;
+                        margin-top: 10px;
+                        border: 1px solid #bee5eb;
+                    }
+                    .ocr-title {
+                        color: #17a2b8;
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                    }
+                    .ocr-item {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 5px 0;
+                        border-bottom: 1px solid #d1ecf1;
+                    }
+                    .ocr-item:last-child {
+                        border-bottom: none;
+                    }
+                    .ocr-label {
+                        color: #0c5460;
+                        font-weight: 500;
+                    }
+                    .ocr-value {
+                        font-weight: bold;
+                        color: #0c5460;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+
+                    ocr_html = '<div class="ocr-card"><div class="ocr-title">📱 site7データ</div>'
+
+                    # 台番号
+                    if ocr.get('machine_number'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">🔢 台番号</span><span class="ocr-value">{ocr["machine_number"]}</span></div>'
+
+                    # 遊技データ
+                    if ocr.get('total_start'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎲 累計スタート</span><span class="ocr-value">{ocr["total_start"]}</span></div>'
+                    if ocr.get('jackpot_count'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎊 大当り回数</span><span class="ocr-value">{ocr["jackpot_count"]}回</span></div>'
+                    if ocr.get('first_hit_count'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎯 初当り回数</span><span class="ocr-value">{ocr["first_hit_count"]}回</span></div>'
+                    if ocr.get('current_start'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">📊 スタート</span><span class="ocr-value">{ocr["current_start"]}</span></div>'
+                    if ocr.get('jackpot_probability'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">📈 大当り確率</span><span class="ocr-value">{ocr["jackpot_probability"]}</span></div>'
+                    if ocr.get('max_payout'):
+                        ocr_html += f'<div class="ocr-item"><span class="ocr-label">💰 最高出玉</span><span class="ocr-value">{ocr["max_payout"]}玉</span></div>'
+
+                    ocr_html += '</div>'
+                    st.markdown(ocr_html, unsafe_allow_html=True)
+
+            else:
+                st.warning("⚠️ グラフデータを検出できませんでした")
+
+            # 区切り線（各列内で）
+            if idx < len(analysis_results) - 2:
+                st.markdown("---")
+
+    # サマリー情報
+    st.markdown("### 📋 解析サマリー")
+
+    success_count = sum(1 for r in analysis_results if r['success'])
+    st.info(f"📈 総画像数: {len(analysis_results)}枚 | ✅ 成功: {success_count}枚 | ⚠️ 失敗: {len(analysis_results) - success_count}枚")
+
+
+    # 結果を表形式で表示
+    st.markdown("### 📊 解析結果（表形式）")
+
+    # 統計情報を計算して表示
+    if analysis_results:
+        success_results = [r for r in analysis_results if r.get('success')]
+        if success_results:
+            # 統計情報の計算
+            total_balance = sum(r['current_val'] for r in success_results)
+            total_balance_yen = total_balance * 4
+            avg_balance = total_balance / len(success_results)
+            avg_balance_yen = avg_balance * 4
+            max_result = max(success_results, key=lambda x: x['current_val'])
+            min_result = min(success_results, key=lambda x: x['current_val'])
+
+            # 統計情報を3列で表示
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric(
+                    "合計収支",
+                    f"{total_balance_yen:+,}円",
+                    f"{total_balance:+,}玉"
+                )
+
+            with col2:
+                st.metric(
+                    "平均収支",
+                    f"{avg_balance_yen:+,.0f}円",
+                    f"{avg_balance:+,.0f}玉"
+                )
+
+            with col3:
+                st.metric(
+                    "最高/最低",
+                    f"{max_result['current_val']:+,}玉",
+                    f"{min_result['current_val']:+,}玉"
+                )
+
+        # データフレームを作成
+        df_data = []
+        for result in analysis_results:
+            if result['success']:
+                row = {
+                    '台番号': result.get('ocr_data', {}).get('machine_number', result['name']),
+                    '最高値': result['max_val'],
+                    '最低値': result['min_val'],
+                    '現在値': result['current_val'],
+                    '初当たり': result['first_hit_val'] if result['first_hit_val'] is not None else '',
+                    '収支（円）': result['current_val'] * 4,
+                    '色': result['dominant_color']
+                }
+                # OCRデータを追加
+                if result.get('ocr_data'):
+                    ocr = result['ocr_data']
+                    row.update({
+                        '累計スタート': ocr.get('total_start', ''),
+                        '大当り回数': ocr.get('jackpot_count', ''),
+                        '初当り回数': ocr.get('first_hit_count', ''),
+                        '現在スタート': ocr.get('current_start', ''),
+                        '大当り確率': ocr.get('jackpot_probability', ''),
+                        '最高出玉': ocr.get('max_payout', '')
+                    })
+                df_data.append(row)
+            else:
+                df_data.append({
+                    '台番号': result.get('ocr_data', {}).get('machine_number', result['name']),
+                    '最高値': '解析失敗',
+                    '最低値': '-',
+                    '現在値': '-',
+                    '初当たり': '-',
+                    '収支（円）': '-',
+                    '色': '-'
+                })
+
+        if df_data:
+            df = pd.DataFrame(df_data)
+            st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "最高値": st.column_config.NumberColumn(format="%d玉"),
+                    "最低値": st.column_config.NumberColumn(format="%d玉"),
+                    "現在値": st.column_config.NumberColumn(format="%d玉"),
+                    "初当たり": st.column_config.NumberColumn(format="%d玉"),
+                    "収支（円）": st.column_config.NumberColumn(format="¥%d")
+                }
+            )
+
+            # CSVダウンロードボタン
+            csv = df.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📥 CSVダウンロード",
+                data=csv,
+                file_name=f'pachinko_analysis_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv',
+                mime='text/csv'
+            )
 
 # フッター
 st.markdown("---")
