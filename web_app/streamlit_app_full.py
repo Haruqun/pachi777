@@ -872,6 +872,11 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         cv2.putText(overlay_img, 'Orange Bar', (10, orange_bottom + 30), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 140, 0), 2)
         
+        # ゼロラインから±30000ラインまでの距離を計算（切り抜き内での計算）
+        zero_in_crop = zero_line_y - top
+        distance_to_plus_30k = zero_in_crop - grid_30k_offset
+        distance_to_minus_30k = (bottom - top - 1 + grid_minus_30k_offset) - zero_in_crop
+        
         # グリッドラインを元画像にも追加
         # +30000ライン（元画像座標）
         y_30k_orig = int(top + grid_30k_offset)
@@ -914,11 +919,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             if 0 <= y_minus_20k_orig < height:
                 cv2.line(overlay_img, (0, y_minus_20k_orig), (width, y_minus_20k_orig), (150, 100, 100), 2)
                 cv2.putText(overlay_img, '-20000', (10, max(10, y_minus_20k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 50, 50), 2)
-        
-        # ゼロラインから±30000ラインまでの距離を計算（切り抜き内での計算）
-        zero_in_crop = zero_line_y - top
-        distance_to_plus_30k = zero_in_crop - grid_30k_offset
-        distance_to_minus_30k = (bottom - top - 1 + grid_minus_30k_offset) - zero_in_crop
         
         # プレビューを左カラムに表示（縦に配置）
         with main_col1:
