@@ -535,12 +535,23 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         # 現在の設定を取得（セッションステートの値を優先）
         current_settings = st.session_state.settings.copy()
         
-        # テスト機能用に画像を再度切り抜き（セッションステートの設定を使用）
-        # ゼロライン検出
+        # ゼロライン検出（最大値アライメント用）
         test_search_start = orange_bottom + current_settings['search_start_offset']
         test_search_end = min(height - 100, orange_bottom + current_settings['search_end_offset'])
         
-        test_zero_line_y = zero_line_y  # リアルタイムプレビューで検出したゼロラインを使用
+        # ゼロライン検出
+        best_score = 0
+        test_zero_line_y = (test_search_start + test_search_end) // 2
+        
+        for y in range(test_search_start, test_search_end):
+            row = gray[y, 100:width-100]
+            darkness = 1.0 - (np.mean(row) / 255.0)
+            uniformity = 1.0 - (np.std(row) / 128.0)
+            score = darkness * 0.5 + uniformity * 0.5
+            
+            if score > best_score:
+                best_score = score
+                test_zero_line_y = y
         
         # 切り抜き
         test_top = max(0, test_zero_line_y - current_settings['crop_top'])
