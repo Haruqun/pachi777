@@ -1711,7 +1711,21 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 sample_points = graph_data_points[::100][:10]  # 10点をサンプル表示
                 st.write("- サンプルデータ (x, 値):")
                 for x, val in sample_points:
-                    y_pixel = zero_line_in_crop - (val / analyzer.scale)
+                    if settings.get('use_nonlinear_scale', False) and hasattr(analyzer, 'scale_points'):
+                        # 非線形スケールでY座標を計算
+                        y_pixel = None
+                        for i in range(len(analyzer.scale_points) - 1):
+                            y1, val1 = analyzer.scale_points[i]
+                            y2, val2 = analyzer.scale_points[i + 1]
+                            if val1 <= val <= val2 or val2 <= val <= val1:
+                                if val2 != val1:
+                                    ratio = (val - val1) / (val2 - val1)
+                                    y_pixel = int(y1 + ratio * (y2 - y1))
+                                    break
+                        if y_pixel is None:
+                            y_pixel = zero_line_in_crop - (val / analyzer.scale)  # フォールバック
+                    else:
+                        y_pixel = zero_line_in_crop - (val / analyzer.scale)
                     st.write(f"  X={int(x)}, 値={int(val)}玉, Y座標={int(y_pixel)}px")
 
         if graph_data_points:
@@ -1791,11 +1805,43 @@ if uploaded_files and st.session_state.get('start_analysis', False):
 
             # グラフポイントを描画
             for x, value in graph_data_points:
-                # Y座標を計算（0ラインからの相対位置）
-                y = int(zero_line_in_crop - (value / analyzer.scale))
+                # Y座標を計算（非線形スケール対応）
+                if settings.get('use_nonlinear_scale', False) and hasattr(analyzer, 'scale_points'):
+                    # 非線形スケールの場合、値からY座標を逆算
+                    y = None
+                    for i in range(len(analyzer.scale_points) - 1):
+                        y1, val1 = analyzer.scale_points[i]
+                        y2, val2 = analyzer.scale_points[i + 1]
+                        
+                        if val1 <= value <= val2 or val2 <= value <= val1:
+                            # この区間で線形補間
+                            if val2 != val1:
+                                ratio = (value - val1) / (val2 - val1)
+                                y = int(y1 + ratio * (y2 - y1))
+                                break
+                    
+                    # 範囲外の場合
+                    if y is None:
+                        if value > max(p[1] for p in analyzer.scale_points):
+                            # 最大値より大きい場合
+                            y1, val1 = analyzer.scale_points[-2]
+                            y2, val2 = analyzer.scale_points[-1]
+                            if val2 != val1:
+                                scale = (y2 - y1) / (val2 - val1)
+                                y = int(y2 + scale * (value - val2))
+                        else:
+                            # 最小値より小さい場合
+                            y1, val1 = analyzer.scale_points[0]
+                            y2, val2 = analyzer.scale_points[1]
+                            if val2 != val1:
+                                scale = (y2 - y1) / (val2 - val1)
+                                y = int(y1 + scale * (value - val1))
+                else:
+                    # 線形スケールの場合（従来の計算）
+                    y = int(zero_line_in_crop - (value / analyzer.scale))
 
                 # 画像範囲内かチェック
-                if 0 <= y < overlay_img.shape[0] and 0 <= x < overlay_img.shape[1]:
+                if y is not None and 0 <= y < overlay_img.shape[0] and 0 <= x < overlay_img.shape[1]:
                     # 点を描画（より見やすくするため）
                     cv2.circle(overlay_img, (int(x), y), 2, draw_color, -1)
 
@@ -1814,9 +1860,39 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 max_idx = graph_values.index(max_val)
             min_idx = graph_values.index(min_val)
 
+            # Y座標計算用の関数（非線形スケール対応）
+            def calculate_y_from_value(val):
+                if settings.get('use_nonlinear_scale', False) and hasattr(analyzer, 'scale_points'):
+                    # 非線形スケールの場合
+                    for i in range(len(analyzer.scale_points) - 1):
+                        y1, val1 = analyzer.scale_points[i]
+                        y2, val2 = analyzer.scale_points[i + 1]
+                        
+                        if val1 <= val <= val2 or val2 <= val <= val1:
+                            if val2 != val1:
+                                ratio = (val - val1) / (val2 - val1)
+                                return int(y1 + ratio * (y2 - y1))
+                    
+                    # 範囲外の場合
+                    if val > max(p[1] for p in analyzer.scale_points):
+                        y1, val1 = analyzer.scale_points[-2]
+                        y2, val2 = analyzer.scale_points[-1]
+                        if val2 != val1:
+                            scale = (y2 - y1) / (val2 - val1)
+                            return int(y2 + scale * (val - val2))
+                    else:
+                        y1, val1 = analyzer.scale_points[0]
+                        y2, val2 = analyzer.scale_points[1]
+                        if val2 != val1:
+                            scale = (y2 - y1) / (val2 - val1)
+                            return int(y1 + scale * (val - val1))
+                else:
+                    # 線形スケールの場合
+                    return int(zero_line_in_crop - (val / analyzer.scale))
+            
             # 横線を描画（最低値、最高値、現在値、初当たり値）
             # 最高値ライン（端から端まで）
-            max_y = int(zero_line_in_crop - (max_val / analyzer.scale))
+            max_y = calculate_y_from_value(max_val)
             if 0 <= max_y < overlay_img.shape[0]:
                 # 端から端まで線を引く
                 cv2.line(overlay_img, (0, max_y), (overlay_img.shape[1], max_y), (0, 255, 255), 2)
@@ -1834,7 +1910,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 150, 150), 1, cv2.LINE_AA)
 
             # 最低値ライン（端から端まで）
-            min_y = int(zero_line_in_crop - (min_val / analyzer.scale))
+            min_y = calculate_y_from_value(min_val)
             if 0 <= min_y < overlay_img.shape[0]:
                 # 端から端まで線を引く
                 cv2.line(overlay_img, (0, min_y), (overlay_img.shape[1], min_y), (255, 0, 255), 2)
@@ -1852,7 +1928,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 0, 150), 1, cv2.LINE_AA)
 
             # 現在値ライン（端から端まで）
-            current_y = int(zero_line_in_crop - (current_val / analyzer.scale))
+            current_y = calculate_y_from_value(current_val)
             if 0 <= current_y < overlay_img.shape[0]:
                 cv2.line(overlay_img, (0, current_y), (overlay_img.shape[1], current_y), (255, 255, 0), 2)
                 # 背景付きテキスト（白背景、濃いシアン文字）右端に表示
@@ -1866,7 +1942,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
 
             # 初当たり値ライン（端から端まで）
             if first_hit_x is not None and first_hit_val != 0:  # 初当たりがある場合
-                first_hit_y = int(zero_line_in_crop - (first_hit_val / analyzer.scale))
+                first_hit_y = calculate_y_from_value(first_hit_val)
                 if 0 <= first_hit_y < overlay_img.shape[0]:
                     # 端から端まで線を引く
                     cv2.line(overlay_img, (0, first_hit_y), (overlay_img.shape[1], first_hit_y), (155, 48, 255), 2)
