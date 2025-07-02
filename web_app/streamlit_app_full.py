@@ -307,19 +307,31 @@ if not st.session_state.authenticated:
     # 認証されていない場合はここで処理を終了
     st.stop()
 
+# プリセット保存用のファイルパスを設定
+# Streamlit Cloudでも動作するように、書き込み可能なディレクトリを使用
+import pickle
+import os
+
+# プリセットファイルのパスを設定
+# Streamlit Cloudでは/tmpディレクトリは一時的なので、
+# プロジェクトディレクトリ内に保存
+preset_dir = os.path.join(os.path.dirname(__file__), 'presets')
+if not os.path.exists(preset_dir):
+    try:
+        os.makedirs(preset_dir)
+    except:
+        # ディレクトリ作成に失敗した場合は現在のディレクトリを使用
+        preset_dir = os.path.dirname(__file__)
+
+preset_file = os.path.join(preset_dir, 'saved_presets.pkl')
+
 # プリセットをファイルから読み込み
 try:
-    import pickle
-    import os
-    preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
     if os.path.exists(preset_file):
         with open(preset_file, 'rb') as f:
             saved_data = pickle.load(f)
             if 'presets' in saved_data:
                 st.session_state.saved_presets = saved_data['presets']
-            # 'current'設定の読み込みを削除（デフォルト値を保持するため）
-            # if 'current' in saved_data:
-            #     st.session_state.settings = saved_data['current']
 except Exception as e:
     # 読み込みエラーは無視
     pass
@@ -329,45 +341,46 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     st.markdown("##### 端末ごとの調整設定")
     st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
     
-    # プリセット選択セクション
-    st.markdown("### 📋 プリセット選択")
-    
-    # 保存されたプリセット一覧
-    preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
-    
-    col_preset1, col_preset2 = st.columns([3, 1])
-    
-    with col_preset1:
-        selected_preset_adjustment = st.selectbox(
-            "設定プリセットを選択",
-            preset_names,
-            help="保存された設定を選択して適用します",
-            key="adjustment_preset_select"
-        )
-    
-    with col_preset2:
-        # プリセット適用ボタン
-        if st.button("📥 適用", use_container_width=True, key="apply_preset_adjustment"):
-            if selected_preset_adjustment == "デフォルト":
-                st.session_state.settings = default_settings.copy()
-            else:
-                st.session_state.settings = st.session_state.saved_presets[selected_preset_adjustment].copy()
-            
-            # 現在のプリセット名を保存
-            st.session_state.current_preset_name = selected_preset_adjustment
-            
-            st.success(f"✅ '{selected_preset_adjustment}' を適用しました")
-            st.rerun()
-    
-    st.divider()
-    
-    # テスト画像のアップロード（全幅で表示）
+    # テスト画像のアップロード（最初に表示）
     test_image = st.file_uploader(
         "🖼️ テスト用画像をアップロード",
         type=['jpg', 'jpeg', 'png'],
         help="調整用の画像を1枚アップロードしてください",
         key="test_image"
     )
+    
+    # 画像がアップロードされた場合のみプリセット選択を表示
+    if test_image:
+        st.divider()
+        
+        # プリセット選択セクション
+        st.markdown("### 📋 設定の読み込み")
+        
+        # 保存されたプリセット一覧
+        preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
+        
+        # プリセットボタンを横に並べる
+        preset_cols = st.columns(min(len(preset_names), 4))  # 最大4列
+        
+        for i, preset_name in enumerate(preset_names):
+            col_idx = i % len(preset_cols)
+            with preset_cols[col_idx]:
+                button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
+                if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
+                    if preset_name == "デフォルト":
+                        st.session_state.settings = default_settings.copy()
+                    else:
+                        st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                    
+                    # 現在のプリセット名を保存（編集モードで使用）
+                    st.session_state.current_preset_name = preset_name
+                    st.session_state.editing_preset_name = preset_name
+                    
+                    st.success(f"✅ '{preset_name}' の設定を読み込みました")
+                    time.sleep(0.5)
+                    st.rerun()
+        
+        st.divider()
     
     # LocalStorageとの連携用JavaScript
     st.markdown("""
@@ -833,22 +846,35 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         help="プリセット名を変更することもできます"
                     )
                 else:
+                    # 編集中のプリセット名がある場合はそれを使用
+                    default_name = st.session_state.get('editing_preset_name', '')
+                    if default_name == 'デフォルト':
+                        default_name = ''
                     preset_name = st.text_input(
                         "プリセット名",
+                        value=default_name,
                         placeholder="例: iPhone15用、S__シリーズ用",
                         help="保存する設定の名前を入力してください"
                     )
             else:
-                # 新規作成モード
+                # 新規作成モード（編集中のプリセット名がある場合はそれを使用）
+                default_name = st.session_state.get('editing_preset_name', '')
+                if default_name == 'デフォルト':
+                    default_name = ''
                 preset_name = st.text_input(
                     "プリセット名",
+                    value=default_name,
                     placeholder="例: iPhone15用、S__シリーズ用",
                     help="保存する設定の名前を入力してください"
                 )
         else:
-            # プリセットがない場合は新規作成のみ
+            # プリセットがない場合は新規作成のみ（編集中のプリセット名がある場合はそれを使用）
+            default_name = st.session_state.get('editing_preset_name', '')
+            if default_name == 'デフォルト':
+                default_name = ''
             preset_name = st.text_input(
                 "プリセット名",
+                value=default_name,
                 placeholder="例: iPhone15用、S__シリーズ用",
                 help="保存する設定の名前を入力してください"
             )
@@ -876,16 +902,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     
                     # ファイルに保存
                     try:
-                        import pickle
-                        import os
-                        preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
                         all_presets = {
                             'presets': st.session_state.saved_presets
                         }
                         with open(preset_file, 'wb') as f:
                             pickle.dump(all_presets, f)
-                    except:
-                        pass
+                    except Exception as e:
+                        st.error(f"プリセットの保存に失敗しました: {str(e)}")
                     
                     # 編集モードかどうかでメッセージを変更
                     if (st.session_state.saved_presets and 
@@ -948,16 +971,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         
                         # ファイルを更新
                         try:
-                            import pickle
-                            import os
-                            preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
                             all_presets = {
                                 'presets': st.session_state.saved_presets
                             }
                             with open(preset_file, 'wb') as f:
                                 pickle.dump(all_presets, f)
-                        except:
-                            pass
+                        except Exception as e:
+                            st.error(f"プリセットの削除に失敗しました: {str(e)}")
                         
                         st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
                         st.rerun()
@@ -996,16 +1016,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     
                     # ファイルを更新
                     try:
-                        import pickle
-                        import os
-                        preset_file = os.path.join(os.path.expanduser('~'), '.pachi777_presets.pkl')
                         all_presets = {
                             'presets': st.session_state.saved_presets
                         }
                         with open(preset_file, 'wb') as f:
                             pickle.dump(all_presets, f)
-                    except:
-                        pass
+                    except Exception as e:
+                        st.error(f"プリセットの削除に失敗しました: {str(e)}")
                     
                     st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
                     st.rerun()
@@ -1116,279 +1133,214 @@ elif st.session_state.uploaded_file_names:
 
 # 解析を実行
 if uploaded_files and 'start_analysis' in st.session_state and st.session_state.start_analysis:
-        # 解析結果セクション
-        st.markdown("### 🎯 解析結果")
-        
-        # 現在使用中のプリセットを表示
-        current_preset_name = st.session_state.get('current_preset_name', 'デフォルト')
-        
-        st.info(f"📋 使用プリセット: **{current_preset_name}**")
-        
-        # 現在の設定値を表示
-        with st.expander("🔧 使用中の設定値", expanded=False):
-            current_settings = st.session_state.get('settings', default_settings)
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.markdown("**切り抜き設定**")
-                st.text(f"上方向: {current_settings.get('crop_top', 246)}px")
-                st.text(f"下方向: {current_settings.get('crop_bottom', 247)}px")
-                st.text(f"左余白: {current_settings.get('left_margin', 125)}px")
-                st.text(f"右余白: {current_settings.get('right_margin', 125)}px")
-            
-            with col2:
-                st.markdown("**検索範囲**")
-                st.text(f"開始位置: +{current_settings.get('search_start_offset', 50)}px")
-                st.text(f"終了位置: +{current_settings.get('search_end_offset', 500)}px")
-            
-            with col3:
-                st.markdown("**グリッドライン調整**")
-                st.text(f"+30k: {current_settings.get('grid_30k_offset', 0):+d}px")
-                st.text(f"+20k: {current_settings.get('grid_20k_offset', 0):+d}px")
-                st.text(f"+10k: {current_settings.get('grid_10k_offset', 0):+d}px")
-                st.text(f"-10k: {current_settings.get('grid_minus_10k_offset', 0):+d}px")
-                st.text(f"-20k: {current_settings.get('grid_minus_20k_offset', 0):+d}px")
-                st.text(f"-30k: {current_settings.get('grid_minus_30k_offset', 0):+d}px")
+    # 解析結果セクション
+    st.markdown("### 🎯 解析結果")
     
-        # プログレスバー
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        detail_text = st.empty()
+    # 現在使用中のプリセットを表示
+    current_preset_name = st.session_state.get('current_preset_name', 'デフォルト')
+    
+    st.info(f"📋 使用プリセット: **{current_preset_name}**")
+    
+    # 現在の設定値を表示
+    with st.expander("🔧 使用中の設定値", expanded=False):
+        current_settings = st.session_state.get('settings', default_settings)
+        col1, col2, col3 = st.columns(3)
         
-        # 初期メッセージを表示
-        status_text.text('🚀 解析を開始します...')
-        time.sleep(0.5)  # 少し待機してメッセージを見やすくする
-
-        # 解析結果を格納
-        analysis_results = []
-
-        # 各画像を処理
-        for idx, uploaded_file in enumerate(uploaded_files):
-            # 進捗更新（開始時）
-            progress_start = idx / len(uploaded_files)
-            progress_bar.progress(progress_start)
-            status_text.text(f'処理中... ({idx + 1}/{len(uploaded_files)})')
-            detail_text.text(f'📷 {uploaded_file.name} の画像を読み込み中...')
-            time.sleep(0.1)  # 視覚的フィードバックのため少し待機
-
-            # 画像を読み込み
-            image = Image.open(uploaded_file)
-            img_array = np.array(image)
-            height, width = img_array.shape[:2]
-
-            # OCRでデータ抽出を試みる
-            detail_text.text(f'🔍 {uploaded_file.name} のOCR解析を実行中...')
-            time.sleep(0.1)  # 視覚的フィードバック
-            ocr_data = extract_site7_data(img_array)
-
-            # Pattern3: Zero Line Based の自動検出
-            detail_text.text(f'📐 {uploaded_file.name} のグラフ領域を検出中...')
-            time.sleep(0.1)  # 視覚的フィードバック
-            hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
-            orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
-            orange_bottom = 0
-
-            # オレンジバーの検出
-            for y in range(height//2):
-                if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
+        with col1:
+            st.markdown("**切り抜き設定**")
+            st.text(f"上方向: {current_settings.get('crop_top', 246)}px")
+            st.text(f"下方向: {current_settings.get('crop_bottom', 247)}px")
+            st.text(f"左余白: {current_settings.get('left_margin', 125)}px")
+            st.text(f"右余白: {current_settings.get('right_margin', 125)}px")
+        
+        with col2:
+            st.markdown("**検索範囲**")
+            st.text(f"開始位置: +{current_settings.get('search_start_offset', 50)}px")
+            st.text(f"終了位置: +{current_settings.get('search_end_offset', 500)}px")
+        
+        with col3:
+            st.markdown("**グリッドライン調整**")
+            st.text(f"+30k: {current_settings.get('grid_30k_offset', 0):+d}px")
+            st.text(f"-30k: {current_settings.get('grid_minus_30k_offset', 0):+d}px")
+    
+    # プログレスバー
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    detail_text = st.empty()
+    
+    # 初期メッセージを表示
+    status_text.text('🚀 解析を開始します...')
+    time.sleep(0.5)  # 少し待機してメッセージを見やすくする
+    
+    # 解析結果を格納
+    analysis_results = []
+    
+    # 各画像を処理
+    for idx, uploaded_file in enumerate(uploaded_files):
+        # 進捗更新（開始時）
+        progress_start = idx / len(uploaded_files)
+        progress_bar.progress(progress_start)
+        status_text.text(f'処理中... ({idx + 1}/{len(uploaded_files)})')
+        detail_text.text(f'📷 {uploaded_file.name} の画像を読み込み中...')
+        time.sleep(0.1)  # 視覚的フィードバックのため少し徇機
+        
+        # 画像を読み込み
+        image = Image.open(uploaded_file)
+        img_array = np.array(image)
+        height, width = img_array.shape[:2]
+        
+        # OCRでデータ抽出を試みる
+        detail_text.text(f'🔍 {uploaded_file.name} のOCR解析を実行中...')
+        time.sleep(0.1)  # 視覚的フィードバック
+        ocr_data = extract_site7_data(img_array)
+        
+        # Pattern3: Zero Line Based の自動検出
+        detail_text.text(f'📐 {uploaded_file.name} のグラフ領域を検出中...')
+        time.sleep(0.1)  # 視覚的フィードバック
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
+        orange_bottom = 0
+        
+        # オレンジバーの検出
+        for y in range(height//2):
+            if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
+                orange_bottom = y
+        
+        # オレンジバーの下端を正確に見つける
+        if orange_bottom > 0:
+            for y in range(orange_bottom, min(orange_bottom + 100, height)):
+                if np.sum(orange_mask[y, :]) < width * 0.1 * 255:
                     orange_bottom = y
+                    break
+        else:
+            orange_bottom = 150
+        
+        # ゼロライン検出
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        
+        # 設定値を使用（セッションステートから取得）
+        settings = st.session_state.get('settings', default_settings)
+        
+        # 検索範囲（設定値を使用）
+        search_start = orange_bottom + settings['search_start_offset']
+        search_end = min(height - 100, orange_bottom + settings['search_end_offset'])
+        
+        # 切り抜きサイズ（±30000）
+        crop_top_offset = settings['crop_top']
+        crop_bottom_offset = settings['crop_bottom']
+        
+        best_score = 0
+        zero_line_y = (search_start + search_end) // 2
+        
+        for y in range(search_start, search_end):
+            row = gray[y, 100:width-100]
+            darkness = 1.0 - (np.mean(row) / 255.0)
+            uniformity = 1.0 - (np.std(row) / 128.0)
+            score = darkness * 0.5 + uniformity * 0.5
+            
+            if score > best_score:
+                best_score = score
+                zero_line_y = y
+        
+        # 切り抜き範囲を設定（最終調整値）
+        top = max(0, zero_line_y - crop_top_offset)  # 0ラインから上
+        bottom = min(height, zero_line_y + crop_bottom_offset)  # 0ラインから下
+        left = settings['left_margin']  # 左右の余白
+        right = width - settings['right_margin']  # 左右の余白
+        
+        # 切り抜き実行
+        cropped_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
+        
+        # グリッドラインを追加
+        # 切り抜き画像の高さは493px（246+247）
+        # 最上部が+30000、最下部が-30000なので、60000の範囲を493pxで表現
+        # 1pxあたり約121.7玉
+        crop_height = cropped_img.shape[0]
+        zero_line_in_crop = zero_line_y - top  # 切り抜き画像内での0ライン位置
+        
+        # スケール計算（上下246,247pxで±30000）
+        scale = 30000 / 246  # 約121.95玉/px
+        
+        # グリッドライン描画（設定値を使用）
+        # +30000ライン（最上部）
+        y_30k = 0 + settings.get('grid_30k_offset', 0)  # 最上部基準
+        if 0 <= y_30k < crop_height:
+            cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
+            cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
+        
+        # -30000ライン（最下部）
+        y_minus_30k = crop_height - 1 + settings.get('grid_minus_30k_offset', 0)
+        y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
+        cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
+        cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
 
-            # オレンジバーの下端を正確に見つける
-            if orange_bottom > 0:
-                for y in range(orange_bottom, min(orange_bottom + 100, height)):
-                    if np.sum(orange_mask[y, :]) < width * 0.1 * 255:
-                        orange_bottom = y
-                        break
+        # ゼロラインから±30000ラインまでの距離を計算
+        distance_to_plus_30k = zero_line_in_crop - y_30k
+        distance_to_minus_30k = y_minus_30k - zero_line_in_crop
+        
+        # 0ライン
+        y_0 = int(zero_line_in_crop)  # 調整なし
+        if 0 < y_0 < crop_height:
+            cv2.line(cropped_img, (0, y_0), (cropped_img.shape[1], y_0), (255, 0, 0), 2)
+            cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
+        
+        # 元画像にもグリッドラインを追加
+        img_with_grid = img_array.copy()
+        
+        # 元画像での座標に変換（切り抜き前の座標系）
+        # +30000ライン（元画像座標）
+        y_30k_orig = int(top + y_30k)
+        if 0 <= y_30k_orig < height:
+            cv2.line(img_with_grid, (0, y_30k_orig), (width, y_30k_orig), (128, 128, 128), 2)
+            cv2.putText(img_with_grid, '+30000', (10, max(20, y_30k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
+        
+        # -30000ライン（元画像座標）
+        y_minus_30k_orig = int(top + y_minus_30k)
+        if 0 <= y_minus_30k_orig < height:
+            cv2.line(img_with_grid, (0, y_minus_30k_orig), (width, y_minus_30k_orig), (128, 128, 128), 2)
+            cv2.putText(img_with_grid, '-30000', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
+        
+        # 0ライン（元画像座標）
+        if 0 <= zero_line_y < height:
+            cv2.line(img_with_grid, (0, zero_line_y), (width, zero_line_y), (255, 0, 0), 2)
+            cv2.putText(img_with_grid, '0', (10, zero_line_y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
+        
+        # 切り抜き範囲を示す枠線を追加（オプション）
+        cv2.rectangle(img_with_grid, (int(left), int(top)), (int(right), int(bottom)), (0, 255, 0), 2)
+
+        # 解析を自動実行
+        detail_text.text(f'📊 {uploaded_file.name} のグラフデータを解析中...')
+        with st.spinner(f"グラフを解析中... ({idx + 1}/{len(uploaded_files)})"):
+            # アナライザーを初期化
+            analyzer = WebCompatibleAnalyzer()
+            
+            # グリッドラインなしの画像を使用
+            analysis_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
+            
+            # 0ラインの位置を設定
+            analyzer.zero_y = zero_line_in_crop
+            # 調整されたグリッドライン位置に基づいてスケールを計算
+            crop_height = analysis_img.shape[0]
+            
+            # 調整された±30,000ライン位置
+            y_30k_adjusted = 0 + settings.get('grid_30k_offset', 0)
+            y_minus_30k_adjusted = crop_height - 1 + settings.get('grid_minus_30k_offset', 0)
+            
+            # ゼロラインから調整された±30,000ラインまでの距離
+            distance_to_plus_30k_adjusted = zero_line_in_crop - y_30k_adjusted
+            distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_line_in_crop
+            
+            # より正確なスケール計算（調整後の距離を使用）
+            if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
+                # 上下の平均距離を使用
+                avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
+                analyzer.scale = 30000 / avg_distance_adjusted
             else:
-                orange_bottom = 150
-
-            # ゼロライン検出
-            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-
-            # 設定値を使用（セッションステートから取得）
-            settings = st.session_state.get('settings', {
-                'search_start_offset': 50,
-                'search_end_offset': 500,
-                'crop_top': 246,
-                'crop_bottom': 247,
-                'left_margin': 125,
-                'right_margin': 125,
-                'grid_30k_offset': 0,
-                'grid_20k_offset': 0,
-                'grid_10k_offset': 0,
-                'grid_minus_10k_offset': 0,
-                'grid_minus_20k_offset': 0,
-                'grid_minus_30k_offset': 0
-            })
-
-            # 検索範囲（設定値を使用）
-            search_start = orange_bottom + settings['search_start_offset']
-            search_end = min(height - 100, orange_bottom + settings['search_end_offset'])
-
-            # 切り抜きサイズ（±30000）
-            crop_top_offset = settings['crop_top']
-            crop_bottom_offset = settings['crop_bottom']
-
-            best_score = 0
-            zero_line_y = (search_start + search_end) // 2
-
-            for y in range(search_start, search_end):
-                row = gray[y, 100:width-100]
-                darkness = 1.0 - (np.mean(row) / 255.0)
-                uniformity = 1.0 - (np.std(row) / 128.0)
-                score = darkness * 0.5 + uniformity * 0.5
-
-                if score > best_score:
-                    best_score = score
-                    zero_line_y = y
-
-            # 切り抜き範囲を設定（最終調整値）
-            top = max(0, zero_line_y - crop_top_offset)  # 0ラインから上
-            bottom = min(height, zero_line_y + crop_bottom_offset)  # 0ラインから下
-            left = settings['left_margin']  # 左右の余白
-            right = width - settings['right_margin']  # 左右の余白
-
-            # 切り抜き実行
-            cropped_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
-
-            # グリッドラインを追加
-            # 切り抜き画像の高さは493px（246+247）
-            # 最上部が+30000、最下部が-30000なので、60000の範囲を493pxで表現
-            # 1pxあたり約121.7玉
-            crop_height = cropped_img.shape[0]
-            zero_line_in_crop = zero_line_y - top  # 切り抜き画像内での0ライン位置
-
-            # スケール計算（上下246,247pxで±30000）
-            scale = 30000 / 246  # 約121.95玉/px
-
-            # グリッドライン描画（設定値を使用）
-            # +30000ライン（最上部）
-            y_30k = 0 + settings.get('grid_30k_offset', 0)  # 最上部基準
-            if 0 <= y_30k < crop_height:
-                cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
-                cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
-
-            # -30000ライン（最下部）
-            y_minus_30k = crop_height - 1 + settings.get('grid_minus_30k_offset', 0)
-            y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
-            cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
-            cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
-
-            # ゼロラインから±30000ラインまでの距離を計算
-            distance_to_plus_30k = zero_line_in_crop - y_30k
-            distance_to_minus_30k = y_minus_30k - zero_line_in_crop
-
-            # +20000ライン（+30000の2/3の位置 + 微調整）
-            y_20k = int(zero_line_in_crop - (distance_to_plus_30k * 2 / 3)) + settings.get('grid_20k_offset', 0)
-            if 0 < y_20k < crop_height:
-                cv2.line(cropped_img, (0, y_20k), (cropped_img.shape[1], y_20k), (128, 128, 128), 1)
-                cv2.putText(cropped_img, '+20000', (10, y_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
-
-            # +10000ライン（+30000の1/3の位置 + 微調整）
-            y_10k = int(zero_line_in_crop - (distance_to_plus_30k * 1 / 3)) + settings.get('grid_10k_offset', 0)
-            if 0 < y_10k < crop_height:
-                cv2.line(cropped_img, (0, y_10k), (cropped_img.shape[1], y_10k), (128, 128, 128), 1)
-                cv2.putText(cropped_img, '+10000', (10, y_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
-
-            # 0ライン
-            y_0 = int(zero_line_in_crop)  # 調整なし
-            if 0 < y_0 < crop_height:
-                cv2.line(cropped_img, (0, y_0), (cropped_img.shape[1], y_0), (255, 0, 0), 2)
-                cv2.putText(cropped_img, '0', (10, y_0 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
-
-            # -10000ライン（-30000の1/3の位置 + 微調整）
-            y_minus_10k = int(zero_line_in_crop + (distance_to_minus_30k * 1 / 3)) + settings.get('grid_minus_10k_offset', 0)
-            if 0 < y_minus_10k < crop_height:
-                cv2.line(cropped_img, (0, y_minus_10k), (cropped_img.shape[1], y_minus_10k), (128, 128, 128), 1)
-                cv2.putText(cropped_img, '-10000', (10, y_minus_10k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
-
-            # -20000ライン（-30000の2/3の位置 + 微調整）
-            y_minus_20k = int(zero_line_in_crop + (distance_to_minus_30k * 2 / 3)) + settings.get('grid_minus_20k_offset', 0)
-            if 0 < y_minus_20k < crop_height:
-                cv2.line(cropped_img, (0, y_minus_20k), (cropped_img.shape[1], y_minus_20k), (128, 128, 128), 1)
-                cv2.putText(cropped_img, '-20000', (10, y_minus_20k - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (64, 64, 64), 1)
-            
-            # 元画像にもグリッドラインを追加
-            img_with_grid = img_array.copy()
-            
-            # 元画像での座標に変換（切り抜き前の座標系）
-            # +30000ライン（元画像座標）
-            y_30k_orig = int(top + y_30k)
-            if 0 <= y_30k_orig < height:
-                cv2.line(img_with_grid, (0, y_30k_orig), (width, y_30k_orig), (128, 128, 128), 2)
-                cv2.putText(img_with_grid, '+30000', (10, max(20, y_30k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
-            
-            # -30000ライン（元画像座標）
-            y_minus_30k_orig = int(top + y_minus_30k)
-            if 0 <= y_minus_30k_orig < height:
-                cv2.line(img_with_grid, (0, y_minus_30k_orig), (width, y_minus_30k_orig), (128, 128, 128), 2)
-                cv2.putText(img_with_grid, '-30000', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
-            
-            # +20000ライン（元画像座標）
-            y_20k_orig = int(top + y_20k)
-            if 0 <= y_20k_orig < height:
-                cv2.line(img_with_grid, (0, y_20k_orig), (width, y_20k_orig), (128, 128, 128), 1)
-                cv2.putText(img_with_grid, '+20000', (10, y_20k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
-            
-            # +10000ライン（元画像座標）
-            y_10k_orig = int(top + y_10k)
-            if 0 <= y_10k_orig < height:
-                cv2.line(img_with_grid, (0, y_10k_orig), (width, y_10k_orig), (128, 128, 128), 1)
-                cv2.putText(img_with_grid, '+10000', (10, y_10k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
-            
-            # 0ライン（元画像座標）
-            if 0 <= zero_line_y < height:
-                cv2.line(img_with_grid, (0, zero_line_y), (width, zero_line_y), (255, 0, 0), 2)
-                cv2.putText(img_with_grid, '0', (10, zero_line_y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
-            
-            # -10000ライン（元画像座標）
-            y_minus_10k_orig = int(top + y_minus_10k)
-            if 0 <= y_minus_10k_orig < height:
-                cv2.line(img_with_grid, (0, y_minus_10k_orig), (width, y_minus_10k_orig), (128, 128, 128), 1)
-                cv2.putText(img_with_grid, '-10000', (10, y_minus_10k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
-            
-            # -20000ライン（元画像座標）
-            y_minus_20k_orig = int(top + y_minus_20k)
-            if 0 <= y_minus_20k_orig < height:
-                cv2.line(img_with_grid, (0, y_minus_20k_orig), (width, y_minus_20k_orig), (128, 128, 128), 1)
-                cv2.putText(img_with_grid, '-20000', (10, y_minus_20k_orig - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (64, 64, 64), 1)
-            
-            # 切り抜き範囲を示す枠線を追加（オプション）
-            cv2.rectangle(img_with_grid, (int(left), int(top)), (int(right), int(bottom)), (0, 255, 0), 2)
-
-            # 解析を自動実行
-            detail_text.text(f'📊 {uploaded_file.name} のグラフデータを解析中...')
-            with st.spinner(f"グラフを解析中... ({idx + 1}/{len(uploaded_files)})"):
-                # アナライザーを初期化
-                analyzer = WebCompatibleAnalyzer()
-
-                # グリッドラインなしの画像を使用
-                analysis_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
-
-                # 0ラインの位置を設定
-                analyzer.zero_y = zero_line_in_crop
-                # 調整されたグリッドライン位置に基づいてスケールを計算
-                crop_height = analysis_img.shape[0]
-                
-                # 調整された±30,000ライン位置
-                y_30k_adjusted = 0 + settings.get('grid_30k_offset', 0)
-                y_minus_30k_adjusted = crop_height - 1 + settings.get('grid_minus_30k_offset', 0)
-                
-                # ゼロラインから調整された±30,000ラインまでの距離
-                distance_to_plus_30k_adjusted = zero_line_in_crop - y_30k_adjusted
-                distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_line_in_crop
-                
-                # より正確なスケール計算（調整後の距離を使用）
-                if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
-                    # 上下の平均距離を使用
-                    avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
-                    analyzer.scale = 30000 / avg_distance_adjusted
-                else:
-                    # フォールバック（調整前の値を使用）
-                    distance_to_top = zero_line_in_crop
-                    distance_to_bottom = crop_height - zero_line_in_crop
-                    avg_distance = (distance_to_top + distance_to_bottom) / 2
-                    analyzer.scale = 30000 / avg_distance
+                # フォールバック（調整前の値を使用）
+                distance_to_top = zero_line_in_crop
+                distance_to_bottom = crop_height - zero_line_in_crop
+                avg_distance = (distance_to_top + distance_to_bottom) / 2
+                analyzer.scale = 30000 / avg_distance
 
                 # グラフデータを抽出
                 graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
