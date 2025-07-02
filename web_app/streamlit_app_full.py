@@ -2306,7 +2306,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 'current_val': int(current_val),
                 'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
                 'dominant_color': dominant_color,
-                'ocr_data': ocr_data  # OCRデータを追加
+                'ocr_data': ocr_data,  # OCRデータを追加
+                'correction_factor': correction_factor  # 補正係数を追加
             })
         else:
             # 解析失敗時
@@ -2479,6 +2480,11 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 first_hit_text = f"{result['first_hit_val']:,}玉" if result['first_hit_val'] is not None else "なし"
                 first_hit_class = get_value_class(result['first_hit_val']) if result['first_hit_val'] is not None else ""
 
+                # 補正係数の表示を準備
+                correction_info = ""
+                if 'correction_factor' in result and result['correction_factor'] != 1.0:
+                    correction_info = f'<div style="font-size: 0.8em; color: #666; text-align: right; margin-top: 5px;">補正率: x{result["correction_factor"]:.2f}</div>'
+                
                 st.markdown(f"""
                 <div class="stat-card">
                     <div class="stat-item">
@@ -2497,6 +2503,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         <span class="stat-label">🎰 初当たり</span>
                         <span class="stat-value {first_hit_class}">{first_hit_text}</span>
                     </div>
+                    {correction_info}
                 </div>
                 """, unsafe_allow_html=True)
 
