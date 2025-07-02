@@ -117,7 +117,7 @@ def extract_site7_data(image):
 # デフォルト値
 default_settings = {
     'search_start_offset': 50,
-    'search_end_offset': 400,
+    'search_end_offset': 500,
     'crop_top': 246,
     'crop_bottom': 247,
     'left_margin': 125,
@@ -1037,7 +1037,7 @@ if uploaded_files:
             # デバッグ情報を表示
             with st.expander("🔍 適用された設定値", expanded=False):
                 st.code(f"検索開始: {st.session_state.settings.get('search_start_offset', 50)}")
-                st.code(f"検索終了: {st.session_state.settings.get('search_end_offset', 400)}")
+                st.code(f"検索終了: {st.session_state.settings.get('search_end_offset', 500)}")
                 st.code(f"上切り抜き: {st.session_state.settings.get('crop_top', 246)}")
                 st.code(f"下切り抜き: {st.session_state.settings.get('crop_bottom', 247)}")
                 st.code(f"+30kライン調整: {st.session_state.settings.get('grid_30k_offset', 0)}")
@@ -1085,7 +1085,7 @@ if uploaded_files:
             with col2:
                 st.markdown("**検索範囲**")
                 st.text(f"開始位置: +{current_settings.get('search_start_offset', 50)}px")
-                st.text(f"終了位置: +{current_settings.get('search_end_offset', 400)}px")
+                st.text(f"終了位置: +{current_settings.get('search_end_offset', 500)}px")
             
             with col3:
                 st.markdown("**グリッドライン調整**")
@@ -1154,7 +1154,7 @@ if uploaded_files:
             # 設定値を使用（セッションステートから取得）
             settings = st.session_state.get('settings', {
                 'search_start_offset': 50,
-                'search_end_offset': 400,
+                'search_end_offset': 500,
                 'crop_top': 246,
                 'crop_bottom': 247,
                 'left_margin': 125,
