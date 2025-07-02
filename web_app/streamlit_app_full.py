@@ -1224,9 +1224,10 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             
             # 切り抜き結果（元画像の下に配置）
             st.markdown("#### 切り抜き結果")
-            cropped_preview = img_array_preview[int(top):int(bottom), int(left):int(right)].copy()
+            cropped_preview_original = img_array_preview[int(top):int(bottom), int(left):int(right)].copy()
+            cropped_preview = cropped_preview_original.copy()  # 表示用のコピーを作成
             
-            # グリッドラインを追加
+            # グリッドラインを追加（表示用画像にのみ）
             zero_in_crop = zero_line_y - top
             cv2.line(cropped_preview, (0, int(zero_in_crop)), (cropped_preview.shape[1], int(zero_in_crop)), (255, 0, 0), 2)
             
@@ -1305,8 +1306,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     else:
                         analyzer_preview.scale = 122  # デフォルト
                 
-                # BGRに変換
-                cropped_bgr_preview = cv2.cvtColor(cropped_preview, cv2.COLOR_RGB2BGR)
+                # BGRに変換（グリッドラインなしの元画像を使用）
+                cropped_bgr_preview = cv2.cvtColor(cropped_preview_original, cv2.COLOR_RGB2BGR)
                 
                 # グラフデータを抽出
                 data_points_preview, color_preview, _ = analyzer_preview.extract_graph_data(cropped_bgr_preview)
@@ -1326,8 +1327,44 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     # 実際の値が入力されている場合はそれを使用、そうでなければ検出値を使用
                     display_max_value = actual_max_value if actual_max_value is not None else max_val_detected
                     
-                    # グラフ上の実際の最大値のY座標（検出値ベース）
-                    max_y_in_crop = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
+                    # グラフ上の実際の最大値のY座標（非線形スケール対応）
+                    if st.session_state.settings.get('use_nonlinear_scale', False) and hasattr(analyzer_preview, 'scale_points'):
+                        # 非線形スケールの場合、値からY座標を逆算
+                        max_y_in_crop = None
+                        for i in range(len(analyzer_preview.scale_points) - 1):
+                            y1, val1 = analyzer_preview.scale_points[i]
+                            y2, val2 = analyzer_preview.scale_points[i + 1]
+                            
+                            if val1 <= max_val_detected <= val2 or val2 <= max_val_detected <= val1:
+                                # この区間で線形補間
+                                if val2 != val1:
+                                    ratio = (max_val_detected - val1) / (val2 - val1)
+                                    max_y_in_crop = int(y1 + ratio * (y2 - y1))
+                                    break
+                        
+                        # 範囲外の場合
+                        if max_y_in_crop is None:
+                            if max_val_detected > max(p[1] for p in analyzer_preview.scale_points):
+                                # 最大値より大きい場合
+                                y1, val1 = analyzer_preview.scale_points[-2]
+                                y2, val2 = analyzer_preview.scale_points[-1]
+                                if val2 != val1:
+                                    scale = (y2 - y1) / (val2 - val1)
+                                    max_y_in_crop = int(y2 + scale * (max_val_detected - val2))
+                                else:
+                                    max_y_in_crop = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
+                            else:
+                                # 最小値より小さい場合
+                                y1, val1 = analyzer_preview.scale_points[0]
+                                y2, val2 = analyzer_preview.scale_points[1]
+                                if val2 != val1:
+                                    scale = (y2 - y1) / (val2 - val1)
+                                    max_y_in_crop = int(y1 + scale * (max_val_detected - val1))
+                                else:
+                                    max_y_in_crop = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
+                    else:
+                        # 線形スケールの場合
+                        max_y_in_crop = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
                     
                     # 表示する値は実際の値があればそれを使用
                     if actual_max_value and max_val_detected > 0:
