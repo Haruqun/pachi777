@@ -652,6 +652,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     if test_image:
         st.markdown("### 🧪 テスト機能: 最大値アライメント")
         st.info("この機能は実験的なものです。読み取ったグラフの最高値と画像上の最高値を一致させることで精度向上を試みます。")
+        st.caption("💡 ヒント: 実際の最大値を入力すると、自動的にグリッドラインの調整値を計算し、ワンクリックで適用できます。")
         
         # 最大値アライメント設定
         # テスト解析を実行
@@ -689,9 +690,22 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             analysis = analyzer.analyze_values(data_points)
             detected_max = analysis['max_value']
             
+            # 最大値の位置にマーカーを追加した画像を作成
+            marked_image = cropped_for_analysis.copy()
+            max_index = analysis['max_index']
+            if max_index < len(data_points):
+                max_x, max_y_value = data_points[max_index]
+                max_y_pixel = int(zero_in_crop - (max_y_value / analyzer.scale))
+                # 最大値の位置に赤い横線を引く
+                cv2.line(marked_image, (0, max_y_pixel), (marked_image.shape[1], max_y_pixel), (255, 0, 0), 2)
+                # 最大値のラベルを追加
+                cv2.putText(marked_image, f'MAX: {detected_max:,}', (10, max_y_pixel - 10), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+            
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("検出された最大値", f"{detected_max:,}玉")
+                st.image(marked_image, caption="最大値の位置（赤線）", use_column_width=True)
             
             with col2:
                     visual_max = st.number_input(
@@ -714,15 +728,55 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     corrected_scale = analyzer.scale * correction_factor
                     st.info(f"推奨スケール: {corrected_scale:.1f} 玉/ピクセル (現在: {analyzer.scale:.1f})")
                     
-                    # グリッドライン調整の提案
-                    if correction_factor > 1.0:
-                        st.write("📏 グラフが圧縮されている可能性があります。以下の調整を試してください：")
-                        st.write(f"- +30,000ライン調整: {int((1-correction_factor)*distance_to_plus_30k)}")
-                        st.write(f"- -30,000ライン調整: {int((correction_factor-1)*distance_to_minus_30k)}")
-                    else:
-                        st.write("📏 グラフが拡大されている可能性があります。以下の調整を試してください：")
-                        st.write(f"- +30,000ライン調整: {int((1-correction_factor)*distance_to_plus_30k)}")
-                        st.write(f"- -30,000ライン調整: {int((correction_factor-1)*distance_to_minus_30k)}")
+                    # 最大値の位置を取得
+                    max_index = analysis['max_index']
+                    if max_index < len(data_points):
+                        max_x, max_y_value = data_points[max_index]
+                        # 画像座標系での最大値のY座標（0が上、heightが下）
+                        max_y_pixel = int(zero_in_crop - (max_y_value / analyzer.scale))
+                        
+                        # 実際の最大値に基づいて新しいスケールを計算
+                        # max_y_pixelから0ラインまでの距離がvisual_max玉に相当
+                        actual_distance = zero_in_crop - max_y_pixel
+                        if actual_distance > 0:
+                            new_scale = visual_max / actual_distance
+                            
+                            # 新しい+30000ラインの位置を計算
+                            new_30k_distance = 30000 / new_scale
+                            current_30k_distance = zero_in_crop - grid_30k_offset
+                            adjustment_30k = int(current_30k_distance - new_30k_distance)
+                            
+                            # 新しい-30000ラインの位置を計算
+                            new_minus_30k_distance = 30000 / new_scale
+                            current_minus_30k_distance = (cropped_for_analysis.shape[0] - 1 + grid_minus_30k_offset) - zero_in_crop
+                            adjustment_minus_30k = int(new_minus_30k_distance - current_minus_30k_distance)
+                            
+                            st.write("### 🎯 自動調整の推奨値")
+                            st.write("最大値の位置に基づいて、以下の調整を推奨します：")
+                            
+                            col_adj1, col_adj2 = st.columns(2)
+                            with col_adj1:
+                                st.write(f"**+30,000ライン調整:** `{adjustment_30k:+d}` px")
+                                st.write(f"**+20,000ライン調整:** `{int(adjustment_30k * 2/3):+d}` px")
+                                st.write(f"**+10,000ライン調整:** `{int(adjustment_30k * 1/3):+d}` px")
+                            
+                            with col_adj2:
+                                st.write(f"**-10,000ライン調整:** `{int(adjustment_minus_30k * 1/3):+d}` px")
+                                st.write(f"**-20,000ライン調整:** `{int(adjustment_minus_30k * 2/3):+d}` px")
+                                st.write(f"**-30,000ライン調整:** `{adjustment_minus_30k:+d}` px")
+                            
+                            # 自動適用ボタン
+                            if st.button("🔧 推奨値を自動適用", type="secondary"):
+                                # セッションステートに新しい値を設定
+                                st.session_state.settings['grid_30k_offset'] = grid_30k_offset + adjustment_30k
+                                st.session_state.settings['grid_20k_offset'] = grid_20k_offset + int(adjustment_30k * 2/3)
+                                st.session_state.settings['grid_10k_offset'] = grid_10k_offset + int(adjustment_30k * 1/3)
+                                st.session_state.settings['grid_minus_10k_offset'] = grid_minus_10k_offset + int(adjustment_minus_30k * 1/3)
+                                st.session_state.settings['grid_minus_20k_offset'] = grid_minus_20k_offset + int(adjustment_minus_30k * 2/3)
+                                st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + adjustment_minus_30k
+                                st.success("✅ 推奨値を適用しました！画面が更新されます...")
+                                time.sleep(1)
+                                st.rerun()
                 else:
                     st.success("✅ 検出値と実際の値がほぼ一致しています！")
         else:
