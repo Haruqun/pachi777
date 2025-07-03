@@ -122,12 +122,12 @@ default_settings = {
     'search_start_offset': 50,
     'search_end_offset': 500,
     'crop_top': 246,
-    'crop_bottom': 247,
+    'crop_bottom': 280,
     'left_margin': 125,
     'right_margin': 125,
     # グリッドライン調整値
-    'grid_30k_offset': 0,       # +30000ライン（最上部）
-    'grid_minus_30k_offset': 0, # -30000ライン（最下部）
+    'grid_30k_offset': 1,       # +30000ライン（最上部）
+    'grid_minus_30k_offset': -34, # -30000ライン（最下部）
 }
 
 # セッションステートの初期化（エキスパンダーより前に行う）
@@ -136,6 +136,8 @@ if 'settings' not in st.session_state:
 
 if 'saved_presets' not in st.session_state:
     st.session_state.saved_presets = {}
+    # データベースから読み込みフラグを設定
+    st.session_state.force_reload_presets = True
 
 if 'show_adjustment' not in st.session_state:
     st.session_state.show_adjustment = False
@@ -446,8 +448,10 @@ def load_presets_from_db():
         return {}
 
 # セッションステートにプリセットを読み込み
-if 'saved_presets' not in st.session_state:
+# リロード時も常に最新のプリセットを読み込む
+if 'saved_presets' not in st.session_state or st.session_state.get('force_reload_presets', False):
     st.session_state.saved_presets = load_presets_from_db()
+    st.session_state.force_reload_presets = False
 
 # プリセットを保存
 def save_preset_to_db(name, settings):
