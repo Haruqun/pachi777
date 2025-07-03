@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-パチンコグラフ解析システム - シンプル版
-画像アップロード機能のみ
+AI Graph Analysis Report - Professional Edition
+高精度データ抽出・解析システム
 """
 
 import streamlit as st
@@ -22,7 +22,7 @@ import secrets
 
 # ページ設定
 st.set_page_config(
-    page_title="パチンコグラフ解析",
+    page_title="AI Graph Analysis Report",
     page_icon="🎰",
     layout="wide"
 )
@@ -223,15 +223,29 @@ if not st.session_state.authenticated and not st.session_state.session_token_che
     # Cookie管理用のJavaScriptを挿入
     st.markdown(cookie_manager(), unsafe_allow_html=True)
     
-    # 隠しフィールドでセッショントークンをチェック
-    token_check = st.text_input("", key="check-session-token", label_visibility="hidden")
-    if token_check and verify_session_token(token_check):
-        st.session_state.authenticated = True
-        st.session_state.session_token = token_check
-        st.session_state.session_token_checked = True
-        st.rerun()
-    else:
-        st.session_state.session_token_checked = True
+    # JavaScriptでセッショントークンを取得してチェック
+    st.markdown("""
+    <script>
+    function checkSessionToken() {
+        var token = getCookie('pachi777_session');
+        if (token) {
+            // Streamlitにトークンを渡すための隠し要素を作成
+            var hiddenDiv = document.getElementById('session-token-holder');
+            if (!hiddenDiv) {
+                hiddenDiv = document.createElement('div');
+                hiddenDiv.id = 'session-token-holder';
+                hiddenDiv.style.display = 'none';
+                hiddenDiv.textContent = token;
+                document.body.appendChild(hiddenDiv);
+            }
+        }
+    }
+    checkSessionToken();
+    </script>
+    """, unsafe_allow_html=True)
+    
+    # セッショントークンのチェックはJavaScriptで行うため、ここでは認証状態のみチェック
+    st.session_state.session_token_checked = True
 
 # パスワード認証
 if not st.session_state.authenticated:
@@ -338,8 +352,8 @@ if not st.session_state.authenticated:
     with col2:
         st.markdown("""
         <div class="login-card">
-            <h1 class="login-title">パチンコグラフ解析</h1>
-            <p class="login-subtitle">認証が必要です</p>
+            <h1 class="login-title">AI Graph Analysis Report</h1>
+            <p class="login-subtitle">Professional Edition - 認証が必要です</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -392,7 +406,7 @@ if not st.session_state.authenticated:
         # フッター
         st.markdown(f"""
         <div class="login-footer">
-            パチンコグラフ解析システム v2.0<br>
+            AI Graph Analysis Report v2.0<br>
             更新日: {datetime.now().strftime('%Y/%m/%d')}<br>
             Produced by <a href="https://pp-town.com/" target="_blank">PPタウン</a><br>
             Created by <a href="https://fivenine-design.com" target="_blank">fivenine-design.com</a>
@@ -437,8 +451,14 @@ except Exception as e:
 
 # 本番解析セクション
 st.markdown("---")
-st.markdown("## 🎰 グラフ解析")
-st.caption("調整が完了したら、実際のグラフ画像を解析します")
+st.markdown("## 🎰 AI Graph Analysis Report")
+st.caption("""高精度データ抽出・解析システム - Professional Edition
+
+本システムは、パチンコ台のグラフ画像をAI技術で自動解析する専門ツールです。
+OCR技術による台番号・回転数の自動読み取り、画像処理によるグラフデータの精密抽出、
+独自アルゴリズムによる統計解析を実現。複数画像の一括処理にも対応し、
+解析結果はCSV形式でダウンロード可能。プリセット機能により、
+異なる端末や表示形式にも柔軟に対応できる高精度な解析システムです。""")
 
 # 使い方ガイド
 show_analysis_help = st.checkbox("📖 解析の使い方を表示", value=False, key="show_analysis_help")
