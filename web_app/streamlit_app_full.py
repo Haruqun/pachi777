@@ -337,17 +337,17 @@ if not st.session_state.authenticated:
             else:
                 st.session_state.login_error = True
         
-        # フォームコンテナでパスワード入力を囲む
-        with st.container():
-            # パスワード入力（Enterキーでログイン可能）
-            password = st.text_input(
-                "パスワード",
-                type="password",
-                placeholder="パスワードを入力してください",
-                label_visibility="hidden",
-                key="password_input",
-                on_change=handle_login
-            )
+        # パスワード入力（Enterキーでログイン可能）
+        # ラベルを上に表示
+        st.markdown('<p style="margin-bottom: 5px; color: #ffffff;">パスワード</p>', unsafe_allow_html=True)
+        password = st.text_input(
+            label="password_field",  # 内部用のラベル
+            type="password",
+            placeholder="パスワードを入力してください",
+            label_visibility="collapsed",  # hiddenではなくcollapsedを使用
+            key="password_input",
+            on_change=handle_login
+        )
         
         # ログインボタン
         if st.button("ログイン", type="primary", use_container_width=True):
