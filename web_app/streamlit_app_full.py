@@ -635,6 +635,7 @@ if uploaded_files:
     # 設定を調整ボタン（別行で表示）
     if st.button("⚙️ 調整設定を開く", use_container_width=True, help="設定を細かく調整したい場合はこちら"):
         st.session_state.show_adjustment = True
+        st.session_state.scroll_to_adjustment = True
         st.rerun()
     
     # STEP 3: 解析開始
@@ -1475,6 +1476,26 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             """)
 
 # 調整機能（コラプス）
+# アンカー用のHTMLを追加
+st.markdown('<div id="adjustment-settings"></div>', unsafe_allow_html=True)
+
+# スクロール処理
+if st.session_state.get('scroll_to_adjustment', False):
+    st.markdown("""
+    <script>
+    // ページ読み込み後にスクロール
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            var element = document.getElementById('adjustment-settings');
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 500);
+    });
+    </script>
+    """, unsafe_allow_html=True)
+    st.session_state.scroll_to_adjustment = False
+
 with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state.show_adjustment):
     st.markdown("##### 端末ごとの調整設定")
     st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
