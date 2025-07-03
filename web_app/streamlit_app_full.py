@@ -472,8 +472,30 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     # STEP 1: テスト画像のアップロード
     st.markdown("### 📸 STEP 1: テスト用画像をアップロード")
     st.caption("実際の最大値がわかるグラフ画像を用意してください")
+    
+    # サンプル画像の表示
+    show_sample = st.checkbox("📷 調整例を表示", value=False, key="show_adjustment_sample")
+    if show_sample:
+        st.info("""
+        **調整用画像の例**
+        
+        ✅ **良い例**
+        - 実際の最大値が確認できる画像
+        - 例：店舗の実機で「最大+15,000玉」と確認した画像
+        - グラフが明確に写っている画像
+        
+        ❌ **悪い例**
+        - 最大値が不明な画像
+        - グラフが不鮮明な画像
+        - 画面が暗い・ぼやけている画像
+        
+        💡 **ヒント**
+        - 複数枚使用するとより正確になります
+        - 異なる最大値の画像を混ぜてもOK
+        """)
+    
     test_images = st.file_uploader(
-        "🖼️ テスト用画像をアップロード",
+        "画像を選択",
         type=['jpg', 'jpeg', 'png'],
         help="調整用の画像を複数アップロードできます。複数枚の場合は統計的に処理されます",
         key="test_images",
@@ -1335,7 +1357,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
 
 # 本番解析セクション
 st.markdown("---")
-st.markdown("## 🎰 グラフ解析（本番）")
+st.markdown("## 🎰 グラフ解析")
 st.caption("調整が完了したら、実際のグラフ画像を解析します")
 
 # 使い方ガイド
