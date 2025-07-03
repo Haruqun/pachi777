@@ -434,933 +434,6 @@ except Exception as e:
     # 読み込みエラーは無視
     pass
 
-# 調整機能（コラプス）
-with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state.show_adjustment):
-    st.markdown("##### 端末ごとの調整設定")
-    st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
-    
-    # 初心者向けの使い方説明
-    show_help = st.checkbox("📖 調整機能の使い方を表示", value=False, key="show_adjustment_help")
-    if show_help:
-        st.info("""
-        **🎯 調整機能とは？**  
-        site7のグラフは端末（iPhone/Android）や画面サイズによって表示が異なります。
-        この機能で**お使いの端末に最適な設定**を保存できます。
-        
-        **📝 使い方（3ステップ）**
-        
-        1️⃣ **テスト画像を準備**
-        - 実際の最大値がわかるグラフ画像を用意
-        - 例：「最大値が+15,000玉」とわかっている画像
-        
-        2️⃣ **自動調整を実行**
-        - 画像をアップロード → 実際の最大値を入力
-        - 「🔧 推奨値を自動適用」ボタンをクリック
-        - 必要に応じて手動で微調整
-        
-        3️⃣ **設定を保存**
-        - プリセット名を入力（例：iPhone15用）
-        - 「💾 保存」ボタンをクリック
-        
-        💡 **ポイント**
-        - 複数枚の画像で調整するとより正確になります
-        - 一度設定すれば、次回から選ぶだけでOK
-        - 端末を変えたら新しいプリセットを作成
-        """)
-        st.divider()
-    
-    # STEP 1: テスト画像のアップロード
-    st.markdown("### 📸 STEP 1: テスト用画像をアップロード")
-    st.caption("実際の最大値がわかるグラフ画像を用意してください")
-    
-    # サンプル画像の表示
-    show_sample = st.checkbox("📷 調整例を表示", value=False, key="show_adjustment_sample")
-    if show_sample:
-        st.info("""
-        **調整用画像の例**
-        
-        ✅ **良い例**
-        - 実際の最大値が確認できる画像
-        - 例：店舗の実機で「最大+15,000玉」と確認した画像
-        - グラフが明確に写っている画像
-        
-        ❌ **悪い例**
-        - 最大値が不明な画像
-        - グラフが不鮮明な画像
-        - 画面が暗い・ぼやけている画像
-        
-        💡 **ヒント**
-        - 複数枚使用するとより正確になります
-        - 異なる最大値の画像を混ぜてもOK
-        """)
-        
-        # サンプル画像が存在する場合は表示
-        sample_image_path = "web_app/images/sample.png"
-        if os.path.exists(sample_image_path):
-            st.markdown("**📸 調整画面の見本**")
-            st.image(sample_image_path, caption="各エリアの説明付きサンプル", use_column_width=True)
-            st.caption("このような画像で、実際の最大値（この例では+2290玉）を入力して調整します")
-    
-    test_images = st.file_uploader(
-        "画像を選択",
-        type=['jpg', 'jpeg', 'png'],
-        help="調整用の画像を複数アップロードできます。複数枚の場合は統計的に処理されます",
-        key="test_images",
-        accept_multiple_files=True
-    )
-    
-    # 単一画像の場合の互換性のため
-    test_image = test_images[0] if test_images else None
-    
-    # 画像がアップロードされた場合のみプリセット選択を表示
-    if test_image:
-        st.divider()
-        
-        # STEP 2: プリセット選択セクション
-        st.markdown("### 📋 STEP 2: 設定の読み込み（任意）")
-        st.caption("保存済みの設定がある場合は選択してください")
-        
-        # 保存されたプリセット一覧
-        preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
-        
-        # プリセットボタンを横に並べる
-        if len(preset_names) <= 4:
-            preset_cols = st.columns(len(preset_names))
-            # プリセットが4個以下の場合
-            for i, preset_name in enumerate(preset_names):
-                with preset_cols[i]:
-                    button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
-                    if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
-                        if preset_name == "デフォルト":
-                            st.session_state.settings = default_settings.copy()
-                        else:
-                            st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
-                        
-                        # 現在のプリセット名を保存（編集モードで使用）
-                        st.session_state.current_preset_name = preset_name
-                        st.session_state.editing_preset_name = preset_name
-                        
-                        st.success(f"✅ '{preset_name}' の設定を読み込みました")
-                        time.sleep(0.5)
-                        st.rerun()
-        else:
-            # 5個以上の場合は複数行に分ける
-            num_rows = (len(preset_names) + 3) // 4  # 4列で何行必要か
-            for row in range(num_rows):
-                cols = st.columns(4)
-                for col in range(4):
-                    idx = row * 4 + col
-                    if idx < len(preset_names):
-                        preset_name = preset_names[idx]
-                        with cols[col]:
-                            button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
-                            if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
-                                if preset_name == "デフォルト":
-                                    st.session_state.settings = default_settings.copy()
-                                else:
-                                    st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
-                                
-                                # 現在のプリセット名を保存（編集モードで使用）
-                                st.session_state.current_preset_name = preset_name
-                                st.session_state.editing_preset_name = preset_name
-                                
-                                st.success(f"✅ '{preset_name}' の設定を読み込みました")
-                                time.sleep(0.5)
-                                st.rerun()
-        
-        st.divider()
-    
-    
-    # 設定値の初期化
-    if test_image:
-        # 画像を読み込み
-        img_array = np.array(Image.open(test_image).convert('RGB'))
-        height, width = img_array.shape[:2]
-        
-        # オレンジバーを検出
-        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
-        orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
-        orange_bottom = 0
-        
-        for y in range(height//2):
-            if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
-                orange_bottom = y
-        
-        if orange_bottom > 0:
-            for y in range(orange_bottom, min(orange_bottom + 100, height)):
-                if np.sum(orange_mask[y, :]) < width * 0.1 * 255:
-                    orange_bottom = y
-                    break
-        else:
-            orange_bottom = 150
-        
-        # グレースケール変換
-        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-        
-        st.info(f"画像サイズ: {width}x{height}px")
-        
-        # レイアウト用のメインカラム（画像を読み込んだ後）
-        main_col1, main_col2 = st.columns([3, 2])
-    
-    # 画像がアップロードされている場合のみレイアウトを適用
-    if test_image:
-        with main_col2:
-            # STEP 3: 設定用の入力フィールド
-            st.markdown("### 🔍 STEP 3: 詳細設定（通常はデフォルトでOK）")
-            st.caption("必要に応じて微調整できます")
-            
-            st.markdown("#### ゼロライン検索設定")
-            col1, col2 = st.columns(2)
-    
-            with col1:
-                search_start_offset = st.number_input(
-                    "検索開始位置（オレンジバーから）",
-                    min_value=0, max_value=800, value=st.session_state.settings['search_start_offset'],
-                    step=10, help="オレンジバーから何ピクセル下から検索を開始するか"
-                )
-            
-            with col2:
-                search_end_offset = st.number_input(
-                    "検索終了位置（オレンジバーから）",
-                    min_value=100, max_value=1200, value=st.session_state.settings['search_end_offset'],
-                    step=50, help="オレンジバーから何ピクセル下まで検索するか"
-                )
-            
-            st.markdown("#### ✂️ 切り抜きサイズの設定")
-            col3, col4 = st.columns(2)
-    
-            with col3:
-                crop_top = st.number_input(
-                    "上方向の切り抜きサイズ",
-                    min_value=100, max_value=500, value=st.session_state.settings['crop_top'],
-                    step=1, help="ゼロラインから上方向に何ピクセル切り抜くか"
-                )
-                crop_bottom = st.number_input(
-                    "下方向の切り抜きサイズ",
-                    min_value=100, max_value=500, value=st.session_state.settings['crop_bottom'],
-                    step=1, help="ゼロラインから下方向に何ピクセル切り抜くか"
-                )
-            
-            with col4:
-                left_margin = st.number_input(
-                    "左側の余白",
-                    min_value=0, max_value=300, value=st.session_state.settings['left_margin'],
-                    step=25, help="左側から何ピクセル除外するか"
-                )
-                right_margin = st.number_input(
-                    "右側の余白",
-                    min_value=0, max_value=300, value=st.session_state.settings['right_margin'],
-                    step=25, help="右側から何ピクセル除外するか"
-                )
-            
-            # グリッドライン調整
-            st.markdown("#### 📏 グリッドライン調整")
-            
-            # グリッドライン手動調整
-            st.markdown("#### ⚙️ 手動調整")
-            st.caption("±30,000ラインの位置を微調整できます（単位：ピクセル）")
-            
-            grid_col1, grid_col2 = st.columns(2)
-            
-            with grid_col1:
-                grid_30k_offset = st.number_input(
-                    "+30,000ライン調整",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_30k_offset', 0),
-                    step=1, help="上端の+30,000ラインの位置調整"
-                )
-            
-            with grid_col2:
-                grid_minus_30k_offset = st.number_input(
-                    "-30,000ライン調整",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
-                    step=1, help="下端の-30,000ラインの位置調整"
-                )
-            
-            # 中間ライン用のダミー変数を設定（他のコードで参照されるため）
-            
-            # STEP 4: 最大値アライメント機能を統合
-            if test_images:
-                st.markdown("### 🎯 STEP 4: 実際の最大値を入力して自動調整")
-                st.caption(f"アップロードされた{len(test_images)}枚の画像から最適な設定を自動計算します")
-                
-                # 複数画像の解析結果を保存
-                all_detections = []
-                all_max_positions = []
-                
-                # 現在の設定を取得（入力フィールドの値を使用）
-                current_settings_align = {
-                    'search_start_offset': search_start_offset,
-                    'search_end_offset': search_end_offset,
-                    'crop_top': crop_top,
-                    'crop_bottom': crop_bottom,
-                    'left_margin': left_margin,
-                    'right_margin': right_margin,
-                    'grid_30k_offset': grid_30k_offset,
-                    'grid_minus_30k_offset': grid_minus_30k_offset
-                }
-                
-                # 各画像を解析
-                for img_idx, test_img in enumerate(test_images):
-                    # 画像を読み込み
-                    img_array_tmp = np.array(Image.open(test_img).convert('RGB'))
-                    height_tmp, width_tmp = img_array_tmp.shape[:2]
-                    
-                    # オレンジバーを検出
-                    hsv_tmp = cv2.cvtColor(img_array_tmp, cv2.COLOR_RGB2HSV)
-                    orange_mask_tmp = cv2.inRange(hsv_tmp, np.array([10, 100, 100]), np.array([30, 255, 255]))
-                    orange_bottom_tmp = 0
-                    
-                    for y in range(height_tmp//2):
-                        if np.sum(orange_mask_tmp[y, :]) > width_tmp * 0.3 * 255:
-                            orange_bottom_tmp = y
-                    
-                    if orange_bottom_tmp > 0:
-                        for y in range(orange_bottom_tmp, min(orange_bottom_tmp + 100, height_tmp)):
-                            if np.sum(orange_mask_tmp[y, :]) < width_tmp * 0.1 * 255:
-                                orange_bottom_tmp = y
-                                break
-                    else:
-                        orange_bottom_tmp = 150
-                    
-                    # グレースケール変換
-                    gray_tmp = cv2.cvtColor(img_array_tmp, cv2.COLOR_RGB2GRAY)
-                    
-                    # 現在の画像で解析を実行
-                    analyzer_align = WebCompatibleAnalyzer()
-                    
-                    # ゼロライン検出（最大値アライメント用）
-                    align_search_start = orange_bottom_tmp + search_start_offset
-                    align_search_end = min(height_tmp - 100, orange_bottom_tmp + search_end_offset)
-                    
-                    # ゼロライン検出
-                    align_best_score = 0
-                    align_zero_line_y = (align_search_start + align_search_end) // 2
-                    
-                    for y in range(align_search_start, align_search_end):
-                        row = gray_tmp[y, 100:width_tmp-100]
-                        darkness = 1.0 - (np.mean(row) / 255.0)
-                        uniformity = 1.0 - (np.std(row) / 128.0)
-                        score = darkness * 0.5 + uniformity * 0.5
-                        
-                        if score > align_best_score:
-                            align_best_score = score
-                            align_zero_line_y = y
-                    
-                    # 切り抜き
-                    align_top = max(0, align_zero_line_y - crop_top)
-                    align_bottom = min(height_tmp, align_zero_line_y + crop_bottom)
-                    align_left = left_margin
-                    align_right = width_tmp - right_margin
-                    
-                    # グリッドライン調整値も適用（現在の入力値を使用）
-                    align_zero_in_crop = align_zero_line_y - align_top
-                    align_distance_to_plus_30k = align_zero_in_crop - grid_30k_offset
-                    align_distance_to_minus_30k = (align_bottom - align_top - 1 + grid_minus_30k_offset) - align_zero_in_crop
-                    
-                    # カスタム設定で解析
-                    analyzer_align.zero_y = align_zero_in_crop
-                    analyzer_align.scale = 30000 / align_distance_to_plus_30k if align_distance_to_plus_30k > 0 else 122
-                    
-                    # 切り抜き画像で解析
-                    cropped_for_align = img_array_tmp[int(align_top):int(align_bottom), int(align_left):int(align_right)]
-                    # BGRに変換（OpenCVの標準形式）
-                    cropped_bgr_align = cv2.cvtColor(cropped_for_align, cv2.COLOR_RGB2BGR)
-                    
-                    # 解析実行（画像データを直接渡す）
-                    data_points_align, color_align, detected_zero_align = analyzer_align.extract_graph_data(cropped_bgr_align)
-                    
-                    if data_points_align:
-                        analysis_align = analyzer_align.analyze_values(data_points_align)
-                        detected_max_align = analysis_align['max_value']
-                        
-                        # 最大値の位置を取得
-                        max_index = analysis_align['max_index']
-                        if max_index < len(data_points_align):
-                            max_x, max_y_value = data_points_align[max_index]
-                            # 画像座標系での最大値のY座標
-                            max_y_pixel = int(align_zero_in_crop - (max_y_value / analyzer_align.scale))
-                            
-                            all_detections.append({
-                                'detected_max': detected_max_align,
-                                'max_y_pixel': max_y_pixel,
-                                'zero_in_crop': align_zero_in_crop,
-                                'crop_height': cropped_for_align.shape[0],
-                                'image_name': test_img.name
-                            })
-                            
-                            all_max_positions.append({
-                                'x': int(max_x),
-                                'y': max_y_pixel,
-                                'value': max_y_value
-                            })
-                
-                if all_detections:
-                    # 統計情報を計算
-                    detected_maxes = [d['detected_max'] for d in all_detections]
-                    avg_detected_max = int(np.mean(detected_maxes))
-                    median_detected_max = int(np.median(detected_maxes))
-                    
-                    # 検出結果を表示
-                    st.markdown("##### 📊 検出結果と実際の値の入力")
-                    
-                    # 各画像に対して個別に実際の値を入力
-                    visual_max_values = []
-                    
-                    if len(all_detections) > 1:
-                        # 統計情報を表示
-                        detection_cols = st.columns(3)
-                        with detection_cols[0]:
-                            st.metric("検出平均値", f"{avg_detected_max:,}玉")
-                        with detection_cols[1]:
-                            st.metric("検出中央値", f"{median_detected_max:,}玉")
-                        with detection_cols[2]:
-                            st.metric("検出画像数", f"{len(all_detections)}/{len(test_images)}枚")
-                        
-                        st.markdown("---")
-                        st.markdown("##### 🎯 各画像の実際の最大値を入力")
-                        st.caption("各画像を確認して、実際の最大値を入力してください")
-                        
-                        # 各画像に対して入力フィールドを作成
-                        cols_per_row = 2
-                        for i, detection in enumerate(all_detections):
-                            if i % cols_per_row == 0:
-                                cols = st.columns(cols_per_row)
-                            
-                            with cols[i % cols_per_row]:
-                                st.markdown(f"**{detection['image_name']}**")
-                                st.caption(f"検出値: {detection['detected_max']:,}玉")
-                                
-                                # プレビューボタン
-                                if st.button(f"🔍 画像を確認", key=f"preview_btn_{i}"):
-                                    st.session_state['preview_image_index'] = i
-                                    # 検出情報も保存
-                                    st.session_state['preview_detection_info'] = detection
-                                
-                                # セッションステートから値を取得（なければデフォルト値を使用）
-                                # ウィジェットのキーとは別のキーを使用
-                                default_val = st.session_state.get(f"saved_visual_max_{i}", detection['detected_max'])
-                                visual_max = st.number_input(
-                                    "実際の最大値",
-                                    min_value=0,
-                                    max_value=50000,
-                                    value=default_val,
-                                    step=100,
-                                    help=f"{detection['image_name']}の実際の最高値",
-                                    key=f"visual_max_{i}",
-                                    label_visibility="visible"
-                                )
-                                # 値が変更されたら保存
-                                if visual_max != default_val:
-                                    st.session_state[f"saved_visual_max_{i}"] = visual_max
-                                visual_max_values.append(visual_max)
-                    else:
-                        # 単一画像の場合
-                        detection = all_detections[0]
-                        st.info(f"🔍 検出値: **{detection['detected_max']:,}玉**")
-                        
-                        # セッションステートから値を取得（なければデフォルト値を使用）
-                        default_val = st.session_state.get("saved_visual_max_single", detection['detected_max'])
-                        visual_max = st.number_input(
-                            "実際の最大値を入力",
-                            min_value=0,
-                            max_value=50000,
-                            value=default_val,
-                            step=100,
-                            help="グラフ画像を見て確認した最高値",
-                            key="visual_max_single",
-                            label_visibility="visible"
-                        )
-                        # 値が変更されたら保存
-                        if visual_max != default_val:
-                            st.session_state["saved_visual_max_single"] = visual_max
-                        visual_max_values.append(visual_max)
-                    
-                    if any(v > 0 for v in visual_max_values):
-                        # 各画像での補正率を計算
-                        corrections = []
-                        for i, (detection, visual_max) in enumerate(zip(all_detections, visual_max_values)):
-                            if detection['detected_max'] > 0 and visual_max > 0:
-                                correction_factor = visual_max / detection['detected_max']
-                                actual_distance = detection['zero_in_crop'] - detection['max_y_pixel']
-                                if actual_distance > 0:
-                                    new_scale = visual_max / actual_distance
-                                    
-                                    # 新しい+30000ラインの位置を計算
-                                    new_30k_distance = 30000 / new_scale
-                                    current_30k_distance = detection['zero_in_crop'] - current_settings_align['grid_30k_offset']
-                                    adjustment_30k = int(current_30k_distance - new_30k_distance)
-                                    
-                                    # 新しい-30000ラインの位置を計算
-                                    new_minus_30k_distance = 30000 / new_scale
-                                    current_minus_30k_distance = (detection['crop_height'] - 1 + current_settings_align['grid_minus_30k_offset']) - detection['zero_in_crop']
-                                    adjustment_minus_30k = int(new_minus_30k_distance - current_minus_30k_distance)
-                                    
-                                    corrections.append({
-                                        'adjustment_30k': adjustment_30k,
-                                        'adjustment_minus_30k': adjustment_minus_30k,
-                                        'correction_factor': correction_factor
-                                    })
-                        
-                        if corrections:
-                            # 平均調整値を計算
-                            avg_adjustment_30k = int(np.mean([c['adjustment_30k'] for c in corrections]))
-                            avg_adjustment_minus_30k = int(np.mean([c['adjustment_minus_30k'] for c in corrections]))
-                            avg_correction_factor = np.mean([c['correction_factor'] for c in corrections])
-                            
-                            # セッションステートに保存
-                            st.session_state.avg_correction_factor = avg_correction_factor
-                            
-                            if abs(avg_correction_factor - 1.0) > 0.001:
-                                # 推奨調整値を表示
-                                st.info(f"平均補正率: **{avg_correction_factor:.2f}x** （{len(corrections)}枚の画像から計算）")
-                                
-                                col_adj1, col_adj2 = st.columns(2)
-                                with col_adj1:
-                                    st.info(f"**+30,000ライン:** {grid_30k_offset}px → {grid_30k_offset + avg_adjustment_30k}px (調整: {avg_adjustment_30k:+d}px)")
-                                with col_adj2:
-                                    st.info(f"**-30,000ライン:** {grid_minus_30k_offset}px → {grid_minus_30k_offset + avg_adjustment_minus_30k}px (調整: {avg_adjustment_minus_30k:+d}px)")
-                                
-                                # 自動適用ボタン
-                                if st.button("🔧 推奨値を自動適用", type="secondary", key="apply_max_alignment"):
-                                    # セッションステートに新しい値を設定（現在の入力値に調整を加える）
-                                    st.session_state.settings['grid_30k_offset'] = grid_30k_offset + avg_adjustment_30k
-                                    st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + avg_adjustment_minus_30k
-                                    
-                                    # 最初の画像の最大値位置を保存（非線形スケール用）
-                                    if all_max_positions:
-                                        st.session_state['max_value_position'] = all_max_positions[0]
-                                    
-                                    st.success("✅ 推奨値を適用しました！画面が更新されます...")
-                                    time.sleep(1)
-                                    st.rerun()
-                            else:
-                                st.success("✅ 検出値と実際の値が一致しています")
-                else:
-                    st.warning("グラフデータを検出できませんでした")
-            
-    
-    
-    # リアルタイムプレビュー
-    if test_images:
-        st.markdown("### 🖼️ リアルタイムプレビュー")
-        
-        # プレビューする画像を決定（ボタンで選択されたもの、または最初の画像）
-        if 'preview_image_index' in st.session_state and st.session_state['preview_image_index'] < len(test_images):
-            selected_image_idx = st.session_state['preview_image_index']
-            selected_image = test_images[selected_image_idx]
-            if len(test_images) > 1:
-                st.info(f"📸 表示中: **{selected_image.name}**")
-        else:
-            selected_image = test_image
-            selected_image_idx = 0
-        
-        # 選択された画像を読み込み
-        img_array_preview = np.array(Image.open(selected_image).convert('RGB'))
-        height_preview, width_preview = img_array_preview.shape[:2]
-        
-        # オレンジバーを検出（選択された画像用）
-        hsv_preview = cv2.cvtColor(img_array_preview, cv2.COLOR_RGB2HSV)
-        orange_mask_preview = cv2.inRange(hsv_preview, np.array([10, 100, 100]), np.array([30, 255, 255]))
-        orange_bottom_preview = 0
-        
-        for y in range(height_preview//2):
-            if np.sum(orange_mask_preview[y, :]) > width_preview * 0.3 * 255:
-                orange_bottom_preview = y
-        
-        if orange_bottom_preview > 0:
-            for y in range(orange_bottom_preview, min(orange_bottom_preview + 100, height_preview)):
-                if np.sum(orange_mask_preview[y, :]) < width_preview * 0.1 * 255:
-                    orange_bottom_preview = y
-                    break
-        else:
-            orange_bottom_preview = 150
-        
-        # グレースケール変換
-        gray_preview = cv2.cvtColor(img_array_preview, cv2.COLOR_RGB2GRAY)
-        
-        # 現在の設定で切り抜き処理を実行
-        search_start = orange_bottom_preview + search_start_offset
-        search_end = min(height_preview - 100, orange_bottom_preview + search_end_offset)
-        
-        # ゼロライン検出
-        best_score = 0
-        zero_line_y = (search_start + search_end) // 2
-        
-        for y in range(search_start, search_end):
-            row = gray_preview[y, 100:width_preview-100]
-            darkness = 1.0 - (np.mean(row) / 255.0)
-            uniformity = 1.0 - (np.std(row) / 128.0)
-            score = darkness * 0.5 + uniformity * 0.5
-            
-            if score > best_score:
-                best_score = score
-                zero_line_y = y
-        
-        # 切り抜き
-        top = max(0, zero_line_y - crop_top)
-        bottom = min(height_preview, zero_line_y + crop_bottom)
-        left = left_margin
-        right = width_preview - right_margin
-        
-        # オーバーレイ画像を作成
-        overlay_img = img_array_preview.copy()
-        
-        # 検索範囲を可視化（濃い緑の枠線）
-        cv2.rectangle(overlay_img, (100, search_start), (width_preview-100, search_end), (0, 255, 0), 3)
-        # 半透明の緑で塗りつぶし
-        overlay = overlay_img.copy()
-        cv2.rectangle(overlay, (100, search_start), (width_preview-100, search_end), (0, 255, 0), -1)
-        overlay_img = cv2.addWeighted(overlay_img, 0.8, overlay, 0.2, 0)
-        
-        # 検索範囲の説明テキストを右上に追加
-        text = 'Zero Line Search Area'
-        text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
-        cv2.putText(overlay_img, text, (width_preview - text_size[0] - 110, search_start + 25), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 200, 0), 2)
-        
-        text2 = f'({search_start_offset} ~ {search_end_offset}px)'
-        text_size2 = cv2.getTextSize(text2, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
-        cv2.putText(overlay_img, text2, (width_preview - text_size2[0] - 110, search_start + 50), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 200, 0), 2)
-        
-        # 検出したゼロラインを描画（赤）
-        cv2.line(overlay_img, (0, zero_line_y), (width_preview, zero_line_y), (255, 0, 0), 3)
-        cv2.putText(overlay_img, f'Zero Line (score: {best_score:.3f})', (10, zero_line_y - 10), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-        
-        # 切り抜き範囲を描画（濃い青）
-        cv2.rectangle(overlay_img, (left, int(top)), (right, int(bottom)), (0, 0, 255), 4)
-        
-        # 切り抜き範囲の説明テキストを右上に追加
-        text3 = 'Crop Area'
-        text_size3 = cv2.getTextSize(text3, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
-        cv2.putText(overlay_img, text3, (right - text_size3[0] - 5, int(top) + 25), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 200), 2)
-        
-        text4 = f'(Top: {crop_top}px, Bottom: {crop_bottom}px)'
-        text_size4 = cv2.getTextSize(text4, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
-        cv2.putText(overlay_img, text4, (right - text_size4[0] - 5, int(top) + 50), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 2)
-        
-        # オレンジバーの位置を表示（濃いオレンジ）
-        cv2.line(overlay_img, (0, orange_bottom_preview), (width_preview, orange_bottom_preview), (255, 140, 0), 3)
-        cv2.putText(overlay_img, 'Orange Bar', (10, orange_bottom_preview + 30), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 140, 0), 2)
-        
-        # ゼロラインから±30000ラインまでの距離を計算（切り抜き内での計算）
-        zero_in_crop = zero_line_y - top
-        distance_to_plus_30k = zero_in_crop - grid_30k_offset
-        distance_to_minus_30k = (bottom - top - 1 + grid_minus_30k_offset) - zero_in_crop
-        
-        # グリッドラインを元画像にも追加
-        # +30000ライン（元画像座標）
-        y_30k_orig = int(top + grid_30k_offset)
-        if 0 <= y_30k_orig < height_preview:
-            cv2.line(overlay_img, (0, y_30k_orig), (width_preview, y_30k_orig), (128, 128, 128), 2)
-            cv2.putText(overlay_img, '+30000', (10, max(20, y_30k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
-        
-        # -30000ライン（元画像座標）
-        y_minus_30k_orig = int(bottom - 1 + grid_minus_30k_offset)
-        if 0 <= y_minus_30k_orig < height_preview:
-            cv2.line(overlay_img, (0, y_minus_30k_orig), (width_preview, y_minus_30k_orig), (128, 128, 128), 2)
-            cv2.putText(overlay_img, '-30000', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
-        
-        
-        # プレビューを左カラムに表示（縦に配置）
-        with main_col1:
-            # 元画像（調整範囲を表示）
-            st.markdown("#### 元画像（調整範囲を表示）")
-            st.image(overlay_img, use_column_width=True)
-            
-            # 切り抜き結果（元画像の下に配置）
-            st.markdown("#### 切り抜き結果")
-            cropped_preview_original = img_array_preview[int(top):int(bottom), int(left):int(right)].copy()
-            cropped_preview = cropped_preview_original.copy()  # 表示用のコピーを作成
-            
-            # グリッドラインを追加（表示用画像にのみ）
-            zero_in_crop = zero_line_y - top
-            cv2.line(cropped_preview, (0, int(zero_in_crop)), (cropped_preview.shape[1], int(zero_in_crop)), (255, 0, 0), 2)
-            
-            # グリッドラインを追加（調整値付き）
-            # +30000ライン（最上部付近）
-            y_30k = 0 + grid_30k_offset  # 最上部を基準に調整
-            if 0 <= y_30k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_30k), (cropped_preview.shape[1], y_30k), (0, 150, 0), 3)
-                cv2.putText(cropped_preview, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 100, 0), 2)
-            
-            # -30000ライン
-            y_minus_30k = cropped_preview.shape[0] - 1 + grid_minus_30k_offset  # 最下部基準
-            if 0 <= y_minus_30k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_minus_30k), (cropped_preview.shape[1], y_minus_30k), (150, 0, 0), 3)
-                cv2.putText(cropped_preview, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 0, 0), 2)
-            
-            
-            # 選択された画像の実際の最大値を表示
-            if 'preview_image_index' in st.session_state:
-                preview_idx = st.session_state.get('preview_image_index', 0)
-                
-                # プレビュー用の解析を実行して最大値を検出
-                analyzer_preview = WebCompatibleAnalyzer()
-                analyzer_preview.zero_y = zero_in_crop
-                
-                # 調整されたグリッドライン位置に基づいてスケールを計算
-                y_30k_adjusted = 0 + grid_30k_offset
-                y_minus_30k_adjusted = cropped_preview.shape[0] - 1 + grid_minus_30k_offset
-                
-                # 線形スケールのみ使用
-                distance_to_plus_30k_adjusted = zero_in_crop - y_30k_adjusted
-                distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_in_crop
-                
-                if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
-                    avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
-                    analyzer_preview.scale = 30000 / avg_distance_adjusted
-                else:
-                    analyzer_preview.scale = 122  # デフォルト
-
-
-                # BGRに変換（グリッドラインなしの元画像を使用）
-                cropped_bgr_preview = cv2.cvtColor(cropped_preview_original, cv2.COLOR_RGB2BGR)
-                
-                # グラフデータを抽出
-                data_points_preview, color_preview, _ = analyzer_preview.extract_graph_data(cropped_bgr_preview)
-                
-                if data_points_preview:
-                    # 最大値を検出
-                    values_preview = [value for x, value in data_points_preview]
-                    max_val_detected = max(values_preview)
-                    max_idx = values_preview.index(max_val_detected)
-                    max_x, _ = data_points_preview[max_idx]
-                    
-                    # 入力された実際の最大値を取得
-                    actual_max_value = None
-                    if f'visual_max_{preview_idx}' in st.session_state:
-                        actual_max_value = st.session_state[f'visual_max_{preview_idx}']
-                    
-                    # 実際の値が入力されている場合はそれを使用、そうでなければ検出値を使用
-                    display_max_value = actual_max_value if actual_max_value is not None else max_val_detected
-                    
-                    # グラフ上の実際の最大値のY座標（線形スケール）
-                    max_y_in_crop = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
-                    
-                    # 表示する値は実際の値があればそれを使用
-                    if actual_max_value and max_val_detected > 0:
-                        correction_factor = actual_max_value / max_val_detected
-                        display_value = actual_max_value
-                    else:
-                        correction_factor = 1.0
-                        display_value = max_val_detected
-                    
-                    if 0 <= max_y_in_crop < cropped_preview.shape[0]:
-                        # 赤い水平線を描画（グラフの最高点の高さ）
-                        cv2.line(cropped_preview, (0, max_y_in_crop), (cropped_preview.shape[1], max_y_in_crop), (0, 0, 255), 3)
-                        # 最大値の点に円を描画（グラフ上の実際の位置）
-                        cv2.circle(cropped_preview, (int(max_x), max_y_in_crop), 8, (0, 0, 255), -1)
-                        cv2.circle(cropped_preview, (int(max_x), max_y_in_crop), 10, (0, 0, 200), 2)
-                        # ラベルを追加（表示する値は実際の値）
-                        label_text = f"MAX: {int(display_value):,}"
-                        cv2.putText(cropped_preview, label_text, (cropped_preview.shape[1] - 180, max_y_in_crop - 5), 
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                    
-                    # 補正情報を表示
-                    if actual_max_value and abs(correction_factor - 1.0) > 0.01:
-                        info_text = f"🔍 検出値: {int(max_val_detected):,}玉 → 実際の値: {int(actual_max_value):,}玉 (補正率 x{correction_factor:.2f})"
-                        st.info(info_text)
-            
-            st.image(cropped_preview, use_column_width=True)
-            
-            # 情報表示
-            st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
-            st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
-        
-    # 設定の保存とプリセット削除を同じ配置で表示（順序を入れ替え）
-    
-    # 設定の保存セクション（全体で共通、保存ボタンだけ別）  
-    # test_imageがある場合は変数を利用、ない場合はセッションステート利用
-    if test_image:
-        # test_imageがある場合、入力値から直接設定を作成
-        def save_settings():
-            settings = {
-                'search_start_offset': search_start_offset,
-                'search_end_offset': search_end_offset,
-                'crop_top': crop_top,
-                'crop_bottom': crop_bottom,
-                'left_margin': left_margin,
-                'right_margin': right_margin,
-                'grid_30k_offset': grid_30k_offset,
-                'grid_minus_30k_offset': grid_minus_30k_offset
-            }
-            return settings
-    else:
-        # test_imageがない場合、セッションステートから取得
-        def save_settings():
-            return st.session_state.settings.copy()
-    
-    # STEP 5: 設定の保存の見出しを適切な場所に配置（画像がある場合のみ表示）
-    if test_image:
-        with main_col2:
-            st.markdown("### 💾 STEP 5: 設定の保存")
-            st.caption("調整が完了したら、端末名をつけて保存してください")
-    
-    # 設定の保存の内容（test_imageの有無で配置を変更）
-    def render_save_settings():
-        # 既存のプリセットを編集する場合
-        if st.session_state.saved_presets:
-            edit_mode = st.checkbox("既存のプリセットを編集", key="edit_preset_mode")
-            
-            if edit_mode:
-                # 編集するプリセットを選択
-                selected_preset = st.selectbox(
-                    "編集するプリセットを選択",
-                    ["新規作成"] + list(st.session_state.saved_presets.keys()),
-                    key="edit_preset_select"
-                )
-                
-                if selected_preset != "新規作成":
-                    # 選択されたプリセット名を入力フィールドに設定
-                    preset_name = st.text_input(
-                        "プリセット名",
-                        value=selected_preset,
-                        help="プリセット名を変更することもできます"
-                    )
-                else:
-                    # 編集中のプリセット名がある場合はそれを使用
-                    default_name = st.session_state.get('editing_preset_name', '')
-                    if default_name == 'デフォルト':
-                        default_name = ''
-                    preset_name = st.text_input(
-                        "プリセット名",
-                        value=default_name,
-                        placeholder="例: iPhone15用、S__シリーズ用",
-                        help="保存する設定の名前を入力してください"
-                    )
-            else:
-                # 新規作成モード（編集中のプリセット名がある場合はそれを使用）
-                default_name = st.session_state.get('editing_preset_name', '')
-                if default_name == 'デフォルト':
-                    default_name = ''
-                preset_name = st.text_input(
-                    "プリセット名",
-                    value=default_name,
-                    placeholder="例: iPhone15用、S__シリーズ用",
-                    help="保存する設定の名前を入力してください"
-                )
-        else:
-            # プリセットがない場合は新規作成のみ（編集中のプリセット名がある場合はそれを使用）
-            default_name = st.session_state.get('editing_preset_name', '')
-            if default_name == 'デフォルト':
-                default_name = ''
-            preset_name = st.text_input(
-                "プリセット名",
-                value=default_name,
-                placeholder="例: iPhone15用、S__シリーズ用",
-                help="保存する設定の名前を入力してください"
-            )
-        
-        # ボタン用のカラムレイアウト
-        save_col1, save_col2 = st.columns([1, 1])
-        
-        with save_col1:
-            # 編集モードかどうかでボタンのラベルを変更
-            save_button_label = "💾 プリセットを更新" if (st.session_state.saved_presets and 
-                                                         'edit_preset_mode' in st.session_state and 
-                                                         st.session_state.edit_preset_mode and 
-                                                         'edit_preset_select' in st.session_state and
-                                                         st.session_state.edit_preset_select != "新規作成") else "💾 プリセットを保存"
-            
-            if st.button(save_button_label, type="primary", use_container_width=True):
-                if preset_name:
-                    # 現在の設定を取得
-                    settings = save_settings()
-                    
-                    # 補正係数があれば追加
-                    if 'avg_correction_factor' in st.session_state:
-                        settings['correction_factor'] = st.session_state.avg_correction_factor
-                    
-                    # プリセットに保存
-                    st.session_state.saved_presets[preset_name] = settings.copy()
-                    # 現在の設定も更新
-                    st.session_state.settings = settings
-                    
-                    # ファイルに保存
-                    try:
-                        all_presets = {
-                            'presets': st.session_state.saved_presets
-                        }
-                        with open(preset_file, 'wb') as f:
-                            pickle.dump(all_presets, f)
-                    except Exception as e:
-                        st.error(f"プリセットの保存に失敗しました: {str(e)}")
-                    
-                    # 編集モードかどうかでメッセージを変更
-                    if (st.session_state.saved_presets and 
-                        'edit_preset_mode' in st.session_state and 
-                        st.session_state.edit_preset_mode and 
-                        'edit_preset_select' in st.session_state and
-                        st.session_state.edit_preset_select != "新規作成"):
-                        st.success(f"✅ プリセット '{preset_name}' を更新しました")
-                    else:
-                        st.success(f"✅ プリセット '{preset_name}' を保存しました")
-                    st.rerun()
-                else:
-                    st.error("プリセット名を入力してください")
-        
-        with save_col2:
-            if st.button("🔄 デフォルトに戻す", use_container_width=True):
-                st.session_state.settings = default_settings.copy()
-                st.rerun()
-    
-    # 設定の保存を描画（画像がある場合のみ）
-    if test_image:
-        with main_col2:
-            render_save_settings()
-    
-    # プリセット削除セクション（設定の保存の直後に配置）
-    if test_image:
-        with main_col2:
-            # プリセット削除
-            if st.session_state.saved_presets:
-                st.markdown("### 🗑️ プリセットの削除")
-                
-                # 現在編集中のプリセットをデフォルトにする
-                default_delete_preset = None
-                if ('edit_preset_mode' in st.session_state and 
-                    st.session_state.edit_preset_mode and 
-                    'edit_preset_select' in st.session_state and
-                    st.session_state.edit_preset_select != "新規作成"):
-                    default_delete_preset = st.session_state.edit_preset_select
-                
-                # デフォルト値を見つける
-                preset_list = list(st.session_state.saved_presets.keys())
-                default_index = 0
-                if default_delete_preset and default_delete_preset in preset_list:
-                    default_index = preset_list.index(default_delete_preset)
-                
-                # プリセット選択（全幅）
-                preset_to_delete = st.selectbox(
-                    "削除するプリセット",
-                    preset_list,
-                    index=default_index,
-                    key="delete_preset"
-                )
-                
-                # 削除ボタン
-                if st.button("🗑️ 削除", type="secondary", use_container_width=True):
-                    if preset_to_delete:
-                        del st.session_state.saved_presets[preset_to_delete]
-                        
-                        # ファイルを更新
-                        try:
-                            all_presets = {
-                                'presets': st.session_state.saved_presets
-                            }
-                            with open(preset_file, 'wb') as f:
-                                pickle.dump(all_presets, f)
-                        except Exception as e:
-                            st.error(f"プリセットの削除に失敗しました: {str(e)}")
-                        
-                        st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
-                        st.rerun()
-
 
 # 本番解析セクション
 st.markdown("---")
@@ -2313,6 +1386,932 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 file_name=f'pachinko_analysis_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv',
                 mime='text/csv'
             )
+
+# 調整機能（コラプス）
+with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state.show_adjustment):
+    st.markdown("##### 端末ごとの調整設定")
+    st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
+    
+    # 初心者向けの使い方説明
+    show_help = st.checkbox("📖 調整機能の使い方を表示", value=False, key="show_adjustment_help")
+    if show_help:
+        st.info("""
+        **🎯 調整機能とは？**  
+        site7のグラフは端末（iPhone/Android）や画面サイズによって表示が異なります。
+        この機能で**お使いの端末に最適な設定**を保存できます。
+        
+        **📝 使い方（3ステップ）**
+        
+        1️⃣ **テスト画像を準備**
+        - 実際の最大値がわかるグラフ画像を用意
+        - 例：「最大値が+15,000玉」とわかっている画像
+        
+        2️⃣ **自動調整を実行**
+        - 画像をアップロード → 実際の最大値を入力
+        - 「🔧 推奨値を自動適用」ボタンをクリック
+        - 必要に応じて手動で微調整
+        
+        3️⃣ **設定を保存**
+        - プリセット名を入力（例：iPhone15用）
+        - 「💾 保存」ボタンをクリック
+        
+        💡 **ポイント**
+        - 複数枚の画像で調整するとより正確になります
+        - 一度設定すれば、次回から選ぶだけでOK
+        - 端末を変えたら新しいプリセットを作成
+        """)
+        st.divider()
+    
+    # STEP 1: テスト画像のアップロード
+    st.markdown("### 📸 STEP 1: テスト用画像をアップロード")
+    st.caption("実際の最大値がわかるグラフ画像を用意してください")
+    
+    # サンプル画像の表示
+    show_sample = st.checkbox("📷 調整例を表示", value=False, key="show_adjustment_sample")
+    if show_sample:
+        st.info("""
+        **調整用画像の例**
+        
+        ✅ **良い例**
+        - 実際の最大値が確認できる画像
+        - 例：店舗の実機で「最大+15,000玉」と確認した画像
+        - グラフが明確に写っている画像
+        
+        ❌ **悪い例**
+        - 最大値が不明な画像
+        - グラフが不鮮明な画像
+        - 画面が暗い・ぼやけている画像
+        
+        💡 **ヒント**
+        - 複数枚使用するとより正確になります
+        - 異なる最大値の画像を混ぜてもOK
+        """)
+        
+        # サンプル画像が存在する場合は表示
+        sample_image_path = "images/sample.png"
+        if os.path.exists(sample_image_path):
+            st.markdown("**📸 調整画面の見本**")
+            st.image(sample_image_path, caption="各エリアの説明付きサンプル", use_column_width=True)
+            st.caption("このような画像で、実際の最大値（この例では+2290玉）を入力して調整します")
+    
+    test_images = st.file_uploader(
+        "画像を選択",
+        type=['jpg', 'jpeg', 'png'],
+        help="調整用の画像を複数アップロードできます。複数枚の場合は統計的に処理されます",
+        key="test_images",
+        accept_multiple_files=True
+    )
+    
+    # 単一画像の場合の互換性のため
+    test_image = test_images[0] if test_images else None
+    
+    # 画像がアップロードされた場合のみプリセット選択を表示
+    if test_image:
+        st.divider()
+        
+        # STEP 2: プリセット選択セクション
+        st.markdown("### 📋 STEP 2: 設定の読み込み（任意）")
+        st.caption("保存済みの設定がある場合は選択してください")
+        
+        # 保存されたプリセット一覧
+        preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
+        
+        # プリセットボタンを横に並べる
+        if len(preset_names) <= 4:
+            preset_cols = st.columns(len(preset_names))
+            # プリセットが4個以下の場合
+            for i, preset_name in enumerate(preset_names):
+                with preset_cols[i]:
+                    button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
+                    if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
+                        if preset_name == "デフォルト":
+                            st.session_state.settings = default_settings.copy()
+                        else:
+                            st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                        
+                        # 現在のプリセット名を保存（編集モードで使用）
+                        st.session_state.current_preset_name = preset_name
+                        st.session_state.editing_preset_name = preset_name
+                        
+                        st.success(f"✅ '{preset_name}' の設定を読み込みました")
+                        time.sleep(0.5)
+                        st.rerun()
+        else:
+            # 5個以上の場合は複数行に分ける
+            num_rows = (len(preset_names) + 3) // 4  # 4列で何行必要か
+            for row in range(num_rows):
+                cols = st.columns(4)
+                for col in range(4):
+                    idx = row * 4 + col
+                    if idx < len(preset_names):
+                        preset_name = preset_names[idx]
+                        with cols[col]:
+                            button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
+                            if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
+                                if preset_name == "デフォルト":
+                                    st.session_state.settings = default_settings.copy()
+                                else:
+                                    st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                                
+                                # 現在のプリセット名を保存（編集モードで使用）
+                                st.session_state.current_preset_name = preset_name
+                                st.session_state.editing_preset_name = preset_name
+                                
+                                st.success(f"✅ '{preset_name}' の設定を読み込みました")
+                                time.sleep(0.5)
+                                st.rerun()
+        
+        st.divider()
+    
+    
+    # 設定値の初期化
+    if test_image:
+        # 画像を読み込み
+        img_array = np.array(Image.open(test_image).convert('RGB'))
+        height, width = img_array.shape[:2]
+        
+        # オレンジバーを検出
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        orange_mask = cv2.inRange(hsv, np.array([10, 100, 100]), np.array([30, 255, 255]))
+        orange_bottom = 0
+        
+        for y in range(height//2):
+            if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
+                orange_bottom = y
+        
+        if orange_bottom > 0:
+            for y in range(orange_bottom, min(orange_bottom + 100, height)):
+                if np.sum(orange_mask[y, :]) < width * 0.1 * 255:
+                    orange_bottom = y
+                    break
+        else:
+            orange_bottom = 150
+        
+        # グレースケール変換
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        
+        st.info(f"画像サイズ: {width}x{height}px")
+        
+        # レイアウト用のメインカラム（画像を読み込んだ後）
+        main_col1, main_col2 = st.columns([3, 2])
+    
+    # 画像がアップロードされている場合のみレイアウトを適用
+    if test_image:
+        with main_col2:
+            # STEP 3: 設定用の入力フィールド
+            st.markdown("### 🔍 STEP 3: 詳細設定（通常はデフォルトでOK）")
+            st.caption("必要に応じて微調整できます")
+            
+            st.markdown("#### ゼロライン検索設定")
+            col1, col2 = st.columns(2)
+    
+            with col1:
+                search_start_offset = st.number_input(
+                    "検索開始位置（オレンジバーから）",
+                    min_value=0, max_value=800, value=st.session_state.settings['search_start_offset'],
+                    step=10, help="オレンジバーから何ピクセル下から検索を開始するか"
+                )
+            
+            with col2:
+                search_end_offset = st.number_input(
+                    "検索終了位置（オレンジバーから）",
+                    min_value=100, max_value=1200, value=st.session_state.settings['search_end_offset'],
+                    step=50, help="オレンジバーから何ピクセル下まで検索するか"
+                )
+            
+            st.markdown("#### ✂️ 切り抜きサイズの設定")
+            col3, col4 = st.columns(2)
+    
+            with col3:
+                crop_top = st.number_input(
+                    "上方向の切り抜きサイズ",
+                    min_value=100, max_value=500, value=st.session_state.settings['crop_top'],
+                    step=1, help="ゼロラインから上方向に何ピクセル切り抜くか"
+                )
+                crop_bottom = st.number_input(
+                    "下方向の切り抜きサイズ",
+                    min_value=100, max_value=500, value=st.session_state.settings['crop_bottom'],
+                    step=1, help="ゼロラインから下方向に何ピクセル切り抜くか"
+                )
+            
+            with col4:
+                left_margin = st.number_input(
+                    "左側の余白",
+                    min_value=0, max_value=300, value=st.session_state.settings['left_margin'],
+                    step=25, help="左側から何ピクセル除外するか"
+                )
+                right_margin = st.number_input(
+                    "右側の余白",
+                    min_value=0, max_value=300, value=st.session_state.settings['right_margin'],
+                    step=25, help="右側から何ピクセル除外するか"
+                )
+            
+            # グリッドライン調整
+            st.markdown("#### 📏 グリッドライン調整")
+            
+            # グリッドライン手動調整
+            st.markdown("#### ⚙️ 手動調整")
+            st.caption("±30,000ラインの位置を微調整できます（単位：ピクセル）")
+            
+            grid_col1, grid_col2 = st.columns(2)
+            
+            with grid_col1:
+                grid_30k_offset = st.number_input(
+                    "+30,000ライン調整",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_30k_offset', 0),
+                    step=1, help="上端の+30,000ラインの位置調整"
+                )
+            
+            with grid_col2:
+                grid_minus_30k_offset = st.number_input(
+                    "-30,000ライン調整",
+                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
+                    step=1, help="下端の-30,000ラインの位置調整"
+                )
+            
+            # 中間ライン用のダミー変数を設定（他のコードで参照されるため）
+            
+            # STEP 4: 最大値アライメント機能を統合
+            if test_images:
+                st.markdown("### 🎯 STEP 4: 実際の最大値を入力して自動調整")
+                st.caption(f"アップロードされた{len(test_images)}枚の画像から最適な設定を自動計算します")
+                
+                # 複数画像の解析結果を保存
+                all_detections = []
+                all_max_positions = []
+                
+                # 現在の設定を取得（入力フィールドの値を使用）
+                current_settings_align = {
+                    'search_start_offset': search_start_offset,
+                    'search_end_offset': search_end_offset,
+                    'crop_top': crop_top,
+                    'crop_bottom': crop_bottom,
+                    'left_margin': left_margin,
+                    'right_margin': right_margin,
+                    'grid_30k_offset': grid_30k_offset,
+                    'grid_minus_30k_offset': grid_minus_30k_offset
+                }
+                
+                # 各画像を解析
+                for img_idx, test_img in enumerate(test_images):
+                    # 画像を読み込み
+                    img_array_tmp = np.array(Image.open(test_img).convert('RGB'))
+                    height_tmp, width_tmp = img_array_tmp.shape[:2]
+                    
+                    # オレンジバーを検出
+                    hsv_tmp = cv2.cvtColor(img_array_tmp, cv2.COLOR_RGB2HSV)
+                    orange_mask_tmp = cv2.inRange(hsv_tmp, np.array([10, 100, 100]), np.array([30, 255, 255]))
+                    orange_bottom_tmp = 0
+                    
+                    for y in range(height_tmp//2):
+                        if np.sum(orange_mask_tmp[y, :]) > width_tmp * 0.3 * 255:
+                            orange_bottom_tmp = y
+                    
+                    if orange_bottom_tmp > 0:
+                        for y in range(orange_bottom_tmp, min(orange_bottom_tmp + 100, height_tmp)):
+                            if np.sum(orange_mask_tmp[y, :]) < width_tmp * 0.1 * 255:
+                                orange_bottom_tmp = y
+                                break
+                    else:
+                        orange_bottom_tmp = 150
+                    
+                    # グレースケール変換
+                    gray_tmp = cv2.cvtColor(img_array_tmp, cv2.COLOR_RGB2GRAY)
+                    
+                    # 現在の画像で解析を実行
+                    analyzer_align = WebCompatibleAnalyzer()
+                    
+                    # ゼロライン検出（最大値アライメント用）
+                    align_search_start = orange_bottom_tmp + search_start_offset
+                    align_search_end = min(height_tmp - 100, orange_bottom_tmp + search_end_offset)
+                    
+                    # ゼロライン検出
+                    align_best_score = 0
+                    align_zero_line_y = (align_search_start + align_search_end) // 2
+                    
+                    for y in range(align_search_start, align_search_end):
+                        row = gray_tmp[y, 100:width_tmp-100]
+                        darkness = 1.0 - (np.mean(row) / 255.0)
+                        uniformity = 1.0 - (np.std(row) / 128.0)
+                        score = darkness * 0.5 + uniformity * 0.5
+                        
+                        if score > align_best_score:
+                            align_best_score = score
+                            align_zero_line_y = y
+                    
+                    # 切り抜き
+                    align_top = max(0, align_zero_line_y - crop_top)
+                    align_bottom = min(height_tmp, align_zero_line_y + crop_bottom)
+                    align_left = left_margin
+                    align_right = width_tmp - right_margin
+                    
+                    # グリッドライン調整値も適用（現在の入力値を使用）
+                    align_zero_in_crop = align_zero_line_y - align_top
+                    align_distance_to_plus_30k = align_zero_in_crop - grid_30k_offset
+                    align_distance_to_minus_30k = (align_bottom - align_top - 1 + grid_minus_30k_offset) - align_zero_in_crop
+                    
+                    # カスタム設定で解析
+                    analyzer_align.zero_y = align_zero_in_crop
+                    analyzer_align.scale = 30000 / align_distance_to_plus_30k if align_distance_to_plus_30k > 0 else 122
+                    
+                    # 切り抜き画像で解析
+                    cropped_for_align = img_array_tmp[int(align_top):int(align_bottom), int(align_left):int(align_right)]
+                    # BGRに変換（OpenCVの標準形式）
+                    cropped_bgr_align = cv2.cvtColor(cropped_for_align, cv2.COLOR_RGB2BGR)
+                    
+                    # 解析実行（画像データを直接渡す）
+                    data_points_align, color_align, detected_zero_align = analyzer_align.extract_graph_data(cropped_bgr_align)
+                    
+                    if data_points_align:
+                        analysis_align = analyzer_align.analyze_values(data_points_align)
+                        detected_max_align = analysis_align['max_value']
+                        
+                        # 最大値の位置を取得
+                        max_index = analysis_align['max_index']
+                        if max_index < len(data_points_align):
+                            max_x, max_y_value = data_points_align[max_index]
+                            # 画像座標系での最大値のY座標
+                            max_y_pixel = int(align_zero_in_crop - (max_y_value / analyzer_align.scale))
+                            
+                            all_detections.append({
+                                'detected_max': detected_max_align,
+                                'max_y_pixel': max_y_pixel,
+                                'zero_in_crop': align_zero_in_crop,
+                                'crop_height': cropped_for_align.shape[0],
+                                'image_name': test_img.name
+                            })
+                            
+                            all_max_positions.append({
+                                'x': int(max_x),
+                                'y': max_y_pixel,
+                                'value': max_y_value
+                            })
+                
+                if all_detections:
+                    # 統計情報を計算
+                    detected_maxes = [d['detected_max'] for d in all_detections]
+                    avg_detected_max = int(np.mean(detected_maxes))
+                    median_detected_max = int(np.median(detected_maxes))
+                    
+                    # 検出結果を表示
+                    st.markdown("##### 📊 検出結果と実際の値の入力")
+                    
+                    # 各画像に対して個別に実際の値を入力
+                    visual_max_values = []
+                    
+                    if len(all_detections) > 1:
+                        # 統計情報を表示
+                        detection_cols = st.columns(3)
+                        with detection_cols[0]:
+                            st.metric("検出平均値", f"{avg_detected_max:,}玉")
+                        with detection_cols[1]:
+                            st.metric("検出中央値", f"{median_detected_max:,}玉")
+                        with detection_cols[2]:
+                            st.metric("検出画像数", f"{len(all_detections)}/{len(test_images)}枚")
+                        
+                        st.markdown("---")
+                        st.markdown("##### 🎯 各画像の実際の最大値を入力")
+                        st.caption("各画像を確認して、実際の最大値を入力してください")
+                        
+                        # 各画像に対して入力フィールドを作成
+                        cols_per_row = 2
+                        for i, detection in enumerate(all_detections):
+                            if i % cols_per_row == 0:
+                                cols = st.columns(cols_per_row)
+                            
+                            with cols[i % cols_per_row]:
+                                st.markdown(f"**{detection['image_name']}**")
+                                st.caption(f"検出値: {detection['detected_max']:,}玉")
+                                
+                                # プレビューボタン
+                                if st.button(f"🔍 画像を確認", key=f"preview_btn_{i}"):
+                                    st.session_state['preview_image_index'] = i
+                                    # 検出情報も保存
+                                    st.session_state['preview_detection_info'] = detection
+                                
+                                # セッションステートから値を取得（なければデフォルト値を使用）
+                                # ウィジェットのキーとは別のキーを使用
+                                default_val = st.session_state.get(f"saved_visual_max_{i}", detection['detected_max'])
+                                visual_max = st.number_input(
+                                    "実際の最大値",
+                                    min_value=0,
+                                    max_value=50000,
+                                    value=default_val,
+                                    step=100,
+                                    help=f"{detection['image_name']}の実際の最高値",
+                                    key=f"visual_max_{i}",
+                                    label_visibility="visible"
+                                )
+                                # 値が変更されたら保存
+                                if visual_max != default_val:
+                                    st.session_state[f"saved_visual_max_{i}"] = visual_max
+                                visual_max_values.append(visual_max)
+                    else:
+                        # 単一画像の場合
+                        detection = all_detections[0]
+                        st.info(f"🔍 検出値: **{detection['detected_max']:,}玉**")
+                        
+                        # セッションステートから値を取得（なければデフォルト値を使用）
+                        default_val = st.session_state.get("saved_visual_max_single", detection['detected_max'])
+                        visual_max = st.number_input(
+                            "実際の最大値を入力",
+                            min_value=0,
+                            max_value=50000,
+                            value=default_val,
+                            step=100,
+                            help="グラフ画像を見て確認した最高値",
+                            key="visual_max_single",
+                            label_visibility="visible"
+                        )
+                        # 値が変更されたら保存
+                        if visual_max != default_val:
+                            st.session_state["saved_visual_max_single"] = visual_max
+                        visual_max_values.append(visual_max)
+                    
+                    if any(v > 0 for v in visual_max_values):
+                        # 各画像での補正率を計算
+                        corrections = []
+                        for i, (detection, visual_max) in enumerate(zip(all_detections, visual_max_values)):
+                            if detection['detected_max'] > 0 and visual_max > 0:
+                                correction_factor = visual_max / detection['detected_max']
+                                actual_distance = detection['zero_in_crop'] - detection['max_y_pixel']
+                                if actual_distance > 0:
+                                    new_scale = visual_max / actual_distance
+                                    
+                                    # 新しい+30000ラインの位置を計算
+                                    new_30k_distance = 30000 / new_scale
+                                    current_30k_distance = detection['zero_in_crop'] - current_settings_align['grid_30k_offset']
+                                    adjustment_30k = int(current_30k_distance - new_30k_distance)
+                                    
+                                    # 新しい-30000ラインの位置を計算
+                                    new_minus_30k_distance = 30000 / new_scale
+                                    current_minus_30k_distance = (detection['crop_height'] - 1 + current_settings_align['grid_minus_30k_offset']) - detection['zero_in_crop']
+                                    adjustment_minus_30k = int(new_minus_30k_distance - current_minus_30k_distance)
+                                    
+                                    corrections.append({
+                                        'adjustment_30k': adjustment_30k,
+                                        'adjustment_minus_30k': adjustment_minus_30k,
+                                        'correction_factor': correction_factor
+                                    })
+                        
+                        if corrections:
+                            # 平均調整値を計算
+                            avg_adjustment_30k = int(np.mean([c['adjustment_30k'] for c in corrections]))
+                            avg_adjustment_minus_30k = int(np.mean([c['adjustment_minus_30k'] for c in corrections]))
+                            avg_correction_factor = np.mean([c['correction_factor'] for c in corrections])
+                            
+                            # セッションステートに保存
+                            st.session_state.avg_correction_factor = avg_correction_factor
+                            
+                            if abs(avg_correction_factor - 1.0) > 0.001:
+                                # 推奨調整値を表示
+                                st.info(f"平均補正率: **{avg_correction_factor:.2f}x** （{len(corrections)}枚の画像から計算）")
+                                
+                                col_adj1, col_adj2 = st.columns(2)
+                                with col_adj1:
+                                    st.info(f"**+30,000ライン:** {grid_30k_offset}px → {grid_30k_offset + avg_adjustment_30k}px (調整: {avg_adjustment_30k:+d}px)")
+                                with col_adj2:
+                                    st.info(f"**-30,000ライン:** {grid_minus_30k_offset}px → {grid_minus_30k_offset + avg_adjustment_minus_30k}px (調整: {avg_adjustment_minus_30k:+d}px)")
+                                
+                                # 自動適用ボタン
+                                if st.button("🔧 推奨値を自動適用", type="secondary", key="apply_max_alignment"):
+                                    # セッションステートに新しい値を設定（現在の入力値に調整を加える）
+                                    st.session_state.settings['grid_30k_offset'] = grid_30k_offset + avg_adjustment_30k
+                                    st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + avg_adjustment_minus_30k
+                                    
+                                    # 最初の画像の最大値位置を保存（非線形スケール用）
+                                    if all_max_positions:
+                                        st.session_state['max_value_position'] = all_max_positions[0]
+                                    
+                                    st.success("✅ 推奨値を適用しました！画面が更新されます...")
+                                    time.sleep(1)
+                                    st.rerun()
+                            else:
+                                st.success("✅ 検出値と実際の値が一致しています")
+                else:
+                    st.warning("グラフデータを検出できませんでした")
+            
+    
+    
+    if test_images:
+        st.markdown("### 🖼️ リアルタイムプレビュー")
+        
+        # プレビューする画像を決定（ボタンで選択されたもの、または最初の画像）
+        if 'preview_image_index' in st.session_state and st.session_state['preview_image_index'] < len(test_images):
+            selected_image_idx = st.session_state['preview_image_index']
+            selected_image = test_images[selected_image_idx]
+            if len(test_images) > 1:
+                st.info(f"📸 表示中: **{selected_image.name}**")
+        else:
+            selected_image = test_image
+            selected_image_idx = 0
+        
+        # 選択された画像を読み込み
+        img_array_preview = np.array(Image.open(selected_image).convert('RGB'))
+        height_preview, width_preview = img_array_preview.shape[:2]
+        
+        # オレンジバーを検出（選択された画像用）
+        hsv_preview = cv2.cvtColor(img_array_preview, cv2.COLOR_RGB2HSV)
+        orange_mask_preview = cv2.inRange(hsv_preview, np.array([10, 100, 100]), np.array([30, 255, 255]))
+        orange_bottom_preview = 0
+        
+        for y in range(height_preview//2):
+            if np.sum(orange_mask_preview[y, :]) > width_preview * 0.3 * 255:
+                orange_bottom_preview = y
+        
+        if orange_bottom_preview > 0:
+            for y in range(orange_bottom_preview, min(orange_bottom_preview + 100, height_preview)):
+                if np.sum(orange_mask_preview[y, :]) < width_preview * 0.1 * 255:
+                    orange_bottom_preview = y
+                    break
+        else:
+            orange_bottom_preview = 150
+        
+        # グレースケール変換
+        gray_preview = cv2.cvtColor(img_array_preview, cv2.COLOR_RGB2GRAY)
+        
+        # 現在の設定で切り抜き処理を実行
+        search_start = orange_bottom_preview + search_start_offset
+        search_end = min(height_preview - 100, orange_bottom_preview + search_end_offset)
+        
+        # ゼロライン検出
+        best_score = 0
+        zero_line_y = (search_start + search_end) // 2
+        
+        for y in range(search_start, search_end):
+            row = gray_preview[y, 100:width_preview-100]
+            darkness = 1.0 - (np.mean(row) / 255.0)
+            uniformity = 1.0 - (np.std(row) / 128.0)
+            score = darkness * 0.5 + uniformity * 0.5
+            
+            if score > best_score:
+                best_score = score
+                zero_line_y = y
+        
+        # 切り抜き
+        top = max(0, zero_line_y - crop_top)
+        bottom = min(height_preview, zero_line_y + crop_bottom)
+        left = left_margin
+        right = width_preview - right_margin
+        
+        # オーバーレイ画像を作成
+        overlay_img = img_array_preview.copy()
+        
+        # 検索範囲を可視化（濃い緑の枠線）
+        cv2.rectangle(overlay_img, (100, search_start), (width_preview-100, search_end), (0, 255, 0), 3)
+        # 半透明の緑で塗りつぶし
+        overlay = overlay_img.copy()
+        cv2.rectangle(overlay, (100, search_start), (width_preview-100, search_end), (0, 255, 0), -1)
+        overlay_img = cv2.addWeighted(overlay_img, 0.8, overlay, 0.2, 0)
+        
+        # 検索範囲の説明テキストを右上に追加
+        text = 'Zero Line Search Area'
+        text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
+        cv2.putText(overlay_img, text, (width_preview - text_size[0] - 110, search_start + 25), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 200, 0), 2)
+        
+        text2 = f'({search_start_offset} ~ {search_end_offset}px)'
+        text_size2 = cv2.getTextSize(text2, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
+        cv2.putText(overlay_img, text2, (width_preview - text_size2[0] - 110, search_start + 50), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 200, 0), 2)
+        
+        # 検出したゼロラインを描画（赤）
+        cv2.line(overlay_img, (0, zero_line_y), (width_preview, zero_line_y), (255, 0, 0), 3)
+        cv2.putText(overlay_img, f'Zero Line (score: {best_score:.3f})', (10, zero_line_y - 10), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+        
+        # 切り抜き範囲を描画（濃い青）
+        cv2.rectangle(overlay_img, (left, int(top)), (right, int(bottom)), (0, 0, 255), 4)
+        
+        # 切り抜き範囲の説明テキストを右上に追加
+        text3 = 'Crop Area'
+        text_size3 = cv2.getTextSize(text3, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
+        cv2.putText(overlay_img, text3, (right - text_size3[0] - 5, int(top) + 25), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 200), 2)
+        
+        text4 = f'(Top: {crop_top}px, Bottom: {crop_bottom}px)'
+        text_size4 = cv2.getTextSize(text4, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
+        cv2.putText(overlay_img, text4, (right - text_size4[0] - 5, int(top) + 50), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 2)
+        
+        # オレンジバーの位置を表示（濃いオレンジ）
+        cv2.line(overlay_img, (0, orange_bottom_preview), (width_preview, orange_bottom_preview), (255, 140, 0), 3)
+        cv2.putText(overlay_img, 'Orange Bar', (10, orange_bottom_preview + 30), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 140, 0), 2)
+        
+        # ゼロラインから±30000ラインまでの距離を計算（切り抜き内での計算）
+        zero_in_crop = zero_line_y - top
+        distance_to_plus_30k = zero_in_crop - grid_30k_offset
+        distance_to_minus_30k = (bottom - top - 1 + grid_minus_30k_offset) - zero_in_crop
+        
+        # グリッドラインを元画像にも追加
+        # +30000ライン（元画像座標）
+        y_30k_orig = int(top + grid_30k_offset)
+        if 0 <= y_30k_orig < height_preview:
+            cv2.line(overlay_img, (0, y_30k_orig), (width_preview, y_30k_orig), (128, 128, 128), 2)
+            cv2.putText(overlay_img, '+30000', (10, max(20, y_30k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
+        
+        # -30000ライン（元画像座標）
+        y_minus_30k_orig = int(bottom - 1 + grid_minus_30k_offset)
+        if 0 <= y_minus_30k_orig < height_preview:
+            cv2.line(overlay_img, (0, y_minus_30k_orig), (width_preview, y_minus_30k_orig), (128, 128, 128), 2)
+            cv2.putText(overlay_img, '-30000', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
+        
+        
+        # プレビューを左カラムに表示（縦に配置）
+        with main_col1:
+            # 元画像（調整範囲を表示）
+            st.markdown("#### 元画像（調整範囲を表示）")
+            st.image(overlay_img, use_column_width=True)
+            
+            # 切り抜き結果（元画像の下に配置）
+            st.markdown("#### 切り抜き結果")
+            cropped_preview_original = img_array_preview[int(top):int(bottom), int(left):int(right)].copy()
+            cropped_preview = cropped_preview_original.copy()  # 表示用のコピーを作成
+            
+            # グリッドラインを追加（表示用画像にのみ）
+            zero_in_crop = zero_line_y - top
+            cv2.line(cropped_preview, (0, int(zero_in_crop)), (cropped_preview.shape[1], int(zero_in_crop)), (255, 0, 0), 2)
+            
+            # グリッドラインを追加（調整値付き）
+            # +30000ライン（最上部付近）
+            y_30k = 0 + grid_30k_offset  # 最上部を基準に調整
+            if 0 <= y_30k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_30k), (cropped_preview.shape[1], y_30k), (0, 150, 0), 3)
+                cv2.putText(cropped_preview, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 100, 0), 2)
+            
+            # -30000ライン
+            y_minus_30k = cropped_preview.shape[0] - 1 + grid_minus_30k_offset  # 最下部基準
+            if 0 <= y_minus_30k < cropped_preview.shape[0]:
+                cv2.line(cropped_preview, (0, y_minus_30k), (cropped_preview.shape[1], y_minus_30k), (150, 0, 0), 3)
+                cv2.putText(cropped_preview, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 0, 0), 2)
+            
+            
+            # 選択された画像の実際の最大値を表示
+            if 'preview_image_index' in st.session_state:
+                preview_idx = st.session_state.get('preview_image_index', 0)
+                
+                # プレビュー用の解析を実行して最大値を検出
+                analyzer_preview = WebCompatibleAnalyzer()
+                analyzer_preview.zero_y = zero_in_crop
+                
+                # 調整されたグリッドライン位置に基づいてスケールを計算
+                y_30k_adjusted = 0 + grid_30k_offset
+                y_minus_30k_adjusted = cropped_preview.shape[0] - 1 + grid_minus_30k_offset
+                
+                # 線形スケールのみ使用
+                distance_to_plus_30k_adjusted = zero_in_crop - y_30k_adjusted
+                distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_in_crop
+                
+                if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
+                    avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
+                    analyzer_preview.scale = 30000 / avg_distance_adjusted
+                else:
+                    analyzer_preview.scale = 122  # デフォルト
+
+
+                # BGRに変換（グリッドラインなしの元画像を使用）
+                cropped_bgr_preview = cv2.cvtColor(cropped_preview_original, cv2.COLOR_RGB2BGR)
+                
+                # グラフデータを抽出
+                data_points_preview, color_preview, _ = analyzer_preview.extract_graph_data(cropped_bgr_preview)
+                
+                if data_points_preview:
+                    # 最大値を検出
+                    values_preview = [value for x, value in data_points_preview]
+                    max_val_detected = max(values_preview)
+                    max_idx = values_preview.index(max_val_detected)
+                    max_x, _ = data_points_preview[max_idx]
+                    
+                    # 入力された実際の最大値を取得
+                    actual_max_value = None
+                    if f'visual_max_{preview_idx}' in st.session_state:
+                        actual_max_value = st.session_state[f'visual_max_{preview_idx}']
+                    
+                    # 実際の値が入力されている場合はそれを使用、そうでなければ検出値を使用
+                    display_max_value = actual_max_value if actual_max_value is not None else max_val_detected
+                    
+                    # グラフ上の実際の最大値のY座標（線形スケール）
+                    max_y_in_crop = int(zero_in_crop - (max_val_detected / analyzer_preview.scale))
+                    
+                    # 表示する値は実際の値があればそれを使用
+                    if actual_max_value and max_val_detected > 0:
+                        correction_factor = actual_max_value / max_val_detected
+                        display_value = actual_max_value
+                    else:
+                        correction_factor = 1.0
+                        display_value = max_val_detected
+                    
+                    if 0 <= max_y_in_crop < cropped_preview.shape[0]:
+                        # 赤い水平線を描画（グラフの最高点の高さ）
+                        cv2.line(cropped_preview, (0, max_y_in_crop), (cropped_preview.shape[1], max_y_in_crop), (0, 0, 255), 3)
+                        # 最大値の点に円を描画（グラフ上の実際の位置）
+                        cv2.circle(cropped_preview, (int(max_x), max_y_in_crop), 8, (0, 0, 255), -1)
+                        cv2.circle(cropped_preview, (int(max_x), max_y_in_crop), 10, (0, 0, 200), 2)
+                        # ラベルを追加（表示する値は実際の値）
+                        label_text = f"MAX: {int(display_value):,}"
+                        cv2.putText(cropped_preview, label_text, (cropped_preview.shape[1] - 180, max_y_in_crop - 5), 
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                    
+                    # 補正情報を表示
+                    if actual_max_value and abs(correction_factor - 1.0) > 0.01:
+                        info_text = f"🔍 検出値: {int(max_val_detected):,}玉 → 実際の値: {int(actual_max_value):,}玉 (補正率 x{correction_factor:.2f})"
+                        st.info(info_text)
+            
+            st.image(cropped_preview, use_column_width=True)
+            
+            # 情報表示
+            st.caption(f"🔍 検出情報: オレンジバー位置 Y={orange_bottom}, ゼロライン Y={zero_line_y}, 検索範囲 Y={search_start}〜{search_end}")
+            st.caption(f"✂️ 切り抜き範囲: 上{crop_top}px, 下{crop_bottom}px, 左{left_margin}px, 右{right_margin}px")
+        
+    # 設定の保存とプリセット削除を同じ配置で表示（順序を入れ替え）
+    
+    # 設定の保存セクション（全体で共通、保存ボタンだけ別）  
+    # test_imageがある場合は変数を利用、ない場合はセッションステート利用
+    if test_image:
+        # test_imageがある場合、入力値から直接設定を作成
+        def save_settings():
+            settings = {
+                'search_start_offset': search_start_offset,
+                'search_end_offset': search_end_offset,
+                'crop_top': crop_top,
+                'crop_bottom': crop_bottom,
+                'left_margin': left_margin,
+                'right_margin': right_margin,
+                'grid_30k_offset': grid_30k_offset,
+                'grid_minus_30k_offset': grid_minus_30k_offset
+            }
+            return settings
+    else:
+        # test_imageがない場合、セッションステートから取得
+        def save_settings():
+            return st.session_state.settings.copy()
+    
+    # STEP 5: 設定の保存の見出しを適切な場所に配置（画像がある場合のみ表示）
+    if test_image:
+        with main_col2:
+            st.markdown("### 💾 STEP 5: 設定の保存")
+            st.caption("調整が完了したら、端末名をつけて保存してください")
+    
+    # 設定の保存の内容（test_imageの有無で配置を変更）
+    def render_save_settings():
+        # 既存のプリセットを編集する場合
+        if st.session_state.saved_presets:
+            edit_mode = st.checkbox("既存のプリセットを編集", key="edit_preset_mode")
+            
+            if edit_mode:
+                # 編集するプリセットを選択
+                selected_preset = st.selectbox(
+                    "編集するプリセットを選択",
+                    ["新規作成"] + list(st.session_state.saved_presets.keys()),
+                    key="edit_preset_select"
+                )
+                
+                if selected_preset != "新規作成":
+                    # 選択されたプリセット名を入力フィールドに設定
+                    preset_name = st.text_input(
+                        "プリセット名",
+                        value=selected_preset,
+                        help="プリセット名を変更することもできます"
+                    )
+                else:
+                    # 編集中のプリセット名がある場合はそれを使用
+                    default_name = st.session_state.get('editing_preset_name', '')
+                    if default_name == 'デフォルト':
+                        default_name = ''
+                    preset_name = st.text_input(
+                        "プリセット名",
+                        value=default_name,
+                        placeholder="例: iPhone15用、S__シリーズ用",
+                        help="保存する設定の名前を入力してください"
+                    )
+            else:
+                # 新規作成モード（編集中のプリセット名がある場合はそれを使用）
+                default_name = st.session_state.get('editing_preset_name', '')
+                if default_name == 'デフォルト':
+                    default_name = ''
+                preset_name = st.text_input(
+                    "プリセット名",
+                    value=default_name,
+                    placeholder="例: iPhone15用、S__シリーズ用",
+                    help="保存する設定の名前を入力してください"
+                )
+        else:
+            # プリセットがない場合は新規作成のみ（編集中のプリセット名がある場合はそれを使用）
+            default_name = st.session_state.get('editing_preset_name', '')
+            if default_name == 'デフォルト':
+                default_name = ''
+            preset_name = st.text_input(
+                "プリセット名",
+                value=default_name,
+                placeholder="例: iPhone15用、S__シリーズ用",
+                help="保存する設定の名前を入力してください"
+            )
+        
+        # ボタン用のカラムレイアウト
+        save_col1, save_col2 = st.columns([1, 1])
+        
+        with save_col1:
+            # 編集モードかどうかでボタンのラベルを変更
+            save_button_label = "💾 プリセットを更新" if (st.session_state.saved_presets and 
+                                                         'edit_preset_mode' in st.session_state and 
+                                                         st.session_state.edit_preset_mode and 
+                                                         'edit_preset_select' in st.session_state and
+                                                         st.session_state.edit_preset_select != "新規作成") else "💾 プリセットを保存"
+            
+            if st.button(save_button_label, type="primary", use_container_width=True):
+                if preset_name:
+                    # 現在の設定を取得
+                    settings = save_settings()
+                    
+                    # 補正係数があれば追加
+                    if 'avg_correction_factor' in st.session_state:
+                        settings['correction_factor'] = st.session_state.avg_correction_factor
+                    
+                    # プリセットに保存
+                    st.session_state.saved_presets[preset_name] = settings.copy()
+                    # 現在の設定も更新
+                    st.session_state.settings = settings
+                    
+                    # ファイルに保存
+                    try:
+                        all_presets = {
+                            'presets': st.session_state.saved_presets
+                        }
+                        with open(preset_file, 'wb') as f:
+                            pickle.dump(all_presets, f)
+                    except Exception as e:
+                        st.error(f"プリセットの保存に失敗しました: {str(e)}")
+                    
+                    # 編集モードかどうかでメッセージを変更
+                    if (st.session_state.saved_presets and 
+                        'edit_preset_mode' in st.session_state and 
+                        st.session_state.edit_preset_mode and 
+                        'edit_preset_select' in st.session_state and
+                        st.session_state.edit_preset_select != "新規作成"):
+                        st.success(f"✅ プリセット '{preset_name}' を更新しました")
+                    else:
+                        st.success(f"✅ プリセット '{preset_name}' を保存しました")
+                    st.rerun()
+                else:
+                    st.error("プリセット名を入力してください")
+        
+        with save_col2:
+            if st.button("🔄 デフォルトに戻す", use_container_width=True):
+                st.session_state.settings = default_settings.copy()
+                st.rerun()
+    
+    # 設定の保存を描画（画像がある場合のみ）
+    if test_image:
+        with main_col2:
+            render_save_settings()
+    
+    # プリセット削除セクション（設定の保存の直後に配置）
+    if test_image:
+        with main_col2:
+            # プリセット削除
+            if st.session_state.saved_presets:
+                st.markdown("### 🗑️ プリセットの削除")
+                
+                # 現在編集中のプリセットをデフォルトにする
+                default_delete_preset = None
+                if ('edit_preset_mode' in st.session_state and 
+                    st.session_state.edit_preset_mode and 
+                    'edit_preset_select' in st.session_state and
+                    st.session_state.edit_preset_select != "新規作成"):
+                    default_delete_preset = st.session_state.edit_preset_select
+                
+                # デフォルト値を見つける
+                preset_list = list(st.session_state.saved_presets.keys())
+                default_index = 0
+                if default_delete_preset and default_delete_preset in preset_list:
+                    default_index = preset_list.index(default_delete_preset)
+                
+                # プリセット選択（全幅）
+                preset_to_delete = st.selectbox(
+                    "削除するプリセット",
+                    preset_list,
+                    index=default_index,
+                    key="delete_preset"
+                )
+                
+                # 削除ボタン
+                if st.button("🗑️ 削除", type="secondary", use_container_width=True):
+                    if preset_to_delete:
+                        del st.session_state.saved_presets[preset_to_delete]
+                        
+                        # ファイルを更新
+                        try:
+                            all_presets = {
+                                'presets': st.session_state.saved_presets
+                            }
+                            with open(preset_file, 'wb') as f:
+                                pickle.dump(all_presets, f)
+                        except Exception as e:
+                            st.error(f"プリセットの削除に失敗しました: {str(e)}")
+                        
+                        st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
+                        st.rerun()
 
 # フッター
 st.markdown("---")
