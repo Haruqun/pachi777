@@ -19,6 +19,7 @@ import pandas as pd
 import time
 import hashlib
 import secrets
+import sqlite3
 
 # ページ設定
 st.set_page_config(
@@ -385,34 +386,106 @@ if not st.session_state.authenticated:
     # 認証されていない場合はここで処理を終了
     st.stop()
 
-# プリセット保存用のファイルパスを設定
-# Streamlit Cloudでも動作するように、書き込み可能なディレクトリを使用
-import pickle
+# SQLiteデータベースの設定
 import os
 
-# プリセットファイルのパスを設定
-# Streamlit Cloudでは/tmpディレクトリは一時的なので、
-# プロジェクトディレクトリ内に保存
-preset_dir = os.path.join(os.path.dirname(__file__), 'presets')
-if not os.path.exists(preset_dir):
+# データベースファイルのパスを設定
+# Streamlit Cloudでは書き込み可能な一時ディレクトリを使用
+if os.environ.get('STREAMLIT_SHARING_MODE'):
+    # Streamlit Cloud環境
+    db_path = '/tmp/presets.db'
+else:
+    # ローカル環境
+    db_dir = os.path.join(os.path.dirname(__file__), 'data')
+    if not os.path.exists(db_dir):
+        try:
+            os.makedirs(db_dir)
+        except:
+            db_dir = os.path.dirname(__file__)
+    db_path = os.path.join(db_dir, 'presets.db')
+
+# データベース接続とテーブル作成
+def init_database():
+    """データベースを初期化"""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # プリセットテーブルを作成
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS presets (
+            name TEXT PRIMARY KEY,
+            settings TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+# データベースを初期化
+init_database()
+
+# プリセットを読み込み
+def load_presets_from_db():
+    """データベースからプリセットを読み込み"""
     try:
-        os.makedirs(preset_dir)
-    except:
-        # ディレクトリ作成に失敗した場合は現在のディレクトリを使用
-        preset_dir = os.path.dirname(__file__)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute('SELECT name, settings FROM presets')
+        rows = cursor.fetchall()
+        conn.close()
+        
+        presets = {}
+        for name, settings_json in rows:
+            presets[name] = json.loads(settings_json)
+        
+        return presets
+    except Exception as e:
+        st.warning(f"プリセット読み込みエラー: {str(e)}")
+        return {}
 
-preset_file = os.path.join(preset_dir, 'saved_presets.pkl')
+# セッションステートにプリセットを読み込み
+if 'saved_presets' not in st.session_state:
+    st.session_state.saved_presets = load_presets_from_db()
 
-# プリセットをファイルから読み込み
-try:
-    if os.path.exists(preset_file):
-        with open(preset_file, 'rb') as f:
-            saved_data = pickle.load(f)
-            if 'presets' in saved_data:
-                st.session_state.saved_presets = saved_data['presets']
-except Exception as e:
-    # 読み込みエラーは無視
-    pass
+# プリセットを保存
+def save_preset_to_db(name, settings):
+    """プリセットをデータベースに保存"""
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        settings_json = json.dumps(settings)
+        
+        # UPSERT操作（存在する場合は更新、なければ挿入）
+        cursor.execute('''
+            INSERT OR REPLACE INTO presets (name, settings, updated_at) 
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        ''', (name, settings_json))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"プリセットの保存に失敗しました: {str(e)}")
+        return False
+
+# プリセットを削除
+def delete_preset_from_db(name):
+    """プリセットをデータベースから削除"""
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('DELETE FROM presets WHERE name = ?', (name,))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"プリセットの削除に失敗しました: {str(e)}")
+        return False
 
 # 本番解析セクション
 st.markdown("---")
@@ -2229,26 +2302,18 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     # 現在の設定も更新
                     st.session_state.settings = settings
                     
-                    # ファイルに保存
-                    try:
-                        all_presets = {
-                            'presets': st.session_state.saved_presets
-                        }
-                        with open(preset_file, 'wb') as f:
-                            pickle.dump(all_presets, f)
-                    except Exception as e:
-                        st.error(f"プリセットの保存に失敗しました: {str(e)}")
-                    
-                    # 編集モードかどうかでメッセージを変更
-                    if (st.session_state.saved_presets and 
-                        'edit_preset_mode' in st.session_state and 
-                        st.session_state.edit_preset_mode and 
-                        'edit_preset_select' in st.session_state and
-                        st.session_state.edit_preset_select != "新規作成"):
-                        st.success(f"✅ プリセット '{preset_name}' を更新しました")
-                    else:
-                        st.success(f"✅ プリセット '{preset_name}' を保存しました")
-                    st.rerun()
+                    # データベースに保存
+                    if save_preset_to_db(preset_name, settings):
+                        # 編集モードかどうかでメッセージを変更
+                        if (st.session_state.saved_presets and 
+                            'edit_preset_mode' in st.session_state and 
+                            st.session_state.edit_preset_mode and 
+                            'edit_preset_select' in st.session_state and
+                            st.session_state.edit_preset_select != "新規作成"):
+                            st.success(f"✅ プリセット '{preset_name}' を更新しました")
+                        else:
+                            st.success(f"✅ プリセット '{preset_name}' を保存しました")
+                        st.rerun()
                 else:
                     st.error("プリセット名を入力してください")
         
@@ -2296,18 +2361,10 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     if preset_to_delete:
                         del st.session_state.saved_presets[preset_to_delete]
                         
-                        # ファイルを更新
-                        try:
-                            all_presets = {
-                                'presets': st.session_state.saved_presets
-                            }
-                            with open(preset_file, 'wb') as f:
-                                pickle.dump(all_presets, f)
-                        except Exception as e:
-                            st.error(f"プリセットの削除に失敗しました: {str(e)}")
-                        
-                        st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
-                        st.rerun()
+                        # データベースから削除
+                        if delete_preset_from_db(preset_to_delete):
+                            st.success(f"✅ プリセット '{preset_to_delete}' を削除しました")
+                            st.rerun()
 
 # フッター
 st.markdown("---")

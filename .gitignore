@@ -40,6 +40,11 @@ old_file/
 dev/
 legacy/
 
+# SQLite databases
+*.db
+web_app/data/
+web_app/presets/
+
 # Temporary files
 *.log
 *.tmp
