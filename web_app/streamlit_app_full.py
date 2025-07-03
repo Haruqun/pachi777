@@ -123,8 +123,8 @@ default_settings = {
     'search_end_offset': 500,
     'crop_top': 246,
     'crop_bottom': 280,
-    'left_margin': 125,
-    'right_margin': 125,
+    'left_margin': 120,
+    'right_margin': 120,
     # グリッドライン調整値
     'grid_30k_offset': 1,       # +30000ライン（最上部）
     'grid_minus_30k_offset': -34, # -30000ライン（最下部）
@@ -572,6 +572,20 @@ if uploaded_files:
     # STEP 2: プリセット選択
     st.markdown("### 📋 STEP 2: 解析設定を選択")
     st.caption("保存されたプリセットを選択するか、デフォルト設定を使用します")
+    
+    # デバッグ情報（一時的）
+    if st.checkbox("🐛 デバッグ情報を表示", value=False):
+        st.write(f"saved_presets の内容: {st.session_state.saved_presets}")
+        st.write(f"データベースパス: {db_path}")
+        import os
+        st.write(f"データベースファイル存在: {os.path.exists(db_path)}")
+        
+        # データベースから直接読み込み
+        try:
+            fresh_presets = load_presets_from_db()
+            st.write(f"データベースから直接読み込んだプリセット: {list(fresh_presets.keys())}")
+        except Exception as e:
+            st.write(f"データベース読み込みエラー: {str(e)}")
     
     # プリセット一覧
     preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
@@ -2308,6 +2322,9 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     
                     # データベースに保存
                     if save_preset_to_db(preset_name, settings):
+                        # データベースから再読み込みして確実に反映
+                        st.session_state.saved_presets = load_presets_from_db()
+                        
                         # 編集モードかどうかでメッセージを変更
                         if (st.session_state.saved_presets and 
                             'edit_preset_mode' in st.session_state and 
