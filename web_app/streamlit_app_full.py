@@ -439,6 +439,34 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     st.markdown("##### 端末ごとの調整設定")
     st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
     
+    # 初心者向けの使い方説明
+    with st.expander("📖 調整機能の使い方", expanded=False):
+        st.markdown("""
+        ### 🎯 調整機能とは？
+        site7のグラフは端末（iPhone/Android）や画面サイズによって表示が異なります。
+        この機能で**お使いの端末に最適な設定**を保存できます。
+        
+        ### 📝 使い方（3ステップ）
+        
+        **1️⃣ テスト画像を準備**
+        - 実際の最大値がわかるグラフ画像を用意
+        - 例：「最大値が+15,000玉」とわかっている画像
+        
+        **2️⃣ 自動調整を実行**
+        - 画像をアップロード → 実際の最大値を入力
+        - 「🔧 推奨値を自動適用」ボタンをクリック
+        
+        **3️⃣ 設定を保存**
+        - プリセット名を入力（例：iPhone15用）
+        - 「💾 保存」ボタンをクリック
+        
+        ### 💡 ポイント
+        - 複数枚の画像で調整するとより正確になります
+        - 一度設定すれば、次回から選ぶだけでOK
+        - 端末を変えたら新しいプリセットを作成
+        """)
+        st.divider()
+    
     # テスト画像のアップロード（最初に表示）
     test_images = st.file_uploader(
         "🖼️ テスト用画像をアップロード",
@@ -1029,7 +1057,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     analyzer_preview.scale = 30000 / avg_distance_adjusted
                 else:
                     analyzer_preview.scale = 122  # デフォルト
-                
+
+
                 # BGRに変換（グリッドラインなしの元画像を使用）
                 cropped_bgr_preview = cv2.cvtColor(cropped_preview_original, cv2.COLOR_RGB2BGR)
                 
