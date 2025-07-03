@@ -781,24 +781,24 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         # グラフデータを抽出
         graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
         
-        # デバッグ情報を追加
-        if uploaded_file.name in ["IMG_0165.PNG", "IMG_0174.PNG", "IMG_0177.PNG"]:
-            st.write(f"🔍 デバッグ情報 - {uploaded_file.name}")
-            st.write(f"- ゼロライン位置（切り抜き内）: {zero_line_in_crop}px")
-            st.write(f"- 切り抜き画像の高さ: {crop_height}px")
-            st.write(f"- 調整された+30000ライン位置: {y_30k_adjusted}px (オフセット: {settings.get('grid_30k_offset', 0)})")
-            st.write(f"- 調整された-30000ライン位置: {y_minus_30k_adjusted}px (オフセット: {settings.get('grid_minus_30k_offset', 0)})")
-            st.write(f"- ゼロから+30000までの距離: {distance_to_plus_30k_adjusted}px")
-            st.write(f"- ゼロから-30000までの距離: {distance_to_minus_30k_adjusted}px")
-            st.write(f"- スケール: {analyzer.scale:.2f} 玉/ピクセル")
-            st.write(f"- 検出された色: {dominant_color}")
-            st.write(f"- データポイント数: {len(graph_data_points) if graph_data_points else 0}")
-            if graph_data_points:
-                sample_points = graph_data_points[::100][:10]  # 10点をサンプル表示
-                st.write("- サンプルデータ (x, 値):")
-                for x, val in sample_points:
-                    y_pixel = zero_line_in_crop - (val / analyzer.scale)
-                    st.write(f"  X={int(x)}, 値={int(val)}玉, Y座標={int(y_pixel)}px")
+        # デバッグ情報を無効化（必要に応じて有効化可能）
+        # if uploaded_file.name in ["IMG_0165.PNG", "IMG_0174.PNG", "IMG_0177.PNG"]:
+        #     st.write(f"🔍 デバッグ情報 - {uploaded_file.name}")
+        #     st.write(f"- ゼロライン位置（切り抜き内）: {zero_line_in_crop}px")
+        #     st.write(f"- 切り抜き画像の高さ: {crop_height}px")
+        #     st.write(f"- 調整された+30000ライン位置: {y_30k_adjusted}px (オフセット: {settings.get('grid_30k_offset', 0)})")
+        #     st.write(f"- 調整された-30000ライン位置: {y_minus_30k_adjusted}px (オフセット: {settings.get('grid_minus_30k_offset', 0)})")
+        #     st.write(f"- ゼロから+30000までの距離: {distance_to_plus_30k_adjusted}px")
+        #     st.write(f"- ゼロから-30000までの距離: {distance_to_minus_30k_adjusted}px")
+        #     st.write(f"- スケール: {analyzer.scale:.2f} 玉/ピクセル")
+        #     st.write(f"- 検出された色: {dominant_color}")
+        #     st.write(f"- データポイント数: {len(graph_data_points) if graph_data_points else 0}")
+        #     if graph_data_points:
+        #         sample_points = graph_data_points[::100][:10]  # 10点をサンプル表示
+        #         st.write("- サンプルデータ (x, 値):")
+        #         for x, val in sample_points:
+        #             y_pixel = zero_line_in_crop - (val / analyzer.scale)
+        #             st.write(f"  X={int(x)}, 値={int(val)}玉, Y座標={int(y_pixel)}px")
 
         if graph_data_points:
             # データポイントから値のみを抽出
