@@ -638,12 +638,23 @@ if uploaded_files:
         st.session_state.scroll_to_adjustment = True
         st.rerun()
     
-    # STEP 3: 解析開始
-    st.markdown("### 🚀 STEP 3: 解析を開始")
+    # STEP 3: 解析オプションと開始
+    st.markdown("### 🚀 STEP 3: 解析オプションと開始")
+    
+    # 解析オプション
+    col_opt1, col_opt2 = st.columns([1, 1])
+    with col_opt1:
+        skip_ocr = st.checkbox(
+            "⚡ OCRをスキップ（高速モード）", 
+            value=False,
+            help="台番号や累計スタートなどのテキスト情報を読み取らず、グラフ解析のみ実行します。処理が高速になります。"
+        )
+    
     st.caption("設定を確認したら、解析ボタンをクリックしてください")
     
     if st.button("🚀 解析を開始", type="primary", use_container_width=True):
         st.session_state.start_analysis = True
+        st.session_state.skip_ocr = skip_ocr
         st.rerun()
 
 # ファイルがアップロードされたことがある場合、解析ボタンを常に表示
@@ -714,10 +725,14 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         img_array = np.array(image)
         height, width = img_array.shape[:2]
         
-        # OCRでデータ抽出を試みる
-        detail_text.text(f'🔍 {uploaded_file.name} のOCR解析を実行中...')
-        time.sleep(0.1)  # 視覚的フィードバック
-        ocr_data = extract_site7_data(img_array)
+        # OCRでデータ抽出を試みる（スキップ設定を確認）
+        if not st.session_state.get('skip_ocr', False):
+            detail_text.text(f'🔍 {uploaded_file.name} のOCR解析を実行中...')
+            time.sleep(0.1)  # 視覚的フィードバック
+            ocr_data = extract_site7_data(img_array)
+        else:
+            detail_text.text(f'⚡ {uploaded_file.name} のOCR解析をスキップ（高速モード）')
+            ocr_data = None
         
         # Pattern3: Zero Line Based の自動検出
         detail_text.text(f'📐 {uploaded_file.name} のグラフ領域を検出中...')
@@ -1408,8 +1423,14 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
         df_data = []
         for result in analysis_results:
             if result['success']:
+                # 台番号の決定（OCRスキップ時はファイル名を使用）
+                if st.session_state.get('skip_ocr', False):
+                    machine_number = result['name']
+                else:
+                    machine_number = result.get('ocr_data', {}).get('machine_number', result['name'])
+                
                 row = {
-                    '台番号': result.get('ocr_data', {}).get('machine_number', result['name']),
+                    '台番号': machine_number,
                     '最高値': result['max_val'],
                     '最低値': result['min_val'],
                     '現在値': result['current_val'],
@@ -1417,8 +1438,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     '収支（円）': result['current_val'] * 4,
                     '色': result['dominant_color']
                 }
-                # OCRデータを追加
-                if result.get('ocr_data'):
+                # OCRデータを追加（OCRスキップモードでない場合のみ）
+                if not st.session_state.get('skip_ocr', False) and result.get('ocr_data'):
                     ocr = result['ocr_data']
                     row.update({
                         '累計スタート': ocr.get('total_start', ''),
@@ -1430,8 +1451,14 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     })
                 df_data.append(row)
             else:
+                # 解析失敗時も台番号の決定方法を統一
+                if st.session_state.get('skip_ocr', False):
+                    machine_number = result['name']
+                else:
+                    machine_number = result.get('ocr_data', {}).get('machine_number', result['name'])
+                    
                 df_data.append({
-                    '台番号': result.get('ocr_data', {}).get('machine_number', result['name']),
+                    '台番号': machine_number,
                     '最高値': '解析失敗',
                     '最低値': '-',
                     '現在値': '-',
