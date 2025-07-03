@@ -983,6 +983,12 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         cv2.rectangle(overlay, (100, search_start), (width_preview-100, search_end), (0, 255, 0), -1)
         overlay_img = cv2.addWeighted(overlay_img, 0.8, overlay, 0.2, 0)
         
+        # 検索範囲の説明テキストを左上に追加
+        cv2.putText(overlay_img, 'Zero Line Search Area', (105, search_start + 25), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 200, 0), 2)
+        cv2.putText(overlay_img, f'({search_start_offset} ~ {search_end_offset}px)', (105, search_start + 50), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 200, 0), 2)
+        
         # 検出したゼロラインを描画（赤）
         cv2.line(overlay_img, (0, zero_line_y), (width_preview, zero_line_y), (255, 0, 0), 3)
         cv2.putText(overlay_img, f'Zero Line (score: {best_score:.3f})', (10, zero_line_y - 10), 
@@ -990,6 +996,12 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         
         # 切り抜き範囲を描画（濃い青）
         cv2.rectangle(overlay_img, (left, int(top)), (right, int(bottom)), (0, 0, 255), 4)
+        
+        # 切り抜き範囲の説明テキストを左上に追加
+        cv2.putText(overlay_img, 'Crop Area', (left + 5, int(top) + 25), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 200), 2)
+        cv2.putText(overlay_img, f'(Top: {crop_top}px, Bottom: {crop_bottom}px)', (left + 5, int(top) + 50), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 2)
         
         # オレンジバーの位置を表示（濃いオレンジ）
         cv2.line(overlay_img, (0, orange_bottom_preview), (width_preview, orange_bottom_preview), (255, 140, 0), 3)
