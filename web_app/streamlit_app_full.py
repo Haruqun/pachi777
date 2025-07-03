@@ -151,71 +151,17 @@ if 'current_preset_name' not in st.session_state:
 if 'uploaded_file_names' not in st.session_state:
     st.session_state.uploaded_file_names = []
 
-# セッショントークンの生成と検証
-def generate_session_token():
-    """セッショントークンを生成"""
-    return secrets.token_urlsafe(32)
 
-def verify_session_token(token):
-    """セッショントークンを検証（簡易実装）"""
-    # 実際の実装では、サーバー側でトークンを管理すべきですが、
-    # 簡易実装として、トークンの形式チェックのみ行います
-    return token and len(token) > 20
+# URLパラメータで簡易的な認証維持を実装
+# パスワードのハッシュをパラメータとして使用
+import base64
 
-# JavaScriptでCookieを扱うヘルパー関数
-def cookie_manager():
-    """Cookie管理用のJavaScriptコード"""
-    return """
-    <script>
-    // Cookieを設定
-    function setCookie(name, value, days) {
-        var expires = "";
-        if (days) {
-            var date = new Date();
-            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-            expires = "; expires=" + date.toUTCString();
-        }
-        document.cookie = name + "=" + (value || "") + expires + "; path=/";
-    }
-    
-    // Cookieを取得
-    function getCookie(name) {
-        var nameEQ = name + "=";
-        var ca = document.cookie.split(';');
-        for(var i = 0; i < ca.length; i++) {
-            var c = ca[i];
-            while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
-        }
-        return null;
-    }
-    
-    // Cookieを削除
-    function eraseCookie(name) {
-        document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    }
-    
-    // Streamlitとの通信
-    function sendToStreamlit(data) {
-        window.parent.postMessage({
-            type: 'streamlit:setComponentValue',
-            data: data
-        }, '*');
-    }
-    
-    // ページ読み込み時にセッショントークンをチェック
-    window.addEventListener('load', function() {
-        var token = getCookie('pachi777_session');
-        if (token) {
-            // セッショントークンが存在する場合の処理
-            // 現在は特に処理なし（将来の拡張用）
-        }
-    });
-    </script>
-    """
-
-# Cookie管理用のJavaScriptを常に挿入（ログイン・ログアウト両方で使用）
-st.markdown(cookie_manager(), unsafe_allow_html=True)
+# URLパラメータから認証情報を確認
+if 'auth' in st.query_params:
+    auth_hash = st.query_params['auth']
+    # 簡易的な検証（本番環境ではより安全な方法を使用すべき）
+    if auth_hash == base64.b64encode(b"059_pachi777").decode():
+        st.session_state.authenticated = True
 
 # パスワード認証
 if not st.session_state.authenticated:
@@ -335,8 +281,6 @@ if not st.session_state.authenticated:
             if st.session_state.password_input == "059":
                 st.session_state.authenticated = True
                 st.session_state.login_success = True
-                # セッショントークンを生成
-                st.session_state.session_token = generate_session_token()
             else:
                 st.session_state.login_error = True
         
@@ -352,6 +296,20 @@ if not st.session_state.authenticated:
             on_change=handle_login
         )
         
+        # ブックマーク用URLの表示
+        if st.checkbox("ログイン不要のURLを表示", value=False, help="このURLをブックマークすると、次回からログインが不要になります"):
+            current_url = st.session_state.get('current_url', '')
+            if not current_url:
+                # 現在のURLを取得（簡易的な方法）
+                current_url = "https://yourapp.streamlit.app"  # 実際のURLに置き換えてください
+            
+            auth_token = base64.b64encode(b"059_pachi777").decode()
+            bookmark_url = f"{current_url}?auth={auth_token}"
+            
+            st.info("📌 以下のURLをブックマークしてください：")
+            st.code(bookmark_url)
+            st.caption("⚠️ このURLは他人と共有しないでください")
+        
         # ログインボタン
         if st.button("ログイン", type="primary", use_container_width=True):
             handle_login()
@@ -359,15 +317,8 @@ if not st.session_state.authenticated:
         # ログイン成功時の処理
         if st.session_state.get('login_success', False):
             st.success("✅ ログインしました")
-            # Cookieを設定するJavaScriptを実行
-            if 'session_token' in st.session_state:
-                st.markdown(f"""
-                <script>
-                setCookie('pachi777_session', '{st.session_state.session_token}', 30);
-                </script>
-                """, unsafe_allow_html=True)
             st.session_state.login_success = False
-            time.sleep(0.5)  # Cookieが設定されるまで少し待機
+            time.sleep(0.3)
             st.rerun()
         
         # ログインエラー時の処理
@@ -2451,14 +2402,8 @@ with footer_col1:
 
 with footer_col3:
     if st.button("🚪 ログアウト", key="logout_button"):
-        # Cookieを削除
-        st.markdown("""
-        <script>
-        eraseCookie('pachi777_session');
-        </script>
-        """, unsafe_allow_html=True)
         st.session_state.authenticated = False
-        if 'session_token' in st.session_state:
-            del st.session_state.session_token
+        # URLパラメータをクリア
+        st.query_params.clear()
         time.sleep(0.3)
         st.rerun()
