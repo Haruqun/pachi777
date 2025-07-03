@@ -493,6 +493,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         - 複数枚使用するとより正確になります
         - 異なる最大値の画像を混ぜてもOK
         """)
+        
+        # サンプル画像が存在する場合は表示
+        sample_image_path = "web_app/images/sample.png"
+        if os.path.exists(sample_image_path):
+            st.markdown("**📸 調整画面の見本**")
+            st.image(sample_image_path, caption="各エリアの説明付きサンプル", use_column_width=True)
+            st.caption("このような画像で、実際の最大値（この例では+2290玉）を入力して調整します")
     
     test_images = st.file_uploader(
         "画像を選択",
