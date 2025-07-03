@@ -343,8 +343,8 @@ if not st.session_state.authenticated:
             password = st.text_input(
                 "パスワード",
                 type="password",
-                placeholder="パスワードを入力",
-                label_visibility="hidden",  # "collapsed"から"hidden"に変更
+                placeholder="パスワードを入力してください",
+                label_visibility="hidden",
                 key="password_input",
                 on_change=handle_login
             )
@@ -1322,7 +1322,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     '最高値': result['max_val'],
                     '最低値': result['min_val'],
                     '現在値': result['current_val'],
-                    '初当たり': result['first_hit_val'] if result['first_hit_val'] is not None else '',
+                    '初当たり': result['first_hit_val'] if result['first_hit_val'] is not None else None,
                     '収支（円）': result['current_val'] * 4,
                     '色': result['dominant_color']
                 }
@@ -1344,7 +1344,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     '最高値': '解析失敗',
                     '最低値': '-',
                     '現在値': '-',
-                    '初当たり': '-',
+                    '初当たり': None,
                     '収支（円）': '-',
                     '色': '-'
                 })
