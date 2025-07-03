@@ -467,7 +467,9 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         """)
         st.divider()
     
-    # テスト画像のアップロード（最初に表示）
+    # STEP 1: テスト画像のアップロード
+    st.markdown("### 📸 STEP 1: テスト用画像をアップロード")
+    st.caption("実際の最大値がわかるグラフ画像を用意してください")
     test_images = st.file_uploader(
         "🖼️ テスト用画像をアップロード",
         type=['jpg', 'jpeg', 'png'],
@@ -483,8 +485,9 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     if test_image:
         st.divider()
         
-        # プリセット選択セクション
-        st.markdown("### 📋 設定の読み込み")
+        # STEP 2: プリセット選択セクション
+        st.markdown("### 📋 STEP 2: 設定の読み込み（任意）")
+        st.caption("保存済みの設定がある場合は選択してください")
         
         # 保存されたプリセット一覧
         preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
@@ -571,8 +574,11 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     # 画像がアップロードされている場合のみレイアウトを適用
     if test_image:
         with main_col2:
-            # 設定用の入力フィールド
-            st.markdown("### 🔍 ゼロライン検索設定")
+            # STEP 3: 設定用の入力フィールド
+            st.markdown("### 🔍 STEP 3: 詳細設定（通常はデフォルトでOK）")
+            st.caption("必要に応じて微調整できます")
+            
+            st.markdown("#### ゼロライン検索設定")
             col1, col2 = st.columns(2)
     
             with col1:
@@ -589,7 +595,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     step=50, help="オレンジバーから何ピクセル下まで検索するか"
                 )
             
-            st.markdown("### ✂️ 切り抜きサイズの設定")
+            st.markdown("#### ✂️ 切り抜きサイズの設定")
             col3, col4 = st.columns(2)
     
             with col3:
@@ -617,7 +623,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 )
             
             # グリッドライン調整
-            st.markdown("### 📏 グリッドライン調整")
+            st.markdown("#### 📏 グリッドライン調整")
             
             # グリッドライン手動調整
             st.markdown("#### ⚙️ 手動調整")
@@ -641,10 +647,10 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             
             # 中間ライン用のダミー変数を設定（他のコードで参照されるため）
             
-            # 最大値アライメント機能を統合
+            # STEP 4: 最大値アライメント機能を統合
             if test_images:
-                st.markdown("#### 🎯 最大値アライメントで自動調整")
-                st.caption(f"アップロードされた{len(test_images)}枚の画像から最適なグリッドライン位置を自動計算します")
+                st.markdown("### 🎯 STEP 4: 実際の最大値を入力して自動調整")
+                st.caption(f"アップロードされた{len(test_images)}枚の画像から最適な設定を自動計算します")
                 
                 # 複数画像の解析結果を保存
                 all_detections = []
@@ -1136,10 +1142,11 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         def save_settings():
             return st.session_state.settings.copy()
     
-    # 設定の保存の見出しを適切な場所に配置（画像がある場合のみ表示）
+    # STEP 5: 設定の保存の見出しを適切な場所に配置（画像がある場合のみ表示）
     if test_image:
         with main_col2:
-            st.markdown("### 💾 設定の保存")
+            st.markdown("### 💾 STEP 5: 設定の保存")
+            st.caption("調整が完了したら、端末名をつけて保存してください")
     
     # 設定の保存の内容（test_imageの有無で配置を変更）
     def render_save_settings():
