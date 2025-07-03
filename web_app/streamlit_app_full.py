@@ -1431,49 +1431,55 @@ if uploaded_files:
     st.markdown("### 📋 STEP 2: 解析設定を選択")
     st.caption("保存されたプリセットを選択するか、デフォルト設定を使用します")
     
-    # プリセット選択
+    # プリセット一覧
     preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
-    selected_preset = st.selectbox(
-        "設定プリセットを選択",
-        preset_names,
-        help="保存された設定を選択して適用します",
-        key="analysis_preset_select"
-    )
     
-    # ボタン（下段）
-    button_col1, button_col2, button_col3 = st.columns([1, 1, 1])
+    # プリセットボタンを横に並べる（調整セクションと同じスタイル）
+    if len(preset_names) <= 4:
+        preset_cols = st.columns(len(preset_names))
+        for i, preset_name in enumerate(preset_names):
+            with preset_cols[i]:
+                button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
+                if st.button(f"📥 {preset_name}", use_container_width=True, key=f"analysis_preset_{preset_name}", type=button_type):
+                    if preset_name == "デフォルト":
+                        st.session_state.settings = default_settings.copy()
+                    else:
+                        st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                    
+                    # 現在のプリセット名を保存
+                    st.session_state.current_preset_name = preset_name
+                    
+                    st.success(f"✅ '{preset_name}' の設定を適用しました")
+                    time.sleep(0.5)
+                    st.rerun()
+    else:
+        # 5個以上の場合は複数行に分ける
+        num_rows = (len(preset_names) + 3) // 4  # 4列で何行必要か
+        for row in range(num_rows):
+            cols = st.columns(4)
+            for col in range(4):
+                idx = row * 4 + col
+                if idx < len(preset_names):
+                    preset_name = preset_names[idx]
+                    with cols[col]:
+                        button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
+                        if st.button(f"📥 {preset_name}", use_container_width=True, key=f"analysis_preset_{preset_name}", type=button_type):
+                            if preset_name == "デフォルト":
+                                st.session_state.settings = default_settings.copy()
+                            else:
+                                st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                            
+                            # 現在のプリセット名を保存
+                            st.session_state.current_preset_name = preset_name
+                            
+                            st.success(f"✅ '{preset_name}' の設定を適用しました")
+                            time.sleep(0.5)
+                            st.rerun()
     
-    with button_col1:
-        # プリセット適用ボタン
-        if st.button("📥 適用", use_container_width=True, key="apply_preset_analysis"):
-            if selected_preset == "デフォルト":
-                st.session_state.settings = default_settings.copy()
-            else:
-                st.session_state.settings = st.session_state.saved_presets[selected_preset].copy()
-            
-            # 現在のプリセット名を保存
-            st.session_state.current_preset_name = selected_preset
-            
-            # デバッグ情報を表示
-            with st.expander("🔍 適用された設定値", expanded=False):
-                st.code(f"検索開始: {st.session_state.settings.get('search_start_offset', 50)}")
-                st.code(f"検索終了: {st.session_state.settings.get('search_end_offset', 500)}")
-                st.code(f"上切り抜き: {st.session_state.settings.get('crop_top', 246)}")
-                st.code(f"下切り抜き: {st.session_state.settings.get('crop_bottom', 247)}")
-                st.code(f"+30kライン調整: {st.session_state.settings.get('grid_30k_offset', 0)}")
-                st.code(f"-30kライン調整: {st.session_state.settings.get('grid_minus_30k_offset', 0)}")
-            
-            st.success(f"✅ '{selected_preset}' を適用しました")
-            st.rerun()
-    
-    with button_col2:
-        # 設定を調整ボタン
-        if st.button("⚙️ 設定を調整", use_container_width=True):
-            st.session_state.show_adjustment = True
-            st.rerun()
-    
-    with button_col3:
-        pass  # 空のカラムでバランスを取る
+    # 設定を調整ボタン（別行で表示）
+    if st.button("⚙️ 調整設定を開く", use_container_width=True, help="設定を細かく調整したい場合はこちら"):
+        st.session_state.show_adjustment = True
+        st.rerun()
     
     # STEP 3: 解析開始
     st.markdown("### 🚀 STEP 3: 解析を開始")
