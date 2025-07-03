@@ -204,48 +204,15 @@ def cookie_manager():
     window.addEventListener('load', function() {
         var token = getCookie('pachi777_session');
         if (token) {
-            // セッショントークンが存在する場合、Streamlitに通知
-            var checkTokenElement = document.getElementById('check-session-token');
-            if (checkTokenElement) {
-                checkTokenElement.value = token;
-                checkTokenElement.dispatchEvent(new Event('change'));
-            }
+            // セッショントークンが存在する場合の処理
+            // 現在は特に処理なし（将来の拡張用）
         }
     });
     </script>
     """
 
-# セッショントークンチェック用の隠しフィールド
-if 'session_token_checked' not in st.session_state:
-    st.session_state.session_token_checked = False
-
-if not st.session_state.authenticated and not st.session_state.session_token_checked:
-    # Cookie管理用のJavaScriptを挿入
-    st.markdown(cookie_manager(), unsafe_allow_html=True)
-    
-    # JavaScriptでセッショントークンを取得してチェック
-    st.markdown("""
-    <script>
-    function checkSessionToken() {
-        var token = getCookie('pachi777_session');
-        if (token) {
-            // Streamlitにトークンを渡すための隠し要素を作成
-            var hiddenDiv = document.getElementById('session-token-holder');
-            if (!hiddenDiv) {
-                hiddenDiv = document.createElement('div');
-                hiddenDiv.id = 'session-token-holder';
-                hiddenDiv.style.display = 'none';
-                hiddenDiv.textContent = token;
-                document.body.appendChild(hiddenDiv);
-            }
-        }
-    }
-    checkSessionToken();
-    </script>
-    """, unsafe_allow_html=True)
-    
-    # セッショントークンのチェックはJavaScriptで行うため、ここでは認証状態のみチェック
-    st.session_state.session_token_checked = True
+# Cookie管理用のJavaScriptを常に挿入（ログイン・ログアウト両方で使用）
+st.markdown(cookie_manager(), unsafe_allow_html=True)
 
 # パスワード認証
 if not st.session_state.authenticated:
@@ -370,15 +337,17 @@ if not st.session_state.authenticated:
             else:
                 st.session_state.login_error = True
         
-        # パスワード入力（Enterキーでログイン可能）
-        password = st.text_input(
-            "パスワード",
-            type="password",
-            placeholder="パスワードを入力",
-            label_visibility="collapsed",
-            key="password_input",
-            on_change=handle_login
-        )
+        # フォームコンテナでパスワード入力を囲む
+        with st.container():
+            # パスワード入力（Enterキーでログイン可能）
+            password = st.text_input(
+                "パスワード",
+                type="password",
+                placeholder="パスワードを入力",
+                label_visibility="hidden",  # "collapsed"から"hidden"に変更
+                key="password_input",
+                on_change=handle_login
+            )
         
         # ログインボタン
         if st.button("ログイン", type="primary", use_container_width=True):
@@ -415,9 +384,6 @@ if not st.session_state.authenticated:
     
     # 認証されていない場合はここで処理を終了
     st.stop()
-
-# 認証済みの場合もCookie管理用のJavaScriptを挿入（ログアウト用）
-st.markdown(cookie_manager(), unsafe_allow_html=True)
 
 # プリセット保存用のファイルパスを設定
 # Streamlit Cloudでも動作するように、書き込み可能なディレクトリを使用
@@ -1406,6 +1372,17 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 file_name=f'pachinko_analysis_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv',
                 mime='text/csv'
             )
+            
+            # 調整設定の案内
+            st.markdown("---")
+            st.info("""
+            💡 **出力結果が期待と異なる場合は？**
+            
+            端末や画面サイズによってグラフの表示が異なるため、調整設定が必要な場合があります。
+            下記の「⚙️ 画像解析の調整設定」から、お使いの端末に合わせた設定を保存してください。
+            
+            [⚙️ 画像解析の調整設定](#画像解析の調整設定)へ移動
+            """)
 
 # 調整機能（コラプス）
 with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state.show_adjustment):
