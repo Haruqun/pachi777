@@ -983,10 +983,15 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         cv2.rectangle(overlay, (100, search_start), (width_preview-100, search_end), (0, 255, 0), -1)
         overlay_img = cv2.addWeighted(overlay_img, 0.8, overlay, 0.2, 0)
         
-        # 検索範囲の説明テキストを左上に追加
-        cv2.putText(overlay_img, 'Zero Line Search Area', (105, search_start + 25), 
+        # 検索範囲の説明テキストを右上に追加
+        text = 'Zero Line Search Area'
+        text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
+        cv2.putText(overlay_img, text, (width_preview - text_size[0] - 110, search_start + 25), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 200, 0), 2)
-        cv2.putText(overlay_img, f'({search_start_offset} ~ {search_end_offset}px)', (105, search_start + 50), 
+        
+        text2 = f'({search_start_offset} ~ {search_end_offset}px)'
+        text_size2 = cv2.getTextSize(text2, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
+        cv2.putText(overlay_img, text2, (width_preview - text_size2[0] - 110, search_start + 50), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 200, 0), 2)
         
         # 検出したゼロラインを描画（赤）
@@ -997,10 +1002,15 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         # 切り抜き範囲を描画（濃い青）
         cv2.rectangle(overlay_img, (left, int(top)), (right, int(bottom)), (0, 0, 255), 4)
         
-        # 切り抜き範囲の説明テキストを左上に追加
-        cv2.putText(overlay_img, 'Crop Area', (left + 5, int(top) + 25), 
+        # 切り抜き範囲の説明テキストを右上に追加
+        text3 = 'Crop Area'
+        text_size3 = cv2.getTextSize(text3, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
+        cv2.putText(overlay_img, text3, (right - text_size3[0] - 5, int(top) + 25), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 200), 2)
-        cv2.putText(overlay_img, f'(Top: {crop_top}px, Bottom: {crop_bottom}px)', (left + 5, int(top) + 50), 
+        
+        text4 = f'(Top: {crop_top}px, Bottom: {crop_bottom}px)'
+        text_size4 = cv2.getTextSize(text4, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
+        cv2.putText(overlay_img, text4, (right - text_size4[0] - 5, int(top) + 50), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 2)
         
         # オレンジバーの位置を表示（濃いオレンジ）
@@ -1323,9 +1333,40 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         st.rerun()
 
 
-# ファイルアップローダー（一番最初に表示）
+# 本番解析セクション
+st.markdown("---")
+st.markdown("## 🎰 グラフ解析（本番）")
+st.caption("調整が完了したら、実際のグラフ画像を解析します")
+
+# 使い方ガイド
+show_analysis_help = st.checkbox("📖 解析の使い方を表示", value=False, key="show_analysis_help")
+if show_analysis_help:
+    st.info("""
+    **🎯 解析の流れ**
+    
+    1️⃣ **画像をアップロード**
+    - site7のグラフ画像を選択
+    - 複数枚まとめて処理可能
+    
+    2️⃣ **プリセットを選択**
+    - 調整設定で保存したプリセットを選択
+    - 初回はデフォルトでOK
+    
+    3️⃣ **解析開始**
+    - 解析ボタンをクリック
+    - 自動的に全データを抽出
+    
+    💡 **ポイント**
+    - 端末に合わせたプリセットを使用すると精度が向上します
+    - 解析結果はCSVダウンロード可能です
+    """)
+
+# STEP 1: ファイルアップロード
+st.markdown("### 📤 STEP 1: 解析したいグラフ画像をアップロード")
+st.caption("site7のグラフ画像を選択してください（複数可）")
+
 uploaded_files = st.file_uploader(
-    "📤 グラフ画像をアップロード",
+    "画像を選択",
     type=['jpg', 'jpeg', 'png'],
     accept_multiple_files=True,
     help="複数の画像を一度にアップロードできます（JPG, PNG形式）",
@@ -1364,10 +1405,11 @@ if uploaded_files:
     # ファイル名をセッションステートに保存
     st.session_state.uploaded_file_names = [f.name for f in uploaded_files]
     
-    # プリセット選択セクション（画像アップロード後に表示）
-    st.markdown("### 📋 解析設定")
+    # STEP 2: プリセット選択
+    st.markdown("### 📋 STEP 2: 解析設定を選択")
+    st.caption("保存されたプリセットを選択するか、デフォルト設定を使用します")
     
-    # プリセット選択（上段）
+    # プリセット選択
     preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
     selected_preset = st.selectbox(
         "設定プリセットを選択",
@@ -1411,7 +1453,10 @@ if uploaded_files:
     with button_col3:
         pass  # 空のカラムでバランスを取る
     
-    # 解析開始ボタン
+    # STEP 3: 解析開始
+    st.markdown("### 🚀 STEP 3: 解析を開始")
+    st.caption("設定を確認したら、解析ボタンをクリックしてください")
+    
     if st.button("🚀 解析を開始", type="primary", use_container_width=True):
         st.session_state.start_analysis = True
         st.rerun()
