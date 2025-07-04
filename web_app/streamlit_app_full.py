@@ -57,11 +57,31 @@ def extract_site7_data(image):
             'max_payout': None
         }
         
-        # 台番号の抽出
-        lines = text.split('\n')
-        for line in lines:
-            if '番台' in line and '【' in line:
-                data['machine_number'] = line.strip()
+        # 台番号の抽出（複数パターン対応）
+        # まず全体テキストから探す
+        machine_patterns = [
+            r'【(\d{1,4})番台】',  # 【123番台】形式
+            r'(\d{1,4})\s*番台',   # 123番台 形式
+            r'(\d{1,4})番\s*台',   # 123番 台 形式（スペースあり）
+            r'台番号\s*[:：]?\s*(\d{1,4})',  # 台番号：123 形式
+        ]
+        
+        for pattern in machine_patterns:
+            machine_match = re.search(pattern, text)
+            if machine_match:
+                data['machine_number'] = f"{machine_match.group(1)}番台"
+                break
+        
+        # 見つからない場合は行ごとに探す
+        if not data['machine_number']:
+            lines = text.split('\n')
+            for line in lines:
+                if '番台' in line:
+                    # 番台を含む行全体を保存
+                    cleaned_line = line.strip()
+                    if cleaned_line and len(cleaned_line) < 20:  # 短い行のみ（ノイズ除外）
+                        data['machine_number'] = cleaned_line
+                        break
         
         # 数値データの抽出
         # 累計スタート
