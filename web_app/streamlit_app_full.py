@@ -54,7 +54,8 @@ def extract_site7_data(image):
             'first_hit_count': None,
             'current_start': None,
             'jackpot_probability': None,
-            'max_payout': None
+            'max_payout': None,
+            'ocr_text': text  # OCRテキストも保存
         }
         
         # 台番号の抽出（複数パターン対応）
@@ -64,6 +65,10 @@ def extract_site7_data(image):
             r'(\d{1,4})\s*番台',   # 123番台 形式
             r'(\d{1,4})番\s*台',   # 123番 台 形式（スペースあり）
             r'台番号\s*[:：]?\s*(\d{1,4})',  # 台番号：123 形式
+            r'(\d{1,4})台',        # 123台 形式
+            r'No\.\s*(\d{1,4})',   # No.123 形式
+            r'№\s*(\d{1,4})',     # №123 形式
+            r'^(\d{1,4})$',        # 行頭の数字のみ
         ]
         
         for pattern in machine_patterns:
@@ -620,12 +625,19 @@ if uploaded_files:
             value=False,
             help="台番号や累計スタートなどのテキスト情報を読み取らず、グラフ解析のみ実行します。処理が高速になります。"
         )
+    with col_opt2:
+        show_ocr_debug = st.checkbox(
+            "🔍 OCRデバッグ情報を表示", 
+            value=False,
+            help="OCRで読み取ったテキストを確認できます。台番号が認識されない場合のトラブルシューティングに使用してください。"
+        )
     
     st.caption("設定を確認したら、解析ボタンをクリックしてください")
     
     if st.button("🚀 解析を開始", type="primary", use_container_width=True):
         st.session_state.start_analysis = True
         st.session_state.skip_ocr = skip_ocr
+        st.session_state.show_ocr_debug = show_ocr_debug
         st.rerun()
 
 # ファイルがアップロードされたことがある場合、解析ボタンを常に表示
@@ -1139,6 +1151,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数を追加
                 'dominant_color': dominant_color,
                 'ocr_data': ocr_data,  # OCRデータを追加
+                'ocr_text': ocr_data.get('ocr_text') if ocr_data else None,  # OCRテキストを追加
                 'correction_factor': correction_factor,  # 補正係数を追加
                 'rotation_metrics': rotation_metrics  # 回転率データを追加
             })
@@ -1399,9 +1412,12 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
 
                     ocr_html = '<div class="ocr-card"><div class="ocr-title">📱 site7データ</div>'
 
-                    # 台番号
+                    # 台番号（デバッグ情報付き）
                     if ocr.get('machine_number'):
                         ocr_html += f'<div class="ocr-item"><span class="ocr-label">🔢 台番号</span><span class="ocr-value">{ocr["machine_number"]}</span></div>'
+                    else:
+                        # 台番号が取得できない場合
+                        ocr_html += '<div class="ocr-item"><span class="ocr-label">🔢 台番号</span><span class="ocr-value" style="color: #999;">未検出</span></div>'
 
                     # 遊技データ
                     if ocr.get('total_start'):
@@ -1425,6 +1441,11 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
 
                     ocr_html += '</div>'
                     st.markdown(ocr_html, unsafe_allow_html=True)
+                    
+                    # OCRデバッグ情報を表示
+                    if st.session_state.get('show_ocr_debug', False) and result.get('ocr_text'):
+                        with st.expander("🔍 OCRで読み取ったテキスト（デバッグ用）"):
+                            st.text_area("OCR結果", result['ocr_text'], height=200, disabled=True)
 
             else:
                 st.warning("⚠️ グラフデータを検出できませんでした")
