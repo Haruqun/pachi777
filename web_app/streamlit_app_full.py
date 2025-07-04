@@ -34,8 +34,8 @@ def extract_machine_number_from_orange_bar(image):
         height, width = image.shape[:2]
         
         # 方法1: 画像の最上部から台番号を探す（台番号は通常最上部にある）
-        # 上部100ピクセルを切り出し
-        top_region = image[0:min(100, height//10), :]
+        # 上部150ピクセルを切り出し（より広い範囲）
+        top_region = image[0:min(150, height//8), :]
         
         # グレースケール変換
         gray_top = cv2.cvtColor(top_region, cv2.COLOR_RGB2GRAY)
@@ -57,15 +57,24 @@ def extract_machine_number_from_orange_bar(image):
         for binary in [binary1, binary2, binary3]:
             try:
                 # 複数のOCR設定を試す
-                for config in [r'--oem 3 --psm 8', r'--oem 3 --psm 7', r'--oem 3 --psm 11']:
+                for config in [r'--oem 3 --psm 8', r'--oem 3 --psm 7', r'--oem 3 --psm 11', r'--oem 3 --psm 6']:
                     text = pytesseract.image_to_string(binary, lang='jpn', config=config)
-                    # 数字を探す
-                    numbers = re.findall(r'\d+', text)
-                    for num in numbers:
-                        if 1 <= len(num) <= 4 and num.isdigit():
-                            num_val = int(num)
-                            if 1 <= num_val <= 9999:
-                                results.append(num)
+                    # 台番号のパターンを探す
+                    # 「1番」「1番台」「台1」「No.1」など
+                    patterns = [
+                        r'(\d{1,4})\s*番(?:台)?',
+                        r'台\s*(\d{1,4})',
+                        r'No\.\s*(\d{1,4})',
+                        r'№\s*(\d{1,4})',
+                        r'^(\d{1,4})$'
+                    ]
+                    for pattern in patterns:
+                        matches = re.findall(pattern, text, re.MULTILINE)
+                        for match in matches:
+                            if match.isdigit():
+                                num_val = int(match)
+                                if 1 <= num_val <= 9999:
+                                    results.append(match)
             except:
                 continue
         
@@ -1409,11 +1418,24 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
 
     for idx, result in enumerate(analysis_results):
         with cols[idx % 2]:
-            # 台番号を優先表示、なければファイル名
+            # 台番号を優先表示、なければファイル名から推測
             if result.get('ocr_data') and result['ocr_data'].get('machine_number'):
                 display_name = result['ocr_data']['machine_number']
             else:
-                display_name = result['name']
+                # ファイル名から台番号を推測
+                filename = result['name']
+                # ファイル名の数字を探す（例：3. 1番台.jpg → 1番台）
+                import re
+                match = re.search(r'(\d+)\s*番台', filename)
+                if match:
+                    display_name = f"{match.group(1)}番台"
+                else:
+                    # 先頭の数字を台番号として使用（例：3. → 3番台）
+                    match = re.search(r'^(\d+)\.', filename)
+                    if match:
+                        display_name = f"{match.group(1)}番台"
+                    else:
+                        display_name = filename
             st.markdown(f"#### {idx + 1}. {display_name}")
 
             # 解析結果画像
