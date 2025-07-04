@@ -1264,6 +1264,25 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 if 'correction_factor' in result and result['correction_factor'] != 1.0:
                     correction_info = f'<div style="font-size: 0.8em; color: #666; text-align: right; margin-top: 5px;">補正率: x{result["correction_factor"]:.2f}</div>'
                 
+                # 回転率データの準備
+                rotation_html = ""
+                if result.get('rotation_metrics'):
+                    metrics = result['rotation_metrics']
+                    if metrics['rotation_rate_1'] > 0:
+                        rotation_html += f'''
+                        <div class="stat-item">
+                            <span class="stat-label">📊 回転率①</span>
+                            <span class="stat-value positive">{metrics['rotation_rate_1']:.1f}回/千円</span>
+                        </div>
+                        '''
+                    if metrics['rotation_rate_2'] > 0:
+                        rotation_html += f'''
+                        <div class="stat-item">
+                            <span class="stat-label">📊 回転率②</span>
+                            <span class="stat-value positive">{metrics['rotation_rate_2']:.1f}回/千円</span>
+                        </div>
+                        '''
+                
                 st.markdown(f"""
                 <div class="stat-card">
                     <div class="stat-item">
@@ -1282,6 +1301,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         <span class="stat-label">🎰 初当たり</span>
                         <span class="stat-value {first_hit_class}">{first_hit_text}</span>
                     </div>
+                    {rotation_html}
                     {correction_info}
                 </div>
                 """, unsafe_allow_html=True)
