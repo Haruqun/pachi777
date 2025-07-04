@@ -1045,6 +1045,28 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 1, cv2.LINE_AA)
 
             # 結果を保存
+            # 回転率計算（OCRデータがある場合のみ）
+            rotation_metrics = None
+            if ocr_data and ocr_data.get('total_start') and not st.session_state.get('skip_ocr', False):
+                # グラフの実効幅（左右マージンを除外）
+                graph_width = right - left
+                # analyze_values形式のデータを作成
+                analysis_data = {
+                    'max_value': int(max_val),
+                    'max_index': max_idx,
+                    'min_value': int(min_val),
+                    'min_index': min_idx,
+                    'first_hit_index': first_hit_x if first_hit_x is not None else -1,
+                    'first_hit_value': int(first_hit_val) if first_hit_x is not None else 0,
+                    'final_value': int(current_val)
+                }
+                rotation_metrics = analyzer.calculate_rotation_metrics(
+                    graph_data_points, 
+                    analysis_data, 
+                    ocr_data['total_start'],
+                    graph_width
+                )
+            
             analysis_results.append({
                 'name': uploaded_file.name,
                 'original_image': img_with_grid,  # グリッド付き元画像を保存
@@ -1057,7 +1079,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
                 'dominant_color': dominant_color,
                 'ocr_data': ocr_data,  # OCRデータを追加
-                'correction_factor': correction_factor  # 補正係数を追加
+                'correction_factor': correction_factor,  # 補正係数を追加
+                'rotation_metrics': rotation_metrics  # 回転率データを追加
             })
         else:
             # 解析失敗時
@@ -1147,9 +1170,15 @@ with st.expander("使い方と注意事項を確認する"):
     - **初当たり検出**：マイナス値からの100玉以上の急上昇を検出します
     
     #### 🔧 技術仕様
-    - 0ライン基準：上246px、下247px（±30,000玉相当）
-    - スケール：120玉/ピクセル
-    - 左右余白：125px除外
+    - 0ライン基準：上246px、下280px（±30,000玉相当）
+    - スケール：約120玉/ピクセル
+    - 左右余白：120px除外
+    
+    #### 🆕 回転率計算機能
+    - **回転率①**：初当たりまでの1000円あたり回転数
+    - **回転率②**：通常時全体の1000円あたり回転数
+    - OCRで読み取った累計スタートを使用して精密計算
+    - 初当たりが検出されない場合は回転率①は表示されません
     """)
 
 # 解析結果を表示
@@ -1389,6 +1418,23 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     '収支（円）': result['current_val'] * 4,
                     '色': result['dominant_color']
                 }
+                
+                # 回転率データを追加（利用可能な場合）
+                if result.get('rotation_metrics'):
+                    metrics = result['rotation_metrics']
+                    if metrics['rotation_rate_1'] > 0:
+                        row['回転率①'] = f"{metrics['rotation_rate_1']:.1f}"
+                    else:
+                        row['回転率①'] = '-'
+                    
+                    if metrics['rotation_rate_2'] > 0:
+                        row['回転率②'] = f"{metrics['rotation_rate_2']:.1f}"
+                    else:
+                        row['回転率②'] = '-'
+                        
+                    # 詳細データ（非表示）
+                    row['初当り回転数'] = metrics['first_hit_spins'] if metrics['first_hit_spins'] > 0 else '-'
+                    row['初当り使用玉'] = metrics['first_hit_balls'] if metrics['first_hit_balls'] > 0 else '-'
                 # OCRデータを追加（OCRスキップモードでない場合のみ）
                 if not st.session_state.get('skip_ocr', False) and result.get('ocr_data'):
                     ocr = result['ocr_data']
@@ -1441,6 +1487,43 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 file_name=f'pachinko_analysis_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv',
                 mime='text/csv'
             )
+            
+            # 回転率の詳細情報を表示
+            if any(result.get('rotation_metrics') for result in analysis_results if result['success']):
+                with st.expander("📊 回転率計算の詳細"):
+                    st.markdown("""
+                    ### 回転率の計算方法
+                    
+                    **回転率①（初当たりまで）**
+                    - 初当たりまでの回転数 ÷ (使用玉数 ÷ 250)
+                    - 初当たりまでの1000円あたりの回転数
+                    
+                    **回転率②（通常時全体）**
+                    - 通常時の総回転数 ÷ (総消費玉数 ÷ 250)
+                    - グラフ全体の下降部分から計算
+                    
+                    ※ 1000円 = 250玉として計算
+                    """)
+                    
+                    # 各台の詳細データ
+                    for result in analysis_results:
+                        if result['success'] and result.get('rotation_metrics'):
+                            metrics = result['rotation_metrics']
+                            if metrics['rotation_rate_1'] > 0 or metrics['rotation_rate_2'] > 0:
+                                st.markdown(f"#### 🎰 {result.get('ocr_data', {}).get('machine_number', result['name'])}")
+                                
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.metric("初当たりまでの回転数", f"{metrics['first_hit_spins']}回転")
+                                    st.metric("初当たりまでの使用玉数", f"{metrics['first_hit_balls']}玉")
+                                    st.metric("回転率①", f"{metrics['rotation_rate_1']:.1f}回/千円")
+                                
+                                with col2:
+                                    st.metric("通常時の総回転数", f"{metrics['normal_decline_spins']}回転")
+                                    st.metric("通常時の総消費玉数", f"{metrics['normal_decline_balls']}玉")
+                                    st.metric("回転率②", f"{metrics['rotation_rate_2']:.1f}回/千円")
+                                
+                                st.markdown("---")
             
             # 調整設定の案内
             st.markdown("---")
