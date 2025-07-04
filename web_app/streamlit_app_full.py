@@ -88,6 +88,27 @@ def extract_site7_data(image):
                         data['machine_number'] = cleaned_line
                         break
         
+        # それでも見つからない場合は機種名を探す
+        if not data['machine_number']:
+            # 機種名のパターン（e〇〇、P〇〇など）
+            machine_name_patterns = [
+                r'e[^\s]{2,30}',  # e大海物語... など
+                r'P[^\s]{2,30}',  # Pフィーバー... など
+                r'CR[^\s]{2,30}', # CR〇〇... など
+            ]
+            
+            for pattern in machine_name_patterns:
+                machine_match = re.search(pattern, text)
+                if machine_match:
+                    # 機種名を台番号として使用
+                    machine_name = machine_match.group(0)
+                    # 特殊文字を除去して整形
+                    machine_name = re.sub(r'[横軸:].*$', '', machine_name)  # 「横軸:稼動」などを除去
+                    machine_name = machine_name.strip()
+                    if len(machine_name) > 3:  # 短すぎる場合は除外
+                        data['machine_number'] = machine_name
+                        break
+        
         # 数値データの抽出
         # 累計スタート
         start_match = re.search(r'(\d{3,4})\s*スタート', text)
