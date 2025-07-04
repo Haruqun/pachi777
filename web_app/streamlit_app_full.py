@@ -767,7 +767,6 @@ if uploaded_files:
     
     # プログレスバー（解析中のみ表示）
     if st.session_state.get('start_analysis', False) and uploaded_files:
-        st.markdown("---")
         progress_bar = st.progress(0)
         status_text = st.empty()
         detail_text = st.empty()
@@ -776,6 +775,8 @@ if uploaded_files:
         st.session_state.progress_bar = progress_bar
         st.session_state.status_text = status_text
         st.session_state.detail_text = detail_text
+        
+        st.markdown("---")
 
 # ファイルがアップロードされたことがある場合、解析ボタンを常に表示
 elif st.session_state.uploaded_file_names:
