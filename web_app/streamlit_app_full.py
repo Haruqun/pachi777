@@ -946,26 +946,26 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 first_hit_val = 0
 
             # 総獲得球数の計算（大当り時の増加分の合計）
-            # 注意：補正前の値（graph_values_original）を使用
+            # 補正後の値（graph_values）を使用
             total_jackpot_balls = 0
             increase_threshold = 100  # 100玉以上の増加を大当りとみなす
             
             i = 0
-            while i < len(graph_values_original) - 1:
+            while i < len(graph_values) - 1:
                 # 急激な増加を検出
-                increase = graph_values_original[i+1] - graph_values_original[i]
+                increase = graph_values[i+1] - graph_values[i]
                 if increase >= increase_threshold:
                     # 大当りの開始点
-                    start_val = graph_values_original[i]
+                    start_val = graph_values[i]
                     # 大当りの終了点を探す（最大値まで継続）
                     j = i + 1
-                    max_val_in_jackpot = graph_values_original[j]
+                    max_val_in_jackpot = graph_values[j]
                     
-                    while j < len(graph_values_original) - 1:
-                        if graph_values_original[j+1] > max_val_in_jackpot:
-                            max_val_in_jackpot = graph_values_original[j+1]
+                    while j < len(graph_values) - 1:
+                        if graph_values[j+1] > max_val_in_jackpot:
+                            max_val_in_jackpot = graph_values[j+1]
                             j += 1
-                        elif graph_values_original[j+1] < graph_values_original[j] - 50:  # 50玉以上の下降で大当り終了
+                        elif graph_values[j+1] < graph_values[j] - 50:  # 50玉以上の下降で大当り終了
                             break
                         else:
                             j += 1
