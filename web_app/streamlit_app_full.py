@@ -33,10 +33,70 @@ def extract_machine_number_from_orange_bar(image):
     try:
         height, width = image.shape[:2]
         
-        # 方法1: 画像の最上部から台番号を探す（台番号は通常最上部にある）
-        # 上部150ピクセルを切り出し（より広い範囲）
-        top_region = image[0:min(150, height//8), :]
+        # HSV色空間に変換してオレンジバーを検出
+        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
         
+        # オレンジ色の範囲を定義（site7のオレンジバー用）
+        orange_lower = np.array([10, 100, 100])
+        orange_upper = np.array([25, 255, 255])
+        
+        # オレンジ色のマスクを作成
+        orange_mask = cv2.inRange(hsv, orange_lower, orange_upper)
+        
+        # オレンジバーがある行を検出（上部300ピクセル内）
+        orange_bar_y = -1
+        for y in range(min(300, height)):
+            # この行のオレンジピクセルの割合を計算
+            orange_ratio = np.sum(orange_mask[y, :]) / (width * 255)
+            if orange_ratio > 0.7:  # 70%以上がオレンジ色
+                orange_bar_y = y
+                break
+        
+        if orange_bar_y == -1:
+            # オレンジバーが見つからない場合は従来の方法
+            # 上部150ピクセルを切り出し
+            top_region = image[0:min(150, height//8), :]
+        else:
+            # オレンジバーが見つかった場合、その領域を切り出し
+            # オレンジバーの高さを検出
+            bar_height = 0
+            for y in range(orange_bar_y, min(orange_bar_y + 100, height)):
+                orange_ratio = np.sum(orange_mask[y, :]) / (width * 255)
+                if orange_ratio > 0.7:
+                    bar_height += 1
+                else:
+                    break
+            
+            # オレンジバー領域を切り出し
+            top_region = image[orange_bar_y:orange_bar_y + bar_height, :]
+            
+            # オレンジバー内の白文字を抽出するため、RGB値で白色を検出
+            # 白文字のマスクを作成（RGB全てが200以上）
+            white_mask = cv2.inRange(top_region, np.array([200, 200, 200]), np.array([255, 255, 255]))
+            
+            # 白文字部分を黒背景に白文字として抽出
+            result = np.zeros_like(white_mask)
+            result[white_mask > 0] = 255
+            
+            # OCRで台番号を読み取り
+            try:
+                # 横長の画像なのでPSM 7（単一テキスト行）を使用
+                text = pytesseract.image_to_string(result, lang='jpn', config='--psm 7')
+                
+                # 台番号パターンを探す（「2308番台」のような形式）
+                match = re.search(r'(\d{1,4})\s*番台', text)
+                if match:
+                    return f"{match.group(1)}番台"
+                
+                # 数字だけ探す
+                numbers = re.findall(r'\d{4}', text)
+                if numbers:
+                    # 4桁の数字を台番号として扱う
+                    return f"{numbers[0]}番台"
+            except:
+                pass
+        
+        # 従来の方法も試す
         # グレースケール変換
         gray_top = cv2.cvtColor(top_region, cv2.COLOR_RGB2GRAY)
         
