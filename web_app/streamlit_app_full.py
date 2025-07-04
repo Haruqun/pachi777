@@ -28,9 +28,85 @@ st.set_page_config(
     layout="wide"
 )
 
+def extract_machine_number_from_orange_bar(image):
+    """オレンジバー付近から台番号を抽出"""
+    try:
+        # HSV色空間に変換
+        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        
+        # オレンジ色の範囲（HSV）
+        orange_lower = np.array([10, 100, 100])
+        orange_upper = np.array([30, 255, 255])
+        
+        # オレンジ色のマスクを作成
+        orange_mask = cv2.inRange(hsv, orange_lower, orange_upper)
+        
+        # オレンジバーのY座標を検出
+        height, width = image.shape[:2]
+        orange_y_coords = []
+        
+        for y in range(height // 2):  # 上半分のみ検索
+            if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
+                orange_y_coords.append(y)
+        
+        if not orange_y_coords:
+            return None
+        
+        # オレンジバーの範囲を特定
+        orange_top = min(orange_y_coords)
+        orange_bottom = max(orange_y_coords)
+        
+        # オレンジバー周辺の画像を切り出し（上下に少し余裕を持たせる）
+        margin = 20
+        crop_top = max(0, orange_top - margin)
+        crop_bottom = min(height, orange_bottom + margin)
+        
+        # オレンジバー領域を切り出し
+        orange_region = image[crop_top:crop_bottom, :]
+        
+        # 画像の前処理（台番号は白文字なので反転処理）
+        gray_region = cv2.cvtColor(orange_region, cv2.COLOR_RGB2GRAY)
+        
+        # 二値化（白文字を抽出）
+        _, binary = cv2.threshold(gray_region, 200, 255, cv2.THRESH_BINARY)
+        
+        # OCRで台番号を読み取り
+        custom_config = r'--oem 3 --psm 8'  # 単一行として認識
+        text = pytesseract.image_to_string(binary, lang='jpn', config=custom_config)
+        
+        # 台番号のパターンマッチング
+        # 数字のみ、または数字+番台の形式
+        patterns = [
+            r'(\d{1,4})(?:\s*番台)?',
+            r'(\d{1,4})',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                return f"{match.group(1)}番台"
+        
+        # 見つからない場合はテキスト全体から数字を探す
+        numbers = re.findall(r'\d+', text)
+        if numbers:
+            # 1〜4桁の数字を台番号として扱う
+            for num in numbers:
+                if 1 <= len(num) <= 4:
+                    return f"{num}番台"
+        
+        return None
+        
+    except Exception as e:
+        return None
+
 def extract_site7_data(image):
     """site7の画像からOCRでデータを抽出"""
     try:
+        # まず、オレンジバーから台番号を抽出
+        machine_number = None
+        if len(image.shape) == 3:  # カラー画像の場合のみ
+            machine_number = extract_machine_number_from_orange_bar(image)
+        
         # 画像をグレースケールに変換
         if len(image.shape) == 3:
             gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
@@ -48,7 +124,7 @@ def extract_site7_data(image):
         
         # 抽出したいデータのパターン定義
         data = {
-            'machine_number': None,
+            'machine_number': machine_number,  # オレンジバーから抽出した台番号
             'total_start': None,
             'jackpot_count': None,
             'first_hit_count': None,
@@ -58,24 +134,24 @@ def extract_site7_data(image):
             'ocr_text': text  # OCRテキストも保存
         }
         
-        # 台番号の抽出（複数パターン対応）
-        # まず全体テキストから探す
-        machine_patterns = [
-            r'【(\d{1,4})番台】',  # 【123番台】形式
-            r'(\d{1,4})\s*番台',   # 123番台 形式
-            r'(\d{1,4})番\s*台',   # 123番 台 形式（スペースあり）
-            r'台番号\s*[:：]?\s*(\d{1,4})',  # 台番号：123 形式
-            r'(\d{1,4})台',        # 123台 形式
-            r'No\.\s*(\d{1,4})',   # No.123 形式
-            r'№\s*(\d{1,4})',     # №123 形式
-            r'^(\d{1,4})$',        # 行頭の数字のみ
-        ]
+        # 台番号がオレンジバーから取得できなかった場合、全体テキストから探す
+        if not data['machine_number']:
+            machine_patterns = [
+                r'【(\d{1,4})番台】',  # 【123番台】形式
+                r'(\d{1,4})\s*番台',   # 123番台 形式
+                r'(\d{1,4})番\s*台',   # 123番 台 形式（スペースあり）
+                r'台番号\s*[:：]?\s*(\d{1,4})',  # 台番号：123 形式
+                r'(\d{1,4})台',        # 123台 形式
+                r'No\.\s*(\d{1,4})',   # No.123 形式
+                r'№\s*(\d{1,4})',     # №123 形式
+                r'^(\d{1,4})$',        # 行頭の数字のみ
+            ]
         
-        for pattern in machine_patterns:
-            machine_match = re.search(pattern, text)
-            if machine_match:
-                data['machine_number'] = f"{machine_match.group(1)}番台"
-                break
+            for pattern in machine_patterns:
+                machine_match = re.search(pattern, text)
+                if machine_match:
+                    data['machine_number'] = f"{machine_match.group(1)}番台"
+                    break
         
         # 見つからない場合は行ごとに探す
         if not data['machine_number']:
@@ -88,26 +164,6 @@ def extract_site7_data(image):
                         data['machine_number'] = cleaned_line
                         break
         
-        # それでも見つからない場合は機種名を探す
-        if not data['machine_number']:
-            # 機種名のパターン（e〇〇、P〇〇など）
-            machine_name_patterns = [
-                r'e[^\s]{2,30}',  # e大海物語... など
-                r'P[^\s]{2,30}',  # Pフィーバー... など
-                r'CR[^\s]{2,30}', # CR〇〇... など
-            ]
-            
-            for pattern in machine_name_patterns:
-                machine_match = re.search(pattern, text)
-                if machine_match:
-                    # 機種名を台番号として使用
-                    machine_name = machine_match.group(0)
-                    # 特殊文字を除去して整形
-                    machine_name = re.sub(r'[横軸:].*$', '', machine_name)  # 「横軸:稼動」などを除去
-                    machine_name = machine_name.strip()
-                    if len(machine_name) > 3:  # 短すぎる場合は除外
-                        data['machine_number'] = machine_name
-                        break
         
         # 数値データの抽出
         # 累計スタート
