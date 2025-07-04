@@ -1269,19 +1269,9 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 if result.get('rotation_metrics'):
                     metrics = result['rotation_metrics']
                     if metrics['rotation_rate_1'] > 0:
-                        rotation_html += f'''
-                        <div class="stat-item">
-                            <span class="stat-label">📊 回転率①</span>
-                            <span class="stat-value positive">{metrics['rotation_rate_1']:.1f}回/千円</span>
-                        </div>
-                        '''
+                        rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{metrics["rotation_rate_1"]:.1f}回/千円</span></div>'
                     if metrics['rotation_rate_2'] > 0:
-                        rotation_html += f'''
-                        <div class="stat-item">
-                            <span class="stat-label">📊 回転率②</span>
-                            <span class="stat-value positive">{metrics['rotation_rate_2']:.1f}回/千円</span>
-                        </div>
-                        '''
+                        rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{metrics["rotation_rate_2"]:.1f}回/千円</span></div>'
                 
                 st.markdown(f"""
                 <div class="stat-card">
