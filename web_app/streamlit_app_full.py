@@ -218,9 +218,9 @@ def extract_machine_number_from_orange_bar(image):
 def extract_site7_data(image):
     """site7の画像からOCRでデータを抽出"""
     try:
-        # まず、オレンジバーから台番号を抽出
+        # まず、オレンジバーから台番号を抽出（スキップ設定を確認）
         machine_number = None
-        if len(image.shape) == 3:  # カラー画像の場合のみ
+        if len(image.shape) == 3 and not st.session_state.get('skip_machine_number', True):  # カラー画像で、かつスキップしない場合
             machine_number = extract_machine_number_from_orange_bar(image)
         
         # 画像をグレースケールに変換
@@ -826,12 +826,19 @@ if uploaded_files:
             help="OCRで読み取ったテキストを確認できます。台番号が認識されない場合のトラブルシューティングに使用してください。"
         )
     
+    skip_machine_number = st.checkbox(
+        "🏷️ 台番号検出をスキップ", 
+        value=True,
+        help="台番号の検出処理をスキップして高速化します。台番号はファイル名から推測されます。"
+    )
+    
     st.caption("設定を確認したら、解析ボタンをクリックしてください")
     
     if st.button("🚀 解析を開始", type="primary", use_container_width=True):
         st.session_state.start_analysis = True
         st.session_state.skip_ocr = skip_ocr
         st.session_state.show_ocr_debug = show_ocr_debug
+        st.session_state.skip_machine_number = skip_machine_number
         st.rerun()
     
     # プログレスバー（解析中のみ表示）
