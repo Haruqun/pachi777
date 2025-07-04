@@ -480,8 +480,9 @@ class WebCompatibleAnalyzer:
                 # 初当たりまでの使用玉数（マイナス値の絶対値）
                 first_hit_balls = abs(analysis['first_hit_value'])
                 # 回転率①（1000円 = 250玉）
+                # 正しい計算式：(回転数 ÷ 使用玉数) × 250
                 if first_hit_balls > 0:
-                    rotation_rate_1 = round(first_hit_spins / (first_hit_balls / 250), 1)
+                    rotation_rate_1 = round((first_hit_spins / first_hit_balls) * 250, 1)
             
             # 通常時（下降区間）の回転率計算
             rotation_rate_2 = 0
@@ -526,7 +527,8 @@ class WebCompatibleAnalyzer:
             if total_decline_balls > 0 and total_decline_pixels > 0:
                 normal_decline_spins = int(total_decline_pixels * spins_per_pixel)
                 normal_decline_balls = int(total_decline_balls)
-                rotation_rate_2 = round(normal_decline_spins / (normal_decline_balls / 250), 1)
+                # 正しい計算式：(回転数 ÷ 使用玉数) × 250
+                rotation_rate_2 = round((normal_decline_spins / normal_decline_balls) * 250, 1)
             
             return {
                 'spins_per_pixel': round(spins_per_pixel, 2),
