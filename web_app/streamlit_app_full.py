@@ -764,6 +764,18 @@ if uploaded_files:
         st.session_state.skip_ocr = skip_ocr
         st.session_state.show_ocr_debug = show_ocr_debug
         st.rerun()
+    
+    # プログレスバー（解析中のみ表示）
+    if st.session_state.get('start_analysis', False) and uploaded_files:
+        st.markdown("---")
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        detail_text = st.empty()
+        
+        # プログレスバーをセッションステートに保存
+        st.session_state.progress_bar = progress_bar
+        st.session_state.status_text = status_text
+        st.session_state.detail_text = detail_text
 
 # ファイルがアップロードされたことがある場合、解析ボタンを常に表示
 elif st.session_state.uploaded_file_names:
@@ -807,10 +819,15 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             st.text(f"+30k: {current_settings.get('grid_30k_offset', 0):+d}px")
             st.text(f"-30k: {current_settings.get('grid_minus_30k_offset', 0):+d}px")
     
-    # プログレスバー
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    detail_text = st.empty()
+    # セッションステートからプログレスバーを取得（既に上部で作成済み）
+    progress_bar = st.session_state.get('progress_bar')
+    status_text = st.session_state.get('status_text')
+    detail_text = st.session_state.get('detail_text')
+    
+    # プログレスバーが存在しない場合（通常はない）
+    if not progress_bar:
+        st.error("プログレスバーの初期化エラー")
+        st.stop()
     
     # 初期メッセージを表示
     status_text.text('🚀 解析を開始します...')
