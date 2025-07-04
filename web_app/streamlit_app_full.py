@@ -31,68 +31,115 @@ st.set_page_config(
 def extract_machine_number_from_orange_bar(image):
     """オレンジバー付近から台番号を抽出"""
     try:
+        height, width = image.shape[:2]
+        
+        # 方法1: 画像の最上部から台番号を探す（台番号は通常最上部にある）
+        # 上部100ピクセルを切り出し
+        top_region = image[0:min(100, height//10), :]
+        
+        # グレースケール変換
+        gray_top = cv2.cvtColor(top_region, cv2.COLOR_RGB2GRAY)
+        
+        # 複数の二値化方法を試す
+        results = []
+        
+        # 白文字を抽出（背景が暗い場合）
+        _, binary1 = cv2.threshold(gray_top, 180, 255, cv2.THRESH_BINARY)
+        
+        # 黒文字を抽出（背景が明るい場合）
+        _, binary2 = cv2.threshold(gray_top, 80, 255, cv2.THRESH_BINARY_INV)
+        
+        # 適応的二値化
+        binary3 = cv2.adaptiveThreshold(gray_top, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                       cv2.THRESH_BINARY, 11, 2)
+        
+        # 各二値化画像でOCRを実行
+        for binary in [binary1, binary2, binary3]:
+            try:
+                # 複数のOCR設定を試す
+                for config in [r'--oem 3 --psm 8', r'--oem 3 --psm 7', r'--oem 3 --psm 11']:
+                    text = pytesseract.image_to_string(binary, lang='jpn', config=config)
+                    # 数字を探す
+                    numbers = re.findall(r'\d+', text)
+                    for num in numbers:
+                        if 1 <= len(num) <= 4 and num.isdigit():
+                            num_val = int(num)
+                            if 1 <= num_val <= 9999:
+                                results.append(num)
+            except:
+                continue
+        
+        # 方法2: オレンジバーを探してその中から台番号を探す
         # HSV色空間に変換
         hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
         
-        # オレンジ色の範囲（HSV）
-        orange_lower = np.array([10, 100, 100])
-        orange_upper = np.array([30, 255, 255])
+        # オレンジ色の範囲（HSV）- より広い範囲に調整
+        orange_lower = np.array([5, 50, 50])
+        orange_upper = np.array([35, 255, 255])
         
         # オレンジ色のマスクを作成
         orange_mask = cv2.inRange(hsv, orange_lower, orange_upper)
         
         # オレンジバーのY座標を検出
-        height, width = image.shape[:2]
         orange_y_coords = []
         
-        for y in range(height // 2):  # 上半分のみ検索
-            if np.sum(orange_mask[y, :]) > width * 0.3 * 255:
+        # 画像の上部1/3を検索（オレンジバーは通常上部にある）
+        for y in range(height // 3):
+            if np.sum(orange_mask[y, :]) > width * 0.2 * 255:  # 閾値を下げる
                 orange_y_coords.append(y)
         
-        if not orange_y_coords:
-            return None
+        if orange_y_coords:
+            # オレンジバーの範囲を特定
+            orange_top = min(orange_y_coords)
+            orange_bottom = max(orange_y_coords)
+            
+            # オレンジバー内の画像を切り出し（バー内のみ）
+            orange_region = image[orange_top:orange_bottom + 1, :]
         
-        # オレンジバーの範囲を特定
-        orange_top = min(orange_y_coords)
-        orange_bottom = max(orange_y_coords)
+        # 複数の前処理方法を試す
+        results = []
         
-        # オレンジバー周辺の画像を切り出し（上下に少し余裕を持たせる）
-        margin = 20
-        crop_top = max(0, orange_top - margin)
-        crop_bottom = min(height, orange_bottom + margin)
-        
-        # オレンジバー領域を切り出し
-        orange_region = image[crop_top:crop_bottom, :]
-        
-        # 画像の前処理（台番号は白文字なので反転処理）
+        # 方法1: グレースケール + 適応的二値化
         gray_region = cv2.cvtColor(orange_region, cv2.COLOR_RGB2GRAY)
+        binary1 = cv2.adaptiveThreshold(gray_region, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                       cv2.THRESH_BINARY, 11, 2)
         
-        # 二値化（白文字を抽出）
-        _, binary = cv2.threshold(gray_region, 200, 255, cv2.THRESH_BINARY)
+        # 方法2: 白色の抽出（RGB）
+        lower_white = np.array([200, 200, 200])
+        upper_white = np.array([255, 255, 255])
+        white_mask = cv2.inRange(orange_region, lower_white, upper_white)
         
-        # OCRで台番号を読み取り
-        custom_config = r'--oem 3 --psm 8'  # 単一行として認識
-        text = pytesseract.image_to_string(binary, lang='jpn', config=custom_config)
+        # 方法3: 固定閾値での二値化
+        _, binary3 = cv2.threshold(gray_region, 180, 255, cv2.THRESH_BINARY)
         
-        # 台番号のパターンマッチング
-        # 数字のみ、または数字+番台の形式
-        patterns = [
-            r'(\d{1,4})(?:\s*番台)?',
-            r'(\d{1,4})',
+        # 各方法でOCRを実行
+        configs = [
+            r'--oem 3 --psm 8',   # 単一行
+            r'--oem 3 --psm 7',   # 単一テキスト行
+            r'--oem 3 --psm 13',  # 生のライン
         ]
         
-        for pattern in patterns:
-            match = re.search(pattern, text)
-            if match:
-                return f"{match.group(1)}番台"
+        for binary in [binary1, white_mask, binary3]:
+            for config in configs:
+                try:
+                    text = pytesseract.image_to_string(binary, lang='jpn', config=config)
+                    # 数字を探す
+                    numbers = re.findall(r'\d+', text)
+                    for num in numbers:
+                        if 1 <= len(num) <= 4 and num.isdigit():
+                            # 妥当な台番号の範囲（1-9999）
+                            num_val = int(num)
+                            if 1 <= num_val <= 9999:
+                                results.append(num)
+                except:
+                    continue
         
-        # 見つからない場合はテキスト全体から数字を探す
-        numbers = re.findall(r'\d+', text)
-        if numbers:
-            # 1〜4桁の数字を台番号として扱う
-            for num in numbers:
-                if 1 <= len(num) <= 4:
-                    return f"{num}番台"
+        # 最も頻出する番号を選択
+        if results:
+            from collections import Counter
+            most_common = Counter(results).most_common(1)
+            if most_common:
+                return f"{most_common[0][0]}番台"
         
         return None
         
@@ -131,7 +178,8 @@ def extract_site7_data(image):
             'current_start': None,
             'jackpot_probability': None,
             'max_payout': None,
-            'ocr_text': text  # OCRテキストも保存
+            'ocr_text': text,  # OCRテキストも保存
+            'orange_bar_detected': machine_number is not None  # デバッグ用
         }
         
         # 台番号がオレンジバーから取得できなかった場合、全体テキストから探す
