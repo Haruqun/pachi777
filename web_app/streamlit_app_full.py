@@ -679,8 +679,10 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         # OCRでデータ抽出を試みる（スキップ設定を確認）
         if not st.session_state.get('skip_ocr', False):
             detail_text.text(f'🔍 {uploaded_file.name} のOCR解析を実行中...')
-            time.sleep(0.1)  # 視覚的フィードバック
+            ocr_start_time = time.time()
             ocr_data = extract_site7_data(img_array)
+            ocr_end_time = time.time()
+            detail_text.text(f'✅ OCR完了 ({ocr_end_time - ocr_start_time:.1f}秒)')
         else:
             detail_text.text(f'⚡ {uploaded_file.name} のOCR解析をスキップ（高速モード）')
             ocr_data = None
