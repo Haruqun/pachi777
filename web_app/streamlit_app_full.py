@@ -1327,7 +1327,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     </div>
                     <div class="stat-item">
                         <span class="stat-label">💰 総獲得球数</span>
-                        <span class="stat-value positive">{result['total_jackpot_balls']:,}玉</span>
+                        <span class="stat-value positive">{result.get('total_jackpot_balls', 0):,}玉</span>
                     </div>
                     {rotation_html}
                     {correction_info}
