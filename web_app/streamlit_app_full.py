@@ -1298,8 +1298,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 </div>
                 """, unsafe_allow_html=True)
 
-                # OCRデータがある場合は表示
-                if result.get('ocr_data') and any(result['ocr_data'].values()):
+                # OCRデータがある場合は表示（すべてNoneでも構造は表示）
+                if result.get('ocr_data') is not None:
                     ocr = result['ocr_data']
                     st.markdown("""
                     <style>
@@ -1354,6 +1354,12 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         ocr_html += f'<div class="ocr-item"><span class="ocr-label">📈 大当り確率</span><span class="ocr-value">{ocr["jackpot_probability"]}</span></div>'
                     if ocr.get('max_payout'):
                         ocr_html += f'<div class="ocr-item"><span class="ocr-label">💰 最高出玉</span><span class="ocr-value">{ocr["max_payout"]}玉</span></div>'
+
+                    # すべてのOCRデータがNoneの場合
+                    if not any([ocr.get('machine_number'), ocr.get('total_start'), ocr.get('jackpot_count'), 
+                               ocr.get('first_hit_count'), ocr.get('current_start'), ocr.get('jackpot_probability'), 
+                               ocr.get('max_payout')]):
+                        ocr_html += '<div class="ocr-item"><span style="color: #856404;">⚠️ OCRデータを取得できませんでした</span></div>'
 
                     ocr_html += '</div>'
                     st.markdown(ocr_html, unsafe_allow_html=True)
