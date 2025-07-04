@@ -1264,7 +1264,11 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 # 補正係数の表示を準備
                 correction_info = ""
                 if 'correction_factor' in result and result['correction_factor'] != 1.0:
-                    correction_info = f'<div style="font-size: 0.8em; color: #666; text-align: right; margin-top: 5px;">補正率: x{result["correction_factor"]:.2f}</div>'
+                    correction_info = f'''
+                    <div class="stat-item" style="font-size: 0.8em;">
+                        <span style="color: #666;">補正率: x{result["correction_factor"]:.2f}</span>
+                    </div>
+                    '''
                 
                 # 回転率データの準備
                 rotation_html = ""
