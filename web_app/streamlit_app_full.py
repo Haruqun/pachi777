@@ -943,6 +943,37 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             if first_hit_val > 0:
                 first_hit_val = 0
 
+            # 総獲得球数の計算（大当り時の増加分の合計）
+            total_jackpot_balls = 0
+            increase_threshold = 100  # 100玉以上の増加を大当りとみなす
+            
+            i = 0
+            while i < len(graph_values) - 1:
+                # 急激な増加を検出
+                increase = graph_values[i+1] - graph_values[i]
+                if increase >= increase_threshold:
+                    # 大当りの開始点
+                    start_val = graph_values[i]
+                    # 大当りの終了点を探す
+                    j = i + 1
+                    while j < len(graph_values) - 1:
+                        if graph_values[j+1] < graph_values[j] - 50:  # 50玉以上の下降で大当り終了
+                            break
+                        if graph_values[j+1] < graph_values[j] + 10:  # 増加が緩やかになったら終了
+                            break
+                        j += 1
+                    
+                    # この大当りでの獲得球数
+                    end_val = graph_values[j]
+                    jackpot_balls = end_val - start_val
+                    if jackpot_balls > 0:
+                        total_jackpot_balls += jackpot_balls
+                    
+                    # 次の検出開始点を更新
+                    i = j
+                else:
+                    i += 1
+
             # オーバーレイ画像を作成
             overlay_img = cropped_img.copy()
 
@@ -1079,6 +1110,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 'min_val': int(min_val),
                 'current_val': int(current_val),
                 'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
+                'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数を追加
                 'dominant_color': dominant_color,
                 'ocr_data': ocr_data,  # OCRデータを追加
                 'correction_factor': correction_factor,  # 補正係数を追加
@@ -1292,6 +1324,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     <div class="stat-item">
                         <span class="stat-label">🎰 初当たり</span>
                         <span class="stat-value {first_hit_class}">{first_hit_text}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">💰 総獲得球数</span>
+                        <span class="stat-value positive">{result['total_jackpot_balls']:,}玉</span>
                     </div>
                     {rotation_html}
                     {correction_info}

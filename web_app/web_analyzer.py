@@ -429,6 +429,37 @@ class WebCompatibleAnalyzer:
                             first_hit_val = values[i]
                             break
         
+        # 総獲得球数の計算（大当り時の増加分の合計）
+        total_jackpot_balls = 0
+        increase_threshold = 100  # 100玉以上の増加を大当りとみなす
+        
+        i = 0
+        while i < len(values) - 1:
+            # 急激な増加を検出
+            increase = values[i+1] - values[i]
+            if increase >= increase_threshold:
+                # 大当りの開始点
+                start_val = values[i]
+                # 大当りの終了点を探す（上昇が止まる、または急激に下降する点）
+                j = i + 1
+                while j < len(values) - 1:
+                    if values[j+1] < values[j] - 50:  # 50玉以上の下降で大当り終了とみなす
+                        break
+                    if values[j+1] < values[j] + 10:  # 増加が緩やかになったら終了
+                        break
+                    j += 1
+                
+                # この大当りでの獲得球数
+                end_val = values[j]
+                jackpot_balls = end_val - start_val
+                if jackpot_balls > 0:
+                    total_jackpot_balls += jackpot_balls
+                
+                # 次の検出開始点を更新
+                i = j
+            else:
+                i += 1
+        
         return {
             'max_value': int(max_val),
             'max_index': max_idx,
@@ -436,7 +467,8 @@ class WebCompatibleAnalyzer:
             'min_index': min_idx,
             'first_hit_index': first_hit_idx,
             'first_hit_value': int(first_hit_val),
-            'final_value': int(current_val)
+            'final_value': int(current_val),
+            'total_jackpot_balls': int(total_jackpot_balls)  # 総獲得球数を追加
         }
     
     def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width):
