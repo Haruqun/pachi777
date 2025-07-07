@@ -498,8 +498,24 @@ if not st.session_state.authenticated:
         
         # ログイン処理を関数化
         def handle_login():
-            if st.session_state.password_input == "059":
+            # デフォルトパスワード
+            default_user_password = "059"
+            default_admin_password = "admin777"
+            
+            # 保存されたパスワードを取得（セッションステートに保存）
+            if 'user_password' not in st.session_state:
+                st.session_state.user_password = default_user_password
+            if 'admin_password' not in st.session_state:
+                st.session_state.admin_password = default_admin_password
+            
+            # パスワードチェック
+            if st.session_state.password_input == st.session_state.user_password:
                 st.session_state.authenticated = True
+                st.session_state.is_admin = False
+                st.session_state.login_success = True
+            elif st.session_state.password_input == st.session_state.admin_password:
+                st.session_state.authenticated = True
+                st.session_state.is_admin = True
                 st.session_state.login_success = True
             else:
                 st.session_state.login_error = True
@@ -3000,10 +3016,68 @@ with footer_col1:
     Created by [fivenine-design.com](https://fivenine-design.com)
     """)
 
+with footer_col2:
+    # 管理者の場合はパスワード変更ボタンを表示
+    if st.session_state.get('is_admin', False):
+        if st.button("🔐 パスワード管理", key="password_management_button"):
+            st.session_state.show_password_management = True
+
 with footer_col3:
     if st.button("🚪 ログアウト", key="logout_button"):
         st.session_state.authenticated = False
+        st.session_state.is_admin = False
         # URLパラメータをクリア
         st.query_params.clear()
         time.sleep(0.3)
         st.rerun()
+
+# パスワード管理モーダル（管理者のみ）
+if st.session_state.get('show_password_management', False) and st.session_state.get('is_admin', False):
+    with st.container():
+        st.markdown("---")
+        st.markdown("### 🔐 パスワード管理")
+        
+        # 現在のパスワードを表示
+        st.info(f"""
+        **現在のパスワード:**
+        - 一般ユーザー: {st.session_state.get('user_password', '059')}
+        - 管理者: {st.session_state.get('admin_password', 'admin777')}
+        """)
+        
+        # パスワード変更フォーム
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 一般ユーザーパスワード")
+            new_user_password = st.text_input(
+                "新しいパスワード",
+                type="password",
+                key="new_user_password",
+                placeholder="新しいパスワードを入力"
+            )
+            if st.button("一般パスワードを変更", key="change_user_password"):
+                if new_user_password:
+                    st.session_state.user_password = new_user_password
+                    st.success("✅ 一般ユーザーパスワードを変更しました")
+                else:
+                    st.error("パスワードを入力してください")
+        
+        with col2:
+            st.markdown("#### 管理者パスワード")
+            new_admin_password = st.text_input(
+                "新しいパスワード",
+                type="password",
+                key="new_admin_password",
+                placeholder="新しいパスワードを入力"
+            )
+            if st.button("管理者パスワードを変更", key="change_admin_password"):
+                if new_admin_password:
+                    st.session_state.admin_password = new_admin_password
+                    st.success("✅ 管理者パスワードを変更しました")
+                else:
+                    st.error("パスワードを入力してください")
+        
+        # 閉じるボタン
+        if st.button("閉じる", key="close_password_management"):
+            st.session_state.show_password_management = False
+            st.rerun()
