@@ -506,9 +506,11 @@ class WebCompatibleAnalyzer:
             first_hit_balls = 0
             rotation_rate_1 = 0
             
-            if analysis['first_hit_index'] > 0:
-                # 初当たりまでの回転数
-                first_hit_spins = int(analysis['first_hit_index'] * spins_per_pixel)
+            if analysis['first_hit_index'] > 0 and analysis['first_hit_index'] < len(data_points):
+                # 初当たりの実際のx座標（ピクセル位置）を取得
+                first_hit_x = data_points[analysis['first_hit_index']][0]
+                # 初当たりまでの回転数（正確なピクセル位置を使用）
+                first_hit_spins = int(first_hit_x * spins_per_pixel)
                 # 初当たりまでの使用玉数（マイナス値の絶対値）
                 first_hit_balls = abs(analysis['first_hit_value'])
                 # 回転率①（1000円 = 250玉）
