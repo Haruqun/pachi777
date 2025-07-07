@@ -1199,6 +1199,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             # 総獲得球数の計算（大当り時の増加分の合計）
             # 補正後の値（graph_values）を使用
             total_jackpot_balls = 0
+            jackpot_count = 0  # 大当り回数をカウント
+            jackpot_details = []  # 各大当りの詳細情報
             increase_threshold = 100  # 100玉以上の増加を大当りとみなす
             
             i = 0
@@ -1208,6 +1210,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 if increase >= increase_threshold:
                     # 大当りの開始点
                     start_val = graph_values[i]
+                    start_idx = i
                     # 大当りの終了点を探す（最大値まで継続）
                     j = i + 1
                     max_val_in_jackpot = graph_values[j]
@@ -1225,11 +1228,23 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     jackpot_balls = max_val_in_jackpot - start_val
                     if jackpot_balls > 0:
                         total_jackpot_balls += jackpot_balls
+                        jackpot_count += 1
+                        jackpot_details.append({
+                            'number': jackpot_count,
+                            'start_idx': start_idx,
+                            'end_idx': j,
+                            'balls': jackpot_balls,
+                            'start_val': start_val,
+                            'peak_val': max_val_in_jackpot
+                        })
                     
                     # 次の検出開始点を更新
                     i = j
                 else:
                     i += 1
+            
+            # 平均獲得球数を計算
+            avg_jackpot_balls = total_jackpot_balls / jackpot_count if jackpot_count > 0 else 0
 
             # オーバーレイ画像を作成
             overlay_img = cropped_img.copy()
@@ -1368,6 +1383,9 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 'current_val': int(current_val),
                 'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
                 'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数を追加
+                'jackpot_count': jackpot_count,  # 大当り回数（グラフから検出）
+                'avg_jackpot_balls': int(avg_jackpot_balls),  # 平均獲得球数
+                'jackpot_details': jackpot_details,  # 各大当りの詳細
                 'dominant_color': dominant_color,
                 'ocr_data': ocr_data,  # OCRデータを追加
                 'ocr_text': ocr_data.get('ocr_text') if ocr_data else None,  # OCRテキストを追加
@@ -1600,6 +1618,14 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         <span class="stat-label">💰 総獲得球数</span>
                         <span class="stat-value positive">{result.get('total_jackpot_balls', 0):,}玉</span>
                     </div>
+                    <div class="stat-item">
+                        <span class="stat-label">🎯 大当り回数</span>
+                        <span class="stat-value positive">{result.get('jackpot_count', 0)}回</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">📊 平均獲得</span>
+                        <span class="stat-value positive">{result.get('avg_jackpot_balls', 0):,}玉/回</span>
+                    </div>
                     {rotation_html}
                     {correction_info}
                 </div>
@@ -1707,6 +1733,11 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             avg_balance_yen = avg_balance * 4
             max_result = max(success_results, key=lambda x: x['current_val'])
             min_result = min(success_results, key=lambda x: x['current_val'])
+            
+            # 1日の総獲得球数を計算
+            total_day_jackpot_balls = sum(r.get('total_jackpot_balls', 0) for r in success_results)
+            total_day_jackpot_count = sum(r.get('jackpot_count', 0) for r in success_results)
+            avg_day_jackpot_balls = total_day_jackpot_balls / total_day_jackpot_count if total_day_jackpot_count > 0 else 0
 
             # 統計情報を3列で表示
             col1, col2, col3 = st.columns(3)
@@ -1731,6 +1762,33 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     f"{max_result['current_val']:+,}玉",
                     f"{min_result['current_val']:+,}玉"
                 )
+            
+            # 2行目の統計情報
+            st.markdown("#### 💰 1日の総獲得情報")
+            col4, col5, col6 = st.columns(3)
+            
+            with col4:
+                st.metric(
+                    "総獲得球数",
+                    f"{total_day_jackpot_balls:,}玉",
+                    f"{total_day_jackpot_balls * 4:,}円相当"
+                )
+            
+            with col5:
+                st.metric(
+                    "総大当り回数",
+                    f"{total_day_jackpot_count}回",
+                    f"平均{avg_day_jackpot_balls:,.0f}玉/回"
+                )
+            
+            with col6:
+                # 実質収支（現在値 + 総獲得球数）
+                real_balance = total_balance + total_day_jackpot_balls
+                st.metric(
+                    "実質収支",
+                    f"{real_balance:+,}玉",
+                    f"{real_balance * 4:+,}円"
+                )
 
         # データフレームを作成
         df_data = []
@@ -1749,6 +1807,9 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     '現在値': result['current_val'],
                     '初当たり': result['first_hit_val'] if result['first_hit_val'] is not None else None,
                     '収支（円）': result['current_val'] * 4,
+                    '総獲得球数': result.get('total_jackpot_balls', 0),
+                    '大当り回数': result.get('jackpot_count', 0),
+                    '平均獲得': result.get('avg_jackpot_balls', 0),
                     '色': result['dominant_color']
                 }
                 
