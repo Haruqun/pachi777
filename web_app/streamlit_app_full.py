@@ -1613,11 +1613,11 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         if metrics['rotation_rate_1'] > 0:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{metrics["rotation_rate_1"]:.1f}回/千円</span></div>'
                             # デバッグ情報（初当たりまで）
-                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}玉使用</div>'
+                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}玉使用</div>'
                         if metrics['rotation_rate_2'] > 0:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{metrics["rotation_rate_2"]:.1f}回/千円</span></div>'
                             # デバッグ情報（通常時）
-                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ {metrics["normal_decline_spins"]}回転 ÷ {metrics["normal_decline_balls"]}玉使用</div>'
+                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 全下降区間合計: {metrics["normal_decline_spins"]}回転 ÷ {metrics["normal_decline_balls"]}玉使用</div>'
                     
                     st.markdown(f"""
                     <div class="stat-card">
