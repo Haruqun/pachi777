@@ -1783,56 +1783,103 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             total_day_jackpot_balls = sum(r.get('total_jackpot_balls', 0) for r in success_results)
             total_day_jackpot_count = sum(r.get('jackpot_count', 0) for r in success_results)
             avg_day_jackpot_balls = total_day_jackpot_balls / total_day_jackpot_count if total_day_jackpot_count > 0 else 0
+            
+            # 総投資球数を計算（各台の最低値の絶対値の合計）
+            total_investment = sum(abs(min(r['min_val'], 0)) for r in success_results)
+            
+            # 実質収支 = 総獲得球数 - 総投資球数
+            net_balance = total_day_jackpot_balls - total_investment
+            net_balance_yen = int(net_balance * exchange_rate)
 
-            # 統計情報を3列で表示
-            col1, col2, col3 = st.columns(3)
+            # 統計情報を2列で表示（見やすさ重視）
+            st.markdown("#### 📊 収支サマリー")
+            col1, col2 = st.columns(2)
 
             with col1:
                 st.metric(
-                    "合計収支",
+                    "🎯 現在の合計収支",
                     f"{total_balance_yen:+,}円",
-                    f"{total_balance:+,}玉"
+                    f"{total_balance:+,}玉",
+                    delta_color="normal"
                 )
 
             with col2:
                 st.metric(
-                    "平均収支",
+                    "📊 台平均収支",
                     f"{avg_balance_yen:+,.0f}円",
-                    f"{avg_balance:+,.0f}玉"
+                    f"{avg_balance:+,.0f}玉",
+                    delta_color="normal"
                 )
 
+            # 2行目
+            col3, col4 = st.columns(2)
+            
             with col3:
                 st.metric(
-                    "最高/最低",
+                    "📈 最高収支",
                     f"{max_result['current_val']:+,}玉",
-                    f"{min_result['current_val']:+,}玉"
+                    f"台番号: {max_result.get('name', '不明')}"
                 )
-            
-            # 2行目の統計情報
-            st.markdown("#### 💰 1日の総獲得情報")
-            col4, col5, col6 = st.columns(3)
             
             with col4:
                 st.metric(
-                    "総獲得球数",
-                    f"{total_day_jackpot_balls:,}玉",
-                    f"{int(total_day_jackpot_balls * exchange_rate):,}円相当"
+                    "📉 最低収支",
+                    f"{min_result['current_val']:+,}玉",
+                    f"台番号: {min_result.get('name', '不明')}"
                 )
+            
+            # 大当り情報を別セクションに
+            st.markdown("#### 🎰 大当り分析")
+            col5, col6, col7 = st.columns(3)
             
             with col5:
                 st.metric(
                     "総大当り回数",
                     f"{total_day_jackpot_count}回",
-                    f"平均{avg_day_jackpot_balls:,.0f}玉/回"
+                    f"{len(success_results)}台合計"
                 )
             
             with col6:
-                # 実質収支（現在値 + 総獲得球数）
-                real_balance = total_balance + total_day_jackpot_balls
+                st.metric(
+                    "総獲得球数",
+                    f"{total_day_jackpot_balls:,}玉",
+                    f"平均{avg_day_jackpot_balls:,.0f}玉/回"
+                )
+            
+            with col7:
+                st.metric(
+                    "獲得金額換算",
+                    f"{int(total_day_jackpot_balls * exchange_rate):,}円",
+                    f"@{exchange_rate:.3f}円/玉"
+                )
+            
+            # 投資と回収の詳細
+            st.markdown("#### 💰 投資・回収分析")
+            col8, col9, col10 = st.columns(3)
+            
+            with col8:
+                st.metric(
+                    "総投資球数",
+                    f"{total_investment:,}玉",
+                    f"{int(total_investment * exchange_rate):,}円相当",
+                    delta_color="inverse"
+                )
+            
+            with col9:
                 st.metric(
                     "実質収支",
-                    f"{real_balance:+,}玉",
-                    f"{int(real_balance * exchange_rate):+,}円"
+                    f"{net_balance:+,}玉",
+                    f"{net_balance_yen:+,}円",
+                    delta_color="normal"
+                )
+            
+            with col10:
+                # 回収率を計算
+                recovery_rate = (total_day_jackpot_balls / total_investment * 100) if total_investment > 0 else 0
+                st.metric(
+                    "回収率",
+                    f"{recovery_rate:.1f}%",
+                    "獲得÷投資" if recovery_rate >= 100 else "投資超過"
                 )
 
         # データフレームを作成
