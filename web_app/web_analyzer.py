@@ -518,31 +518,51 @@ class WebCompatibleAnalyzer:
                 if first_hit_balls > 0:
                     rotation_rate_1 = round((first_hit_spins / first_hit_balls) * 250, 1)
             
-            # 通常時（下降区間）の回転率計算 - シンプルな方法
+            # 通常時（下降区間）の回転率計算
             rotation_rate_2 = 0
             normal_decline_spins = 0
             normal_decline_balls = 0
             
-            # より簡単な計算方法：最低値までの使用球数と回転数から計算
-            if analysis['min_index'] > 0 and analysis['min_index'] < len(data_points):
-                # 最低値のx座標（ピクセル位置）
-                min_x = data_points[analysis['min_index']][0]
-                # 最低値までの回転数
-                total_spins_to_min = int(min_x * spins_per_pixel)
-                # 最低値（使用球数の総計）
-                total_balls_used = abs(analysis['min_value'])
-                
-                # 初当たりまでの分を除外して通常時のみを計算
-                if first_hit_spins > 0 and first_hit_balls > 0:
-                    normal_decline_spins = total_spins_to_min - first_hit_spins
-                    normal_decline_balls = total_balls_used - first_hit_balls
+            # 下降区間を検出（連続して下降している部分）
+            values = [p[1] for p in data_points]
+            decline_segments = []
+            current_segment = []
+            
+            for i in range(1, len(values)):
+                if values[i] < values[i-1] - 5:  # 5玉以上の下降
+                    if not current_segment:
+                        current_segment = [i-1]
+                    current_segment.append(i)
                 else:
-                    normal_decline_spins = total_spins_to_min
-                    normal_decline_balls = total_balls_used
+                    if len(current_segment) > 10:  # 10点以上の連続下降
+                        decline_segments.append(current_segment)
+                    current_segment = []
+            
+            if len(current_segment) > 10:
+                decline_segments.append(current_segment)
+            
+            # 全下降区間の合計を計算
+            total_decline_balls = 0
+            total_decline_pixels = 0
+            
+            for segment in decline_segments:
+                start_idx = segment[0]
+                end_idx = segment[-1]
+                # 区間での玉数減少
+                balls_decline = values[start_idx] - values[end_idx]
+                # 区間のピクセル数（回転数に比例）
+                pixels = data_points[end_idx][0] - data_points[start_idx][0]
                 
-                # 回転率計算（1000円 = 250玉）
-                if normal_decline_balls > 0 and normal_decline_spins > 0:
-                    rotation_rate_2 = round((normal_decline_spins / normal_decline_balls) * 250, 1)
+                if balls_decline > 0 and pixels > 0:
+                    total_decline_balls += balls_decline
+                    total_decline_pixels += pixels
+            
+            # 通常時の回転率を計算
+            if total_decline_balls > 0 and total_decline_pixels > 0:
+                normal_decline_spins = int(total_decline_pixels * spins_per_pixel)
+                normal_decline_balls = int(total_decline_balls)
+                # 正しい計算式：(回転数 ÷ 使用玉数) × 250
+                rotation_rate_2 = round((normal_decline_spins / normal_decline_balls) * 250, 1)
             
             return {
                 'spins_per_pixel': round(spins_per_pixel, 2),
