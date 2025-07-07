@@ -1884,27 +1884,84 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
 
         if df_data:
             df = pd.DataFrame(df_data)
-            st.dataframe(
+            
+            # データエディタで編集可能にする
+            st.markdown("#### 📝 データ編集")
+            st.info("💡 表内のセルをクリックして直接編集できます。編集後は下のボタンでダウンロードしてください。")
+            
+            edited_df = st.data_editor(
                 df,
                 use_container_width=True,
                 hide_index=True,
+                num_rows="dynamic",  # 行の追加・削除を許可
                 column_config={
-                    "最高値": st.column_config.NumberColumn(format="%d玉"),
-                    "最低値": st.column_config.NumberColumn(format="%d玉"),
-                    "現在値": st.column_config.NumberColumn(format="%d玉"),
-                    "初当たり": st.column_config.NumberColumn(format="%d玉"),
-                    "収支（円）": st.column_config.NumberColumn(format="¥%d")
+                    "台番号": st.column_config.TextColumn(
+                        "台番号",
+                        help="台番号を入力",
+                        required=True
+                    ),
+                    "最高値": st.column_config.NumberColumn(
+                        "最高値",
+                        help="最高値（玉数）",
+                        format="%d玉"
+                    ),
+                    "最低値": st.column_config.NumberColumn(
+                        "最低値", 
+                        help="最低値（玉数）",
+                        format="%d玉"
+                    ),
+                    "現在値": st.column_config.NumberColumn(
+                        "現在値",
+                        help="現在値（玉数）", 
+                        format="%d玉"
+                    ),
+                    "初当たり": st.column_config.NumberColumn(
+                        "初当たり",
+                        help="初当たり時の玉数",
+                        format="%d玉"
+                    ),
+                    "初当たり回転数": st.column_config.NumberColumn(
+                        "初当たり回転数",
+                        help="初当たりまでの回転数",
+                        format="%d回"
+                    ),
+                    "収支（円）": st.column_config.NumberColumn(
+                        "収支（円）",
+                        help="現在値×4円",
+                        format="¥%d"
+                    ),
+                    "総獲得球数": st.column_config.NumberColumn(
+                        "総獲得球数",
+                        help="大当りで獲得した総球数",
+                        format="%d玉"
+                    ),
+                    "大当り回数": st.column_config.NumberColumn(
+                        "大当り回数",
+                        help="大当りの回数",
+                        format="%d回"
+                    ),
+                    "回転率①": st.column_config.TextColumn(
+                        "回転率①",
+                        help="初当たりまでの回転率"
+                    ),
+                    "回転率②": st.column_config.TextColumn(
+                        "回転率②",
+                        help="通常時全体の回転率"
+                    )
                 }
             )
 
-            # CSVダウンロードボタン
-            csv = df.to_csv(index=False).encode('utf-8-sig')
-            st.download_button(
-                label="📥 CSVダウンロード",
-                data=csv,
-                file_name=f'pachinko_analysis_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv',
-                mime='text/csv'
-            )
+            # 編集されたデータでCSVダウンロードボタン
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                csv = edited_df.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(
+                    label="📥 編集済みCSVダウンロード",
+                    data=csv,
+                    file_name=f'pachinko_analysis_edited_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv',
+                    mime='text/csv',
+                    type="primary"
+                )
             
             # 回転率の詳細情報を表示
             if any(result.get('rotation_metrics') for result in analysis_results if result['success']):
