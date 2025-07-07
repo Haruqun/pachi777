@@ -1852,35 +1852,6 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     f"{int(total_day_jackpot_balls * exchange_rate):,}円",
                     f"@{exchange_rate:.3f}円/玉"
                 )
-            
-            # 投資と回収の詳細
-            st.markdown("#### 💰 投資・回収分析")
-            col8, col9, col10 = st.columns(3)
-            
-            with col8:
-                st.metric(
-                    "総投資球数",
-                    f"{total_investment:,}玉",
-                    f"{int(total_investment * exchange_rate):,}円相当",
-                    delta_color="inverse"
-                )
-            
-            with col9:
-                st.metric(
-                    "実質収支",
-                    f"{net_balance:+,}玉",
-                    f"{net_balance_yen:+,}円",
-                    delta_color="normal"
-                )
-            
-            with col10:
-                # 回収率を計算
-                recovery_rate = (total_day_jackpot_balls / total_investment * 100) if total_investment > 0 else 0
-                st.metric(
-                    "回収率",
-                    f"{recovery_rate:.1f}%",
-                    "獲得÷投資" if recovery_rate >= 100 else "投資超過"
-                )
 
         # データフレームを作成
         df_data = []
