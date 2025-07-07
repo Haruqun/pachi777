@@ -347,6 +347,7 @@ default_settings = {
     # グリッドライン調整値
     'grid_30k_offset': 1,       # +30000ライン（最上部）
     'grid_minus_30k_offset': -34, # -30000ライン（最下部）
+    'exchange_rate': 3.57145    # 交換レート（円/玉）デフォルトは28玉交換
 }
 
 # セッションステートの初期化（エキスパンダーより前に行う）
@@ -831,6 +832,18 @@ if uploaded_files:
         value=True,
         help="台番号の検出処理をスキップして高速化します。台番号はファイル名から推測されます。"
     )
+    
+    # 交換レート設定
+    exchange_rate = st.number_input(
+        "💱 交換レート（円/玉）",
+        min_value=0.1,
+        max_value=10.0,
+        value=st.session_state.settings.get('exchange_rate', 3.57145),
+        step=0.01,
+        format="%.5f",
+        help="1玉あたりの交換レート（円）。28玉交換の場合は3.57145円/玉"
+    )
+    st.session_state.settings['exchange_rate'] = exchange_rate
     
     st.caption("設定を確認したら、解析ボタンをクリックしてください")
     
@@ -1752,9 +1765,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
         if success_results:
             # 統計情報の計算
             total_balance = sum(r['current_val'] for r in success_results)
-            total_balance_yen = total_balance * 4
+            exchange_rate = st.session_state.settings.get('exchange_rate', 3.57145)
+            total_balance_yen = int(total_balance * exchange_rate)
             avg_balance = total_balance / len(success_results)
-            avg_balance_yen = avg_balance * 4
+            avg_balance_yen = int(avg_balance * exchange_rate)
             max_result = max(success_results, key=lambda x: x['current_val'])
             min_result = min(success_results, key=lambda x: x['current_val'])
             
@@ -1795,7 +1809,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 st.metric(
                     "総獲得球数",
                     f"{total_day_jackpot_balls:,}玉",
-                    f"{total_day_jackpot_balls * 4:,}円相当"
+                    f"{int(total_day_jackpot_balls * exchange_rate):,}円相当"
                 )
             
             with col5:
@@ -1811,7 +1825,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 st.metric(
                     "実質収支",
                     f"{real_balance:+,}玉",
-                    f"{real_balance * 4:+,}円"
+                    f"{int(real_balance * exchange_rate):+,}円"
                 )
 
         # データフレームを作成
@@ -1831,7 +1845,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     '現在値': result['current_val'],
                     '初当たり球数': result['first_hit_val'] if result['first_hit_val'] is not None else None,
                     '初当たり回転数': (result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0,
-                    '収支（円）': result['current_val'] * 4,
+                    '収支（円）': int(result['current_val'] * st.session_state.settings.get('exchange_rate', 3.57145)),
                     '総獲得球数': result.get('total_jackpot_balls', 0),
                     '大当り回数': result.get('jackpot_count', 0),
                     '色': result['dominant_color']
