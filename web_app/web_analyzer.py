@@ -431,6 +431,7 @@ class WebCompatibleAnalyzer:
         
         # 総獲得球数の計算（大当り時の増加分の合計）
         total_jackpot_balls = 0
+        jackpot_count = 0  # 大当り回数をカウント
         increase_threshold = 100  # 100玉以上の増加を大当りとみなす
         
         i = 0
@@ -454,6 +455,7 @@ class WebCompatibleAnalyzer:
                 jackpot_balls = end_val - start_val
                 if jackpot_balls > 0:
                     total_jackpot_balls += jackpot_balls
+                    jackpot_count += 1  # 大当りをカウント
                 
                 # 次の検出開始点を更新
                 i = j
@@ -468,7 +470,8 @@ class WebCompatibleAnalyzer:
             'first_hit_index': first_hit_idx,
             'first_hit_value': int(first_hit_val),
             'final_value': int(current_val),
-            'total_jackpot_balls': int(total_jackpot_balls)  # 総獲得球数を追加
+            'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数を追加
+            'jackpot_count': jackpot_count  # 大当り回数を追加
         }
     
     def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width):
@@ -518,76 +521,54 @@ class WebCompatibleAnalyzer:
                 if first_hit_balls > 0:
                     rotation_rate_1 = round((first_hit_spins / first_hit_balls) * 250, 1)
             
-            # 通常時（下降区間）の回転率計算 - より正確な方法
+            # 通常時（下降区間）の回転率計算 - シンプルで確実な方法
             rotation_rate_2 = 0
             normal_decline_spins = 0
             normal_decline_balls = 0
             
-            # 大当たり区間を検出（大幅な上昇区間）
-            values = [p[1] for p in data_points]
-            jackpot_segments = []
+            # 簡易的な計算方法：
+            # 1. 総回転数（累計スタート）から大当たり中の回転数を推定して引く
+            # 2. 総使用球数 = 現在値の絶対値 + 総獲得球数（大当たりで得た分）
+            # 3. 初当たりまでの分を除外
             
-            # 100玉以上の急上昇を大当たりとして検出
-            i = 0
-            while i < len(values) - 1:
-                if values[i+1] - values[i] > 100:  # 大当たり開始
-                    start = i
-                    # 大当たり終了を探す（上昇が止まるまで）
-                    j = i + 1
-                    while j < len(values) - 1 and values[j+1] >= values[j] - 50:
-                        j += 1
-                    jackpot_segments.append((start, j))
-                    i = j
+            if total_spins > 0 and analysis['first_hit_index'] >= 0:
+                # 大当たり中の推定回転数（1回の大当たりで約30回転と仮定）
+                jackpot_count = analysis.get('jackpot_count', 0)
+                estimated_jackpot_spins = jackpot_count * 30
+                
+                # 通常時の回転数 = 総回転数 - 大当たり中の回転数 - 初当たりまでの回転数
+                normal_decline_spins = max(0, total_spins - estimated_jackpot_spins - first_hit_spins)
+                
+                # 総使用球数を計算
+                current_value = analysis['final_value']
+                total_jackpot_balls = analysis.get('total_jackpot_balls', 0)
+                
+                # 総使用球数 = 総獲得球数 - 現在値（現在値がマイナスの場合は加算）
+                if current_value < 0:
+                    total_used = total_jackpot_balls + abs(current_value)
                 else:
-                    i += 1
-            
-            # 大当たり区間以外のピクセル数と玉数変化を計算
-            total_pixels = 0
-            total_balls_used = 0
-            
-            # 最初から最後までの全区間を確認
-            if len(data_points) > 0:
-                last_x = data_points[-1][0]
-                last_value = values[-1]
+                    total_used = max(0, total_jackpot_balls - current_value)
                 
-                # 大当たり区間を除外したピクセル数を計算
-                jackpot_pixels = 0
-                for start, end in jackpot_segments:
-                    if start < len(data_points) and end < len(data_points):
-                        jackpot_pixels += data_points[end][0] - data_points[start][0]
-                
-                # 通常時のピクセル数 = 全体 - 大当たり区間
-                normal_pixels = last_x - jackpot_pixels
-                
-                # 通常時の回転数を計算
-                normal_decline_spins = int(normal_pixels * spins_per_pixel)
-                
-                # 使用球数を計算（最低値または現在値の絶対値から大当たり獲得分を引く）
-                min_value = min(values)
-                # 総使用球数 = |最低値| （マイナスなので絶対値）
-                total_balls_used = abs(min_value)
-                
-                # 初当たりまでの分を考慮
-                if first_hit_balls > 0 and normal_decline_spins > first_hit_spins:
-                    # 初当たり後の通常時
-                    normal_decline_spins = normal_decline_spins - first_hit_spins
-                    normal_decline_balls = total_balls_used - first_hit_balls
-                else:
-                    # 全体を通常時として計算
-                    normal_decline_balls = total_balls_used
+                # 通常時の使用球数 = 総使用球数 - 初当たりまでの使用球数
+                normal_decline_balls = max(0, total_used - first_hit_balls)
                 
                 # 回転率計算（1000円 = 250玉）
-                if normal_decline_balls > 0 and normal_decline_spins > 0:
+                if normal_decline_balls > 100 and normal_decline_spins > 10:  # 最小値でフィルタ
                     rotation_rate_2 = round((normal_decline_spins / normal_decline_balls) * 250, 1)
+                    # 異常値をチェック（1-50回/千円の範囲に制限）
+                    if rotation_rate_2 > 50:
+                        rotation_rate_2 = 0  # 異常値の場合は0にする
+                    elif rotation_rate_2 < 1:
+                        rotation_rate_2 = 0
             
             return {
                 'spins_per_pixel': round(spins_per_pixel, 2),
                 'first_hit_spins': first_hit_spins,
-                'first_hit_balls': first_hit_balls,
+                'first_hit_balls': int(first_hit_balls),
                 'rotation_rate_1': rotation_rate_1,
                 'rotation_rate_2': rotation_rate_2,
                 'normal_decline_spins': normal_decline_spins,
-                'normal_decline_balls': normal_decline_balls
+                'normal_decline_balls': int(normal_decline_balls)
             }
             
         except Exception as e:

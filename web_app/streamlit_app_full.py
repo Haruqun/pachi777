@@ -1656,7 +1656,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">🎯 初当たり回数</span>
-                            <span class="stat-value positive">{(result.get('ocr_data') or {}).get('first_hit_count', result.get('jackpot_count', 0))}回</span>
+                            <span class="stat-value positive">{(result.get('ocr_data') or {}).get('first_hit_count') or result.get('jackpot_count') or 0}回</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">💰 総獲得球数</span>
