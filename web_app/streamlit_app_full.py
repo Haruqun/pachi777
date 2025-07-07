@@ -1634,7 +1634,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             <span class="stat-value {get_value_class(result['current_val'])}">{result['current_val']:,}玉</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">🎰 初当たり</span>
+                            <span class="stat-label">🎰 初当たり球数</span>
                             <span class="stat-value {first_hit_class}">{first_hit_text}</span>
                         </div>
                         <div class="stat-item">
@@ -1646,8 +1646,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             <span class="stat-value positive">{result.get('total_jackpot_balls', 0):,}玉</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">🎯 大当り回数</span>
-                            <span class="stat-value positive">{result.get('jackpot_count', 0)}回</span>
+                            <span class="stat-label">🎯 初当たり回数</span>
+                            <span class="stat-value positive">{(result.get('ocr_data') or {}).get('first_hit_count', result.get('jackpot_count', 0))}回</span>
                         </div>
                         {rotation_html}
                         {rotation_detail}
@@ -1829,7 +1829,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     '最高値': result['max_val'],
                     '最低値': result['min_val'],
                     '現在値': result['current_val'],
-                    '初当たり': result['first_hit_val'] if result['first_hit_val'] is not None else None,
+                    '初当たり球数': result['first_hit_val'] if result['first_hit_val'] is not None else None,
                     '初当たり回転数': (result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0,
                     '収支（円）': result['current_val'] * 4,
                     '総獲得球数': result.get('total_jackpot_balls', 0),
@@ -1877,7 +1877,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     '最高値': '解析失敗',
                     '最低値': '-',
                     '現在値': '-',
-                    '初当たり': None,
+                    '初当たり球数': None,
                     '収支（円）': '-',
                     '色': '-'
                 })
@@ -1915,8 +1915,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         help="現在値（玉数）", 
                         format="%d玉"
                     ),
-                    "初当たり": st.column_config.NumberColumn(
-                        "初当たり",
+                    "初当たり球数": st.column_config.NumberColumn(
+                        "初当たり球数",
                         help="初当たり時の玉数",
                         format="%d玉"
                     ),
