@@ -1195,6 +1195,17 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             # 初当たり値がプラスの場合は0を表示
             if first_hit_val > 0:
                 first_hit_val = 0
+            
+            # 初当たりまでの使用球数を計算
+            first_hit_used_balls = 0
+            if first_hit_x is not None and first_hit_val < 0:
+                # 初当たりまでの最低値（最も球を使った時点）を探す
+                min_val_before_first = 0
+                for i in range(first_hit_x + 1):
+                    if graph_values[i] < min_val_before_first:
+                        min_val_before_first = graph_values[i]
+                # 使用球数は最低値の絶対値
+                first_hit_used_balls = abs(min_val_before_first)
 
             # 総獲得球数の計算（大当り時の増加分の合計）
             # 補正後の値（graph_values）を使用
@@ -1382,6 +1393,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 'min_val': int(min_val),
                 'current_val': int(current_val),
                 'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
+                'first_hit_used_balls': int(first_hit_used_balls),  # 初当たりまでの使用球数
                 'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数を追加
                 'jackpot_count': jackpot_count,  # 大当り回数（グラフから検出）
                 'avg_jackpot_balls': int(avg_jackpot_balls),  # 平均獲得球数
@@ -1615,16 +1627,16 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         <span class="stat-value {first_hit_class}">{first_hit_text}</span>
                     </div>
                     <div class="stat-item">
+                        <span class="stat-label">🎯 初当たり使用</span>
+                        <span class="stat-value negative">{result.get('first_hit_used_balls', 0):,}玉</span>
+                    </div>
+                    <div class="stat-item">
                         <span class="stat-label">💰 総獲得球数</span>
                         <span class="stat-value positive">{result.get('total_jackpot_balls', 0):,}玉</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-label">🎯 大当り回数</span>
                         <span class="stat-value positive">{result.get('jackpot_count', 0)}回</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">📊 平均獲得</span>
-                        <span class="stat-value positive">{result.get('avg_jackpot_balls', 0):,}玉/回</span>
                     </div>
                     {rotation_html}
                     {correction_info}
@@ -1806,10 +1818,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     '最低値': result['min_val'],
                     '現在値': result['current_val'],
                     '初当たり': result['first_hit_val'] if result['first_hit_val'] is not None else None,
+                    '初当たり使用': result.get('first_hit_used_balls', 0),
                     '収支（円）': result['current_val'] * 4,
                     '総獲得球数': result.get('total_jackpot_balls', 0),
                     '大当り回数': result.get('jackpot_count', 0),
-                    '平均獲得': result.get('avg_jackpot_balls', 0),
                     '色': result['dominant_color']
                 }
                 
