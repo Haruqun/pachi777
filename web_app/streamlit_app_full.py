@@ -1978,41 +1978,23 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 )
             
             # 回転率の詳細情報を表示
-            if any(result.get('rotation_metrics') for result in analysis_results if result['success']):
-                with st.expander("📊 回転率計算の詳細"):
-                    st.markdown("""
-                    ### 回転率の計算方法
-                    
-                    **回転率①（初当たりまで）**
-                    - 初当たりまでの回転数 ÷ (使用玉数 ÷ 250)
-                    - 初当たりまでの1000円あたりの回転数
-                    
-                    **回転率②（通常時全体）**
-                    - 通常時の総回転数 ÷ (総消費玉数 ÷ 250)
-                    - グラフ全体の下降部分から計算
-                    
-                    ※ 1000円 = 250玉として計算
-                    """)
-                    
-                    # 各台の詳細データ
-                    for result in analysis_results:
-                        if result['success'] and result.get('rotation_metrics'):
-                            metrics = result['rotation_metrics']
-                            if metrics['rotation_rate_1'] > 0 or metrics['rotation_rate_2'] > 0:
-                                st.markdown(f"#### 🎰 {result.get('ocr_data', {}).get('machine_number', result['name'])}")
-                                
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    st.metric("初当たりまでの回転数", f"{metrics['first_hit_spins']}回転")
-                                    st.metric("初当たりまでの使用玉数", f"{metrics['first_hit_balls']}玉")
-                                    st.metric("回転率①", f"{metrics['rotation_rate_1']:.1f}回/千円")
-                                
-                                with col2:
-                                    st.metric("通常時の総回転数", f"{metrics['normal_decline_spins']}回転")
-                                    st.metric("通常時の総消費玉数", f"{metrics['normal_decline_balls']}玉")
-                                    st.metric("回転率②", f"{metrics['rotation_rate_2']:.1f}回/千円")
-                                
-                                st.markdown("---")
+            with st.expander("📊 回転率計算の詳細"):
+                st.markdown("""
+                ### 回転率の計算方法
+                
+                **回転率①（初当たりまで）**
+                - 初当たりまでの回転数 ÷ (使用玉数 ÷ 250)
+                - 初当たりまでの1000円あたりの回転数
+                - 朝一から初当たりを引くまでの釘の状態を反映
+                
+                **回転率②（通常時全体）**
+                - 通常時の総回転数 ÷ (総消費玉数 ÷ 250)
+                - 累計スタート数から大当たり中の回転数を除いて計算
+                - 全体を通しての釘の状態を反映
+                
+                ※ 1000円 = 250玉として計算
+                ※ 回転率②は最低値（最大投資額）を基準に計算
+                """)
             
             # 調整設定の案内
             st.markdown("---")
