@@ -543,11 +543,22 @@ class WebCompatibleAnalyzer:
                 current_value = analysis['final_value']
                 total_jackpot_balls = analysis.get('total_jackpot_balls', 0)
                 
-                # 総使用球数 = 総獲得球数 - 現在値（現在値がマイナスの場合は加算）
-                if current_value < 0:
-                    total_used = total_jackpot_balls + abs(current_value)
+                # より正確な計算方法：最低値を使用
+                min_value = analysis.get('min_value', 0)
+                
+                # 総使用球数の計算
+                # 基本的な考え方：総使用球数 = 総獲得球数 + |最低値|
+                # ただし、最低値が0以上の場合は、現在値を基準に計算
+                if min_value < 0:
+                    # 最低値がマイナスの場合：その絶対値が最大使用球数
+                    total_used = abs(min_value)
                 else:
-                    total_used = max(0, total_jackpot_balls - current_value)
+                    # 最低値がプラスの場合（初めから勝っている）
+                    if current_value < 0:
+                        total_used = total_jackpot_balls + abs(current_value)
+                    else:
+                        # 現在値と総獲得から逆算
+                        total_used = total_jackpot_balls - current_value
                 
                 # 通常時の使用球数 = 総使用球数 - 初当たりまでの使用球数
                 normal_decline_balls = max(0, total_used - first_hit_balls)
