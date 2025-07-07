@@ -564,7 +564,7 @@ class WebCompatibleAnalyzer:
                 normal_decline_balls = max(0, total_used - first_hit_balls)
                 
                 # 回転率計算（1000円 = 250玉）
-                if normal_decline_balls > 100 and normal_decline_spins > 10:  # 最小値でフィルタ
+                if normal_decline_balls > 0 and normal_decline_spins > 0:  # 0より大きければ計算
                     rotation_rate_2 = round((normal_decline_spins / normal_decline_balls) * 250, 1)
                     # 異常値をチェック（1-50回/千円の範囲に制限）
                     if rotation_rate_2 > 50:
