@@ -1622,16 +1622,16 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     st.markdown(f"""
                     <div class="stat-card">
                         <div class="stat-item">
+                            <span class="stat-label">🎯 現在値</span>
+                            <span class="stat-value {get_value_class(result['current_val'])}">{result['current_val']:,}玉</span>
+                        </div>
+                        <div class="stat-item">
                             <span class="stat-label">📈 最高値</span>
                             <span class="stat-value {get_value_class(result['max_val'])}">{result['max_val']:,}玉</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">📉 最低値</span>
                             <span class="stat-value {get_value_class(result['min_val'])}">{result['min_val']:,}玉</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">🎯 現在値</span>
-                            <span class="stat-value {get_value_class(result['current_val'])}">{result['current_val']:,}玉</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">🎰 初当たり球数</span>
@@ -1642,12 +1642,12 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             <span class="stat-value">{(result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0}回</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">💰 総獲得球数</span>
-                            <span class="stat-value positive">{result.get('total_jackpot_balls', 0):,}玉</span>
-                        </div>
-                        <div class="stat-item">
                             <span class="stat-label">🎯 初当たり回数</span>
                             <span class="stat-value positive">{(result.get('ocr_data') or {}).get('first_hit_count', result.get('jackpot_count', 0))}回</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">💰 総獲得球数</span>
+                            <span class="stat-value positive">{result.get('total_jackpot_balls', 0):,}玉</span>
                         </div>
                         {rotation_html}
                         {rotation_detail}
