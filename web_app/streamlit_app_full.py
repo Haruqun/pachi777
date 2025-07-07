@@ -28,6 +28,17 @@ st.set_page_config(
     layout="wide"
 )
 
+# グローバル変数でパスワードを管理（アプリ再起動まで有効）
+if 'GLOBAL_USER_PASSWORD' not in st.session_state:
+    # アプリ全体で共有されるグローバル変数を初期化
+    if not hasattr(st, '_global_passwords'):
+        st._global_passwords = {
+            'user': '059',
+            'admin': 'admin777'
+        }
+    st.session_state.GLOBAL_USER_PASSWORD = st._global_passwords['user']
+    st.session_state.GLOBAL_ADMIN_PASSWORD = st._global_passwords['admin']
+
 def extract_machine_number_from_orange_bar(image):
     """オレンジバー付近から台番号を抽出"""
     try:
@@ -498,22 +509,16 @@ if not st.session_state.authenticated:
         
         # ログイン処理を関数化
         def handle_login():
-            # デフォルトパスワード
-            default_user_password = "059"
-            default_admin_password = "admin777"
-            
-            # 保存されたパスワードを取得（セッションステートに保存）
-            if 'user_password' not in st.session_state:
-                st.session_state.user_password = default_user_password
-            if 'admin_password' not in st.session_state:
-                st.session_state.admin_password = default_admin_password
+            # グローバルパスワードを取得
+            user_password = st._global_passwords['user']
+            admin_password = st._global_passwords['admin']
             
             # パスワードチェック
-            if st.session_state.password_input == st.session_state.user_password:
+            if st.session_state.password_input == user_password:
                 st.session_state.authenticated = True
                 st.session_state.is_admin = False
                 st.session_state.login_success = True
-            elif st.session_state.password_input == st.session_state.admin_password:
+            elif st.session_state.password_input == admin_password:
                 st.session_state.authenticated = True
                 st.session_state.is_admin = True
                 st.session_state.login_success = True
@@ -3040,8 +3045,8 @@ if st.session_state.get('show_password_management', False) and st.session_state.
         # 現在のパスワードを表示
         st.info(f"""
         **現在のパスワード:**
-        - 一般ユーザー: {st.session_state.get('user_password', '059')}
-        - 管理者: {st.session_state.get('admin_password', 'admin777')}
+        - 一般ユーザー: {st._global_passwords['user']}
+        - 管理者: {st._global_passwords['admin']}
         """)
         
         # パスワード変更フォーム
@@ -3057,8 +3062,8 @@ if st.session_state.get('show_password_management', False) and st.session_state.
             )
             if st.button("一般パスワードを変更", key="change_user_password"):
                 if new_user_password:
-                    st.session_state.user_password = new_user_password
-                    st.success("✅ 一般ユーザーパスワードを変更しました")
+                    st._global_passwords['user'] = new_user_password
+                    st.success("✅ 一般ユーザーパスワードを変更しました（アプリ再起動まで有効）")
                 else:
                     st.error("パスワードを入力してください")
         
@@ -3072,8 +3077,8 @@ if st.session_state.get('show_password_management', False) and st.session_state.
             )
             if st.button("管理者パスワードを変更", key="change_admin_password"):
                 if new_admin_password:
-                    st.session_state.admin_password = new_admin_password
-                    st.success("✅ 管理者パスワードを変更しました")
+                    st._global_passwords['admin'] = new_admin_password
+                    st.success("✅ 管理者パスワードを変更しました（アプリ再起動まで有効）")
                 else:
                     st.error("パスワードを入力してください")
         
