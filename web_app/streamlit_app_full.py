@@ -852,6 +852,9 @@ if uploaded_files:
         st.session_state.skip_ocr = skip_ocr
         st.session_state.show_ocr_debug = show_ocr_debug
         st.session_state.skip_machine_number = skip_machine_number
+        # データエディタのセッションステートをリセット
+        if 'edited_df' in st.session_state:
+            del st.session_state.edited_df
         st.rerun()
     
     # プログレスバー（解析中のみ表示）
@@ -1901,13 +1904,25 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             
             # データエディタで編集可能にする
             st.markdown("#### 📝 データ編集")
-            st.info("💡 表内のセルをクリックして直接編集できます。編集後は下のボタンでダウンロードしてください。")
+            st.info("""
+            💡 表内のセルをクリックして直接編集できます。
+            
+            **自動計算される項目：**
+            - 現在値を変更 → 収支（円）が自動更新
+            - 初当たり球数・回転数を変更 → 回転率①が自動更新
+            - 編集後は下のボタンでダウンロードしてください。
+            """)
+            
+            # セッションステートにデータフレームを保存（初回のみ）
+            if 'edited_df' not in st.session_state:
+                st.session_state.edited_df = df.copy()
             
             edited_df = st.data_editor(
-                df,
+                st.session_state.edited_df,
                 use_container_width=True,
                 hide_index=True,
                 num_rows="dynamic",  # 行の追加・削除を許可
+                key="data_editor",
                 column_config={
                     "台番号": st.column_config.TextColumn(
                         "台番号",
@@ -1964,6 +1979,32 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     )
                 }
             )
+            
+            # データが編集された場合、自動計算を実行
+            if edited_df is not None and not edited_df.equals(st.session_state.edited_df):
+                # 現在の交換レートを取得
+                exchange_rate = st.session_state.settings.get('exchange_rate', 3.57145)
+                
+                # 各行について自動計算
+                for idx in range(len(edited_df)):
+                    # 収支（円）を現在値から自動計算
+                    if pd.notna(edited_df.at[idx, '現在値']):
+                        edited_df.at[idx, '収支（円）'] = int(edited_df.at[idx, '現在値'] * exchange_rate)
+                    
+                    # 回転率①を自動計算
+                    if pd.notna(edited_df.at[idx, '初当たり回転数']) and pd.notna(edited_df.at[idx, '初当たり球数']):
+                        spins = edited_df.at[idx, '初当たり回転数']
+                        balls = abs(edited_df.at[idx, '初当たり球数'])  # 絶対値を使用
+                        if balls > 0:
+                            rate1 = round((spins / balls) * 250, 1)
+                            edited_df.at[idx, '回転率①'] = f"{rate1:.1f}"
+                        else:
+                            edited_df.at[idx, '回転率①'] = '-'
+                
+                # セッションステートを更新
+                st.session_state.edited_df = edited_df.copy()
+                # 画面を再描画
+                st.rerun()
 
             # 編集されたデータでCSVダウンロードボタン
             col1, col2 = st.columns([1, 4])
