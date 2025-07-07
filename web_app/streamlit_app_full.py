@@ -1810,23 +1810,6 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     f"{avg_balance:+,.0f}玉",
                     delta_color="normal"
                 )
-
-            # 2行目
-            col3, col4 = st.columns(2)
-            
-            with col3:
-                st.metric(
-                    "📈 最高収支",
-                    f"{max_result['current_val']:+,}玉",
-                    f"台番号: {max_result.get('name', '不明')}"
-                )
-            
-            with col4:
-                st.metric(
-                    "📉 最低収支",
-                    f"{min_result['current_val']:+,}玉",
-                    f"台番号: {min_result.get('name', '不明')}"
-                )
             
             # 大当り情報を別セクションに
             st.markdown("#### 🎰 大当り分析")
