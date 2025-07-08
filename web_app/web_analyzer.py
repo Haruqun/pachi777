@@ -548,8 +548,8 @@ class WebCompatibleAnalyzer:
                 # 正しい計算式：(回転数 ÷ 使用玉数) × 250
                 if first_hit_balls > 0:
                     rotation_rate_1 = round((first_hit_spins / first_hit_balls) * 250, 1)
-                    # 異常値をチェック（5-30回/千円の範囲に制限）
-                    if rotation_rate_1 > 30 or rotation_rate_1 < 5:
+                    # 異常値をチェック（5-40回/千円の範囲に制限）
+                    if rotation_rate_1 > 40 or rotation_rate_1 < 5:
                         rotation_rate_1 = 0  # 異常値の場合は0にする
             
             # 通常時（下降区間）の回転率計算 - 下降区間のみを検出
