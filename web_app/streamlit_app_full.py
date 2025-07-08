@@ -2139,11 +2139,18 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     
                     with col1:
                         # 台番号（デフォルト値または手入力）
+                        # OCRで取得できない場合は画像名（拡張子なし）をデフォルト値に
+                        default_machine_number = str(row.get('台番号', ''))
+                        if default_machine_number == '' or default_machine_number == row.get('画像名', ''):
+                            # 画像名から拡張子を除去
+                            image_name = row.get('画像名', f'台{idx + 1}')
+                            default_machine_number = image_name.rsplit('.', 1)[0]  # 拡張子を除去
+                        
                         machine_number = st.text_input(
                             "台番号", 
-                            value=str(row.get('台番号', '')),
+                            value=default_machine_number,
                             key=f"machine_{idx}",
-                            help="例: 1000"
+                            help="例: 1000 または IMG_0321"
                         )
                     
                     with col2:
