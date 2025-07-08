@@ -2150,13 +2150,22 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         )
                     
                     with col3:
-                        # 通常回転数（手入力）
+                        # 通常回転数（手入力）- デフォルト値は下降区間での回転数
+                        default_normal_spins = 0
+                        if row.get('回転率②') and row['回転率②'] != '-' and row['回転率②'] != '計算不可':
+                            # rotation_metricsから通常回転数を取得
+                            for result in st.session_state.analysis_results:
+                                if result['name'] == row.get('画像名'):
+                                    if result.get('rotation_metrics'):
+                                        default_normal_spins = result['rotation_metrics'].get('normal_decline_spins', 0)
+                                    break
+                        
                         normal_spins_manual = st.number_input(
                             "通常回転数（手）",
-                            value=0,
+                            value=default_normal_spins,
                             min_value=0,
                             key=f"normal_spins_{idx}",
-                            help="手入力の通常回転数"
+                            help="通常時（下降区間）の回転数"
                         )
                     
                     with col4:
