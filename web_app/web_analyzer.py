@@ -327,6 +327,9 @@ class WebCompatibleAnalyzer:
                 mask = cv2.inRange(hsv, color_range['lower'], color_range['upper'])
                 
                 data_points = []
+                graph_start_x = None  # グラフの開始X座標
+                graph_end_x = None    # グラフの終了X座標
+                
                 for x in range(0, width, 2):  # production版と同じ2ピクセルステップ
                     col_mask = mask[:, x]
                     colored_pixels = np.where(col_mask > 0)[0]
@@ -341,6 +344,11 @@ class WebCompatibleAnalyzer:
                         # 値を±30,000の範囲にクリップ
                         value = max(-30000, min(30000, value))
                         data_points.append((x, value))
+                        
+                        # グラフの開始と終了位置を記録
+                        if graph_start_x is None:
+                            graph_start_x = x
+                        graph_end_x = x
                 
                 if len(data_points) > max_points:
                     max_points = len(data_points)
@@ -349,7 +357,12 @@ class WebCompatibleAnalyzer:
             except:
                 continue
         
-        return best_result, best_color, detected_zero
+        # グラフの座標情報を追加して返す
+        graph_info = {
+            'start_x': graph_start_x if 'graph_start_x' in locals() else None,
+            'end_x': graph_end_x if 'graph_end_x' in locals() else None
+        }
+        return best_result, best_color, detected_zero, graph_info
     
     def analyze_values(self, data_points):
         """値の分析（data_pointsは(x, value)のタプルリスト）"""
@@ -474,7 +487,7 @@ class WebCompatibleAnalyzer:
             'jackpot_count': jackpot_count  # 大当り回数を追加
         }
     
-    def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width):
+    def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width, graph_info=None):
         """回転率を計算
         
         Args:
@@ -482,6 +495,7 @@ class WebCompatibleAnalyzer:
             analysis: analyze_values()の結果
             total_start: OCRで読み取った累計スタート（総回転数）
             graph_width: グラフの横幅（ピクセル）
+            graph_info: グラフの開始・終了座標情報（オプション）
             
         Returns:
             dict: 回転率メトリクス
@@ -501,8 +515,17 @@ class WebCompatibleAnalyzer:
             # 累計スタートを数値に変換
             total_spins = int(total_start)
             
-            # 1ピクセルあたりの回転数
-            spins_per_pixel = total_spins / graph_width
+            # グラフの実際の幅を計算（グラフ座標情報がある場合）
+            if graph_info and graph_info.get('start_x') is not None and graph_info.get('end_x') is not None:
+                actual_graph_width = graph_info['end_x'] - graph_info['start_x']
+                graph_start_x = graph_info['start_x']
+            else:
+                # グラフ座標情報がない場合は従来の方法
+                actual_graph_width = graph_width
+                graph_start_x = 0
+            
+            # 1ピクセルあたりの回転数（実際のグラフ幅を使用）
+            spins_per_pixel = total_spins / actual_graph_width if actual_graph_width > 0 else 0
             
             # 初当たりまでの計算
             first_hit_spins = 0
@@ -512,8 +535,9 @@ class WebCompatibleAnalyzer:
             if analysis['first_hit_index'] > 0 and analysis['first_hit_index'] < len(data_points):
                 # 初当たりの実際のx座標（ピクセル位置）を取得
                 first_hit_x = data_points[analysis['first_hit_index']][0]
-                # 初当たりまでの回転数（正確なピクセル位置を使用）
-                first_hit_spins = int(first_hit_x * spins_per_pixel)
+                # 初当たりまでの回転数（グラフ開始位置からの相対位置を使用）
+                relative_x = first_hit_x - graph_start_x
+                first_hit_spins = int(relative_x * spins_per_pixel)
                 # 初当たりまでの使用玉数（マイナス値の絶対値）
                 first_hit_balls = abs(analysis['first_hit_value'])
                 # 回転率①（1000円 = 250玉）
@@ -604,10 +628,14 @@ class WebCompatibleAnalyzer:
             if first_hit_spins > 0:
                 debug_info = {
                     'graph_width': graph_width,
+                    'actual_graph_width': actual_graph_width,
+                    'graph_start_x': graph_start_x,
+                    'graph_end_x': graph_info['end_x'] if graph_info else graph_width,
                     'total_spins': total_spins,
                     'spins_per_pixel': round(spins_per_pixel, 2),
                     'first_hit_x': round(first_hit_x, 1) if 'first_hit_x' in locals() else 0,
-                    'position_percent': round((first_hit_x / graph_width * 100), 1) if 'first_hit_x' in locals() else 0
+                    'relative_x': round(relative_x, 1) if 'relative_x' in locals() else 0,
+                    'position_percent': round((relative_x / actual_graph_width * 100), 1) if 'relative_x' in locals() else 0
                 }
             
             result = {
@@ -637,7 +665,7 @@ class WebCompatibleAnalyzer:
                 'normal_decline_balls': 0
             }
     
-    def create_analysis_image(self, cropped_img, data_points, detected_color, detected_zero, analysis, output_path):
+    def create_analysis_image(self, cropped_img, data_points, detected_color, detected_zero, analysis, output_path, graph_info=None):
         """解析結果の可視化画像作成（production版と同じオーバーレイ形式）"""
         if not data_points:
             return
@@ -700,6 +728,27 @@ class WebCompatibleAnalyzer:
             # グラフ線を強調表示
             ax.plot(x_coords, y_coords, color='#F39C12', linewidth=4, 
                    alpha=0.9, label=f'データ抽出結果 ({detected_color})')
+            
+            # グラフの開始点・終了点・初当たり位置のマーカーを追加
+            if graph_info and len(data_points) > 0:
+                # 開始点（緑の点）
+                start_point = data_points[0]
+                start_y = detected_zero - (start_point[1] / self.scale)
+                ax.scatter(start_point[0], start_y, color='green', s=300, 
+                          marker='o', label='開始点', zorder=10, edgecolors='darkgreen', linewidth=2)
+                
+                # 現在地/終了点（赤の点）
+                end_point = data_points[-1]
+                end_y = detected_zero - (end_point[1] / self.scale)
+                ax.scatter(end_point[0], end_y, color='red', s=300, 
+                          marker='o', label='現在地', zorder=10, edgecolors='darkred', linewidth=2)
+                
+                # 初当たり位置（黄色の点）
+                if analysis['first_hit_index'] >= 0 and analysis['first_hit_index'] < len(data_points):
+                    hit_point = data_points[analysis['first_hit_index']]
+                    hit_y = detected_zero - (hit_point[1] / self.scale)
+                    ax.scatter(hit_point[0], hit_y, color='yellow', s=300,
+                              marker='o', label='初当たり', zorder=10, edgecolors='orange', linewidth=2)
             
             # 重要ポイントのマーク
             if analysis['max_value'] > 0 and analysis['max_index'] < len(data_points):
@@ -775,7 +824,7 @@ class WebCompatibleAnalyzer:
             print(f"Saved cropped image to: {cropped_path}")
             
             # データ抽出（production版形式）
-            data_points, detected_color, detected_zero = self.extract_graph_data(cropped)
+            data_points, detected_color, detected_zero, graph_info = self.extract_graph_data(cropped)
             print(f"Extracted {len(data_points)} data points, color: {detected_color}")
             
             if not data_points or len(data_points) < 10:
@@ -795,7 +844,7 @@ class WebCompatibleAnalyzer:
             
             # 結果画像作成（production版と同じファイル名）
             vis_path = os.path.join(output_dir, f"professional_analysis_{base_name}.png")
-            self.create_analysis_image(cropped, data_points, detected_color, detected_zero, analysis, vis_path)
+            self.create_analysis_image(cropped, data_points, detected_color, detected_zero, analysis, vis_path, graph_info)
             
             # 結果を保存
             result = {

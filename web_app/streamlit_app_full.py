@@ -1126,7 +1126,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             analyzer.scale = 30000 / avg_distance
         
         # グラフデータを抽出
-        graph_data_points, dominant_color, _ = analyzer.extract_graph_data(analysis_img)
+        graph_data_points, dominant_color, _, graph_info = analyzer.extract_graph_data(analysis_img)
         
         # デバッグ情報を無効化（必要に応じて有効化可能）
         # if uploaded_file.name in ["IMG_0165.PNG", "IMG_0174.PNG", "IMG_0177.PNG"]:
@@ -1417,7 +1417,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     graph_data_points, 
                     analysis_data, 
                     ocr_data['total_start'],
-                    graph_width
+                    graph_width,
+                    graph_info
                 )
             
             analysis_results.append({
@@ -1659,12 +1660,16 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 <details style="margin-left: 20px; margin-top: 10px;">
                                     <summary style="cursor: pointer; color: #666; font-size: 0.8em;">🔍 初当たり計算の検証データ</summary>
                                     <div style="background-color: #f0f0f0; padding: 10px; margin-top: 5px; font-size: 0.7em; color: #333;">
-                                        <div>📊 グラフ横幅: {debug.get("graph_width", 0)}px</div>
+                                        <div>📊 画像横幅: {debug.get("graph_width", 0)}px</div>
+                                        <div>📍 グラフ開始X: {debug.get("graph_start_x", 0)}px</div>
+                                        <div>📍 グラフ終了X: {debug.get("graph_end_x", 0)}px</div>
+                                        <div>📐 実際のグラフ幅: {debug.get("actual_graph_width", 0)}px</div>
                                         <div>🎲 累計スタート: {debug.get("total_spins", 0)}回転</div>
                                         <div>📏 1pxあたり: {debug.get("spins_per_pixel", 0):.2f}回転/px</div>
-                                        <div>📍 初当たりX座標: {debug.get("first_hit_x", 0):.1f}px</div>
+                                        <div>🎯 初当たりX座標: {debug.get("first_hit_x", 0):.1f}px</div>
+                                        <div>➡️ 相対X座標: {debug.get("relative_x", 0):.1f}px</div>
                                         <div>📐 グラフ上の位置: {debug.get("position_percent", 0):.1f}%</div>
-                                        <div>🎯 計算式: {debug.get("first_hit_x", 0):.1f}px × {debug.get("spins_per_pixel", 0):.2f} = {metrics["first_hit_spins"]}回転</div>
+                                        <div>🎯 計算式: {debug.get("relative_x", 0):.1f}px × {debug.get("spins_per_pixel", 0):.2f} = {metrics["first_hit_spins"]}回転</div>
                                     </div>
                                 </details>
                                 '''
