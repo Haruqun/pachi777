@@ -1369,6 +1369,11 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             current_y = calculate_y_from_value(current_val)
             if 0 <= current_y < overlay_img.shape[0]:
                 cv2.line(overlay_img, (0, current_y), (overlay_img.shape[1], current_y), (255, 255, 0), 2)
+                # 現在値の点に大きめの円を描画（グラフ上）
+                if len(graph_data_points) > 0:
+                    current_x = graph_data_points[-1][0]  # 最後のデータポイントのX座標
+                    cv2.circle(overlay_img, (int(current_x), current_y), 8, (255, 255, 0), -1)
+                    cv2.circle(overlay_img, (int(current_x), current_y), 10, (200, 200, 0), 2)
                 # 背景付きテキスト（白背景、濃いシアン文字）右端に表示
                 text = f'CURRENT: {int(current_val):,}'
                 text_width = 160
