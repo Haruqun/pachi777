@@ -262,12 +262,20 @@ def enhance_image_for_ocr(image):
     return enhanced
 
 def extract_site7_data(image):
-    """site7の画像からOCRでデータを抽出（領域別処理）"""
+    """site7の画像からOCRでデータを抽出"""
     try:
+        # 処理時間計測用
+        ocr_timings = {} if st.session_state.get('show_ocr_debug', False) else None
+        start_time = time.time()
+        
         # まず、オレンジバーから台番号を抽出（スキップ設定を確認）
         machine_number = None
         if len(image.shape) == 3 and not st.session_state.get('skip_machine_number', True):  # カラー画像で、かつスキップしない場合
+            if ocr_timings is not None:
+                orange_start = time.time()
             machine_number = extract_machine_number_from_orange_bar(image)
+            if ocr_timings is not None:
+                ocr_timings['オレンジバー処理'] = f"{time.time() - orange_start:.2f}秒"
         
         # 画像の高さと幅を取得
         height, width = image.shape[:2] if len(image.shape) >= 2 else (0, 0)
@@ -284,12 +292,23 @@ def extract_site7_data(image):
             'ocr_text': "",  # OCRテキストも保存
             'orange_bar_detected': machine_number is not None,  # デバッグ用
             'enhanced_image': None,  # デバッグ用
-            'region_images': {}  # 各領域の画像（デバッグ用）
+            'ocr_timings': ocr_timings  # 処理時間情報
         }
         
-        # 全体OCRを実行（site7では全体処理が最も効果的）
+        # 画像前処理
+        if ocr_timings is not None:
+            enhance_start = time.time()
         enhanced_image = enhance_image_for_ocr(image)
+        if ocr_timings is not None:
+            ocr_timings['画像前処理'] = f"{time.time() - enhance_start:.2f}秒"
+        
+        # OCR実行
+        if ocr_timings is not None:
+            ocr_start = time.time()
         text = pytesseract.image_to_string(enhanced_image, lang='jpn')
+        if ocr_timings is not None:
+            ocr_timings['OCR実行'] = f"{time.time() - ocr_start:.2f}秒"
+        
         data['ocr_text'] = text  # シンプルに全体OCRテキストのみ保存
         
         if st.session_state.get('show_ocr_debug', False):
@@ -406,6 +425,9 @@ def extract_site7_data(image):
                     data['max_payout'] = str(value)
                     break
         
+        # 合計処理時間を記録
+        if ocr_timings is not None:
+            ocr_timings['合計処理時間'] = f"{time.time() - start_time:.2f}秒"
         
         return data
     except Exception as e:
@@ -1011,7 +1033,13 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             ocr_start_time = time.time()
             ocr_data = extract_site7_data(img_array)
             ocr_end_time = time.time()
-            detail_text.text(f'✅ OCR完了 ({ocr_end_time - ocr_start_time:.1f}秒)')
+            
+            # OCR処理時間の詳細表示（デバッグモードの場合）
+            if ocr_data and ocr_data.get('ocr_timings'):
+                timing_details = " | ".join([f"{k}: {v}" for k, v in ocr_data['ocr_timings'].items()])
+                detail_text.text(f'✅ OCR完了 ({timing_details})')
+            else:
+                detail_text.text(f'✅ OCR完了 ({ocr_end_time - ocr_start_time:.1f}秒)')
         else:
             detail_text.text(f'⚡ {uploaded_file.name} のOCR解析をスキップ（高速モード）')
             ocr_data = None
@@ -1868,6 +1896,13 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 }
                                 for key, value in ocr_debug_data.items():
                                     st.write(f"- **{key}**: {value}")
+                                
+                                # 処理時間情報を表示
+                                if result['ocr_data'].get('ocr_timings'):
+                                    st.markdown("#### ⏱️ 処理時間")
+                                    timing_data = result['ocr_data']['ocr_timings']
+                                    for key, value in timing_data.items():
+                                        st.write(f"- **{key}**: {value}")
                                 
                                 # OCR精度向上のヒント
                                 st.info("""
