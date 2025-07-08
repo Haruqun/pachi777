@@ -552,13 +552,23 @@ class WebCompatibleAnalyzer:
                     if rotation_rate_1 > 40 or rotation_rate_1 < 5:
                         rotation_rate_1 = 0  # 異常値の場合は0にする
             
-            # 通常時（下降区間）の回転率計算 - 下降区間のみを検出
+            # 通常時の回転率計算 - シンプルに累計スタートと最低値で計算
             rotation_rate_2 = 0
-            normal_decline_spins = 0
+            normal_decline_spins = total_spins  # 累計スタート全体
             normal_decline_balls = 0
             
-            # 下降区間の検出と集計
-            if len(data_points) > 1:
+            # 最低値（最大投資額）がある場合
+            if analysis['min_value'] < -100:  # 100玉以上のマイナス
+                normal_decline_balls = abs(int(analysis['min_value']))  # 最低値の絶対値
+                
+                if normal_decline_balls > 0:
+                    rotation_rate_2 = round((normal_decline_spins / normal_decline_balls) * 250, 1)
+                    # 異常値をチェック
+                    if rotation_rate_2 > 30 or rotation_rate_2 < 5:
+                        rotation_rate_2 = 0
+            
+            # 下降区間の検出と集計（デバッグ用に残す）
+            elif len(data_points) > 1:
                 values = [p[1] for p in data_points]
                 
                 # 下降区間を検出（連続的に減少している部分）
