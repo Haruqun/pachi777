@@ -1651,6 +1651,23 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{metrics["rotation_rate_1"]:.1f}回/千円</span></div>'
                             # デバッグ情報（初当たりまで）
                             rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}玉使用</div>'
+                            
+                            # 検証用データを追加（初当たり計算の詳細）
+                            if 'debug_info' in metrics:
+                                debug = metrics['debug_info']
+                                rotation_detail += f'''
+                                <details style="margin-left: 20px; margin-top: 10px;">
+                                    <summary style="cursor: pointer; color: #666; font-size: 0.8em;">🔍 初当たり計算の検証データ</summary>
+                                    <div style="background-color: #f0f0f0; padding: 10px; margin-top: 5px; font-size: 0.7em; color: #333;">
+                                        <div>📊 グラフ横幅: {debug.get("graph_width", 0)}px</div>
+                                        <div>🎲 累計スタート: {debug.get("total_spins", 0)}回転</div>
+                                        <div>📏 1pxあたり: {debug.get("spins_per_pixel", 0):.2f}回転/px</div>
+                                        <div>📍 初当たりX座標: {debug.get("first_hit_x", 0):.1f}px</div>
+                                        <div>📐 グラフ上の位置: {debug.get("position_percent", 0):.1f}%</div>
+                                        <div>🎯 計算式: {debug.get("first_hit_x", 0):.1f}px × {debug.get("spins_per_pixel", 0):.2f} = {metrics["first_hit_spins"]}回転</div>
+                                    </div>
+                                </details>
+                                '''
                         # 回転率②は常に表示（0の場合も含む）
                         if metrics.get('rotation_rate_2', 0) >= 0:
                             if metrics['rotation_rate_2'] > 0:

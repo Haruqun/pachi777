@@ -599,7 +599,18 @@ class WebCompatibleAnalyzer:
                         elif rotation_rate_2 < 5:
                             rotation_rate_2 = 0
             
-            return {
+            # デバッグ情報を追加
+            debug_info = {}
+            if first_hit_spins > 0:
+                debug_info = {
+                    'graph_width': graph_width,
+                    'total_spins': total_spins,
+                    'spins_per_pixel': round(spins_per_pixel, 2),
+                    'first_hit_x': round(first_hit_x, 1) if 'first_hit_x' in locals() else 0,
+                    'position_percent': round((first_hit_x / graph_width * 100), 1) if 'first_hit_x' in locals() else 0
+                }
+            
+            result = {
                 'spins_per_pixel': round(spins_per_pixel, 2),
                 'first_hit_spins': first_hit_spins,
                 'first_hit_balls': int(first_hit_balls),
@@ -608,6 +619,11 @@ class WebCompatibleAnalyzer:
                 'normal_decline_spins': normal_decline_spins,
                 'normal_decline_balls': int(normal_decline_balls)
             }
+            
+            if debug_info:
+                result['debug_info'] = debug_info
+                
+            return result
             
         except Exception as e:
             print(f"回転率計算エラー: {e}")
