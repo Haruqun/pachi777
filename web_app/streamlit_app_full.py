@@ -1922,24 +1922,37 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                     
                                     if 'stats' in region_images:
                                         st.markdown("##### 統計情報領域")
-                                        st.image(region_images['stats'], caption="統計情報領域（前処理済み）", use_container_width=True)
+                                        # グレースケール画像を3チャンネルに変換
+                                        stats_img = region_images['stats']
+                                        if len(stats_img.shape) == 2:
+                                            stats_img = cv2.cvtColor(stats_img, cv2.COLOR_GRAY2RGB)
+                                        st.image(stats_img, caption="統計情報領域（前処理済み）", use_container_width=True)
                                     
                                     # 左右の領域も表示
                                     col_left, col_right = st.columns(2)
                                     if 'left' in region_images:
                                         with col_left:
                                             st.markdown("##### 左側領域")
-                                            st.image(region_images['left'], caption="左側領域（累計スタート等）", use_container_width=True)
+                                            left_img = region_images['left']
+                                            if len(left_img.shape) == 2:
+                                                left_img = cv2.cvtColor(left_img, cv2.COLOR_GRAY2RGB)
+                                            st.image(left_img, caption="左側領域（累計スタート等）", use_container_width=True)
                                     
                                     if 'right' in region_images:
                                         with col_right:
                                             st.markdown("##### 右側領域")
-                                            st.image(region_images['right'], caption="右側領域（大当り回数等）", use_container_width=True)
+                                            right_img = region_images['right']
+                                            if len(right_img.shape) == 2:
+                                                right_img = cv2.cvtColor(right_img, cv2.COLOR_GRAY2RGB)
+                                            st.image(right_img, caption="右側領域（大当り回数等）", use_container_width=True)
                                 
                                 # 前処理後の全体画像を表示
                                 if result['ocr_data'].get('enhanced_image') is not None:
                                     st.markdown("#### 前処理後の全体画像")
-                                    st.image(result['ocr_data']['enhanced_image'], caption="OCR用に強化された画像（全体）", use_container_width=True)
+                                    enhanced_img = result['ocr_data']['enhanced_image']
+                                    if len(enhanced_img.shape) == 2:
+                                        enhanced_img = cv2.cvtColor(enhanced_img, cv2.COLOR_GRAY2RGB)
+                                    st.image(enhanced_img, caption="OCR用に強化された画像（全体）", use_container_width=True)
                                 
                                 # OCRテキスト結果
                                 if result['ocr_data'].get('ocr_text'):
