@@ -1649,20 +1649,12 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 result = analysis_results[idx]
                 
                 with cols[col_idx]:
-                    # 台番号を優先表示、なければファイル名から推測
+                    # 台番号を表示、なければファイル名を表示
                     if result.get('ocr_data') and result['ocr_data'].get('machine_number'):
                         display_name = result['ocr_data']['machine_number']
                     else:
-                        # ファイル名から台番号を推測
-                        filename = result['name']
-                        # ファイル名に番台が含まれる場合（例：8. 720番台.jpg → 720番台）
-                        import re
-                        match = re.search(r'(\d+)\s*番台', filename)
-                        if match:
-                            display_name = f"{match.group(1)}番台"
-                        else:
-                            # それ以外はファイル名をそのまま使用
-                            display_name = filename
+                        # OCRで台番号が取得できなかった場合はファイル名をそのまま表示
+                        display_name = result['name']
                     st.markdown(f"#### {idx + 1}. {display_name}")
 
                     # 解析結果画像
