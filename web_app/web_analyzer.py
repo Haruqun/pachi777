@@ -491,7 +491,7 @@ class WebCompatibleAnalyzer:
             'jackpot_count': jackpot_count  # 大当り回数を追加
         }
     
-    def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width, graph_info=None):
+    def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width, graph_info=None, ocr_data=None):
         """回転率を計算
         
         Args:
@@ -500,6 +500,7 @@ class WebCompatibleAnalyzer:
             total_start: OCRで読み取った累計スタート（総回転数）
             graph_width: グラフの横幅（ピクセル）
             graph_info: グラフの開始・終了座標情報（オプション）
+            ocr_data: OCRで読み取ったデータ（オプション）
             
         Returns:
             dict: 回転率メトリクス
@@ -549,82 +550,67 @@ class WebCompatibleAnalyzer:
                 if first_hit_balls > 0:
                     rotation_rate_1 = round((first_hit_spins / first_hit_balls) * 250, 1)
             
-            # 通常時の回転率計算 - グラフの下降区間から計算
+            # 通常時の回転率計算
             rotation_rate_2 = 0
             normal_decline_spins = 0
             normal_decline_balls = 0
             
-            # 下降区間の検出と集計
+            # グラフから上昇区間（大当り中）と下降区間（通常時）を分析
+            total_decline_balls = 0  # 通常時の使用玉数
+            total_rise_pixels = 0    # 大当り中のピクセル数（回転数計算用）
+            
             if len(data_points) > 1:
                 values = [p[1] for p in data_points]
                 
-                # 下降区間を検出（連続的に減少している部分）
-                decline_segments = []
                 i = 0
-                
                 while i < len(values) - 1:
-                    # 下降開始を検出（10玉以上の減少）
-                    if values[i+1] < values[i] - 10:
-                        start_idx = i
+                    # 上昇区間の検出（100玉以上の急上昇 = 大当り）
+                    if values[i+1] > values[i] + 100:
+                        # 上昇開始
                         start_x = data_points[i][0]
-                        start_val = values[i]
-                        
-                        # 下降が続く限り追跡
                         j = i + 1
-                        while j < len(values) - 1:
-                            # 大幅な上昇（100玉以上）で下降終了
-                            if values[j+1] > values[j] + 100:
-                                break
-                            # 緩やかな上昇でも50玉以上なら終了
-                            elif values[j+1] > values[j] + 50:
-                                # 次の数点を確認して本当に上昇トレンドか確認
-                                if j + 3 < len(values) and values[j+3] > values[j] + 100:
-                                    break
+                        
+                        # 上昇が続く限り追跡
+                        while j < len(values) - 1 and values[j+1] >= values[j] - 50:
                             j += 1
                         
-                        end_idx = j
+                        # 上昇区間の幅（ピクセル）
                         end_x = data_points[j][0]
-                        end_val = values[j]
+                        rise_pixels = end_x - start_x
+                        total_rise_pixels += rise_pixels
                         
-                        # この下降区間での変化を記録
-                        if end_val < start_val - 20:  # 20玉以上の下降をカウント（条件を緩和）
-                            decline_segments.append({
-                                'start_idx': start_idx,
-                                'end_idx': end_idx,
-                                'pixels': end_x - start_x,
-                                'balls_used': start_val - end_val
-                            })
-                        
-                        i = j + 1
+                        i = j
+                    # 下降区間の検出（通常時）
+                    elif values[i+1] < values[i] - 10:
+                        # この区間での使用玉数
+                        balls_used = values[i] - values[i+1]
+                        total_decline_balls += balls_used
+                        i += 1
                     else:
                         i += 1
+            
+            # 大当り中の回転数 = 上昇区間のピクセル数 × 1ピクセルあたりの回転数
+            jackpot_spins = int(total_rise_pixels * spins_per_pixel)
+            
+            # 通常時の総回転数 = 累計スタート - 大当り中の回転数
+            if total_spins > 0:
+                normal_total_spins = total_spins - jackpot_spins
+                normal_total_spins = max(0, normal_total_spins)  # 負の値を防ぐ
                 
-                # 全下降区間の合計を計算
-                total_decline_pixels = 0
-                total_decline_balls = 0
+                # 通常時の使用玉数 = グラフの下降部分の合計
+                normal_total_balls = int(total_decline_balls)
                 
-                for segment in decline_segments:
-                    total_decline_pixels += segment['pixels']
-                    total_decline_balls += segment['balls_used']
-                
-                # 下降区間の回転数を計算
-                if total_decline_pixels > 0 and total_decline_balls > 0:
-                    normal_decline_spins = int(total_decline_pixels * spins_per_pixel)
-                    normal_decline_balls = int(total_decline_balls)
+                # 回転率②の計算（1000円 = 250玉）
+                if normal_total_balls > 0 and normal_total_spins > 0:
+                    rotation_rate_2 = round((normal_total_spins / normal_total_balls) * 250, 1)
                     
-                    # 初当たりまでの分を除外するかどうか
-                    if first_hit_spins > 0 and normal_decline_spins > first_hit_spins:
-                        # 初当たり後の通常時のみ
-                        normal_decline_spins = normal_decline_spins - first_hit_spins
-                        normal_decline_balls = max(0, normal_decline_balls - first_hit_balls)
-                    
-                    # 回転率計算（1000円 = 250玉）
-                    if normal_decline_balls > 0 and normal_decline_spins > 0:
-                        rotation_rate_2 = round((normal_decline_spins / normal_decline_balls) * 250, 1)
+                # デバッグ用に値を保存
+                normal_decline_spins = normal_total_spins
+                normal_decline_balls = normal_total_balls
             
             # デバッグ情報を追加
             debug_info = {}
-            if first_hit_spins > 0 or len(decline_segments) > 0:
+            if first_hit_spins > 0 or total_decline_balls > 0:
                 debug_info = {
                     'graph_width': graph_width,
                     'actual_graph_width': actual_graph_width,
@@ -634,7 +620,10 @@ class WebCompatibleAnalyzer:
                     'spins_per_pixel': round(spins_per_pixel, 2),
                     'first_hit_x': round(first_hit_x, 1) if 'first_hit_x' in locals() else 0,
                     'relative_x': round(relative_x, 1) if 'relative_x' in locals() else 0,
-                    'position_percent': round((relative_x / actual_graph_width * 100), 1) if 'relative_x' in locals() else 0
+                    'position_percent': round((relative_x / actual_graph_width * 100), 1) if 'relative_x' in locals() else 0,
+                    'jackpot_spins': jackpot_spins,
+                    'normal_total_spins': normal_total_spins,
+                    'total_decline_balls': total_decline_balls
                 }
             
             result = {

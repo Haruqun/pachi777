@@ -1438,7 +1438,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     analysis_data, 
                     ocr_data['total_start'],
                     graph_width,
-                    graph_info
+                    graph_info,
+                    ocr_data  # OCRデータを追加
                 )
             
             analysis_results.append({
