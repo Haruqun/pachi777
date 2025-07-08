@@ -2196,10 +2196,13 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     if machine_number:  # 台番号が入力されている場合のみ
                         # 初当たり玉数（絶対値）
                         first_hit_balls_value = row.get('初当たり球数', 0)
-                        if first_hit_balls_value is None:
+                        if first_hit_balls_value is None or first_hit_balls_value == 'なし':
                             first_hit_balls = 0
                         else:
-                            first_hit_balls = abs(int(first_hit_balls_value))
+                            try:
+                                first_hit_balls = abs(int(first_hit_balls_value))
+                            except (ValueError, TypeError):
+                                first_hit_balls = 0
                         # 回転率①
                         rotation_rate_1 = row.get('回転率①', '-')
                         if rotation_rate_1 != '-' and rotation_rate_1 != '計算不可':
