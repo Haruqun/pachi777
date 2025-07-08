@@ -548,35 +548,14 @@ class WebCompatibleAnalyzer:
                 # 正しい計算式：(回転数 ÷ 使用玉数) × 250
                 if first_hit_balls > 0:
                     rotation_rate_1 = round((first_hit_spins / first_hit_balls) * 250, 1)
-                    # 異常値をチェック（5-40回/千円の範囲に制限）
-                    if rotation_rate_1 > 40 or rotation_rate_1 < 5:
-                        rotation_rate_1 = 0  # 異常値の場合は0にする
             
-            # 通常時の回転率計算 - 累計スタートから大当り中の回転数を除外
+            # 通常時の回転率計算 - グラフの下降区間から計算
             rotation_rate_2 = 0
             normal_decline_spins = 0
             normal_decline_balls = 0
             
-            # 大当り中の回転数を推定（1回あたり約15回転）
-            jackpot_spins = 0
-            if 'jackpot_count' in locals() and jackpot_count > 0:
-                jackpot_spins = jackpot_count * 15  # 大当り1回あたり15回転と仮定
-            
-            # 通常時の回転数 = 累計スタート - 大当り中の回転数
-            normal_decline_spins = max(0, total_spins - jackpot_spins)
-            
-            # 最低値（最大投資額）がある場合
-            if analysis['min_value'] < -100:  # 100玉以上のマイナス
-                normal_decline_balls = abs(int(analysis['min_value']))  # 最低値の絶対値
-                
-                if normal_decline_balls > 0 and normal_decline_spins > 0:
-                    rotation_rate_2 = round((normal_decline_spins / normal_decline_balls) * 250, 1)
-                    # 異常値をチェック
-                    if rotation_rate_2 > 30 or rotation_rate_2 < 5:
-                        rotation_rate_2 = 0
-            
-            # 下降区間の検出と集計（デバッグ用に残す）
-            elif len(data_points) > 1:
+            # 下降区間の検出と集計
+            if len(data_points) > 1:
                 values = [p[1] for p in data_points]
                 
                 # 下降区間を検出（連続的に減少している部分）
@@ -608,7 +587,7 @@ class WebCompatibleAnalyzer:
                         end_val = values[j]
                         
                         # この下降区間での変化を記録
-                        if end_val < start_val - 50:  # 50玉以上の下降のみカウント
+                        if end_val < start_val - 20:  # 20玉以上の下降をカウント（条件を緩和）
                             decline_segments.append({
                                 'start_idx': start_idx,
                                 'end_idx': end_idx,
@@ -642,15 +621,12 @@ class WebCompatibleAnalyzer:
                     # 回転率計算（1000円 = 250玉）
                     if normal_decline_balls > 0 and normal_decline_spins > 0:
                         rotation_rate_2 = round((normal_decline_spins / normal_decline_balls) * 250, 1)
-                        # 異常値をチェック（5-30回/千円の範囲に制限）
-                        if rotation_rate_2 > 30:
-                            rotation_rate_2 = 0  # 異常値の場合は0にする
                         elif rotation_rate_2 < 5:
                             rotation_rate_2 = 0
             
             # デバッグ情報を追加
             debug_info = {}
-            if first_hit_spins > 0:
+            if first_hit_spins > 0 or len(decline_segments) > 0:
                 debug_info = {
                     'graph_width': graph_width,
                     'actual_graph_width': actual_graph_width,

@@ -1658,10 +1658,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     first_hit_text = f"{result['first_hit_val']:,}玉" if result['first_hit_val'] is not None else "なし"
                     first_hit_class = get_value_class(result['first_hit_val']) if result['first_hit_val'] is not None else ""
 
-                    # 補正係数の表示を準備
+                    # 補正係数の表示を準備（非表示にする）
                     correction_info = ""
-                    if 'correction_factor' in result and result['correction_factor'] != 1.0:
-                        correction_info = f'<div class="stat-item" style="font-size: 0.8em;"><span style="color: #666;">補正率: x{result["correction_factor"]:.2f}</span></div>'
                     
                     # 回転率データの準備
                     rotation_html = ""
@@ -1910,12 +1908,20 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 if result.get('rotation_metrics'):
                     metrics = result['rotation_metrics']
                     if metrics['rotation_rate_1'] > 0:
-                        row['回転率①'] = f"{metrics['rotation_rate_1']:.1f}"
+                        # 異常値に絵文字を追加
+                        rate1_str = f"{metrics['rotation_rate_1']:.1f}"
+                        if metrics['rotation_rate_1'] < 5 or metrics['rotation_rate_1'] > 40:
+                            rate1_str += " ⚠️"  # 異常値警告
+                        row['回転率①'] = rate1_str
                     else:
                         row['回転率①'] = '-'
                     
                     if metrics['rotation_rate_2'] > 0:
-                        row['回転率②'] = f"{metrics['rotation_rate_2']:.1f}"
+                        # 異常値に絵文字を追加
+                        rate2_str = f"{metrics['rotation_rate_2']:.1f}"
+                        if metrics['rotation_rate_2'] < 5 or metrics['rotation_rate_2'] > 30:
+                            rate2_str += " ⚠️"  # 異常値警告
+                        row['回転率②'] = rate2_str
                     else:
                         row['回転率②'] = '-'
                         
@@ -2196,10 +2202,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 first_hit_balls = 0
                         # 回転率①
                         rotation_rate_1 = row.get('回転率①', '-')
-                        if rotation_rate_1 != '-' and rotation_rate_1 != '計算不可':
+                        if rotation_rate_1 != '-':
                             # 文字列の場合のみreplace、数値の場合はそのまま
                             if isinstance(rotation_rate_1, str):
-                                rotation_rate_1 = rotation_rate_1.replace('回/千円', '')
+                                rotation_rate_1 = rotation_rate_1.replace('回/千円', '').replace(' ⚠️', '')
                             else:
                                 rotation_rate_1 = str(rotation_rate_1)
                         else:
@@ -2210,10 +2216,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         
                         # 回転率（通常時用の計算 - 仮実装）
                         rotation_rate_2 = row.get('回転率②', '-')
-                        if rotation_rate_2 != '-' and rotation_rate_2 != '計算不可':
+                        if rotation_rate_2 != '-':
                             # 文字列の場合のみreplace、数値の場合はそのまま
                             if isinstance(rotation_rate_2, str):
-                                rotation_rate_2 = rotation_rate_2.replace('回/千円', '')
+                                rotation_rate_2 = rotation_rate_2.replace('回/千円', '').replace(' ⚠️', '')
                             else:
                                 rotation_rate_2 = str(rotation_rate_2)
                         else:
@@ -2756,7 +2762,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             
                             if abs(avg_correction_factor - 1.0) > 0.001:
                                 # 推奨調整値を表示
-                                st.info(f"平均補正率: **{avg_correction_factor:.2f}x** （{len(corrections)}枚の画像から計算）")
+                                # st.info(f"平均補正率: **{avg_correction_factor:.2f}x** （{len(corrections)}枚の画像から計算）")  # 補正率表示を非表示化
                                 
                                 col_adj1, col_adj2 = st.columns(2)
                                 with col_adj1:
@@ -3006,7 +3012,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     
                     # 補正情報を表示
                     if actual_max_value and abs(correction_factor - 1.0) > 0.01:
-                        info_text = f"🔍 検出値: {int(max_val_detected):,}玉 → 実際の値: {int(actual_max_value):,}玉 (補正率 x{correction_factor:.2f})"
+                        info_text = f"🔍 検出値: {int(max_val_detected):,}玉 → 実際の値: {int(actual_max_value):,}玉"
                         st.info(info_text)
             
             st.image(cropped_preview, use_column_width=True)
