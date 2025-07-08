@@ -2195,7 +2195,11 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # データを整形
                     if machine_number:  # 台番号が入力されている場合のみ
                         # 初当たり玉数（絶対値）
-                        first_hit_balls = abs(int(row.get('初当たり球数', 0)))
+                        first_hit_balls_value = row.get('初当たり球数', 0)
+                        if first_hit_balls_value is None:
+                            first_hit_balls = 0
+                        else:
+                            first_hit_balls = abs(int(first_hit_balls_value))
                         # 回転率①
                         rotation_rate_1 = row.get('回転率①', '-')
                         if rotation_rate_1 != '-' and rotation_rate_1 != '計算不可':
