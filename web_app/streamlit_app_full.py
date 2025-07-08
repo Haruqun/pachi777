@@ -383,16 +383,7 @@ if 'uploaded_file_names' not in st.session_state:
     st.session_state.uploaded_file_names = []
 
 
-# URLパラメータで簡易的な認証維持を実装
-# パスワードのハッシュをパラメータとして使用
-import base64
-
-# URLパラメータから認証情報を確認
-if 'auth' in st.query_params:
-    auth_hash = st.query_params['auth']
-    # 簡易的な検証（本番環境ではより安全な方法を使用すべき）
-    if auth_hash == base64.b64encode(b"059_pachi777").decode():
-        st.session_state.authenticated = True
+# URLパラメータによる認証バイパスを削除（セキュリティ向上のため）
 
 # パスワード認証
 if not st.session_state.authenticated:
@@ -537,19 +528,6 @@ if not st.session_state.authenticated:
             on_change=handle_login
         )
         
-        # ブックマーク用URLの表示
-        if st.checkbox("ログイン不要のURLを表示", value=False, help="このURLをブックマークすると、次回からログインが不要になります"):
-            current_url = st.session_state.get('current_url', '')
-            if not current_url:
-                # 現在のURLを取得（簡易的な方法）
-                current_url = "https://yourapp.streamlit.app"  # 実際のURLに置き換えてください
-            
-            auth_token = base64.b64encode(b"059_pachi777").decode()
-            bookmark_url = f"{current_url}?auth={auth_token}"
-            
-            st.info("📌 以下のURLをブックマークしてください：")
-            st.code(bookmark_url)
-            st.caption("⚠️ このURLは他人と共有しないでください")
         
         # ログインボタン
         if st.button("ログイン", type="primary", use_container_width=True):
