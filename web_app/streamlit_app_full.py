@@ -249,10 +249,15 @@ def enhance_image_for_ocr(image):
     # numpy配列に戻す
     enhanced = np.array(pil_image)
     
-    # ノイズ除去（メディアンフィルタ）
+    # グレースケールに変換
     if len(enhanced.shape) == 3:
         enhanced = cv2.cvtColor(enhanced, cv2.COLOR_RGB2GRAY)
+    
+    # ノイズ除去（メディアンフィルタ）
     enhanced = cv2.medianBlur(enhanced, 3)
+    
+    # uint8型を確実にする
+    enhanced = enhanced.astype(np.uint8)
     
     return enhanced
 
