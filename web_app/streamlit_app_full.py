@@ -2108,6 +2108,110 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 ※ 回転率②は最低値（最大投資額）を基準に計算
                 """)
             
+            # データ出力フォーム
+            st.markdown("---")
+            st.markdown("### 📝 データ出力フォーム")
+            st.caption("解析結果を指定フォーマットで出力します")
+            
+            with st.expander("📋 データ出力（手入力対応）", expanded=False):
+                # 今日の日付を取得
+                today = datetime.now().strftime("%-m/%-d")  # 例: 7/7
+                
+                # データ収集用のリスト
+                output_lines = []
+                
+                # 各解析結果に対してデータを収集
+                for idx, row in edited_df.iterrows():
+                    st.markdown(f"#### {idx + 1}. {row['画像名']}")
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        # 台番号（デフォルト値または手入力）
+                        machine_number = st.text_input(
+                            "台番号", 
+                            value=str(row.get('台番号', '')),
+                            key=f"machine_{idx}",
+                            help="例: 1000"
+                        )
+                    
+                    with col2:
+                        # 初当たり回転数（手入力）
+                        first_hit_spins_manual = st.number_input(
+                            "初当たり回転数（手）",
+                            value=int(row.get('初当たり回転数', 0)),
+                            min_value=0,
+                            key=f"first_spins_{idx}",
+                            help="手入力の初当たり回転数"
+                        )
+                    
+                    with col3:
+                        # 通常回転数（手入力）
+                        normal_spins_manual = st.number_input(
+                            "通常回転数（手）",
+                            value=0,
+                            min_value=0,
+                            key=f"normal_spins_{idx}",
+                            help="手入力の通常回転数"
+                        )
+                    
+                    with col4:
+                        # 獲得数（手入力）
+                        total_win_manual = st.number_input(
+                            "獲得数（手）",
+                            value=int(row.get('総獲得球数', 0)),
+                            min_value=0,
+                            key=f"total_win_{idx}",
+                            help="手入力の獲得数"
+                        )
+                    
+                    # データを整形
+                    if machine_number:  # 台番号が入力されている場合のみ
+                        # 初当たり玉数（絶対値）
+                        first_hit_balls = abs(int(row.get('初当たり球数', 0)))
+                        # 回転率①
+                        rotation_rate_1 = row.get('回転率①', '-')
+                        if rotation_rate_1 != '-' and rotation_rate_1 != '計算不可':
+                            rotation_rate_1 = rotation_rate_1.replace('回/千円', '')
+                        else:
+                            rotation_rate_1 = '0'
+                        
+                        # 現在値
+                        current_value = int(row.get('現在値', 0))
+                        
+                        # 回転率（通常時用の計算 - 仮実装）
+                        rotation_rate_2 = row.get('回転率②', '-')
+                        if rotation_rate_2 != '-' and rotation_rate_2 != '計算不可':
+                            rotation_rate_2 = rotation_rate_2.replace('回/千円', '')
+                        else:
+                            rotation_rate_2 = '0'
+                        
+                        # フォーマットに従って出力
+                        # 前半部分: 日付#台番#初当通常回転(手)#初当玉数#回転率①
+                        first_part = f"{today}#{machine_number}#{first_hit_spins_manual}#{first_hit_balls}#{rotation_rate_1}"
+                        # 後半部分: 日付#台番#通常回転数(手)#現在値#獲得数(手)#回転率
+                        second_part = f"{today}#{machine_number}#{normal_spins_manual}#{current_value}#{total_win_manual}#{rotation_rate_2}"
+                        
+                        # 完全な行
+                        full_line = f"{first_part} {second_part}"
+                        output_lines.append(full_line)
+                        
+                        # プレビュー表示
+                        st.code(full_line, language='text')
+                    
+                    st.divider()
+                
+                # 全データ出力
+                if output_lines:
+                    st.markdown("#### 📄 全データ出力")
+                    all_data = "\n".join(output_lines)
+                    st.text_area("コピー用データ", value=all_data, height=200)
+                    
+                    # コピーボタン
+                    if st.button("📋 クリップボードにコピー", key="copy_output"):
+                        st.code(all_data, language='text')
+                        st.success("データをコピーしました！")
+            
             # 調整設定の案内
             st.markdown("---")
             st.info("""
