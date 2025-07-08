@@ -2148,7 +2148,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         # 台番号（デフォルト値または手入力）
                         # OCRで取得できない場合は画像名（拡張子なし）をデフォルト値に
                         default_machine_number = str(row.get('台番号', ''))
-                        if default_machine_number == '' or default_machine_number == row.get('画像名', ''):
+                        if default_machine_number == '' or default_machine_number == row.get('画像名', '') or default_machine_number == 'None':
                             # 画像名から拡張子を除去
                             image_name = row.get('画像名', f'台{idx + 1}')
                             default_machine_number = image_name.rsplit('.', 1)[0]  # 拡張子を除去
@@ -2200,6 +2200,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         )
                     
                     # データを整形
+                    # machine_numberが空の場合はdefault_machine_numberを使用
+                    if not machine_number or machine_number == 'None':
+                        machine_number = default_machine_number
+                    
                     if machine_number:  # 台番号が入力されている場合のみ
                         # 初当たり玉数（絶対値）
                         first_hit_balls_value = row.get('初当たり球数', 0)
