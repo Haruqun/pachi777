@@ -552,16 +552,24 @@ class WebCompatibleAnalyzer:
                     if rotation_rate_1 > 40 or rotation_rate_1 < 5:
                         rotation_rate_1 = 0  # 異常値の場合は0にする
             
-            # 通常時の回転率計算 - シンプルに累計スタートと最低値で計算
+            # 通常時の回転率計算 - 累計スタートから大当り中の回転数を除外
             rotation_rate_2 = 0
-            normal_decline_spins = total_spins  # 累計スタート全体
+            normal_decline_spins = 0
             normal_decline_balls = 0
+            
+            # 大当り中の回転数を推定（1回あたり約15回転）
+            jackpot_spins = 0
+            if 'jackpot_count' in locals() and jackpot_count > 0:
+                jackpot_spins = jackpot_count * 15  # 大当り1回あたり15回転と仮定
+            
+            # 通常時の回転数 = 累計スタート - 大当り中の回転数
+            normal_decline_spins = max(0, total_spins - jackpot_spins)
             
             # 最低値（最大投資額）がある場合
             if analysis['min_value'] < -100:  # 100玉以上のマイナス
                 normal_decline_balls = abs(int(analysis['min_value']))  # 最低値の絶対値
                 
-                if normal_decline_balls > 0:
+                if normal_decline_balls > 0 and normal_decline_spins > 0:
                     rotation_rate_2 = round((normal_decline_spins / normal_decline_balls) * 250, 1)
                     # 異常値をチェック
                     if rotation_rate_2 > 30 or rotation_rate_2 < 5:
