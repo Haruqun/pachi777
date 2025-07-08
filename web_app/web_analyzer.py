@@ -320,6 +320,8 @@ class WebCompatibleAnalyzer:
         best_result = []
         best_color = "なし"
         max_points = 0
+        best_graph_start_x = None
+        best_graph_end_x = None
         
         # 各色でデータ抽出を試みる
         for color_name, color_range in self.color_ranges.items():
@@ -354,13 +356,15 @@ class WebCompatibleAnalyzer:
                     max_points = len(data_points)
                     best_result = data_points
                     best_color = color_name
+                    best_graph_start_x = graph_start_x
+                    best_graph_end_x = graph_end_x
             except:
                 continue
         
         # グラフの座標情報を追加して返す
         graph_info = {
-            'start_x': graph_start_x if 'graph_start_x' in locals() else None,
-            'end_x': graph_end_x if 'graph_end_x' in locals() else None
+            'start_x': best_graph_start_x,
+            'end_x': best_graph_end_x
         }
         return best_result, best_color, detected_zero, graph_info
     
@@ -731,19 +735,21 @@ class WebCompatibleAnalyzer:
             
             # グラフの開始点・終了点・初当たり位置のマーカーを追加
             if graph_info and len(data_points) > 0:
-                # 開始点（緑の点）
+                # 開始点（緑の点）- ゼロラインとの交差点
                 start_point = data_points[0]
-                start_y = detected_zero - (start_point[1] / self.scale)
-                ax.scatter(start_point[0], start_y, color='green', s=300, 
+                start_x = start_point[0]
+                start_y = detected_zero  # ゼロライン上
+                ax.scatter(start_x, start_y, color='green', s=300, 
                           marker='o', label='開始点', zorder=10, edgecolors='darkgreen', linewidth=2)
                 
-                # 現在地/終了点（赤の点）
+                # 現在地/終了点（赤の点）- ゼロラインとの交差点
                 end_point = data_points[-1]
-                end_y = detected_zero - (end_point[1] / self.scale)
-                ax.scatter(end_point[0], end_y, color='red', s=300, 
+                end_x = end_point[0]
+                end_y = detected_zero  # ゼロライン上
+                ax.scatter(end_x, end_y, color='red', s=300, 
                           marker='o', label='現在地', zorder=10, edgecolors='darkred', linewidth=2)
                 
-                # 初当たり位置（黄色の点）
+                # 初当たり位置（黄色の点）- 実際のグラフ上の位置
                 if analysis['first_hit_index'] >= 0 and analysis['first_hit_index'] < len(data_points):
                     hit_point = data_points[analysis['first_hit_index']]
                     hit_y = detected_zero - (hit_point[1] / self.scale)
