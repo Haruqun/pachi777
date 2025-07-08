@@ -1920,39 +1920,57 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                     st.markdown("#### 📍 領域別OCR処理")
                                     region_images = result['ocr_data']['region_images']
                                     
-                                    if 'stats' in region_images:
+                                    if 'stats' in region_images and region_images['stats'] is not None:
                                         st.markdown("##### 統計情報領域")
-                                        # グレースケール画像を3チャンネルに変換
-                                        stats_img = region_images['stats']
-                                        if len(stats_img.shape) == 2:
-                                            stats_img = cv2.cvtColor(stats_img, cv2.COLOR_GRAY2RGB)
-                                        st.image(stats_img, caption="統計情報領域（前処理済み）", use_container_width=True)
+                                        try:
+                                            # グレースケール画像を3チャンネルに変換
+                                            stats_img = region_images['stats']
+                                            if stats_img is not None and hasattr(stats_img, 'shape'):
+                                                if len(stats_img.shape) == 2:
+                                                    stats_img = cv2.cvtColor(stats_img, cv2.COLOR_GRAY2RGB)
+                                                st.image(stats_img, caption="統計情報領域（前処理済み）", use_container_width=True)
+                                            else:
+                                                st.warning("統計情報領域の画像が無効です")
+                                        except Exception as e:
+                                            st.error(f"統計情報領域の表示エラー: {str(e)}")
                                     
                                     # 左右の領域も表示
                                     col_left, col_right = st.columns(2)
-                                    if 'left' in region_images:
+                                    if 'left' in region_images and region_images['left'] is not None:
                                         with col_left:
                                             st.markdown("##### 左側領域")
-                                            left_img = region_images['left']
-                                            if len(left_img.shape) == 2:
-                                                left_img = cv2.cvtColor(left_img, cv2.COLOR_GRAY2RGB)
-                                            st.image(left_img, caption="左側領域（累計スタート等）", use_container_width=True)
+                                            try:
+                                                left_img = region_images['left']
+                                                if left_img is not None and hasattr(left_img, 'shape'):
+                                                    if len(left_img.shape) == 2:
+                                                        left_img = cv2.cvtColor(left_img, cv2.COLOR_GRAY2RGB)
+                                                    st.image(left_img, caption="左側領域（累計スタート等）", use_container_width=True)
+                                            except Exception as e:
+                                                st.error(f"左側領域の表示エラー: {str(e)}")
                                     
-                                    if 'right' in region_images:
+                                    if 'right' in region_images and region_images['right'] is not None:
                                         with col_right:
                                             st.markdown("##### 右側領域")
-                                            right_img = region_images['right']
-                                            if len(right_img.shape) == 2:
-                                                right_img = cv2.cvtColor(right_img, cv2.COLOR_GRAY2RGB)
-                                            st.image(right_img, caption="右側領域（大当り回数等）", use_container_width=True)
+                                            try:
+                                                right_img = region_images['right']
+                                                if right_img is not None and hasattr(right_img, 'shape'):
+                                                    if len(right_img.shape) == 2:
+                                                        right_img = cv2.cvtColor(right_img, cv2.COLOR_GRAY2RGB)
+                                                    st.image(right_img, caption="右側領域（大当り回数等）", use_container_width=True)
+                                            except Exception as e:
+                                                st.error(f"右側領域の表示エラー: {str(e)}")
                                 
                                 # 前処理後の全体画像を表示
                                 if result['ocr_data'].get('enhanced_image') is not None:
                                     st.markdown("#### 前処理後の全体画像")
-                                    enhanced_img = result['ocr_data']['enhanced_image']
-                                    if len(enhanced_img.shape) == 2:
-                                        enhanced_img = cv2.cvtColor(enhanced_img, cv2.COLOR_GRAY2RGB)
-                                    st.image(enhanced_img, caption="OCR用に強化された画像（全体）", use_container_width=True)
+                                    try:
+                                        enhanced_img = result['ocr_data']['enhanced_image']
+                                        if enhanced_img is not None and hasattr(enhanced_img, 'shape'):
+                                            if len(enhanced_img.shape) == 2:
+                                                enhanced_img = cv2.cvtColor(enhanced_img, cv2.COLOR_GRAY2RGB)
+                                            st.image(enhanced_img, caption="OCR用に強化された画像（全体）", use_container_width=True)
+                                    except Exception as e:
+                                        st.error(f"全体画像の表示エラー: {str(e)}")
                                 
                                 # OCRテキスト結果
                                 if result['ocr_data'].get('ocr_text'):
