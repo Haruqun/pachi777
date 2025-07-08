@@ -911,11 +911,6 @@ if uploaded_files:
             help="OCRで読み取ったテキストを確認できます。台番号が認識されない場合のトラブルシューティングに使用してください。"
         )
     
-    skip_machine_number = st.checkbox(
-        "🏷️ 台番号検出をスキップ", 
-        value=True,
-        help="台番号の検出処理をスキップして高速化します。台番号はファイル名から推測されます。"
-    )
     
     # 交換レート設定
     exchange_rate = st.number_input(
@@ -935,7 +930,6 @@ if uploaded_files:
         st.session_state.start_analysis = True
         st.session_state.skip_ocr = skip_ocr
         st.session_state.show_ocr_debug = show_ocr_debug
-        st.session_state.skip_machine_number = skip_machine_number
         # データエディタのセッションステートをリセット
         if 'edited_df' in st.session_state:
             del st.session_state.edited_df
