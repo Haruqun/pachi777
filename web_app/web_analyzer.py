@@ -621,8 +621,6 @@ class WebCompatibleAnalyzer:
                     # 回転率計算（1000円 = 250玉）
                     if normal_decline_balls > 0 and normal_decline_spins > 0:
                         rotation_rate_2 = round((normal_decline_spins / normal_decline_balls) * 250, 1)
-                        elif rotation_rate_2 < 5:
-                            rotation_rate_2 = 0
             
             # デバッグ情報を追加
             debug_info = {}
