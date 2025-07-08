@@ -548,7 +548,7 @@ if not st.session_state.authenticated:
         # フッター
         st.markdown(f"""
         <div class="login-footer">
-            AI Graph Analysis Report v2.0<br>
+            AI Graph Analysis Report v2.1<br>
             更新日: {datetime.now().strftime('%Y/%m/%d')}<br>
             Produced by <a href="https://pp-town.com/" target="_blank">PPタウン</a><br>
             Created by <a href="https://fivenine-design.com" target="_blank">fivenine-design.com</a>
@@ -3116,7 +3116,7 @@ footer_col1, footer_col2, footer_col3 = st.columns([2, 1, 1])
 
 with footer_col1:
     st.markdown(f"""
-    🎰 パチンコグラフ解析システム v2.0  
+    🎰 パチンコグラフ解析システム v2.1  
     更新日: {datetime.now().strftime('%Y/%m/%d')}  
     Produced by [PPタウン](https://pp-town.com/)  
     Created by [fivenine-design.com](https://fivenine-design.com)

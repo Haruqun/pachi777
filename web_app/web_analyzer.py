@@ -3,12 +3,12 @@
 Web環境対応版 パチンコグラフ解析モジュール
 ファイルパスを柔軟に扱える設計
 
-Version: 1.0.61 (Build c3d265d)
-Last Updated: 2025-06-30
+Version: 2.1.0
+Last Updated: 2025-07-08
 """
 
-__version__ = "1.0.61"
-__build__ = "c3d265d"
+__version__ = "2.1.0"
+__build__ = "bfb474a"
 
 import os
 import cv2
