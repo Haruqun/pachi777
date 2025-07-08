@@ -2206,7 +2206,11 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         # 回転率①
                         rotation_rate_1 = row.get('回転率①', '-')
                         if rotation_rate_1 != '-' and rotation_rate_1 != '計算不可':
-                            rotation_rate_1 = rotation_rate_1.replace('回/千円', '')
+                            # 文字列の場合のみreplace、数値の場合はそのまま
+                            if isinstance(rotation_rate_1, str):
+                                rotation_rate_1 = rotation_rate_1.replace('回/千円', '')
+                            else:
+                                rotation_rate_1 = str(rotation_rate_1)
                         else:
                             rotation_rate_1 = '0'
                         
@@ -2216,7 +2220,11 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         # 回転率（通常時用の計算 - 仮実装）
                         rotation_rate_2 = row.get('回転率②', '-')
                         if rotation_rate_2 != '-' and rotation_rate_2 != '計算不可':
-                            rotation_rate_2 = rotation_rate_2.replace('回/千円', '')
+                            # 文字列の場合のみreplace、数値の場合はそのまま
+                            if isinstance(rotation_rate_2, str):
+                                rotation_rate_2 = rotation_rate_2.replace('回/千円', '')
+                            else:
+                                rotation_rate_2 = str(rotation_rate_2)
                         else:
                             rotation_rate_2 = '0'
                         
