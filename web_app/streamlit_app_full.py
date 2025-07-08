@@ -1891,20 +1891,6 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                     timing_data = result['ocr_data']['ocr_timings']
                                     for key, value in timing_data.items():
                                         st.write(f"- **{key}**: {value}")
-                                
-                                # OCR精度向上のヒント
-                                st.info("""
-                                💡 **OCR精度を向上させるには：**
-                                - 画像が鮮明であることを確認
-                                - 文字が水平に配置されている
-                                - 背景と文字のコントラストが高い
-                                - 画像サイズが適切（小さすぎない）
-                                
-                                🔧 **OCR処理について：**
-                                - 画像を2倍に拡大して精度向上
-                                - コントラストとシャープネスを強化
-                                - 誤認識パターンを自動補正（O→0、l→1など）
-                                """)
 
                     else:
                         st.warning("⚠️ グラフデータを検出できませんでした")
