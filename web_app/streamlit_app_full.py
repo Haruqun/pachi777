@@ -2113,9 +2113,16 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             # データ出力フォーム
             st.markdown("---")
             st.markdown("### 📝 データ出力フォーム")
-            st.caption("解析結果を指定フォーマットで出力します")
+            st.caption("pachikeisan.x0.com用のフォーマットで出力します")
             
-            with st.expander("📋 データ出力（手入力対応）", expanded=False):
+            with st.expander("📋 データ出力（pachikeisan用）", expanded=False):
+                st.info("""
+                📌 **出力フォーマット説明**
+                - 1台につき2行で出力されます
+                - 1行目: 台番#初当たり回転数#初当たり玉数#0（回転率①計算用）
+                - 2行目: 通常回転数#使用玉数#獲得数#現在値（回転率②計算用）
+                - 出力されたテキストをpachikeisan.x0.comに貼り付けて計算できます
+                """)
                 # 今日の日付を取得
                 today = datetime.now().strftime("%-m/%-d")  # 例: 7/7
                 
@@ -2199,18 +2206,21 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         else:
                             rotation_rate_2 = '0'
                         
-                        # フォーマットに従って出力
-                        # 前半部分: 日付#台番#初当通常回転(手)#初当玉数#回転率①
-                        first_part = f"{today}#{machine_number}#{first_hit_spins_manual}#{first_hit_balls}#{rotation_rate_1}"
-                        # 後半部分: 日付#台番#通常回転数(手)#現在値#獲得数(手)#回転率
-                        second_part = f"{today}#{machine_number}#{normal_spins_manual}#{current_value}#{total_win_manual}#{rotation_rate_2}"
+                        # pachikeisanツール用のフォーマットに出力
+                        # 行を分けて出力（1台につき2行）
+                        # 1行目: 回転率①計算用（初当たりまで）
+                        line1 = f"{machine_number}#{first_hit_spins_manual}#{first_hit_balls}#0"
+                        output_lines.append(line1)
                         
-                        # 完全な行
-                        full_line = f"{first_part} {second_part}"
-                        output_lines.append(full_line)
+                        # 2行目: 回転率②計算用（通常時全体）
+                        # 通常回転数#使用玉数#獲得数#現在値の形式
+                        # 使用玉数は最低値（マイナスの最大値）を使用
+                        used_balls = abs(int(row.get('最低値', 0)))
+                        line2 = f"{normal_spins_manual}#{used_balls}#{total_win_manual}#{current_value}"
+                        output_lines.append(line2)
                         
                         # プレビュー表示
-                        st.code(full_line, language='text')
+                        st.code(f"{line1}\n{line2}", language='text')
                     
                     st.divider()
                 
