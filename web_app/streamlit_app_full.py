@@ -8,7 +8,7 @@ import streamlit as st
 from datetime import datetime
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 import io
 from web_analyzer import WebCompatibleAnalyzer
 import platform
@@ -226,28 +226,46 @@ def extract_machine_number_from_orange_bar(image):
     except Exception as e:
         return None
 
+def enhance_image_for_ocr(image):
+    """OCR精度向上のための画像前処理"""
+    # PILイメージに変換
+    if isinstance(image, np.ndarray):
+        pil_image = Image.fromarray(image)
+    else:
+        pil_image = image
+    
+    # 画像を2倍に拡大（OCR精度向上）
+    width, height = pil_image.size
+    pil_image = pil_image.resize((width * 2, height * 2), Image.Resampling.LANCZOS)
+    
+    # コントラスト強調
+    enhancer = ImageEnhance.Contrast(pil_image)
+    pil_image = enhancer.enhance(1.5)
+    
+    # シャープネス強調
+    enhancer = ImageEnhance.Sharpness(pil_image)
+    pil_image = enhancer.enhance(2.0)
+    
+    # numpy配列に戻す
+    enhanced = np.array(pil_image)
+    
+    # ノイズ除去（メディアンフィルタ）
+    if len(enhanced.shape) == 3:
+        enhanced = cv2.cvtColor(enhanced, cv2.COLOR_RGB2GRAY)
+    enhanced = cv2.medianBlur(enhanced, 3)
+    
+    return enhanced
+
 def extract_site7_data(image):
-    """site7の画像からOCRでデータを抽出"""
+    """site7の画像からOCRでデータを抽出（領域別処理）"""
     try:
         # まず、オレンジバーから台番号を抽出（スキップ設定を確認）
         machine_number = None
         if len(image.shape) == 3 and not st.session_state.get('skip_machine_number', True):  # カラー画像で、かつスキップしない場合
             machine_number = extract_machine_number_from_orange_bar(image)
         
-        # 画像をグレースケールに変換
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        else:
-            gray = image
-        
-        # OCRの前処理
-        # コントラストを上げる
-        alpha = 1.5  # コントラスト制御
-        beta = 0     # 明度制御
-        adjusted = cv2.convertScaleAbs(gray, alpha=alpha, beta=beta)
-        
-        # 全体のOCR実行（日本語対応）
-        text = pytesseract.image_to_string(adjusted, lang='jpn')
+        # 画像の高さと幅を取得
+        height, width = image.shape[:2] if len(image.shape) >= 2 else (0, 0)
         
         # 抽出したいデータのパターン定義
         data = {
@@ -258,9 +276,108 @@ def extract_site7_data(image):
             'current_start': None,
             'jackpot_probability': None,
             'max_payout': None,
-            'ocr_text': text,  # OCRテキストも保存
-            'orange_bar_detected': machine_number is not None  # デバッグ用
+            'ocr_text': "",  # OCRテキストも保存
+            'orange_bar_detected': machine_number is not None,  # デバッグ用
+            'enhanced_image': None,  # デバッグ用
+            'region_images': {}  # 各領域の画像（デバッグ用）
         }
+        
+        # 領域別OCR処理
+        # 統計情報領域（上部中央、オレンジバーの下）
+        stats_region = None
+        if height > 400:  # 十分な高さがある場合
+            # オレンジバーの下から200ピクセル程度を統計領域とする
+            stats_top = 100  # オレンジバーより下
+            stats_bottom = min(300, height // 3)
+            stats_region = image[stats_top:stats_bottom, :]
+            
+            # 統計領域の強化処理
+            stats_enhanced = enhance_image_for_ocr(stats_region)
+            
+            # 統計情報のOCR（PSM 6: 均一なブロックテキスト）
+            stats_text = pytesseract.image_to_string(stats_enhanced, lang='jpn', config='--psm 6')
+            data['ocr_text'] += f"[統計領域]\n{stats_text}\n"
+            
+            if st.session_state.get('show_ocr_debug', False):
+                data['region_images']['stats'] = stats_enhanced
+            
+            # 統計情報から累計スタートと大当り回数を抽出
+            stats_text_corrected = re.sub(r'[Oo０〇](?=\d|\s|$)', '0', stats_text)
+            stats_text_corrected = re.sub(r'(?<=\d)[lI](?=\d)', '1', stats_text_corrected)
+            stats_text_corrected = re.sub(r'(?<=\d)B(?=\d)', '8', stats_text_corrected)
+            
+            # 累計スタート（統計領域優先）
+            start_patterns = [
+                r'(\d{3,4})\s*スタート',
+                r'累計\s*(\d{3,4})',
+                r'START\s*(\d{3,4})',
+                r'スタート\s*[:：]?\s*(\d{3,4})',
+            ]
+            for pattern in start_patterns:
+                start_match = re.search(pattern, stats_text_corrected)
+                if start_match:
+                    data['total_start'] = start_match.group(1)
+                    break
+            
+            # 大当り回数（統計領域優先）
+            jackpot_patterns = [
+                r'(\d+)\s*回\s*大当り',
+                r'大当り回数\s*[:：]?\s*(\d+)',
+                r'大当り\s*[:：]?\s*(\d+)\s*回',
+                r'BONUS\s*[:：]?\s*(\d+)',
+                r'回数\s*[:：]?\s*(\d+)',
+            ]
+            for pattern in jackpot_patterns:
+                jackpot_match = re.search(pattern, stats_text_corrected)
+                if jackpot_match:
+                    data['jackpot_count'] = jackpot_match.group(1)
+                    break
+            
+            # 左右の領域も処理（累計スタートと大当り回数がまだ見つかっていない場合）
+            if not data['total_start'] or not data['jackpot_count']:
+                # 左側領域（累計スタートが配置されることが多い）
+                if width > 600 and not data['total_start']:
+                    left_region = stats_region[:, :width//3]
+                    left_enhanced = enhance_image_for_ocr(left_region)
+                    left_text = pytesseract.image_to_string(left_enhanced, lang='jpn', config='--psm 11')
+                    left_text_corrected = re.sub(r'[Oo０〇](?=\d|\s|$)', '0', left_text)
+                    left_text_corrected = re.sub(r'(?<=\d)[lI](?=\d)', '1', left_text_corrected)
+                    
+                    for pattern in start_patterns:
+                        start_match = re.search(pattern, left_text_corrected)
+                        if start_match:
+                            data['total_start'] = start_match.group(1)
+                            break
+                    
+                    if st.session_state.get('show_ocr_debug', False):
+                        data['region_images']['left'] = left_enhanced
+                        data['ocr_text'] += f"\n[左側領域]\n{left_text}\n"
+                
+                # 右側領域（大当り回数が配置されることが多い）
+                if width > 600 and not data['jackpot_count']:
+                    right_region = stats_region[:, -width//3:]
+                    right_enhanced = enhance_image_for_ocr(right_region)
+                    right_text = pytesseract.image_to_string(right_enhanced, lang='jpn', config='--psm 11')
+                    right_text_corrected = re.sub(r'[Oo０〇](?=\d|\s|$)', '0', right_text)
+                    right_text_corrected = re.sub(r'(?<=\d)[lI](?=\d)', '1', right_text_corrected)
+                    
+                    for pattern in jackpot_patterns:
+                        jackpot_match = re.search(pattern, right_text_corrected)
+                        if jackpot_match:
+                            data['jackpot_count'] = jackpot_match.group(1)
+                            break
+                    
+                    if st.session_state.get('show_ocr_debug', False):
+                        data['region_images']['right'] = right_enhanced
+                        data['ocr_text'] += f"\n[右側領域]\n{right_text}\n"
+        
+        # 全体OCRも実行（フォールバック用）
+        enhanced_image = enhance_image_for_ocr(image)
+        text = pytesseract.image_to_string(enhanced_image, lang='jpn')
+        data['ocr_text'] += f"\n[全体領域]\n{text}\n"
+        
+        if st.session_state.get('show_ocr_debug', False):
+            data['enhanced_image'] = enhanced_image
         
         # 台番号がオレンジバーから取得できなかった場合、全体テキストから探す
         if not data['machine_number']:
@@ -293,18 +410,40 @@ def extract_site7_data(image):
                         break
         
         
-        # 数値データの抽出
-        # 累計スタート
-        start_match = re.search(r'(\d{3,4})\s*スタート', text)
-        if start_match:
-            data['total_start'] = start_match.group(1)
+        # 数値データの抽出（全体テキストから）
+        # OCR結果の後処理（よくある誤認識の補正）
+        # 0とO、1とl、8とBなどの置換
+        text_corrected = text
+        text_corrected = re.sub(r'[Oo０〇](?=\d|\s|$)', '0', text_corrected)  # OやOを0に
+        text_corrected = re.sub(r'(?<=\d)[lI](?=\d)', '1', text_corrected)  # lやIを1に
+        text_corrected = re.sub(r'(?<=\d)B(?=\d)', '8', text_corrected)  # Bを8に
         
-        # 大当り回数
-        jackpot_match = re.search(r'(\d+)\s*回\s*大当り', text)
-        if not jackpot_match:
-            jackpot_match = re.search(r'大当り回数\s*(\d+)', text)
-        if jackpot_match:
-            data['jackpot_count'] = jackpot_match.group(1)
+        # 累計スタート（統計領域で見つからなかった場合）
+        if not data['total_start']:
+            start_patterns = [
+                r'(\d{3,4})\s*スタート',
+                r'累計\s*(\d{3,4})',
+                r'START\s*(\d{3,4})',
+            ]
+            for pattern in start_patterns:
+                start_match = re.search(pattern, text_corrected)
+                if start_match:
+                    data['total_start'] = start_match.group(1)
+                    break
+        
+        # 大当り回数（統計領域で見つからなかった場合）
+        if not data['jackpot_count']:
+            jackpot_patterns = [
+                r'(\d+)\s*回\s*大当り',
+                r'大当り回数\s*(\d+)',
+                r'大当り\s*(\d+)\s*回',
+                r'BONUS\s*(\d+)',
+            ]
+            for pattern in jackpot_patterns:
+                jackpot_match = re.search(pattern, text_corrected)
+                if jackpot_match:
+                    data['jackpot_count'] = jackpot_match.group(1)
+                    break
         
         # 初当り回数
         first_hit_match = re.search(r'初当り回数\s*(\d+)', text)
@@ -1769,9 +1908,108 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         st.markdown(ocr_html, unsafe_allow_html=True)
                         
                         # OCRデバッグ情報を表示
-                        if st.session_state.get('show_ocr_debug', False) and result.get('ocr_text'):
-                            with st.expander("🔍 OCRで読み取ったテキスト（デバッグ用）"):
-                                st.text_area("OCR結果", result['ocr_text'], height=200, disabled=True)
+                        if st.session_state.get('show_ocr_debug', False) and result.get('ocr_data'):
+                            with st.expander("🔍 OCRデバッグ情報"):
+                                # 領域別画像を表示
+                                if result['ocr_data'].get('region_images'):
+                                    st.markdown("#### 📍 領域別OCR処理")
+                                    region_images = result['ocr_data']['region_images']
+                                    
+                                    if 'stats' in region_images:
+                                        st.markdown("##### 統計情報領域")
+                                        st.image(region_images['stats'], caption="統計情報領域（前処理済み）", use_container_width=True)
+                                    
+                                    # 左右の領域も表示
+                                    col_left, col_right = st.columns(2)
+                                    if 'left' in region_images:
+                                        with col_left:
+                                            st.markdown("##### 左側領域")
+                                            st.image(region_images['left'], caption="左側領域（累計スタート等）", use_container_width=True)
+                                    
+                                    if 'right' in region_images:
+                                        with col_right:
+                                            st.markdown("##### 右側領域")
+                                            st.image(region_images['right'], caption="右側領域（大当り回数等）", use_container_width=True)
+                                
+                                # 前処理後の全体画像を表示
+                                if result['ocr_data'].get('enhanced_image') is not None:
+                                    st.markdown("#### 前処理後の全体画像")
+                                    st.image(result['ocr_data']['enhanced_image'], caption="OCR用に強化された画像（全体）", use_container_width=True)
+                                
+                                # OCRテキスト結果
+                                if result['ocr_data'].get('ocr_text'):
+                                    st.markdown("#### OCRで読み取ったテキスト")
+                                    # 領域別に分けて表示
+                                    ocr_text = result['ocr_data']['ocr_text']
+                                    
+                                    # 各領域のテキストを抽出
+                                    regions = {}
+                                    current_region = None
+                                    current_text = []
+                                    
+                                    for line in ocr_text.split('\n'):
+                                        if line.startswith('[') and line.endswith(']'):
+                                            if current_region and current_text:
+                                                regions[current_region] = '\n'.join(current_text).strip()
+                                            current_region = line[1:-1]  # []を除去
+                                            current_text = []
+                                        else:
+                                            current_text.append(line)
+                                    
+                                    # 最後の領域を追加
+                                    if current_region and current_text:
+                                        regions[current_region] = '\n'.join(current_text).strip()
+                                    
+                                    # 領域ごとに表示
+                                    if '統計領域' in regions:
+                                        st.text_area("統計領域のOCR結果", regions['統計領域'], height=80, disabled=True)
+                                    
+                                    # 左右領域がある場合は並べて表示
+                                    if '左側領域' in regions or '右側領域' in regions:
+                                        col_l, col_r = st.columns(2)
+                                        if '左側領域' in regions:
+                                            with col_l:
+                                                st.text_area("左側領域", regions['左側領域'], height=60, disabled=True)
+                                        if '右側領域' in regions:
+                                            with col_r:
+                                                st.text_area("右側領域", regions['右側領域'], height=60, disabled=True)
+                                    
+                                    if '全体領域' in regions:
+                                        st.text_area("全体領域のOCR結果", regions['全体領域'], height=120, disabled=True)
+                                    
+                                    # 領域がない場合は全体を表示
+                                    if not regions:
+                                        st.text_area("OCR結果", ocr_text, height=200, disabled=True)
+                                
+                                # 抽出されたデータ
+                                st.markdown("#### 抽出されたデータ")
+                                ocr_debug_data = {
+                                    '台番号': result['ocr_data'].get('machine_number', '未検出'),
+                                    '累計スタート': result['ocr_data'].get('total_start', '未検出'),
+                                    '大当り回数': result['ocr_data'].get('jackpot_count', '未検出'),
+                                    '初当り回数': result['ocr_data'].get('first_hit_count', '未検出'),
+                                    '現在スタート': result['ocr_data'].get('current_start', '未検出'),
+                                    '大当り確率': result['ocr_data'].get('jackpot_probability', '未検出'),
+                                    '最高出玉': result['ocr_data'].get('max_payout', '未検出'),
+                                    'オレンジバー検出': '成功' if result['ocr_data'].get('orange_bar_detected') else '失敗'
+                                }
+                                for key, value in ocr_debug_data.items():
+                                    st.write(f"- **{key}**: {value}")
+                                
+                                # OCR精度向上のヒント
+                                st.info("""
+                                💡 **OCR精度を向上させるには：**
+                                - 画像が鮮明であることを確認
+                                - 文字が水平に配置されている
+                                - 背景と文字のコントラストが高い
+                                - 画像サイズが適切（小さすぎない）
+                                
+                                🔧 **領域別OCR処理について：**
+                                - 統計情報領域：画像上部の統計データを専用処理
+                                - 左側領域：累計スタートなど左側配置のデータ
+                                - 右側領域：大当り回数など右側配置のデータ
+                                - 全体領域：フォールバック用の全体OCR
+                                """)
 
                     else:
                         st.warning("⚠️ グラフデータを検出できませんでした")
