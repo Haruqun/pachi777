@@ -1669,8 +1669,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         metrics = result['rotation_metrics']
                         if metrics.get('rotation_rate_1', 0) >= 0:
                             if metrics['rotation_rate_1'] > 0:
-                                # 異常値チェック
-                                warning = " ⚠️" if metrics['rotation_rate_1'] < 5 or metrics['rotation_rate_1'] > 40 else ""
+                                # 異常値チェック（現実的な範囲: 10-35回/千円）
+                                warning = " ⚠️" if metrics['rotation_rate_1'] < 10 or metrics['rotation_rate_1'] > 35 else ""
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{metrics["rotation_rate_1"]:.1f}回/千円{warning}</span></div>'
                             else:
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
@@ -1680,8 +1680,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         # 回転率②は常に表示（0の場合も含む）
                         if metrics.get('rotation_rate_2', 0) >= 0:
                             if metrics['rotation_rate_2'] > 0:
-                                # 異常値チェック
-                                warning = " ⚠️" if metrics['rotation_rate_2'] < 5 or metrics['rotation_rate_2'] > 30 else ""
+                                # 異常値チェック（現実的な範囲: 10-30回/千円）
+                                warning = " ⚠️" if metrics['rotation_rate_2'] < 10 or metrics['rotation_rate_2'] > 30 else ""
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{metrics["rotation_rate_2"]:.1f}回/千円{warning}</span></div>'
                             else:
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
@@ -1913,18 +1913,18 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 if result.get('rotation_metrics'):
                     metrics = result['rotation_metrics']
                     if metrics['rotation_rate_1'] > 0:
-                        # 異常値に絵文字を追加
+                        # 異常値に絵文字を追加（現実的な範囲: 10-35回/千円）
                         rate1_str = f"{metrics['rotation_rate_1']:.1f}"
-                        if metrics['rotation_rate_1'] < 5 or metrics['rotation_rate_1'] > 40:
+                        if metrics['rotation_rate_1'] < 10 or metrics['rotation_rate_1'] > 35:
                             rate1_str += " ⚠️"  # 異常値警告
                         row['回転率①'] = rate1_str
                     else:
                         row['回転率①'] = '-'
                     
                     if metrics['rotation_rate_2'] > 0:
-                        # 異常値に絵文字を追加
+                        # 異常値に絵文字を追加（現実的な範囲: 10-30回/千円）
                         rate2_str = f"{metrics['rotation_rate_2']:.1f}"
-                        if metrics['rotation_rate_2'] < 5 or metrics['rotation_rate_2'] > 30:
+                        if metrics['rotation_rate_2'] < 10 or metrics['rotation_rate_2'] > 30:
                             rate2_str += " ⚠️"  # 異常値警告
                         row['回転率②'] = rate2_str
                     else:
