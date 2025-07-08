@@ -824,11 +824,8 @@ if uploaded_files:
                             time.sleep(0.5)
                             st.rerun()
     
-    # 設定を調整ボタン（別行で表示）
-    if st.button("⚙️ 調整設定を開く", use_container_width=True, help="設定を細かく調整したい場合はこちら"):
-        st.session_state.show_adjustment = True
-        st.session_state.scroll_to_adjustment = True
-        st.rerun()
+    # 調整設定の案内テキスト
+    st.info("⚙️ 詳細な調整設定は、ページ下部の「画像解析の調整設定」セクションにあります。")
     
     # STEP 3: 解析オプションと開始
     st.markdown("### 🚀 STEP 3: 解析オプションと開始")
