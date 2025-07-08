@@ -2118,10 +2118,17 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             with st.expander("📋 データ出力（pachikeisan用）", expanded=False):
                 st.info("""
                 📌 **出力フォーマット説明**
+                - 最初に日付（例: 7/8）
                 - 1台につき2行で出力されます
-                - 1行目: 台番#初当たり回転数#初当たり玉数#0（回転率①計算用）
-                - 2行目: 通常回転数#使用玉数#獲得数#現在値（回転率②計算用）
-                - 出力されたテキストをpachikeisan.x0.comに貼り付けて計算できます
+                - 1行目: (初)台番#初当たり回転数#初当たり玉数(回転率①)
+                - 2行目: (全)台番#通常回転数#獲得数#現在値(回転率②)
+                
+                **例:**
+                ```
+                7/8
+                (初)1005#222#500(20.1)
+                (全)1005#666#25000#10000(20.4)
+                ```
                 """)
                 # 今日の日付を取得
                 today = datetime.now().strftime("%-m/%-d")  # 例: 7/7
@@ -2229,20 +2236,21 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             rotation_rate_2 = '0'
                         
                         # pachikeisanツール用のフォーマットに出力
-                        # 行を分けて出力（1台につき2行）
-                        # 1行目: 回転率①計算用（初当たりまで）
-                        line1 = f"{machine_number}#{first_hit_spins_manual}#{first_hit_balls}#0"
+                        # 日付の追加（初回のみ）
+                        if len(output_lines) == 0:
+                            output_lines.append(today)
+                        
+                        # 1行目: (初) 台番#初当たり回転数#初当たり玉数(回転率①)
+                        line1 = f"(初){machine_number}#{first_hit_spins_manual}#{first_hit_balls}({rotation_rate_1})"
                         output_lines.append(line1)
                         
-                        # 2行目: 回転率②計算用（通常時全体）
-                        # 通常回転数#使用玉数#獲得数#現在値の形式
-                        # 使用玉数は最低値（マイナスの最大値）を使用
-                        used_balls = abs(int(row.get('最低値', 0)))
-                        line2 = f"{normal_spins_manual}#{used_balls}#{total_win_manual}#{current_value}"
+                        # 2行目: (全) 台番#通常回転数#獲得数#現在値(回転率②)
+                        line2 = f"(全){machine_number}#{normal_spins_manual}#{total_win_manual}#{current_value}({rotation_rate_2})"
                         output_lines.append(line2)
                         
                         # プレビュー表示
-                        st.code(f"{line1}\n{line2}", language='text')
+                        preview_text = f"{line1}\n{line2}"
+                        st.code(preview_text, language='text')
                     
                     st.divider()
                 
