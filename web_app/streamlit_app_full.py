@@ -1396,6 +1396,29 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                                  (overlay_img.shape[1] - 10, text_y + 5), (255, 255, 255), -1)
                     cv2.putText(overlay_img, text, (overlay_img.shape[1] - text_width - 10, text_y), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 0, 150), 1, cv2.LINE_AA)
+            
+            # グラフの開始点と現在地のマーカーを追加（ゼロライン上）
+            if graph_info and len(graph_data_points) > 0:
+                # ゼロラインのY座標
+                zero_y = zero_line_in_crop
+                
+                # 開始点（緑の点）- ゼロライン上
+                if graph_info.get('start_x') is not None:
+                    start_x = graph_info['start_x']
+                    cv2.circle(overlay_img, (int(start_x), zero_y), 10, (0, 255, 0), -1)
+                    cv2.circle(overlay_img, (int(start_x), zero_y), 12, (0, 200, 0), 2)
+                    # ラベル
+                    cv2.putText(overlay_img, 'START', (int(start_x) - 20, zero_y - 15), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 200, 0), 1, cv2.LINE_AA)
+                
+                # 現在地（赤の点）- ゼロライン上
+                if graph_info.get('end_x') is not None:
+                    end_x = graph_info['end_x']
+                    cv2.circle(overlay_img, (int(end_x), zero_y), 10, (0, 0, 255), -1)
+                    cv2.circle(overlay_img, (int(end_x), zero_y), 12, (0, 0, 200), 2)
+                    # ラベル
+                    cv2.putText(overlay_img, 'END', (int(end_x) - 15, zero_y - 15), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 200), 1, cv2.LINE_AA)
 
             # 結果を保存
             # 回転率計算（OCRデータがある場合のみ）
