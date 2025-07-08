@@ -1416,14 +1416,6 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     cv2.putText(overlay_img, 'START', (int(start_x) - 20, zero_y - 15), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 200, 0), 1, cv2.LINE_AA)
                 
-                # 現在地（赤の点）- ゼロライン上
-                if graph_info.get('end_x') is not None:
-                    end_x = graph_info['end_x']
-                    cv2.circle(overlay_img, (int(end_x), zero_y), 10, (0, 0, 255), -1)
-                    cv2.circle(overlay_img, (int(end_x), zero_y), 12, (0, 0, 200), 2)
-                    # ラベル
-                    cv2.putText(overlay_img, 'END', (int(end_x) - 15, zero_y - 15), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 200), 1, cv2.LINE_AA)
 
             # 結果を保存
             # 回転率計算（OCRデータがある場合のみ）
