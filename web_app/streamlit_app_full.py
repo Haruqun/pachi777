@@ -268,9 +268,9 @@ def extract_site7_data(image):
         ocr_timings = {} if st.session_state.get('show_ocr_debug', False) else None
         start_time = time.time()
         
-        # まず、オレンジバーから台番号を抽出（スキップ設定を確認）
+        # オレンジバーから台番号を抽出（デフォルトでスキップ）
         machine_number = None
-        if len(image.shape) == 3 and not st.session_state.get('skip_machine_number', True):  # カラー画像で、かつスキップしない場合
+        if len(image.shape) == 3 and st.session_state.get('extract_machine_from_orange', False):  # 明示的に有効化した場合のみ
             if ocr_timings is not None:
                 orange_start = time.time()
             machine_number = extract_machine_number_from_orange_bar(image)
@@ -1655,18 +1655,14 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     else:
                         # ファイル名から台番号を推測
                         filename = result['name']
-                        # ファイル名の数字を探す（例：3. 1番台.jpg → 1番台）
+                        # ファイル名に番台が含まれる場合（例：8. 720番台.jpg → 720番台）
                         import re
                         match = re.search(r'(\d+)\s*番台', filename)
                         if match:
                             display_name = f"{match.group(1)}番台"
                         else:
-                            # 先頭の数字を台番号として使用（例：3. → 3番台）
-                            match = re.search(r'^(\d+)\.', filename)
-                            if match:
-                                display_name = f"{match.group(1)}番台"
-                            else:
-                                display_name = filename
+                            # それ以外はファイル名をそのまま使用
+                            display_name = filename
                     st.markdown(f"#### {idx + 1}. {display_name}")
 
                     # 解析結果画像
