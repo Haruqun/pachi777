@@ -2106,90 +2106,90 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             st.markdown("### 📝 データ出力")
             st.caption("pachikeisan.x0.com用のフォーマットで一括出力します")
             
-            with st.expander("📋 一括データ出力", expanded=False):
-                # 今日の日付を取得
-                today = datetime.now().strftime("%-m/%-d")  # 例: 7/7
+            # 一括データ出力（常に表示）
+            # 今日の日付を取得
+            today = datetime.now().strftime("%-m/%-d")  # 例: 7/7
+            
+            # データ収集用のリスト
+            output_lines = [today]  # 日付を最初に追加
+            
+            # 各解析結果に対してデータを収集（自動処理）
+            for idx, row in edited_df.iterrows():
+                # 台番号を取得
+                machine_number = str(row.get('台番号', ''))
+                if machine_number == '' or machine_number == row.get('画像名', '') or machine_number == 'None' or machine_number == '未検出':
+                    # 画像名から拡張子を除去して台番号とする
+                    image_name = row.get('画像名', f'台{idx + 1}')
+                    machine_number = image_name.rsplit('.', 1)[0]
                 
-                # データ収集用のリスト
-                output_lines = [today]  # 日付を最初に追加
+                # 初当たり回転数
+                first_hit_spins = int(row.get('初当たり回転数', 0))
                 
-                # 各解析結果に対してデータを収集（自動処理）
-                for idx, row in edited_df.iterrows():
-                    # 台番号を取得
-                    machine_number = str(row.get('台番号', ''))
-                    if machine_number == '' or machine_number == row.get('画像名', '') or machine_number == 'None' or machine_number == '未検出':
-                        # 画像名から拡張子を除去して台番号とする
-                        image_name = row.get('画像名', f'台{idx + 1}')
-                        machine_number = image_name.rsplit('.', 1)[0]
-                    
-                    # 初当たり回転数
-                    first_hit_spins = int(row.get('初当たり回転数', 0))
-                    
-                    # 初当たり玉数（絶対値）
-                    first_hit_balls_value = row.get('初当たり球数', 0)
-                    if first_hit_balls_value is None or first_hit_balls_value == 'なし':
+                # 初当たり玉数（絶対値）
+                first_hit_balls_value = row.get('初当たり球数', 0)
+                if first_hit_balls_value is None or first_hit_balls_value == 'なし':
+                    first_hit_balls = 0
+                else:
+                    try:
+                        first_hit_balls = abs(int(first_hit_balls_value))
+                    except (ValueError, TypeError):
                         first_hit_balls = 0
-                    else:
-                        try:
-                            first_hit_balls = abs(int(first_hit_balls_value))
-                        except (ValueError, TypeError):
-                            first_hit_balls = 0
-                    
-                    # 回転率①
-                    rotation_rate_1 = row.get('回転率①', '-')
-                    if rotation_rate_1 != '-':
-                        if isinstance(rotation_rate_1, str):
-                            rotation_rate_1 = rotation_rate_1.replace('回/千円', '').replace(' ⚠️', '')
-                        else:
-                            rotation_rate_1 = str(rotation_rate_1)
-                    else:
-                        rotation_rate_1 = '0'
-                    
-                    # 通常回転数（rotation_metricsから取得）
-                    normal_spins = 0
-                    if st.session_state.analysis_results:
-                        for result in st.session_state.analysis_results:
-                            if result['name'] == row.get('画像名'):
-                                if result.get('rotation_metrics'):
-                                    normal_spins = result['rotation_metrics'].get('normal_decline_spins', 0)
-                                break
-                    
-                    # 総獲得球数
-                    total_win = int(row.get('総獲得球数', 0))
-                    
-                    # 現在値
-                    current_value = int(row.get('現在値', 0))
-                    
-                    # 回転率②
-                    rotation_rate_2 = row.get('回転率②', '-')
-                    if rotation_rate_2 != '-':
-                        if isinstance(rotation_rate_2, str):
-                            rotation_rate_2 = rotation_rate_2.replace('回/千円', '').replace(' ⚠️', '')
-                        else:
-                            rotation_rate_2 = str(rotation_rate_2)
-                    else:
-                        rotation_rate_2 = '0'
-                    
-                    # 1行目: (初) 台番#初当たり回転数#初当たり玉数(回転率①)
-                    line1 = f"(初){machine_number}#{first_hit_spins}#{first_hit_balls}({rotation_rate_1})"
-                    output_lines.append(line1)
-                    
-                    # 2行目: (全) 台番#通常回転数#獲得数#現在値(回転率②)
-                    line2 = f"(全){machine_number}#{normal_spins}#{total_win}#{current_value}({rotation_rate_2})"
-                    output_lines.append(line2)
                 
-                # 全データ出力
-                all_data = "\n".join(output_lines)
-                st.text_area("コピー用データ", value=all_data, height=300)
+                # 回転率①
+                rotation_rate_1 = row.get('回転率①', '-')
+                if rotation_rate_1 != '-':
+                    if isinstance(rotation_rate_1, str):
+                        rotation_rate_1 = rotation_rate_1.replace('回/千円', '').replace(' ⚠️', '')
+                    else:
+                        rotation_rate_1 = str(rotation_rate_1)
+                else:
+                    rotation_rate_1 = '0'
                 
-                # 出力フォーマット説明
-                st.info("""
-                📌 **出力フォーマット**
-                - 1行目: 日付
-                - 以降、1台につき2行で出力
-                - (初)台番#初当たり回転数#初当たり玉数(回転率①)
-                - (全)台番#通常回転数#獲得数#現在値(回転率②)
-                """)
+                # 通常回転数（rotation_metricsから取得）
+                normal_spins = 0
+                if st.session_state.analysis_results:
+                    for result in st.session_state.analysis_results:
+                        if result['name'] == row.get('画像名'):
+                            if result.get('rotation_metrics'):
+                                normal_spins = result['rotation_metrics'].get('normal_decline_spins', 0)
+                            break
+                
+                # 総獲得球数
+                total_win = int(row.get('総獲得球数', 0))
+                
+                # 現在値
+                current_value = int(row.get('現在値', 0))
+                
+                # 回転率②
+                rotation_rate_2 = row.get('回転率②', '-')
+                if rotation_rate_2 != '-':
+                    if isinstance(rotation_rate_2, str):
+                        rotation_rate_2 = rotation_rate_2.replace('回/千円', '').replace(' ⚠️', '')
+                    else:
+                        rotation_rate_2 = str(rotation_rate_2)
+                else:
+                    rotation_rate_2 = '0'
+                
+                # 1行目: (初) 台番#初当たり回転数#初当たり玉数(回転率①)
+                line1 = f"(初){machine_number}#{first_hit_spins}#{first_hit_balls}({rotation_rate_1})"
+                output_lines.append(line1)
+                
+                # 2行目: (全) 台番#通常回転数#獲得数#現在値(回転率②)
+                line2 = f"(全){machine_number}#{normal_spins}#{total_win}#{current_value}({rotation_rate_2})"
+                output_lines.append(line2)
+            
+            # 全データ出力
+            all_data = "\n".join(output_lines)
+            st.text_area("コピー用データ", value=all_data, height=300)
+            
+            # 出力フォーマット説明
+            st.info("""
+            📌 **出力フォーマット**
+            - 1行目: 日付
+            - 以降、1台につき2行で出力
+            - (初)台番#初当たり回転数#初当たり玉数(回転率①)
+            - (全)台番#通常回転数#獲得数#現在値(回転率②)
+            """)
             
             # 調整設定の案内
             st.markdown("---")
