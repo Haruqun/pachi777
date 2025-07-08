@@ -1669,18 +1669,22 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         metrics = result['rotation_metrics']
                         if metrics.get('rotation_rate_1', 0) >= 0:
                             if metrics['rotation_rate_1'] > 0:
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{metrics["rotation_rate_1"]:.1f}回/千円</span></div>'
+                                # 異常値チェック
+                                warning = " ⚠️" if metrics['rotation_rate_1'] < 5 or metrics['rotation_rate_1'] > 40 else ""
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{metrics["rotation_rate_1"]:.1f}回/千円{warning}</span></div>'
                             else:
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">計算不可</span></div>'
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
                             # デバッグ情報（初当たりまで）
                             rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}玉使用</div>'
                             
                         # 回転率②は常に表示（0の場合も含む）
                         if metrics.get('rotation_rate_2', 0) >= 0:
                             if metrics['rotation_rate_2'] > 0:
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{metrics["rotation_rate_2"]:.1f}回/千円</span></div>'
+                                # 異常値チェック
+                                warning = " ⚠️" if metrics['rotation_rate_2'] < 5 or metrics['rotation_rate_2'] > 30 else ""
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{metrics["rotation_rate_2"]:.1f}回/千円{warning}</span></div>'
                             else:
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">計算不可</span></div>'
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
                             # デバッグ情報（通常時）
                             rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {metrics["normal_decline_spins"]}回転 ÷ {metrics["normal_decline_balls"]}玉使用</div>'
                     
