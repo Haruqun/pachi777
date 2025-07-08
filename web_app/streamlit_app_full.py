@@ -1913,6 +1913,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     machine_number = result.get('ocr_data', {}).get('machine_number', result['name'])
                 
                 row = {
+                    '画像名': result['name'],  # 画像名を追加
                     '台番号': machine_number,
                     '最高値': result['max_val'],
                     '最低値': result['min_val'],
@@ -1961,6 +1962,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     machine_number = result.get('ocr_data', {}).get('machine_number', result['name'])
                     
                 df_data.append({
+                    '画像名': result['name'],  # 画像名を追加
                     '台番号': machine_number,
                     '最高値': '解析失敗',
                     '最低値': '-',
@@ -2122,7 +2124,9 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 
                 # 各解析結果に対してデータを収集
                 for idx, row in edited_df.iterrows():
-                    st.markdown(f"#### {idx + 1}. {row['画像名']}")
+                    # 画像名または台番号を取得
+                    display_name = row.get('画像名', row.get('台番号', f'台{idx + 1}'))
+                    st.markdown(f"#### {idx + 1}. {display_name}")
                     
                     col1, col2, col3, col4 = st.columns(4)
                     
