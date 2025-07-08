@@ -1853,18 +1853,6 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         # OCRデバッグ情報を表示
                         if st.session_state.get('show_ocr_debug', False) and result.get('ocr_data'):
                             with st.expander("🔍 OCRデバッグ情報"):
-                                # 前処理後の画像を表示
-                                if result['ocr_data'].get('enhanced_image') is not None:
-                                    st.markdown("#### 前処理後の画像")
-                                    try:
-                                        enhanced_img = result['ocr_data']['enhanced_image']
-                                        if enhanced_img is not None and hasattr(enhanced_img, 'shape'):
-                                            if len(enhanced_img.shape) == 2:
-                                                enhanced_img = cv2.cvtColor(enhanced_img, cv2.COLOR_GRAY2RGB)
-                                            st.image(enhanced_img, caption="OCR用に強化された画像", use_column_width=True)
-                                    except Exception as e:
-                                        st.error(f"画像の表示エラー: {str(e)}")
-                                
                                 # OCRテキスト結果
                                 if result['ocr_data'].get('ocr_text'):
                                     st.markdown("#### OCRで読み取ったテキスト")
@@ -1879,8 +1867,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                     '初当り回数': result['ocr_data'].get('first_hit_count', '未検出'),
                                     '現在スタート': result['ocr_data'].get('current_start', '未検出'),
                                     '大当り確率': result['ocr_data'].get('jackpot_probability', '未検出'),
-                                    '最高出玉': result['ocr_data'].get('max_payout', '未検出'),
-                                    'オレンジバー検出': '成功' if result['ocr_data'].get('orange_bar_detected') else '失敗'
+                                    '最高出玉': result['ocr_data'].get('max_payout', '未検出')
                                 }
                                 for key, value in ocr_debug_data.items():
                                     st.write(f"- **{key}**: {value}")
