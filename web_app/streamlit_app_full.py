@@ -1928,7 +1928,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                             if stats_img is not None and hasattr(stats_img, 'shape'):
                                                 if len(stats_img.shape) == 2:
                                                     stats_img = cv2.cvtColor(stats_img, cv2.COLOR_GRAY2RGB)
-                                                st.image(stats_img, caption="統計情報領域（前処理済み）", use_container_width=True)
+                                                st.image(stats_img, caption="統計情報領域（前処理済み）", use_column_width=True)
                                             else:
                                                 st.warning("統計情報領域の画像が無効です")
                                         except Exception as e:
@@ -1944,7 +1944,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                                 if left_img is not None and hasattr(left_img, 'shape'):
                                                     if len(left_img.shape) == 2:
                                                         left_img = cv2.cvtColor(left_img, cv2.COLOR_GRAY2RGB)
-                                                    st.image(left_img, caption="左側領域（累計スタート等）", use_container_width=True)
+                                                    st.image(left_img, caption="左側領域（累計スタート等）", use_column_width=True)
                                             except Exception as e:
                                                 st.error(f"左側領域の表示エラー: {str(e)}")
                                     
@@ -1956,7 +1956,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                                 if right_img is not None and hasattr(right_img, 'shape'):
                                                     if len(right_img.shape) == 2:
                                                         right_img = cv2.cvtColor(right_img, cv2.COLOR_GRAY2RGB)
-                                                    st.image(right_img, caption="右側領域（大当り回数等）", use_container_width=True)
+                                                    st.image(right_img, caption="右側領域（大当り回数等）", use_column_width=True)
                                             except Exception as e:
                                                 st.error(f"右側領域の表示エラー: {str(e)}")
                                 
@@ -1968,7 +1968,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                         if enhanced_img is not None and hasattr(enhanced_img, 'shape'):
                                             if len(enhanced_img.shape) == 2:
                                                 enhanced_img = cv2.cvtColor(enhanced_img, cv2.COLOR_GRAY2RGB)
-                                            st.image(enhanced_img, caption="OCR用に強化された画像（全体）", use_container_width=True)
+                                            st.image(enhanced_img, caption="OCR用に強化された画像（全体）", use_column_width=True)
                                     except Exception as e:
                                         st.error(f"全体画像の表示エラー: {str(e)}")
                                 
