@@ -10,6 +10,17 @@
       "grid_30k_offset": 1,
       "grid_minus_30k_offset": -34,
       "exchange_rate": 3.57145
+    },
+    "iPhone15": {
+      "search_start_offset": 50,
+      "search_end_offset": 500,
+      "crop_top": 350,
+      "crop_bottom": 400,
+      "left_margin": 120,
+      "right_margin": 120,
+      "grid_30k_offset": 19,
+      "grid_minus_30k_offset": -68,
+      "exchange_rate": 3.57145
     }
   },
   "version": "2.1",
