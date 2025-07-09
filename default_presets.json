@@ -1,0 +1,17 @@
+{
+  "presets": {
+    "標準設定": {
+      "search_start_offset": 50,
+      "search_end_offset": 500,
+      "crop_top": 246,
+      "crop_bottom": 280,
+      "left_margin": 120,
+      "right_margin": 120,
+      "grid_30k_offset": 1,
+      "grid_minus_30k_offset": -34,
+      "exchange_rate": 3.57145
+    }
+  },
+  "version": "2.1",
+  "description": "デフォルトのプリセット設定"
+}

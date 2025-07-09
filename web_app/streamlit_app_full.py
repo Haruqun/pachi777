@@ -455,6 +455,17 @@ if 'settings' not in st.session_state:
 
 if 'saved_presets' not in st.session_state:
     st.session_state.saved_presets = {}
+    # デフォルトプリセットを読み込み（存在する場合）
+    try:
+        import os
+        default_preset_path = os.path.join(os.path.dirname(__file__), '..', 'default_presets.json')
+        if os.path.exists(default_preset_path):
+            with open(default_preset_path, 'r', encoding='utf-8') as f:
+                default_data = json.load(f)
+                if 'presets' in default_data:
+                    st.session_state.saved_presets.update(default_data['presets'])
+    except Exception:
+        pass
     # データベースから読み込みフラグを設定
     st.session_state.force_reload_presets = True
 
@@ -3210,6 +3221,57 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
 
 # フッター
 st.markdown("---")
+
+# プリセットのエクスポート/インポート機能
+with st.expander("📤 プリセットのエクスポート/インポート"):
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 📤 エクスポート")
+        if st.session_state.saved_presets:
+            # プリセットデータをJSON形式で表示
+            preset_data = {
+                "presets": st.session_state.saved_presets,
+                "version": "2.1",
+                "exported_at": datetime.now().isoformat()
+            }
+            preset_json = json.dumps(preset_data, ensure_ascii=False, indent=2)
+            st.text_area("プリセットデータ（コピーして保存）", preset_json, height=200)
+            
+            # ダウンロードボタン
+            st.download_button(
+                label="📥 JSONファイルとしてダウンロード",
+                data=preset_json,
+                file_name=f"presets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json"
+            )
+        else:
+            st.info("保存されたプリセットがありません")
+    
+    with col2:
+        st.markdown("#### 📥 インポート")
+        import_data = st.text_area("プリセットデータを貼り付け", height=200, placeholder="エクスポートしたJSONデータを貼り付けてください")
+        
+        if st.button("📥 インポート実行"):
+            if import_data:
+                try:
+                    imported = json.loads(import_data)
+                    if "presets" in imported:
+                        # 既存のプリセットに追加
+                        for name, preset in imported["presets"].items():
+                            st.session_state.saved_presets[name] = preset
+                            # データベースにも保存
+                            save_preset_to_db(name, preset)
+                        st.success(f"✅ {len(imported['presets'])}個のプリセットをインポートしました")
+                        st.rerun()
+                    else:
+                        st.error("無効なプリセットデータです")
+                except json.JSONDecodeError:
+                    st.error("JSONの形式が正しくありません")
+                except Exception as e:
+                    st.error(f"インポートエラー: {str(e)}")
+            else:
+                st.warning("インポートするデータを入力してください")
 
 # フッターをカラムで配置
 footer_col1, footer_col2, footer_col3 = st.columns([2, 1, 1])
