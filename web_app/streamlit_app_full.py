@@ -2639,7 +2639,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     cropped_bgr_align = cv2.cvtColor(cropped_for_align, cv2.COLOR_RGB2BGR)
                     
                     # 解析実行（画像データを直接渡す）
-                    data_points_align, color_align, detected_zero_align = analyzer_align.extract_graph_data(cropped_bgr_align)
+                    data_points_align, color_align, detected_zero_align, graph_info_align = analyzer_align.extract_graph_data(cropped_bgr_align)
                     
                     if data_points_align:
                         analysis_align = analyzer_align.analyze_values(data_points_align)
@@ -2993,7 +2993,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 cropped_bgr_preview = cv2.cvtColor(cropped_preview_original, cv2.COLOR_RGB2BGR)
                 
                 # グラフデータを抽出
-                data_points_preview, color_preview, _ = analyzer_preview.extract_graph_data(cropped_bgr_preview)
+                data_points_preview, color_preview, _, graph_info_preview = analyzer_preview.extract_graph_data(cropped_bgr_preview)
                 
                 if data_points_preview:
                     # 最大値を検出
