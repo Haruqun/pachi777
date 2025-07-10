@@ -434,6 +434,19 @@ def extract_site7_data(image):
         st.warning(f"OCRエラー: {str(e)}")
         return None
 
+# ヘルパー関数
+def get_unit():
+    """現在の遊技種別に応じた単位を返す"""
+    return "玉" if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else "枚"
+
+def get_unit_per_1000yen():
+    """現在の遊技種別に応じた1000円あたりの単位数を返す"""
+    return 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
+
+def get_graph_limit():
+    """現在の遊技種別に応じたグラフの上下限を返す"""
+    return 30000 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 5000
+
 
 # デフォルト値
 default_settings = {
@@ -494,6 +507,10 @@ if 'csv_columns' not in st.session_state:
         '回転率②',
         '通常回転数'
     ]
+
+# 遊技種別の初期化
+if 'game_type' not in st.session_state:
+    st.session_state.game_type = 'パチンコ'  # デフォルトはパチンコ
 
 
 # URLパラメータによる認証バイパスを削除（セキュリティ向上のため）
@@ -661,7 +678,7 @@ if not st.session_state.authenticated:
         # フッター
         st.markdown(f"""
         <div class="login-footer">
-            AI Graph Analysis Report v2.2<br>
+            AI Graph Analysis Report v2.3<br>
             更新日: {datetime.now().strftime('%Y/%m/%d')}<br>
             Produced by <a href="https://pp-town.com/" target="_blank">PPタウン</a><br>
             Created by <a href="https://fivenine-design.com" target="_blank">fivenine-design.com</a>
@@ -779,11 +796,41 @@ st.markdown("---")
 st.markdown("## 🎰 AI Graph Analysis Report")
 st.caption("""高精度データ抽出・解析システム - Professional Edition
 
-本システムは、パチンコ台のグラフ画像をAI技術で自動解析する専門ツールです。
+本システムは、パチンコ・パチスロ台のグラフ画像をAI技術で自動解析する専門ツールです。
 OCR技術による台番号・回転数の自動読み取り、画像処理によるグラフデータの精密抽出、
 独自アルゴリズムによる統計解析を実現。複数画像の一括処理にも対応し、
 解析結果はCSV形式でダウンロード可能。プリセット機能により、
 異なる端末や表示形式にも柔軟に対応できる高精度な解析システムです。""")
+
+# 遊技種別選択
+st.markdown("### 🎯 遊技種別を選択")
+col1, col2, col3 = st.columns([1, 1, 2])
+with col1:
+    game_type = st.radio(
+        "遊技種別",
+        ["パチンコ", "パチスロ"],
+        index=0 if st.session_state.game_type == "パチンコ" else 1,
+        key="game_type_selector",
+        horizontal=True
+    )
+    if game_type != st.session_state.game_type:
+        st.session_state.game_type = game_type
+        # 遊技種別に応じてデフォルト値を変更
+        if game_type == "パチンコ":
+            st.session_state.settings['exchange_rate'] = 3.57145  # 28玉交換
+        else:
+            st.session_state.settings['exchange_rate'] = 17.86  # 5.6枚交換
+        st.rerun()
+
+with col2:
+    # 単位表示
+    unit = "玉" if st.session_state.game_type == "パチンコ" else "枚"
+    st.info(f"🎲 単位: {unit}")
+
+with col3:
+    # 交換レート表示
+    rate = st.session_state.settings.get('exchange_rate', 3.57145 if st.session_state.game_type == "パチンコ" else 17.86)
+    st.info(f"💱 交換レート: {rate:.2f}円/{unit}")
 
 # 使い方ガイド
 show_analysis_help = st.checkbox("📖 解析の使い方を表示", value=False, key="show_analysis_help")
@@ -1131,21 +1178,24 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         # 注意：この変数はグリッドライン描画にのみ使用され、実際の解析には使用されない
         scale = 30000 / 246  # グリッドライン描画用のデフォルト値
         
+        # グラフの上下限値を取得
+        graph_limit = get_graph_limit()
+        
         # グリッドライン描画（設定値を使用）
-        # +30000ライン（最上部）
+        # +上限ライン（最上部）
         y_30k = 0 + settings.get('grid_30k_offset', 0)  # 最上部基準
         if 0 <= y_30k < crop_height:
             cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
-            cv2.putText(cropped_img, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
+            cv2.putText(cropped_img, f'+{graph_limit}', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
         
-        # -30000ライン（最下部）
+        # -下限ライン（最下部）
         y_minus_30k = crop_height - 1 + settings.get('grid_minus_30k_offset', 0)
         y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
         cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
-        cv2.putText(cropped_img, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
+        cv2.putText(cropped_img, f'-{graph_limit}', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
 
         
-        # ゼロラインから±30000ラインまでの距離を計算
+        # ゼロラインから上下限ラインまでの距離を計算
         distance_to_plus_30k = zero_line_in_crop - y_30k
         distance_to_minus_30k = y_minus_30k - zero_line_in_crop
         
@@ -1159,17 +1209,17 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         img_with_grid = img_array.copy()
         
         # 元画像での座標に変換（切り抜き前の座標系）
-        # +30000ライン（元画像座標）
+        # +上限ライン（元画像座標）
         y_30k_orig = int(top + y_30k)
         if 0 <= y_30k_orig < height:
             cv2.line(img_with_grid, (0, y_30k_orig), (width, y_30k_orig), (128, 128, 128), 2)
-            cv2.putText(img_with_grid, '+30000', (10, max(20, y_30k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
+            cv2.putText(img_with_grid, f'+{graph_limit}', (10, max(20, y_30k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
         
-        # -30000ライン（元画像座標）
+        # -下限ライン（元画像座標）
         y_minus_30k_orig = int(top + y_minus_30k)
         if 0 <= y_minus_30k_orig < height:
             cv2.line(img_with_grid, (0, y_minus_30k_orig), (width, y_minus_30k_orig), (128, 128, 128), 2)
-            cv2.putText(img_with_grid, '-30000', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
+            cv2.putText(img_with_grid, f'-{graph_limit}', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
         
         # 0ライン（元画像座標）
         if 0 <= zero_line_y < height:
@@ -1201,17 +1251,20 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         distance_to_plus_30k_adjusted = zero_line_in_crop - y_30k_adjusted
         distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_line_in_crop
         
+        # グラフの上下限値を取得
+        graph_limit = get_graph_limit()
+        
         # 通常の線形スケール計算
         if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
             # 上下の平均距離を使用
             avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
-            analyzer.scale = 30000 / avg_distance_adjusted
+            analyzer.scale = graph_limit / avg_distance_adjusted
         else:
             # フォールバック（調整前の値を使用）
             distance_to_top = zero_line_in_crop
             distance_to_bottom = crop_height - zero_line_in_crop
             avg_distance = (distance_to_top + distance_to_bottom) / 2
-            analyzer.scale = 30000 / avg_distance
+            analyzer.scale = graph_limit / avg_distance
         
         # グラフデータを抽出
         graph_data_points, dominant_color, _, graph_info = analyzer.extract_graph_data(analysis_img)
@@ -1265,13 +1318,16 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 min_val = min_val_original
                 current_val = current_val_original
 
-            # 最大値が30,000を超える場合は30,000にクリップ
-            if max_val > 30000:
-                max_val = 30000
+            # グラフの上下限値でクリップ
+            graph_limit = get_graph_limit()
             
-            # 最小値が-30,000を下回る場合は-30,000にクリップ
-            if min_val < -30000:
-                min_val = -30000
+            # 最大値が上限を超える場合は上限にクリップ
+            if max_val > graph_limit:
+                max_val = graph_limit
+            
+            # 最小値が下限を下回る場合は下限にクリップ
+            if min_val < -graph_limit:
+                min_val = -graph_limit
 
             # MAXがマイナスの場合は0を表示
             if max_val < 0:
@@ -1280,7 +1336,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             # 初当たり値を探す（production版と同じロジック）
             first_hit_val = 0
             first_hit_x = None
-            min_payout = 100  # 最低払い出し玉数
+            min_payout = 100 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 20  # 最低払い出し単位数
 
             # 方法1: 100玉以上の急激な増加を検出
             for i in range(1, min(len(graph_values)-2, 150)):  # 最大150点まで探索
@@ -1527,7 +1583,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     ocr_data['total_start'],
                     graph_width,
                     graph_info,
-                    ocr_data  # OCRデータを追加
+                    ocr_data,  # OCRデータを追加
+                    st.session_state.get('game_type', 'パチンコ')  # 遊技種別を追加
                 )
             
             analysis_results.append({
@@ -1732,7 +1789,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         else:
                             return "zero"
 
-                    first_hit_text = f"{result['first_hit_val']:,}玉" if result['first_hit_val'] is not None else "なし"
+                    unit = get_unit()
+                    first_hit_text = f"{result['first_hit_val']:,}{unit}" if result['first_hit_val'] is not None else "なし"
                     first_hit_class = get_value_class(result['first_hit_val']) if result['first_hit_val'] is not None else ""
 
                     # 補正係数の表示を準備（非表示にする）
@@ -1751,7 +1809,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             else:
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
                             # デバッグ情報（初当たりまで）
-                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}玉使用</div>'
+                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}{unit}使用</div>'
                             
                         # 回転率②は常に表示（0の場合も含む）
                         if metrics.get('rotation_rate_2', 0) >= 0:
@@ -1762,24 +1820,24 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             else:
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
                             # デバッグ情報（通常時）
-                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {metrics["normal_decline_spins"]}回転 ÷ {metrics["normal_decline_balls"]}玉使用</div>'
+                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {metrics["normal_decline_spins"]}回転 ÷ {metrics["normal_decline_balls"]}{unit}使用</div>'
                     
                     st.markdown(f"""
                     <div class="stat-card">
                         <div class="stat-item">
                             <span class="stat-label">🎯 現在値</span>
-                            <span class="stat-value {get_value_class(result['current_val'])}">{result['current_val']:,}玉</span>
+                            <span class="stat-value {get_value_class(result['current_val'])}">{result['current_val']:,}{unit}</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">📈 最高値</span>
-                            <span class="stat-value {get_value_class(result['max_val'])}">{result['max_val']:,}玉</span>
+                            <span class="stat-value {get_value_class(result['max_val'])}">{result['max_val']:,}{unit}</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">📉 最低値</span>
-                            <span class="stat-value {get_value_class(result['min_val'])}">{result['min_val']:,}玉</span>
+                            <span class="stat-value {get_value_class(result['min_val'])}">{result['min_val']:,}{unit}</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">🎰 初当たり球数</span>
+                            <span class="stat-label">🎰 初当たり{unit}数</span>
                             <span class="stat-value {first_hit_class}">{first_hit_text}</span>
                         </div>
                         <div class="stat-item">
@@ -1791,8 +1849,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             <span class="stat-value positive">{(result.get('ocr_data') or {}).get('first_hit_count') or result.get('jackpot_count') or 0}回</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">💰 総獲得球数</span>
-                            <span class="stat-value positive">{result.get('total_jackpot_balls', 0):,}玉</span>
+                            <span class="stat-label">💰 総獲得{unit}数</span>
+                            <span class="stat-value positive">{result.get('total_jackpot_balls', 0):,}{unit}</span>
                         </div>
                         {rotation_html}
                         {rotation_detail}
@@ -2321,20 +2379,21 @@ with st.expander("📊 CSV表示項目の設定", expanded=False):
     st.markdown("##### CSVデータテーブルに表示する項目を選択")
     st.caption("チェックを外した項目は表示されません。表が横に長くなりすぎる場合は不要な項目を非表示にできます。")
     
-    # 全項目リスト
+    # 全項目リスト（単位を動的に変更）
+    unit = get_unit()
     all_columns = [
         '画像名', '台番号', '最高値', '最低値', '現在値',
-        '初当たり球数', '初当たり回転数', '収支（円）',
-        '総獲得球数', '大当り回数（グラフ）', '色', '回転率①', '回転率②',
-        '通常回転数', '初当り使用玉',
+        f'初当たり{unit}数', '初当たり回転数', '収支（円）',
+        f'総獲得{unit}数', '大当り回数（グラフ）', '色', '回転率①', '回転率②',
+        '通常回転数', f'初当り使用{unit}',
         '累計スタート', '大当り回数（OCR）', '初当り回数',
-        '現在スタート', '大当り確率', '最高出玉'
+        '現在スタート', '大当り確率', f'最高出{unit}'
     ]
     
     # デフォルト表示項目
     default_columns = [
-        '台番号', '現在値', '初当たり球数', '初当たり回転数',
-        '総獲得球数', '回転率①', '回転率②', '通常回転数'
+        '台番号', '現在値', f'初当たり{unit}数', '初当たり回転数',
+        f'総獲得{unit}数', '回転率①', '回転率②', '通常回転数'
     ]
     
     # 初期化時にデフォルト値を設定

@@ -3,12 +3,12 @@
 Web環境対応版 パチンコグラフ解析モジュール
 ファイルパスを柔軟に扱える設計
 
-Version: 2.2.0
+Version: 2.3.0
 Last Updated: 2025-07-10
 """
 
-__version__ = "2.2.0"
-__build__ = "df8c92a"
+__version__ = "2.3.0"
+__build__ = "a3f9b21"
 
 import os
 import cv2
@@ -491,7 +491,7 @@ class WebCompatibleAnalyzer:
             'jackpot_count': jackpot_count  # 大当り回数を追加
         }
     
-    def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width, graph_info=None, ocr_data=None):
+    def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width, graph_info=None, ocr_data=None, game_type='パチンコ'):
         """回転率を計算
         
         Args:
@@ -501,6 +501,7 @@ class WebCompatibleAnalyzer:
             graph_width: グラフの横幅（ピクセル）
             graph_info: グラフの開始・終了座標情報（オプション）
             ocr_data: OCRで読み取ったデータ（オプション）
+            game_type: 遊技種別（'パチンコ' or 'パチスロ'）
             
         Returns:
             dict: 回転率メトリクス
@@ -545,10 +546,11 @@ class WebCompatibleAnalyzer:
                 first_hit_spins = int(relative_x * spins_per_pixel)
                 # 初当たりまでの使用玉数（マイナス値の絶対値）
                 first_hit_balls = abs(analysis['first_hit_value'])
-                # 回転率①（1000円 = 250玉）
-                # 正しい計算式：(回転数 ÷ 使用玉数) × 250
+                # 回転率①（1000円あたり）
+                # パチンコ: 1000円 = 250玉、パチスロ: 1000円 = 50枚
+                unit_per_1000yen = 250 if game_type == 'パチンコ' else 50
                 if first_hit_balls > 0:
-                    rotation_rate_1 = round((first_hit_spins / first_hit_balls) * 250, 1)
+                    rotation_rate_1 = round((first_hit_spins / first_hit_balls) * unit_per_1000yen, 1)
             
             # 通常時の回転率計算
             rotation_rate_2 = 0
@@ -564,8 +566,10 @@ class WebCompatibleAnalyzer:
                 
                 i = 0
                 while i < len(values) - 1:
-                    # 上昇区間の検出（100玉以上の急上昇 = 大当り）
-                    if values[i+1] > values[i] + 100:
+                    # 上昇区間の検出（大当り）
+                    # パチンコ: 100玉以上、パチスロ: 20枚以上
+                    threshold = 100 if game_type == 'パチンコ' else 20
+                    if values[i+1] > values[i] + threshold:
                         # 上昇開始
                         start_x = data_points[i][0]
                         j = i + 1
@@ -600,9 +604,10 @@ class WebCompatibleAnalyzer:
                 # 通常時の使用玉数 = グラフの下降部分の合計
                 normal_total_balls = int(total_decline_balls)
                 
-                # 回転率②の計算（1000円 = 250玉）
+                # 回転率②の計算（1000円あたり）
+                unit_per_1000yen = 250 if game_type == 'パチンコ' else 50
                 if normal_total_balls > 0 and normal_total_spins > 0:
-                    rotation_rate_2 = round((normal_total_spins / normal_total_balls) * 250, 1)
+                    rotation_rate_2 = round((normal_total_spins / normal_total_balls) * unit_per_1000yen, 1)
                     
                 # デバッグ用に値を保存
                 normal_decline_spins = normal_total_spins
