@@ -481,6 +481,20 @@ if 'current_preset_name' not in st.session_state:
 if 'uploaded_file_names' not in st.session_state:
     st.session_state.uploaded_file_names = []
 
+# CSV表示項目の設定を初期化
+if 'csv_columns' not in st.session_state:
+    # デフォルト表示項目
+    st.session_state.csv_columns = [
+        '台番号',
+        '現在値',
+        '初当たり球数',
+        '初当たり回転数',
+        '総獲得球数',
+        '回転率①',
+        '回転率②',
+        '通常回転数'
+    ]
+
 
 # URLパラメータによる認証バイパスを削除（セキュリティ向上のため）
 
@@ -2019,6 +2033,12 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 詳細データ（非表示）
                     row['初当り回転数'] = metrics['first_hit_spins'] if metrics['first_hit_spins'] > 0 else '-'
                     row['初当り使用玉'] = metrics['first_hit_balls'] if metrics['first_hit_balls'] > 0 else '-'
+                    
+                    # 通常回転数を追加
+                    if 'normal_decline_spins' in metrics:
+                        row['通常回転数'] = metrics['normal_decline_spins'] if metrics['normal_decline_spins'] > 0 else 0
+                    else:
+                        row['通常回転数'] = 0
                 # OCRデータを追加（OCRスキップモードでない場合のみ）
                 if not st.session_state.get('skip_ocr', False) and result.get('ocr_data'):
                     ocr = result['ocr_data']
@@ -2050,7 +2070,13 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 })
 
         if df_data:
-            df = pd.DataFrame(df_data)
+            # 全データを含むDataFrameを作成
+            df_full = pd.DataFrame(df_data)
+            
+            # 選択された列のみを抽出
+            # csv_columnsに存在する列のみを選択
+            selected_cols = [col for col in st.session_state.csv_columns if col in df_full.columns]
+            df = df_full[selected_cols].copy()
             
             # データエディタで編集可能にする
             st.markdown("#### 📝 データ編集")
@@ -2126,6 +2152,11 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     "回転率②": st.column_config.TextColumn(
                         "回転率②",
                         help="通常時全体の回転率"
+                    ),
+                    "通常回転数": st.column_config.NumberColumn(
+                        "通常回転数",
+                        help="大当たり中を除いた通常時の総回転数",
+                        format="%d回"
                     )
                 }
             )
@@ -2285,6 +2316,67 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             端末や画面サイズによってグラフの表示が異なるため、調整設定が必要な場合があります。
             ページ下部の「⚙️ 画像解析の調整設定」から、お使いの端末に合わせた設定を保存してください。
             """)
+
+# CSV表示項目の設定セクション
+with st.expander("📊 CSV表示項目の設定", expanded=False):
+    st.markdown("##### CSVデータテーブルに表示する項目を選択")
+    st.caption("チェックを外した項目は表示されません。表が横に長くなりすぎる場合は不要な項目を非表示にできます。")
+    
+    # 全項目リスト
+    all_columns = [
+        '画像名', '台番号', '最高値', '最低値', '現在値',
+        '初当たり球数', '初当たり回転数', '収支（円）',
+        '総獲得球数', '大当り回数', '色', '回転率①', '回転率②',
+        '通常回転数', '初当り回転数', '初当り使用玉',
+        '累計スタート', '大当り回数', '初当り回数',
+        '現在スタート', '大当り確率', '最高出玉'
+    ]
+    
+    # デフォルト表示項目
+    default_columns = [
+        '台番号', '現在値', '初当たり球数', '初当たり回転数',
+        '総獲得球数', '回転率①', '回転率②', '通常回転数'
+    ]
+    
+    # 初期化時にデフォルト値を設定
+    if 'csv_columns' not in st.session_state or len(st.session_state.csv_columns) == 0:
+        st.session_state.csv_columns = default_columns.copy()
+    
+    # 項目を3列で表示
+    col_count = 3
+    cols = st.columns(col_count)
+    
+    # 選択された項目を一時的に保存
+    selected_columns = []
+    
+    for i, column in enumerate(all_columns):
+        col_idx = i % col_count
+        with cols[col_idx]:
+            # デフォルトでチェックされているかどうか
+            is_checked = column in st.session_state.csv_columns
+            if st.checkbox(column, value=is_checked, key=f"csv_col_{column}"):
+                selected_columns.append(column)
+    
+    # ボタンで操作
+    btn_col1, btn_col2, btn_col3 = st.columns(3)
+    
+    with btn_col1:
+        if st.button("デフォルトに戻す", use_container_width=True):
+            st.session_state.csv_columns = default_columns.copy()
+            st.success("デフォルト設定に戻しました")
+            st.rerun()
+    
+    with btn_col2:
+        if st.button("全て選択", use_container_width=True):
+            st.session_state.csv_columns = all_columns.copy()
+            st.success("全項目を選択しました")
+            st.rerun()
+    
+    with btn_col3:
+        if st.button("選択を適用", type="primary", use_container_width=True):
+            st.session_state.csv_columns = selected_columns
+            st.success(f"{len(selected_columns)}個の項目を選択しました")
+            st.rerun()
 
 # 調整機能（コラプス）
 # アンカー用のHTMLを追加
