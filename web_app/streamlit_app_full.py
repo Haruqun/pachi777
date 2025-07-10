@@ -1966,7 +1966,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         jackpot_count = bb_count + rb_count if (bb_count or rb_count) else result.get('jackpot_count') or 0
                         jackpot_label = "大当り回数"
                     
-                    st.markdown(f"""
+                    # HTMLコンテンツを組み立て
+                    html_content = f"""
                     <div class="stat-card">
                         <div class="stat-item">
                             <span class="stat-label">🎯 現在値</span>
@@ -1980,7 +1981,13 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             <span class="stat-label">📉 最低値</span>
                             <span class="stat-value {get_value_class(result['min_val'])}">{result['min_val']:,}{unit}</span>
                         </div>
-                        {first_hit_html}
+                        """
+                    
+                    # パチンコの場合のみ初当たり情報を追加
+                    if st.session_state.game_type == 'パチンコ':
+                        html_content += first_hit_html
+                    
+                    html_content += f"""
                         <div class="stat-item">
                             <span class="stat-label">🎯 {jackpot_label}</span>
                             <span class="stat-value positive">{jackpot_count}回</span>
@@ -1993,7 +2000,9 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         {rotation_detail}
                         {correction_info}
                     </div>
-                    """, unsafe_allow_html=True)
+                    """
+                    
+                    st.markdown(html_content, unsafe_allow_html=True)
 
                     # OCRデータがある場合は表示（すべてNoneでも構造は表示）
                     if result.get('ocr_data') is not None:
