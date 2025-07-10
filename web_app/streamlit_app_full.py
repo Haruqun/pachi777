@@ -1941,6 +1941,31 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             # デバッグ情報（通常時）
                             rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {metrics["normal_decline_spins"]}回転 ÷ {metrics["normal_decline_balls"]}{unit}使用</div>'
                     
+                    # 初当たり関連のHTMLを条件分岐で生成
+                    first_hit_html = ""
+                    if st.session_state.game_type == 'パチンコ':
+                        first_hit_html = f'''
+                        <div class="stat-item">
+                            <span class="stat-label">🎰 初当たり{unit}数</span>
+                            <span class="stat-value {first_hit_class}">{first_hit_text}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">🎲 初当たり回転数</span>
+                            <span class="stat-value">{(result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0}回</span>
+                        </div>
+                        '''
+                    
+                    # 大当り回数の計算
+                    if st.session_state.game_type == 'パチンコ':
+                        jackpot_count = (result.get('ocr_data') or {}).get('first_hit_count') or result.get('jackpot_count') or 0
+                        jackpot_label = "初当たり回数"
+                    else:
+                        ocr_data = result.get('ocr_data') or {}
+                        bb_count = int(ocr_data.get('bb_count') or 0)
+                        rb_count = int(ocr_data.get('rb_count') or 0)
+                        jackpot_count = bb_count + rb_count if (bb_count or rb_count) else result.get('jackpot_count') or 0
+                        jackpot_label = "大当り回数"
+                    
                     st.markdown(f"""
                     <div class="stat-card">
                         <div class="stat-item">
@@ -1955,30 +1980,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             <span class="stat-label">📉 最低値</span>
                             <span class="stat-value {get_value_class(result['min_val'])}">{result['min_val']:,}{unit}</span>
                         </div>
-                        {"" if st.session_state.game_type == 'パチスロ' else f'''
+                        {first_hit_html}
                         <div class="stat-item">
-                            <span class="stat-label">🎰 初当たり{unit}数</span>
-                            <span class="stat-value {first_hit_class}">{first_hit_text}</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">🎲 初当たり回転数</span>
-                            <span class="stat-value">{(result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0}回</span>
-                        </div>
-                        '''}
-                        <div class="stat-item">
-                            <span class="stat-label">🎯 {"初当たり回数" if st.session_state.game_type == 'パチンコ' else "大当り回数"}</span>
-                            <span class="stat-value positive">{
-                                # パチンコの場合は従来通り
-                                (result.get('ocr_data') or {}).get('first_hit_count') or result.get('jackpot_count') or 0 
-                                if st.session_state.game_type == 'パチンコ' else
-                                # パチスロの場合はBB+RBの合計を優先
-                                (
-                                    (int((result.get('ocr_data') or {}).get('bb_count') or 0) + 
-                                     int((result.get('ocr_data') or {}).get('rb_count') or 0))
-                                    if (result.get('ocr_data') or {}).get('bb_count') or (result.get('ocr_data') or {}).get('rb_count')
-                                    else result.get('jackpot_count') or 0
-                                )
-                            }回</span>
+                            <span class="stat-label">🎯 {jackpot_label}</span>
+                            <span class="stat-value positive">{jackpot_count}回</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">💰 総獲得{unit}数</span>
