@@ -368,7 +368,7 @@ class WebCompatibleAnalyzer:
         }
         return best_result, best_color, detected_zero, graph_info
     
-    def analyze_values(self, data_points):
+    def analyze_values(self, data_points, game_type='パチンコ'):
         """値の分析（data_pointsは(x, value)のタプルリスト）"""
         if not data_points:
             return {
@@ -411,7 +411,8 @@ class WebCompatibleAnalyzer:
         # 初当たり検出（production版と同じロジック）
         first_hit_idx = -1
         first_hit_val = 0
-        min_payout = 100  # 最低払い出し玉数を100に変更
+        # 遊技種別に応じて閾値を設定
+        min_payout = 100 if game_type == 'パチンコ' else 20  # パチスロは20枚以上
         
         # 方法1: シンプルな増加検出
         for i in range(1, min(len(values)-2, 150)):  # 最大150点まで探索
@@ -449,7 +450,7 @@ class WebCompatibleAnalyzer:
         # 総獲得球数の計算（大当り時の増加分の合計）
         total_jackpot_balls = 0
         jackpot_count = 0  # 大当り回数をカウント
-        increase_threshold = 100  # 100玉以上の増加を大当りとみなす
+        increase_threshold = 100 if game_type == 'パチンコ' else 20  # 遊技種別に応じた閾値
         
         i = 0
         while i < len(values) - 1:

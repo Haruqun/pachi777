@@ -1348,14 +1348,15 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             first_hit_x = None
             min_payout = 100 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 20  # 最低払い出し単位数
 
-            # 方法1: 100玉以上の急激な増加を検出
+            # 方法1: 閾値以上の急激な増加を検出
             for i in range(1, min(len(graph_values)-2, 150)):  # 最大150点まで探索
                 current_increase = graph_values[i+1] - graph_values[i]
 
-                # 100玉以上の増加を検出
+                # 閾値以上の増加を検出
                 if current_increase > min_payout:
                     # 次の点も上昇または維持していることを確認（ノイズ除外）
-                    if graph_values[i+2] >= graph_values[i+1] - 50:
+                    noise_threshold = 50 if st.session_state.game_type == 'パチンコ' else 10
+                    if graph_values[i+2] >= graph_values[i+1] - noise_threshold:
                         # 初当たりは必ずマイナス値から
                         if graph_values[i] < 0:
                             first_hit_val = graph_values[i]
@@ -1376,7 +1377,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
 
                         # 減少傾向からの急上昇
                         if avg_slope <= 0 and current_change > min_payout:
-                            if i + 2 < len(graph_values) and graph_values[i+2] > graph_values[i+1] - 50:
+                            noise_threshold = 50 if st.session_state.game_type == 'パチンコ' else 10
+                            if i + 2 < len(graph_values) and graph_values[i+2] > graph_values[i+1] - noise_threshold:
                                 # 初当たりは必ずマイナス値
                                 if graph_values[i] < 0:
                                     first_hit_val = graph_values[i]
@@ -1403,7 +1405,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             total_jackpot_balls = 0
             jackpot_count = 0  # 大当り回数をカウント
             jackpot_details = []  # 各大当りの詳細情報
-            increase_threshold = 100  # 100玉以上の増加を大当りとみなす
+            # 遊技種別に応じた閾値
+            increase_threshold = 100 if st.session_state.game_type == 'パチンコ' else 20  # パチスロは20枚以上
             
             i = 0
             while i < len(graph_values) - 1:
@@ -1421,7 +1424,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                         if graph_values[j+1] > max_val_in_jackpot:
                             max_val_in_jackpot = graph_values[j+1]
                             j += 1
-                        elif graph_values[j+1] < graph_values[j] - 50:  # 50玉以上の下降で大当り終了
+                        elif graph_values[j+1] < graph_values[j] - (50 if st.session_state.game_type == 'パチンコ' else 10):  # 下降で大当り終了（パチスロは10枚）
                             break
                         else:
                             j += 1
@@ -2814,7 +2817,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     data_points_align, color_align, detected_zero_align, graph_info_align = analyzer_align.extract_graph_data(cropped_bgr_align)
                     
                     if data_points_align:
-                        analysis_align = analyzer_align.analyze_values(data_points_align)
+                        analysis_align = analyzer_align.analyze_values(data_points_align, st.session_state.game_type)
                         detected_max_align = analysis_align['max_value']
                         
                         # 最大値の位置を取得
