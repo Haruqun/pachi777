@@ -1657,12 +1657,12 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
     # 結果をグリッド表示
     st.markdown("### 📊 解析結果一覧")
 
-    # 解析結果を2列で表示（行ごとに処理）
-    for row_idx in range(0, len(analysis_results), 2):
-        cols = st.columns(2)
+    # 解析結果を3列で表示（行ごとに処理）
+    for row_idx in range(0, len(analysis_results), 3):
+        cols = st.columns(3)
         
-        # 各行の左と右の結果を処理
-        for col_idx in range(2):
+        # 各行の3つの結果を処理
+        for col_idx in range(3):
             idx = row_idx + col_idx
             if idx < len(analysis_results):
                 result = analysis_results[idx]
@@ -1902,7 +1902,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         st.warning("⚠️ グラフデータを検出できませんでした")
 
                     # 区切り線（各列内で）
-                    if idx < len(analysis_results) - 2:
+                    if idx < len(analysis_results) - 3:
                         st.markdown("---")
 
     # サマリー情報
