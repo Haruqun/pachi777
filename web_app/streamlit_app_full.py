@@ -931,6 +931,9 @@ if uploaded_files:
                         st.session_state.settings = default_settings.copy()
                     else:
                         st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                        # プリセットに遊技種別情報がある場合は適用
+                        if 'game_type' in st.session_state.settings:
+                            st.session_state.game_type = st.session_state.settings['game_type']
                     
                     # 現在のプリセット名を保存
                     st.session_state.current_preset_name = preset_name
@@ -954,6 +957,9 @@ if uploaded_files:
                                 st.session_state.settings = default_settings.copy()
                             else:
                                 st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                                # プリセットに遊技種別情報がある場合は適用
+                                if 'game_type' in st.session_state.settings:
+                                    st.session_state.game_type = st.session_state.settings['game_type']
                             
                             # 現在のプリセット名を保存
                             st.session_state.current_preset_name = preset_name
@@ -2474,7 +2480,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         
         1️⃣ **テスト画像を準備**
         - 実際の最大値がわかるグラフ画像を用意
-        - 例：「最大値が+15,000玉」とわかっている画像
+        - 例：パチンコ「最大値が+15,000玉」、パチスロ「最大値が+2,500枚」とわかっている画像
         
         2️⃣ **自動調整を実行**
         - 画像をアップロード → 実際の最大値を入力
@@ -2504,7 +2510,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         
         ✅ **良い例**
         - 実際の最大値が確認できる画像
-        - 例：店舗の実機で「最大+15,000玉」と確認した画像
+        - 例：店舗の実機でパチンコ「最大+15,000玉」、パチスロ「最大+2,500枚」と確認した画像
         - グラフが明確に写っている画像
         
         ❌ **悪い例**
@@ -2558,6 +2564,9 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             st.session_state.settings = default_settings.copy()
                         else:
                             st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                            # プリセットに遊技種別情報がある場合は適用
+                            if 'game_type' in st.session_state.settings:
+                                st.session_state.game_type = st.session_state.settings['game_type']
                         
                         # 現在のプリセット名を保存（編集モードで使用）
                         st.session_state.current_preset_name = preset_name
@@ -2582,8 +2591,11 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                     st.session_state.settings = default_settings.copy()
                                 else:
                                     st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                                    # プリセットに遊技種別情報がある場合は適用
+                                    if 'game_type' in st.session_state.settings:
+                                        st.session_state.game_type = st.session_state.settings['game_type']
                                 
-                                # 現在のプリセット名を保存（編集モードで使用）
+                                # 現在のプリセット名を保存（編雈モードで使用）
                                 st.session_state.current_preset_name = preset_name
                                 st.session_state.editing_preset_name = preset_name
                                 
@@ -2681,22 +2693,24 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             
             # グリッドライン手動調整
             st.markdown("#### ⚙️ 手動調整")
-            st.caption("±30,000ラインの位置を微調整できます（単位：ピクセル）")
+            # 遊技種別に応じた上下限値を取得
+            graph_limit = get_graph_limit()
+            st.caption(f"±{graph_limit:,}ラインの位置を微調整できます（単位：ピクセル）")
             
             grid_col1, grid_col2 = st.columns(2)
             
             with grid_col1:
                 grid_30k_offset = st.number_input(
-                    "+30,000ライン調整",
+                    f"+{graph_limit:,}ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_30k_offset', 0),
-                    step=1, help="上端の+30,000ラインの位置調整"
+                    step=1, help=f"上端の+{graph_limit:,}ラインの位置調整"
                 )
             
             with grid_col2:
                 grid_minus_30k_offset = st.number_input(
-                    "-30,000ライン調整",
+                    f"-{graph_limit:,}ライン調整",
                     min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
-                    step=1, help="下端の-30,000ラインの位置調整"
+                    step=1, help=f"下端の-{graph_limit:,}ラインの位置調整"
                 )
             
             # 中間ライン用のダミー変数を設定（他のコードで参照されるため）
@@ -2782,7 +2796,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     
                     # カスタム設定で解析
                     analyzer_align.zero_y = align_zero_in_crop
-                    analyzer_align.scale = 30000 / align_distance_to_plus_30k if align_distance_to_plus_30k > 0 else 122
+                    graph_limit = get_graph_limit()
+                    analyzer_align.scale = graph_limit / align_distance_to_plus_30k if align_distance_to_plus_30k > 0 else 122
                     
                     # 切り抜き画像で解析
                     cropped_for_align = img_array_tmp[int(align_top):int(align_bottom), int(align_left):int(align_right)]
@@ -2831,11 +2846,12 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     
                     if len(all_detections) > 1:
                         # 統計情報を表示
+                        unit = get_unit()
                         detection_cols = st.columns(3)
                         with detection_cols[0]:
-                            st.metric("検出平均値", f"{avg_detected_max:,}玉")
+                            st.metric("検出平均値", f"{avg_detected_max:,}{unit}")
                         with detection_cols[1]:
-                            st.metric("検出中央値", f"{median_detected_max:,}玉")
+                            st.metric("検出中央値", f"{median_detected_max:,}{unit}")
                         with detection_cols[2]:
                             st.metric("検出画像数", f"{len(all_detections)}/{len(test_images)}枚")
                         
@@ -2851,7 +2867,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             
                             with cols[i % cols_per_row]:
                                 st.markdown(f"**{detection['image_name']}**")
-                                st.caption(f"検出値: {detection['detected_max']:,}玉")
+                                unit = get_unit()
+                                st.caption(f"検出値: {detection['detected_max']:,}{unit}")
                                 
                                 # プレビューボタン
                                 if st.button(f"🔍 画像を確認", key=f"preview_btn_{i}"):
@@ -2879,7 +2896,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     else:
                         # 単一画像の場合
                         detection = all_detections[0]
-                        st.info(f"🔍 検出値: **{detection['detected_max']:,}玉**")
+                        unit = get_unit()
+                        st.info(f"🔍 検出値: **{detection['detected_max']:,}{unit}**")
                         
                         # セッションステートから値を取得（なければデフォルト値を使用）
                         default_val = st.session_state.get("saved_visual_max_single", detection['detected_max'])
@@ -2908,13 +2926,14 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                 if actual_distance > 0:
                                     new_scale = visual_max / actual_distance
                                     
-                                    # 新しい+30000ラインの位置を計算
-                                    new_30k_distance = 30000 / new_scale
+                                    # 新しい上限ラインの位置を計算
+                                    graph_limit = get_graph_limit()
+                                    new_30k_distance = graph_limit / new_scale
                                     current_30k_distance = detection['zero_in_crop'] - current_settings_align['grid_30k_offset']
                                     adjustment_30k = int(current_30k_distance - new_30k_distance)
                                     
-                                    # 新しい-30000ラインの位置を計算
-                                    new_minus_30k_distance = 30000 / new_scale
+                                    # 新しい下限ラインの位置を計算
+                                    new_minus_30k_distance = graph_limit / new_scale
                                     current_minus_30k_distance = (detection['crop_height'] - 1 + current_settings_align['grid_minus_30k_offset']) - detection['zero_in_crop']
                                     adjustment_minus_30k = int(new_minus_30k_distance - current_minus_30k_distance)
                                     
@@ -2938,10 +2957,11 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                 # st.info(f"平均補正率: **{avg_correction_factor:.2f}x** （{len(corrections)}枚の画像から計算）")  # 補正率表示を非表示化
                                 
                                 col_adj1, col_adj2 = st.columns(2)
+                                graph_limit = get_graph_limit()
                                 with col_adj1:
-                                    st.info(f"**+30,000ライン:** {grid_30k_offset}px → {grid_30k_offset + avg_adjustment_30k}px (調整: {avg_adjustment_30k:+d}px)")
+                                    st.info(f"**+{graph_limit:,}ライン:** {grid_30k_offset}px → {grid_30k_offset + avg_adjustment_30k}px (調整: {avg_adjustment_30k:+d}px)")
                                 with col_adj2:
-                                    st.info(f"**-30,000ライン:** {grid_minus_30k_offset}px → {grid_minus_30k_offset + avg_adjustment_minus_30k}px (調整: {avg_adjustment_minus_30k:+d}px)")
+                                    st.info(f"**-{graph_limit:,}ライン:** {grid_minus_30k_offset}px → {grid_minus_30k_offset + avg_adjustment_minus_30k}px (調整: {avg_adjustment_minus_30k:+d}px)")
                                 
                                 # 自動適用ボタン
                                 if st.button("🔧 推奨値を自動適用", type="secondary", key="apply_max_alignment"):
@@ -3185,7 +3205,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     
                     # 補正情報を表示
                     if actual_max_value and abs(correction_factor - 1.0) > 0.01:
-                        info_text = f"🔍 検出値: {int(max_val_detected):,}玉 → 実際の値: {int(actual_max_value):,}玉"
+                        unit = get_unit()
+                        info_text = f"🔍 検出値: {int(max_val_detected):,}{unit} → 実際の値: {int(actual_max_value):,}{unit}"
                         st.info(info_text)
             
             st.image(cropped_preview, use_column_width=True)
@@ -3209,13 +3230,16 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 'left_margin': left_margin,
                 'right_margin': right_margin,
                 'grid_30k_offset': grid_30k_offset,
-                'grid_minus_30k_offset': grid_minus_30k_offset
+                'grid_minus_30k_offset': grid_minus_30k_offset,
+                'game_type': st.session_state.game_type  # 遊技種別を追加
             }
             return settings
     else:
         # test_imageがない場合、セッションステートから取得
         def save_settings():
-            return st.session_state.settings.copy()
+            settings = st.session_state.settings.copy()
+            settings['game_type'] = st.session_state.game_type  # 遊技種別を追加
+            return settings
     
     # STEP 5: 設定の保存の見出しを適切な場所に配置（画像がある場合のみ表示）
     if test_image:
