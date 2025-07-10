@@ -1915,10 +1915,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 補正係数の表示を準備（非表示にする）
                     correction_info = ""
                     
-                    # 回転率データの準備
+                    # 回転率データの準備（パチンコのみ）
                     rotation_html = ""
                     rotation_detail = ""
-                    if result.get('rotation_metrics'):
+                    if result.get('rotation_metrics') and st.session_state.game_type == 'パチンコ':
                         metrics = result['rotation_metrics']
                         if metrics.get('rotation_rate_1', 0) >= 0:
                             if metrics['rotation_rate_1'] > 0:
@@ -1955,6 +1955,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             <span class="stat-label">📉 最低値</span>
                             <span class="stat-value {get_value_class(result['min_val'])}">{result['min_val']:,}{unit}</span>
                         </div>
+                        {"" if st.session_state.game_type == 'パチスロ' else f'''
                         <div class="stat-item">
                             <span class="stat-label">🎰 初当たり{unit}数</span>
                             <span class="stat-value {first_hit_class}">{first_hit_text}</span>
@@ -1963,6 +1964,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             <span class="stat-label">🎲 初当たり回転数</span>
                             <span class="stat-value">{(result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0}回</span>
                         </div>
+                        '''}
                         <div class="stat-item">
                             <span class="stat-label">🎯 {"初当たり回数" if st.session_state.game_type == 'パチンコ' else "大当り回数"}</span>
                             <span class="stat-value positive">{
