@@ -991,14 +991,18 @@ if uploaded_files:
     
     
     # 交換レート設定
+    unit = get_unit()
+    default_rate = 3.57145 if st.session_state.game_type == "パチンコ" else 17.86
+    help_text = "1玉あたりの交換レート（円）。28玉交換の場合は3.57145円/玉" if st.session_state.game_type == "パチンコ" else "1枚あたりの交換レート（円）。5.6枚交換の場合は17.86円/枚"
+    
     exchange_rate = st.number_input(
-        "💱 交換レート（円/玉）",
+        f"💱 交換レート（円/{unit}）",
         min_value=0.1,
-        max_value=10.0,
-        value=st.session_state.settings.get('exchange_rate', 3.57145),
+        max_value=50.0,
+        value=st.session_state.settings.get('exchange_rate', default_rate),
         step=0.01,
         format="%.5f",
-        help="1玉あたりの交換レート（円）。28玉交換の場合は3.57145円/玉"
+        help=help_text
     )
     st.session_state.settings['exchange_rate'] = exchange_rate
     
@@ -2012,7 +2016,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 st.metric(
                     "🎯 現在の合計収支",
                     f"{total_balance_yen:+,}円",
-                    f"{total_balance:+,}玉",
+                    f"{total_balance:+,}{get_unit()}",
                     delta_color="normal"
                 )
 
@@ -2020,7 +2024,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 st.metric(
                     "📊 台平均収支",
                     f"{avg_balance_yen:+,.0f}円",
-                    f"{avg_balance:+,.0f}玉",
+                    f"{avg_balance:+,.0f}{get_unit()}",
                     delta_color="normal"
                 )
             
@@ -2036,17 +2040,19 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 )
             
             with col6:
+                unit = get_unit()
+                label = "総獲得球数" if st.session_state.game_type == "パチンコ" else "総獲得枚数"
                 st.metric(
-                    "総獲得球数",
-                    f"{total_day_jackpot_balls:,}玉",
-                    f"平均{avg_day_jackpot_balls:,.0f}玉/回"
+                    label,
+                    f"{total_day_jackpot_balls:,}{unit}",
+                    f"平均{avg_day_jackpot_balls:,.0f}{unit}/回"
                 )
             
             with col7:
                 st.metric(
                     "獲得金額換算",
                     f"{int(total_day_jackpot_balls * exchange_rate):,}円",
-                    f"@{exchange_rate:.3f}円/玉"
+                    f"@{exchange_rate:.3f}円/{get_unit()}"
                 )
 
         # データフレームを作成
