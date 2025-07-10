@@ -1987,20 +1987,20 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     if st.session_state.game_type == 'パチンコ':
                         html_content += first_hit_html
                     
-                    html_content += f"""
-                        <div class="stat-item">
-                            <span class="stat-label">🎯 {jackpot_label}</span>
-                            <span class="stat-value positive">{jackpot_count}回</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">💰 総獲得{unit}数</span>
-                            <span class="stat-value positive">{result.get('total_jackpot_balls', 0):,}{unit}</span>
-                        </div>
-                        {rotation_html}
-                        {rotation_detail}
-                        {correction_info}
-                    </div>
-                    """
+                    # 残りの統計情報を追加
+                    html_content += f'<div class="stat-item"><span class="stat-label">🎯 {jackpot_label}</span><span class="stat-value positive">{jackpot_count}回</span></div>'
+                    html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数</span><span class="stat-value positive">{result.get("total_jackpot_balls", 0):,}{unit}</span></div>'
+                    
+                    # 回転率データを追加
+                    if rotation_html:
+                        html_content += rotation_html
+                    if rotation_detail:
+                        html_content += rotation_detail
+                    if correction_info:
+                        html_content += correction_info
+                    
+                    # stat-cardを閉じる
+                    html_content += '</div>'
                     
                     st.markdown(html_content, unsafe_allow_html=True)
 
