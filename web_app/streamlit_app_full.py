@@ -1964,8 +1964,19 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             <span class="stat-value">{(result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0}回</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">🎯 初当たり回数</span>
-                            <span class="stat-value positive">{(result.get('ocr_data') or {}).get('first_hit_count') or result.get('jackpot_count') or 0}回</span>
+                            <span class="stat-label">🎯 {"初当たり回数" if st.session_state.game_type == 'パチンコ' else "大当り回数"}</span>
+                            <span class="stat-value positive">{
+                                # パチンコの場合は従来通り
+                                (result.get('ocr_data') or {}).get('first_hit_count') or result.get('jackpot_count') or 0 
+                                if st.session_state.game_type == 'パチンコ' else
+                                # パチスロの場合はBB+RBの合計を優先
+                                (
+                                    (int((result.get('ocr_data') or {}).get('bb_count') or 0) + 
+                                     int((result.get('ocr_data') or {}).get('rb_count') or 0))
+                                    if (result.get('ocr_data') or {}).get('bb_count') or (result.get('ocr_data') or {}).get('rb_count')
+                                    else result.get('jackpot_count') or 0
+                                )
+                            }回</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">💰 総獲得{unit}数</span>
@@ -2129,7 +2140,19 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             
             # 1日の総獲得球数を計算
             total_day_jackpot_balls = sum(r.get('total_jackpot_balls', 0) for r in success_results)
-            total_day_jackpot_count = sum(r.get('jackpot_count', 0) for r in success_results)
+            
+            # パチスロの場合はBB+RBの合計、パチンコは従来通り
+            if st.session_state.game_type == 'パチスロ':
+                total_day_jackpot_count = sum(
+                    int((r.get('ocr_data') or {}).get('bb_count') or 0) + 
+                    int((r.get('ocr_data') or {}).get('rb_count') or 0)
+                    if (r.get('ocr_data') or {}).get('bb_count') or (r.get('ocr_data') or {}).get('rb_count')
+                    else r.get('jackpot_count', 0)
+                    for r in success_results
+                )
+            else:
+                total_day_jackpot_count = sum(r.get('jackpot_count', 0) for r in success_results)
+            
             avg_day_jackpot_balls = total_day_jackpot_balls / total_day_jackpot_count if total_day_jackpot_count > 0 else 0
             
             # 総投資球数を計算（各台の最低値の絶対値の合計）
@@ -2250,6 +2273,18 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         '大当り確率': ocr.get('jackpot_probability', ''),
                         '最高出玉': ocr.get('max_payout', '')
                     })
+                    # パチスロ用データを追加
+                    if st.session_state.game_type == 'パチスロ':
+                        row.update({
+                            '累計ゲーム': ocr.get('total_games', ''),
+                            'BB回数': ocr.get('bb_count', ''),
+                            'BB確率': ocr.get('bb_probability', ''),
+                            'RB回数': ocr.get('rb_count', ''),
+                            'RB確率': ocr.get('rb_probability', ''),
+                            'ART回数': ocr.get('art_count', ''),
+                            '合成確率': ocr.get('composite_probability', ''),
+                            'BB+RB回数': int(ocr.get('bb_count') or 0) + int(ocr.get('rb_count') or 0) if (ocr.get('bb_count') or ocr.get('rb_count')) else ''
+                        })
                 df_data.append(row)
             else:
                 # 解析失敗時も台番号の決定方法を統一
@@ -2532,6 +2567,13 @@ with st.expander("📊 CSV表示項目の設定", expanded=False):
         '累計スタート', '大当り回数（OCR）', '初当り回数',
         '現在スタート', '大当り確率', f'最高出{unit}'
     ]
+    
+    # パチスロ用の追加カラム
+    if st.session_state.game_type == 'パチスロ':
+        all_columns.extend([
+            '累計ゲーム', 'BB回数', 'BB確率', 'RB回数', 'RB確率',
+            'ART回数', '合成確率', 'BB+RB回数'
+        ])
     
     # デフォルト表示項目
     default_columns = [
