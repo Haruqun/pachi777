@@ -289,6 +289,14 @@ def extract_site7_data(image):
             'current_start': None,
             'jackpot_probability': None,
             'max_payout': None,
+            # パチスロ用追加フィールド
+            'total_games': None,  # 累計ゲーム数
+            'bb_count': None,  # BB回数
+            'bb_probability': None,  # BB確率
+            'rb_count': None,  # RB回数
+            'rb_probability': None,  # RB確率
+            'art_count': None,  # ART回数
+            'composite_probability': None,  # 合成確率
             'ocr_text': "",  # OCRテキストも保存
             'orange_bar_detected': machine_number is not None,  # デバッグ用
             'enhanced_image': None,  # デバッグ用
@@ -423,6 +431,104 @@ def extract_site7_data(image):
                 # 妥当な範囲の値かチェック（100-99999）
                 if 100 <= value <= 99999:
                     data['max_payout'] = str(value)
+                    break
+        
+        # パチスロ用データの抽出（game_typeがパチスロの場合のみ）
+        if st.session_state.get('game_type', 'パチンコ') == 'パチスロ':
+            # 累計ゲーム数
+            game_patterns = [
+                r'累計ゲーム\s*(\d{3,5})回',
+                r'累計ゲーム\s*(\d{3,5})',
+                r'(\d{3,5})\s*ゲーム',
+                r'総ゲーム数\s*(\d{3,5})'
+            ]
+            for pattern in game_patterns:
+                game_match = re.search(pattern, text_corrected)
+                if game_match:
+                    data['total_games'] = game_match.group(1)
+                    break
+            
+            # BB回数とBB確率
+            bb_count_patterns = [
+                r'BB回数\s*(\d+)回',
+                r'BB\s*(\d+)回',
+                r'BB回数\s*(\d+)',
+                r'ビッグ\s*(\d+)回'
+            ]
+            for pattern in bb_count_patterns:
+                bb_match = re.search(pattern, text_corrected)
+                if bb_match:
+                    data['bb_count'] = bb_match.group(1)
+                    break
+            
+            bb_prob_patterns = [
+                r'BB確率\s*1[/7](\d{2,4})',
+                r'BB確率\s*1/(\d{2,4})',
+                r'BB\s*1[/7](\d{2,4})'
+            ]
+            for pattern in bb_prob_patterns:
+                bb_prob_match = re.search(pattern, text_corrected)
+                if bb_prob_match:
+                    prob = bb_prob_match.group(1)
+                    if len(prob) == 4 and prob.startswith('7'):
+                        prob = prob[1:]
+                    data['bb_probability'] = f"1/{prob}"
+                    break
+            
+            # RB回数とRB確率
+            rb_count_patterns = [
+                r'RB回数\s*(\d+)回',
+                r'RB\s*(\d+)回',
+                r'RB回数\s*(\d+)',
+                r'レギュラー\s*(\d+)回'
+            ]
+            for pattern in rb_count_patterns:
+                rb_match = re.search(pattern, text_corrected)
+                if rb_match:
+                    data['rb_count'] = rb_match.group(1)
+                    break
+            
+            rb_prob_patterns = [
+                r'RB確率\s*1[/7](\d{2,4})',
+                r'RB確率\s*1/(\d{2,4})',
+                r'RB\s*1[/7](\d{2,4})'
+            ]
+            for pattern in rb_prob_patterns:
+                rb_prob_match = re.search(pattern, text_corrected)
+                if rb_prob_match:
+                    prob = rb_prob_match.group(1)
+                    if len(prob) == 4 and prob.startswith('7'):
+                        prob = prob[1:]
+                    data['rb_probability'] = f"1/{prob}"
+                    break
+            
+            # ART回数
+            art_patterns = [
+                r'ART回数\s*(\d+)回',
+                r'ART\s*(\d+)回',
+                r'AT回数\s*(\d+)回',
+                r'AT\s*(\d+)回',
+                r'ART回数\s*(\d+)'
+            ]
+            for pattern in art_patterns:
+                art_match = re.search(pattern, text_corrected)
+                if art_match:
+                    data['art_count'] = art_match.group(1)
+                    break
+            
+            # 合成確率
+            composite_patterns = [
+                r'合成確率\s*1[/7](\d{2,4})',
+                r'合成確率\s*1/(\d{2,4})',
+                r'合成\s*1[/7](\d{2,4})'
+            ]
+            for pattern in composite_patterns:
+                comp_match = re.search(pattern, text_corrected)
+                if comp_match:
+                    prob = comp_match.group(1)
+                    if len(prob) == 4 and prob.startswith('7'):
+                        prob = prob[1:]
+                    data['composite_probability'] = f"1/{prob}"
                     break
         
         # 合計処理時間を記録
@@ -1929,12 +2035,34 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         if ocr.get('jackpot_probability'):
                             ocr_html += f'<div class="ocr-item"><span class="ocr-label">📈 大当り確率</span><span class="ocr-value">{ocr["jackpot_probability"]}</span></div>'
                         if ocr.get('max_payout'):
-                            ocr_html += f'<div class="ocr-item"><span class="ocr-label">💰 最高出玉</span><span class="ocr-value">{ocr["max_payout"]}玉</span></div>'
+                            unit_label = "玉" if st.session_state.game_type == 'パチンコ' else "枚"
+                            ocr_html += f'<div class="ocr-item"><span class="ocr-label">💰 最高出{unit_label}</span><span class="ocr-value">{ocr["max_payout"]}{unit_label}</span></div>'
+                        
+                        # パチスロ特有のデータ表示
+                        if st.session_state.game_type == 'パチスロ':
+                            if ocr.get('total_games'):
+                                ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎮 累計ゲーム</span><span class="ocr-value">{ocr["total_games"]}回</span></div>'
+                            if ocr.get('bb_count'):
+                                ocr_html += f'<div class="ocr-item"><span class="ocr-label">🅱️ BB回数</span><span class="ocr-value">{ocr["bb_count"]}回</span></div>'
+                            if ocr.get('bb_probability'):
+                                ocr_html += f'<div class="ocr-item"><span class="ocr-label">📊 BB確率</span><span class="ocr-value">{ocr["bb_probability"]}</span></div>'
+                            if ocr.get('rb_count'):
+                                ocr_html += f'<div class="ocr-item"><span class="ocr-label">🆁 RB回数</span><span class="ocr-value">{ocr["rb_count"]}回</span></div>'
+                            if ocr.get('rb_probability'):
+                                ocr_html += f'<div class="ocr-item"><span class="ocr-label">📊 RB確率</span><span class="ocr-value">{ocr["rb_probability"]}</span></div>'
+                            if ocr.get('art_count'):
+                                ocr_html += f'<div class="ocr-item"><span class="ocr-label">🎯 ART回数</span><span class="ocr-value">{ocr["art_count"]}回</span></div>'
+                            if ocr.get('composite_probability'):
+                                ocr_html += f'<div class="ocr-item"><span class="ocr-label">📈 合成確率</span><span class="ocr-value">{ocr["composite_probability"]}</span></div>'
 
                         # すべてのOCRデータがNoneの場合
-                        if not any([ocr.get('machine_number'), ocr.get('total_start'), ocr.get('jackpot_count'), 
-                                   ocr.get('first_hit_count'), ocr.get('current_start'), ocr.get('jackpot_probability'), 
-                                   ocr.get('max_payout')]):
+                        basic_fields = [ocr.get('machine_number'), ocr.get('total_start'), ocr.get('jackpot_count'), 
+                                       ocr.get('first_hit_count'), ocr.get('current_start'), ocr.get('jackpot_probability'), 
+                                       ocr.get('max_payout')]
+                        slot_fields = [ocr.get('total_games'), ocr.get('bb_count'), ocr.get('bb_probability'),
+                                      ocr.get('rb_count'), ocr.get('rb_probability'), ocr.get('art_count'),
+                                      ocr.get('composite_probability')] if st.session_state.game_type == 'パチスロ' else []
+                        if not any(basic_fields + slot_fields):
                             ocr_html += '<div class="ocr-item"><span style="color: #856404;">⚠️ OCRデータを取得できませんでした</span></div>'
 
                         ocr_html += '</div>'
