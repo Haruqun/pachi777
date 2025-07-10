@@ -998,7 +998,7 @@ if uploaded_files:
     exchange_rate = st.number_input(
         f"💱 交換レート（円/{unit}）",
         min_value=0.1,
-        max_value=50.0,
+        max_value=20.0,
         value=st.session_state.settings.get('exchange_rate', default_rate),
         step=0.01,
         format="%.5f",
