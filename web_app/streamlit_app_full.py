@@ -661,7 +661,7 @@ if not st.session_state.authenticated:
         # フッター
         st.markdown(f"""
         <div class="login-footer">
-            AI Graph Analysis Report v2.1<br>
+            AI Graph Analysis Report v2.2<br>
             更新日: {datetime.now().strftime('%Y/%m/%d')}<br>
             Produced by <a href="https://pp-town.com/" target="_blank">PPタウン</a><br>
             Created by <a href="https://fivenine-design.com" target="_blank">fivenine-design.com</a>
