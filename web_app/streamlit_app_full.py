@@ -2005,7 +2005,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     '初当たり回転数': (result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0,
                     '収支（円）': int(result['current_val'] * st.session_state.settings.get('exchange_rate', 3.57145)),
                     '総獲得球数': result.get('total_jackpot_balls', 0),
-                    '大当り回数': result.get('jackpot_count', 0),
+                    '大当り回数（グラフ）': result.get('jackpot_count', 0),  # 列名を変更
                     '色': result['dominant_color']
                 }
                 
@@ -2030,8 +2030,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     else:
                         row['回転率②'] = '-'
                         
-                    # 詳細データ（非表示）
-                    row['初当り回転数'] = metrics['first_hit_spins'] if metrics['first_hit_spins'] > 0 else '-'
+                    # 詳細データ
                     row['初当り使用玉'] = metrics['first_hit_balls'] if metrics['first_hit_balls'] > 0 else '-'
                     
                     # 通常回転数を追加
@@ -2044,7 +2043,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     ocr = result['ocr_data']
                     row.update({
                         '累計スタート': ocr.get('total_start', ''),
-                        '大当り回数': ocr.get('jackpot_count', ''),
+                        '大当り回数（OCR）': ocr.get('jackpot_count', ''),  # 列名を変更
                         '初当り回数': ocr.get('first_hit_count', ''),
                         '現在スタート': ocr.get('current_start', ''),
                         '大当り確率': ocr.get('jackpot_probability', ''),
@@ -2326,9 +2325,9 @@ with st.expander("📊 CSV表示項目の設定", expanded=False):
     all_columns = [
         '画像名', '台番号', '最高値', '最低値', '現在値',
         '初当たり球数', '初当たり回転数', '収支（円）',
-        '総獲得球数', '大当り回数', '色', '回転率①', '回転率②',
-        '通常回転数', '初当り回転数', '初当り使用玉',
-        '累計スタート', '大当り回数', '初当り回数',
+        '総獲得球数', '大当り回数（グラフ）', '色', '回転率①', '回転率②',
+        '通常回転数', '初当り使用玉',
+        '累計スタート', '大当り回数（OCR）', '初当り回数',
         '現在スタート', '大当り確率', '最高出玉'
     ]
     
@@ -2354,7 +2353,8 @@ with st.expander("📊 CSV表示項目の設定", expanded=False):
         with cols[col_idx]:
             # デフォルトでチェックされているかどうか
             is_checked = column in st.session_state.csv_columns
-            if st.checkbox(column, value=is_checked, key=f"csv_col_{column}"):
+            # インデックスを含むユニークなキーを生成
+            if st.checkbox(column, value=is_checked, key=f"csv_col_{i}_{column}"):
                 selected_columns.append(column)
     
     # ボタンで操作
