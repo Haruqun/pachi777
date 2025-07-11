@@ -2117,7 +2117,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 現在スタートのギャップを表示（パチンコのみ）
                     if st.session_state.game_type == 'パチンコ' and result.get('rotation_metrics'):
                         metrics = result['rotation_metrics']
-                        if 'current_start_from_graph' in metrics:
+                        if 'current_start_from_graph' in metrics and metrics['current_start_from_graph'] > 0:
                             graph_start = metrics['current_start_from_graph']
                             ocr_start = metrics.get('ocr_current_start', 0)
                             gap = metrics.get('current_start_gap', 0)
@@ -2130,7 +2130,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         </div>"""
                             
                             # ギャップがある場合のみ表示
-                            if ocr_start > 0 and gap != 0:
+                            if ocr_start > 0:
                                 gap_class = "positive" if gap >= 0 else "negative"
                                 gap_percent = (gap / ocr_start * 100) if ocr_start != 0 else 0
                                 html_content += f"""

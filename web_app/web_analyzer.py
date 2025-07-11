@@ -652,17 +652,37 @@ class WebCompatibleAnalyzer:
             
             # 最後の大当たり位置を探す
             if analysis.get('jackpot_details') and len(analysis['jackpot_details']) > 0:
-                last_jackpot = analysis['jackpot_details'][-1]
-                last_jackpot_end_idx = last_jackpot['end_idx']
-                if last_jackpot_end_idx < len(data_points):
+                # グラフ内で完結している大当たりを探す
+                last_complete_jackpot = None
+                for jackpot in reversed(analysis['jackpot_details']):
+                    # 大当たりが画面内で終了しているかチェック
+                    if jackpot['end_idx'] < len(data_points) - 1:
+                        # 終了後に通常遊技が続いているか確認
+                        end_value = data_points[jackpot['end_idx']][1]
+                        next_value = data_points[jackpot['end_idx'] + 1][1]
+                        # 下降していれば大当たり終了と判断
+                        if next_value < end_value:
+                            last_complete_jackpot = jackpot
+                            break
+                
+                if last_complete_jackpot:
+                    last_jackpot_end_idx = last_complete_jackpot['end_idx']
                     last_jackpot_end_x = data_points[last_jackpot_end_idx][0]
                     # 最後の大当たり終了から現在までの回転数
                     end_x = data_points[-1][0]
                     pixels_from_last_jackpot = end_x - last_jackpot_end_x
                     current_start_from_graph = int(pixels_from_last_jackpot * spins_per_pixel)
+                else:
+                    # 画面内で終了した大当たりがない場合は計算不可
+                    current_start_from_graph = 0
             else:
-                # 大当たりがない場合は全体が現在スタート
-                current_start_from_graph = total_spins
+                # 大当たりがない場合
+                # グラフの最初から最後までの幅から計算
+                if len(data_points) > 0 and graph_info:
+                    graph_width_px = data_points[-1][0] - data_points[0][0]
+                    current_start_from_graph = int(graph_width_px * spins_per_pixel)
+                else:
+                    current_start_from_graph = 0
             
             # OCRの現在スタートとの比較
             current_start_gap = 0
