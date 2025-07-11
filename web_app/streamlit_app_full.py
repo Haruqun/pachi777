@@ -1465,32 +1465,9 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     if graph_values[i+2] >= graph_values[i+1] - noise_threshold:
                         # 初当たりは必ずマイナス値から
                         if graph_values[i] < 0:
-                            # 上昇の急峻さと投資額に応じて検出位置を調整
-                            # 超深い投資（-10000玉以下）
-                            if graph_values[i] < -10000:
-                                if current_increase > 500:
-                                    offset = 8  # 8点前
-                                elif current_increase > 300:
-                                    offset = 6  # 6点前
-                                else:
-                                    offset = 4  # 4点前
-                            # 深い投資（-5000〜-10000玉）
-                            elif graph_values[i] < -5000:
-                                offset = 3  # 3点前
-                            # 中程度の投資（-3000〜-5000玉）
-                            elif graph_values[i] < -3000:
-                                # -4000玉前後は特別扱い（2355番台のようなケース）
-                                if graph_values[i] < -4000:
-                                    offset = 0  # 調整なし
-                                else:
-                                    offset = 1  # 1点前
-                            # 浅い投資（-3000玉以上）
-                            else:
-                                offset = 0  # 調整なし
-                            
-                            actual_hit_idx = max(0, i - offset)
-                            first_hit_val = graph_values[actual_hit_idx]
-                            first_hit_x = actual_hit_idx
+                            # 補正なしで純粋な検出位置を使用
+                            first_hit_val = graph_values[i]
+                            first_hit_x = i
                             break
 
             # 方法2: 減少傾向からの急上昇を検出
@@ -1511,32 +1488,9 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                             if i + 2 < len(graph_values) and graph_values[i+2] > graph_values[i+1] - noise_threshold:
                                 # 初当たりは必ずマイナス値
                                 if graph_values[i] < 0:
-                                    # 上昇の急峻さと投資額に応じて検出位置を調整
-                                    # 超深い投資（-10000玉以下）
-                                    if graph_values[i] < -10000:
-                                        if current_change > 500:
-                                            offset = 8  # 8点前
-                                        elif current_change > 300:
-                                            offset = 6  # 6点前
-                                        else:
-                                            offset = 4  # 4点前
-                                    # 深い投資（-5000〜-10000玉）
-                                    elif graph_values[i] < -5000:
-                                        offset = 3  # 3点前
-                                    # 中程度の投資（-3000〜-5000玉）
-                                    elif graph_values[i] < -3000:
-                                        # -4000玉前後は特別扱い（2355番台のようなケース）
-                                        if graph_values[i] < -4000:
-                                            offset = 0  # 調整なし
-                                        else:
-                                            offset = 1  # 1点前
-                                    # 浅い投資（-3000玉以上）
-                                    else:
-                                        offset = 0  # 調整なし
-                                    
-                                    actual_hit_idx = max(0, i - offset)
-                                    first_hit_val = graph_values[actual_hit_idx]
-                                    first_hit_x = actual_hit_idx
+                                    # 補正なしで純粋な検出位置を使用
+                                    first_hit_val = graph_values[i]
+                                    first_hit_x = i
                                     break
 
             # 初当たり値がプラスの場合は0を表示
@@ -3691,7 +3645,7 @@ footer_col1, footer_col2, footer_col3 = st.columns([2, 1, 1])
 
 with footer_col1:
     st.markdown(f"""
-    🎰 パチンコグラフ解析システム v2.4.6  
+    🎰 パチンコグラフ解析システム v2.5.0  
     更新日: {datetime.now().strftime('%Y/%m/%d')}  
     Produced by [PPタウン](https://pp-town.com/)  
     Created by [fivenine-design.com](https://fivenine-design.com)
