@@ -2084,7 +2084,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         except (ValueError, TypeError):
                             pass
                     
-                    html_content += """
+                    html_content += f"""
                         <div class="stat-item">
                             <span class="stat-label">📉 最低値</span>
                             <span class="stat-value {get_value_class(result['min_val'])}">{result['min_val']:,}{unit}</span>
