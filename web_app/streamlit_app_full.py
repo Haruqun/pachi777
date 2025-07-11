@@ -1466,23 +1466,23 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                         # 初当たりは必ずマイナス値から
                         if graph_values[i] < 0:
                             # 上昇の急峻さと投資額に応じて検出位置を調整
-                            # 深い投資（-5000玉以下）の場合はより前の位置を初当たりとする
-                            if graph_values[i] < -5000:
-                                if current_increase > 500:  # 500玉以上の急上昇
+                            # 超深い投資（-10000玉以下）
+                            if graph_values[i] < -10000:
+                                if current_increase > 500:
                                     offset = 8  # 8点前
-                                elif current_increase > 300:  # 300玉以上
+                                elif current_increase > 300:
                                     offset = 6  # 6点前
                                 else:
                                     offset = 4  # 4点前
-                            # 中程度の投資（-2000〜-5000玉）
-                            elif graph_values[i] < -2000:
-                                if current_increase > 400:
-                                    offset = 4  # 4点前
-                                else:
-                                    offset = 2  # 2点前
-                            # 浅い投資（-2000玉以上）
+                            # 深い投資（-5000〜-10000玉）
+                            elif graph_values[i] < -5000:
+                                offset = 3  # 3点前
+                            # 中程度の投資（-3000〜-5000玉）
+                            elif graph_values[i] < -3000:
+                                offset = 1  # 1点前
+                            # 浅い投資（-3000玉以上）
                             else:
-                                offset = 1  # 1点前（ほぼ調整なし）
+                                offset = 0  # 調整なし
                             
                             actual_hit_idx = max(0, i - offset)
                             first_hit_val = graph_values[actual_hit_idx]
@@ -1508,23 +1508,23 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                                 # 初当たりは必ずマイナス値
                                 if graph_values[i] < 0:
                                     # 上昇の急峻さと投資額に応じて検出位置を調整
-                                    # 深い投資（-5000玉以下）の場合はより前の位置を初当たりとする
-                                    if graph_values[i] < -5000:
-                                        if current_change > 500:  # 500玉以上の急上昇
+                                    # 超深い投資（-10000玉以下）
+                                    if graph_values[i] < -10000:
+                                        if current_change > 500:
                                             offset = 8  # 8点前
-                                        elif current_change > 300:  # 300玉以上
+                                        elif current_change > 300:
                                             offset = 6  # 6点前
                                         else:
                                             offset = 4  # 4点前
-                                    # 中程度の投資（-2000〜-5000玉）
-                                    elif graph_values[i] < -2000:
-                                        if current_change > 400:
-                                            offset = 4  # 4点前
-                                        else:
-                                            offset = 2  # 2点前
-                                    # 浅い投資（-2000玉以上）
+                                    # 深い投資（-5000〜-10000玉）
+                                    elif graph_values[i] < -5000:
+                                        offset = 3  # 3点前
+                                    # 中程度の投資（-3000〜-5000玉）
+                                    elif graph_values[i] < -3000:
+                                        offset = 1  # 1点前
+                                    # 浅い投資（-3000玉以上）
                                     else:
-                                        offset = 1  # 1点前（ほぼ調整なし）
+                                        offset = 0  # 調整なし
                                     
                                     actual_hit_idx = max(0, i - offset)
                                     first_hit_val = graph_values[actual_hit_idx]
@@ -3681,7 +3681,7 @@ footer_col1, footer_col2, footer_col3 = st.columns([2, 1, 1])
 
 with footer_col1:
     st.markdown(f"""
-    🎰 パチンコグラフ解析システム v2.4.3  
+    🎰 パチンコグラフ解析システム v2.4.4  
     更新日: {datetime.now().strftime('%Y/%m/%d')}  
     Produced by [PPタウン](https://pp-town.com/)  
     Created by [fivenine-design.com](https://fivenine-design.com)

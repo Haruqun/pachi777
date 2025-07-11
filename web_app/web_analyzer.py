@@ -3,11 +3,11 @@
 Web環境対応版 パチンコグラフ解析モジュール
 ファイルパスを柔軟に扱える設計
 
-Version: 2.4.3
+Version: 2.4.4
 Last Updated: 2025-07-11
 """
 
-__version__ = "2.4.3"
+__version__ = "2.4.4"
 __build__ = "a3f9b21"
 
 import os
@@ -426,20 +426,19 @@ class WebCompatibleAnalyzer:
                     if values[i] < 0:  # マイナス値のみを初当たりとして検出
                         # 上昇開始の少し前の点を初当たりとする（実際の初当たりは上昇前に発生）
                         # 投資額と上昇の急峻さに応じて調整
-                        if values[i] < -5000:  # 深い投資
+                        if values[i] < -10000:  # 超深い投資
                             if current_increase > 500:
                                 offset = 8
                             elif current_increase > 300:
                                 offset = 6
                             else:
                                 offset = 4
-                        elif values[i] < -2000:  # 中程度の投資
-                            if current_increase > 400:
-                                offset = 4
-                            else:
-                                offset = 2
-                        else:  # 浅い投資
+                        elif values[i] < -5000:  # 深い投資
+                            offset = 3
+                        elif values[i] < -3000:  # 中程度の投資
                             offset = 1
+                        else:  # 浅い投資
+                            offset = 0
                         
                         actual_hit_idx = max(0, i - offset)
                         first_hit_idx = actual_hit_idx
@@ -463,20 +462,19 @@ class WebCompatibleAnalyzer:
                         if values[i] < 0:  # マイナス値のみ
                             # 上昇開始の少し前の点を初当たりとする
                             # 投資額と上昇の急峻さに応じて調整
-                            if values[i] < -5000:  # 深い投資
+                            if values[i] < -10000:  # 超深い投資
                                 if current_change > 500:
                                     offset = 8
                                 elif current_change > 300:
                                     offset = 6
                                 else:
                                     offset = 4
-                            elif values[i] < -2000:  # 中程度の投資
-                                if current_change > 400:
-                                    offset = 4
-                                else:
-                                    offset = 2
-                            else:  # 浅い投資
+                            elif values[i] < -5000:  # 深い投資
+                                offset = 3
+                            elif values[i] < -3000:  # 中程度の投資
                                 offset = 1
+                            else:  # 浅い投資
+                                offset = 0
                             
                             actual_hit_idx = max(0, i - offset)
                             first_hit_idx = actual_hit_idx
