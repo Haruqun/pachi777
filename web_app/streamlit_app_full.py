@@ -1633,17 +1633,31 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             # 検出されたグラフラインを描画
             prev_x = None
             prev_y = None
+            prev_value = None
 
-            # 緑色で統一（見やすさ重視）
-            draw_color = (0, 255, 0)  # 緑色固定
+            # 色の定義
+            color_up = (0, 255, 0)      # 上昇中：緑色
+            color_down = (255, 0, 0)    # 下降中：赤色
+            color_flat = (255, 255, 0)  # 横ばい：黄色
 
             # グラフポイントを描画
-            for x, value in graph_data_points:
+            for i, (x, value) in enumerate(graph_data_points):
                 # Y座標を計算（線形スケール）
                 y = int(zero_line_in_crop - (value / analyzer.scale))
 
                 # 画像範囲内かチェック
                 if y is not None and 0 <= y < overlay_img.shape[0] and 0 <= x < overlay_img.shape[1]:
+                    # 前の値との比較で色を決定
+                    if prev_value is not None:
+                        if value > prev_value + 10:  # 10玉以上の上昇
+                            draw_color = color_up
+                        elif value < prev_value - 10:  # 10玉以上の下降
+                            draw_color = color_down
+                        else:  # 横ばい
+                            draw_color = color_flat
+                    else:
+                        draw_color = color_flat  # 最初の点
+
                     # 点を描画（より見やすくするため）
                     cv2.circle(overlay_img, (int(x), y), 2, draw_color, -1)
 
@@ -1653,6 +1667,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
 
                     prev_x = x
                     prev_y = y
+                    prev_value = value
 
             # 最高値、最低値、初当たりの位置を見つける
             # インデックスは既に上で取得済み
@@ -2050,7 +2065,26 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         <div class="stat-item">
                             <span class="stat-label">📈 最高値</span>
                             <span class="stat-value {get_value_class(result['max_val'])}">{result['max_val']:,}{unit}</span>
-                        </div>
+                        </div>"""
+                    
+                    # OCR最大値とのギャップを表示
+                    ocr_max_value = None
+                    if result.get('ocr_data') and result['ocr_data'].get('max_value'):
+                        try:
+                            ocr_max_value = int(result['ocr_data']['max_value'])
+                            gap = result['max_val'] - ocr_max_value
+                            gap_percent = (gap / ocr_max_value * 100) if ocr_max_value != 0 else 0
+                            gap_class = "positive" if gap >= 0 else "negative"
+                            
+                            html_content += f"""
+                        <div class="stat-item" style="background-color: #f0f0f0;">
+                            <span class="stat-label">📊 最大値ギャップ</span>
+                            <span class="stat-value {gap_class}">{gap:+,}{unit} ({gap_percent:+.1f}%)</span>
+                        </div>"""
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    html_content += """
                         <div class="stat-item">
                             <span class="stat-label">📉 最低値</span>
                             <span class="stat-value {get_value_class(result['min_val'])}">{result['min_val']:,}{unit}</span>
