@@ -1944,16 +1944,9 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 初当たり関連のHTMLを条件分岐で生成
                     first_hit_html = ""
                     if st.session_state.game_type == 'パチンコ':
-                        first_hit_html = f'''
-                        <div class="stat-item">
-                            <span class="stat-label">🎰 初当たり{unit}数</span>
-                            <span class="stat-value {first_hit_class}">{first_hit_text}</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">🎲 初当たり回転数</span>
-                            <span class="stat-value">{(result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0}回</span>
-                        </div>
-                        '''
+                        first_hit_spins = (result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0
+                        first_hit_html = f'<div class="stat-item"><span class="stat-label">🎰 初当たり{unit}数</span><span class="stat-value {first_hit_class}">{first_hit_text}</span></div>'
+                        first_hit_html += f'<div class="stat-item"><span class="stat-label">🎲 初当たり回転数</span><span class="stat-value">{first_hit_spins}回</span></div>'
                     
                     # 大当り回数の計算
                     if st.session_state.game_type == 'パチンコ':
