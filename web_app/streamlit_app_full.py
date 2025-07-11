@@ -2182,62 +2182,261 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         
                         # 初当たり検出デバッグ情報を表示
                         if result.get('first_hit_debug'):
-                            with st.expander("🎯 初当たり検出デバッグ情報"):
+                            with st.expander("🔬 初当たり検出デバッグ情報"):
                                 debug_info = result['first_hit_debug']
                                 
-                                st.markdown("#### 検出結果")
+                                # カスタムCSSスタイル
+                                st.markdown("""
+                                <style>
+                                .debug-header {
+                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                    color: white;
+                                    padding: 15px;
+                                    border-radius: 10px;
+                                    margin-bottom: 20px;
+                                    text-align: center;
+                                }
+                                .debug-section {
+                                    background: #f8f9fa;
+                                    padding: 15px;
+                                    border-radius: 8px;
+                                    margin-bottom: 15px;
+                                    border-left: 4px solid #667eea;
+                                }
+                                .debug-title {
+                                    font-size: 1.2em;
+                                    font-weight: bold;
+                                    color: #333;
+                                    margin-bottom: 10px;
+                                }
+                                .debug-value {
+                                    font-size: 1.4em;
+                                    font-weight: bold;
+                                    color: #667eea;
+                                }
+                                .scale-info {
+                                    background: #e8f5e9;
+                                    border-left: 4px solid #4caf50;
+                                }
+                                .candidate-info {
+                                    background: #fff3e0;
+                                    border-left: 4px solid #ff9800;
+                                }
+                                </style>
+                                """, unsafe_allow_html=True)
+                                
+                                # 検出結果のヘッダー
+                                if debug_info['detected_position'] is not None:
+                                    st.markdown('<div class="debug-header"><h3>✅ 初当たり検出成功</h3></div>', unsafe_allow_html=True)
+                                else:
+                                    st.markdown('<div class="debug-header"><h3>❌ 初当たり未検出</h3></div>', unsafe_allow_html=True)
+                                
+                                # 検出結果の詳細
+                                st.markdown('<div class="debug-section">', unsafe_allow_html=True)
+                                st.markdown('<div class="debug-title">🎯 検出結果</div>', unsafe_allow_html=True)
+                                
                                 col1, col2 = st.columns(2)
                                 with col1:
-                                    st.metric("検出位置", f"{debug_info['detected_position']}点目" if debug_info['detected_position'] is not None else "未検出")
-                                    st.metric("検出値", f"{debug_info['detected_value']:,}玉" if debug_info['detected_value'] is not None else "なし")
+                                    if debug_info['detected_position'] is not None:
+                                        st.markdown(f"""
+                                        <div style="text-align: center;">
+                                            <div style="font-size: 0.9em; color: #666;">📍 検出位置</div>
+                                            <div class="debug-value">{debug_info['detected_position']}点目</div>
+                                        </div>
+                                        """, unsafe_allow_html=True)
+                                        
+                                        st.markdown(f"""
+                                        <div style="text-align: center; margin-top: 20px;">
+                                            <div style="font-size: 0.9em; color: #666;">💰 検出値</div>
+                                            <div class="debug-value" style="color: #dc3545;">{debug_info['detected_value']:,.0f}玉</div>
+                                        </div>
+                                        """, unsafe_allow_html=True)
+                                    else:
+                                        st.markdown("""
+                                        <div style="text-align: center;">
+                                            <div style="font-size: 1.5em; color: #999;">⚠️ 未検出</div>
+                                        </div>
+                                        """, unsafe_allow_html=True)
+                                
                                 with col2:
-                                    st.metric("検出方法", debug_info['detection_method'] or "未検出")
-                                    st.metric("候補数", len(debug_info['candidates']))
+                                    st.markdown(f"""
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 0.9em; color: #666;">🔍 検出方法</div>
+                                        <div style="font-size: 1.1em; font-weight: bold; color: #764ba2;">{debug_info['detection_method'] or "なし"}</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                    
+                                    st.markdown(f"""
+                                    <div style="text-align: center; margin-top: 20px;">
+                                        <div style="font-size: 0.9em; color: #666;">📋 候補数</div>
+                                        <div class="debug-value" style="color: #ff9800;">{len(debug_info['candidates'])}件</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                
+                                st.markdown('</div>', unsafe_allow_html=True)
                                 
                                 # スケール情報を表示
                                 if 'scale_info' in debug_info:
-                                    st.markdown("#### 📏 スケール情報（1pxあたりの数値）")
+                                    st.markdown('<div class="debug-section scale-info">', unsafe_allow_html=True)
+                                    st.markdown('<div class="debug-title">📏 スケール情報（1pxあたりの数値）</div>', unsafe_allow_html=True)
+                                    
                                     scale_col1, scale_col2 = st.columns(2)
                                     with scale_col1:
                                         balls_per_px = debug_info['scale_info'].get('balls_per_pixel')
                                         if balls_per_px:
-                                            st.metric("玉数/px", f"{balls_per_px:.2f}玉")
+                                            st.markdown(f"""
+                                            <div style="text-align: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                                <div style="font-size: 2.5em;">🎱</div>
+                                                <div style="font-size: 0.9em; color: #666; margin-top: 5px;">玉数/px</div>
+                                                <div style="font-size: 1.8em; font-weight: bold; color: #4caf50;">{balls_per_px:.4f}玉</div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
                                         else:
-                                            st.metric("玉数/px", "未計算")
+                                            st.markdown("""
+                                            <div style="text-align: center; background: white; padding: 15px; border-radius: 8px;">
+                                                <div style="font-size: 1.2em; color: #999;">未計算</div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                    
                                     with scale_col2:
                                         spins_per_px = debug_info['scale_info'].get('spins_per_pixel')
                                         if spins_per_px:
-                                            st.metric("回転数/px", f"{spins_per_px:.4f}回")
+                                            st.markdown(f"""
+                                            <div style="text-align: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                                <div style="font-size: 2.5em;">🎯</div>
+                                                <div style="font-size: 0.9em; color: #666; margin-top: 5px;">回転数/px</div>
+                                                <div style="font-size: 1.8em; font-weight: bold; color: #2196f3;">{spins_per_px:.4f}回</div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
                                         else:
-                                            st.metric("回転数/px", "未計算")
+                                            st.markdown("""
+                                            <div style="text-align: center; background: white; padding: 15px; border-radius: 8px;">
+                                                <div style="font-size: 1.2em; color: #999;">未計算</div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                    
+                                    st.markdown('</div>', unsafe_allow_html=True)
                                     
                                     # グラフ情報も表示
                                     if 'graph_info' in debug_info:
                                         graph_info = debug_info['graph_info']
-                                        st.markdown("##### グラフ情報")
-                                        col1, col2 = st.columns(2)
-                                        with col1:
-                                            st.write(f"グラフ幅: {graph_info.get('graph_width', 0)}px")
-                                            st.write(f"総回転数: {graph_info.get('total_spins', 0)}回")
-                                        with col2:
-                                            st.write(f"開始X: {graph_info.get('graph_start_x', 0)}")
-                                            st.write(f"終了X: {graph_info.get('graph_end_x', 0)}")
+                                        st.markdown('<div class="debug-section">', unsafe_allow_html=True)
+                                        st.markdown('<div class="debug-title">📊 グラフ情報</div>', unsafe_allow_html=True)
+                                        
+                                        info_col1, info_col2 = st.columns(2)
+                                        with info_col1:
+                                            st.markdown(f"""
+                                            <div style="background: white; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                                                <div style="display: flex; align-items: center;">
+                                                    <span style="font-size: 1.5em; margin-right: 10px;">📐</span>
+                                                    <div>
+                                                        <div style="font-size: 0.8em; color: #666;">グラフ幅</div>
+                                                        <div style="font-size: 1.2em; font-weight: bold;">{graph_info.get('graph_width', 0)}px</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                            
+                                            st.markdown(f"""
+                                            <div style="background: white; padding: 10px; border-radius: 5px;">
+                                                <div style="display: flex; align-items: center;">
+                                                    <span style="font-size: 1.5em; margin-right: 10px;">🎰</span>
+                                                    <div>
+                                                        <div style="font-size: 0.8em; color: #666;">総回転数</div>
+                                                        <div style="font-size: 1.2em; font-weight: bold;">{graph_info.get('total_spins', 0):,}回</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                        
+                                        with info_col2:
+                                            st.markdown(f"""
+                                            <div style="background: white; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                                                <div style="display: flex; align-items: center;">
+                                                    <span style="font-size: 1.5em; margin-right: 10px;">▶️</span>
+                                                    <div>
+                                                        <div style="font-size: 0.8em; color: #666;">開始X座標</div>
+                                                        <div style="font-size: 1.2em; font-weight: bold;">{graph_info.get('graph_start_x', 0)}px</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                            
+                                            st.markdown(f"""
+                                            <div style="background: white; padding: 10px; border-radius: 5px;">
+                                                <div style="display: flex; align-items: center;">
+                                                    <span style="font-size: 1.5em; margin-right: 10px;">⏸️</span>
+                                                    <div>
+                                                        <div style="font-size: 0.8em; color: #666;">終了X座標</div>
+                                                        <div style="font-size: 1.2em; font-weight: bold;">{graph_info.get('graph_end_x', 0)}px</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                        
+                                        st.markdown('</div>', unsafe_allow_html=True)
                                 
                                 if debug_info['candidates']:
-                                    st.markdown("#### 検出候補")
+                                    st.markdown('<div class="debug-section candidate-info">', unsafe_allow_html=True)
+                                    st.markdown('<div class="debug-title">🔍 検出候補一覧</div>', unsafe_allow_html=True)
+                                    
                                     for idx, candidate in enumerate(debug_info['candidates']):
-                                        st.markdown(f"**候補{idx+1}**")
+                                        st.markdown(f"""
+                                        <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                                <span style="font-size: 1.5em; margin-right: 10px;">#{idx+1}</span>
+                                                <span style="font-size: 1.1em; font-weight: bold;">候補{idx+1}</span>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+                                        
                                         col1, col2, col3 = st.columns(3)
                                         with col1:
-                                            st.write(f"位置: {candidate['position']}点目")
-                                            st.write(f"値: {candidate['value']:,.0f}玉")
+                                            st.markdown(f"""
+                                            <div style="text-align: center;">
+                                                <div style="font-size: 2em;">📍</div>
+                                                <div style="font-size: 0.8em; color: #666;">位置</div>
+                                                <div style="font-size: 1.3em; font-weight: bold; color: #673ab7;">{candidate['position']}点目</div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                            
+                                            st.markdown(f"""
+                                            <div style="text-align: center; margin-top: 15px;">
+                                                <div style="font-size: 2em;">💰</div>
+                                                <div style="font-size: 0.8em; color: #666;">検出値</div>
+                                                <div style="font-size: 1.3em; font-weight: bold; color: #dc3545;">{candidate['value']:,.0f}玉</div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                        
                                         with col2:
-                                            st.write(f"上昇量: {candidate.get('increase', 0):,.0f}玉")
+                                            st.markdown(f"""
+                                            <div style="text-align: center;">
+                                                <div style="font-size: 2em;">📈</div>
+                                                <div style="font-size: 0.8em; color: #666;">上昇量</div>
+                                                <div style="font-size: 1.3em; font-weight: bold; color: #4caf50;">{candidate.get('increase', 0):,.0f}玉</div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                            
                                             if 'slope' in candidate:
-                                                st.write(f"傾き: {candidate['slope']:.1f}")
+                                                st.markdown(f"""
+                                                <div style="text-align: center; margin-top: 15px;">
+                                                    <div style="font-size: 2em;">📊</div>
+                                                    <div style="font-size: 0.8em; color: #666;">傾き</div>
+                                                    <div style="font-size: 1.3em; font-weight: bold; color: #ff9800;">{candidate['slope']:.1f}</div>
+                                                </div>
+                                                """, unsafe_allow_html=True)
+                                        
                                         with col3:
-                                            st.write(f"理由: {candidate['reason']}")
-                                        st.markdown("---")
+                                            st.markdown(f"""
+                                            <div style="text-align: center;">
+                                                <div style="font-size: 2em;">💡</div>
+                                                <div style="font-size: 0.8em; color: #666;">検出理由</div>
+                                                <div style="font-size: 1.1em; color: #333; margin-top: 5px;">{candidate['reason']}</div>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                        
+                                        st.markdown('</div>', unsafe_allow_html=True)
+                                    
+                                    st.markdown('</div>', unsafe_allow_html=True)
 
                     else:
                         st.warning("⚠️ グラフデータを検出できませんでした")
