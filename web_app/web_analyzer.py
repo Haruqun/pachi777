@@ -3,11 +3,11 @@
 Web環境対応版 パチンコグラフ解析モジュール
 ファイルパスを柔軟に扱える設計
 
-Version: 2.4.0
-Last Updated: 2025-07-10
+Version: 2.4.1
+Last Updated: 2025-07-11
 """
 
-__version__ = "2.4.0"
+__version__ = "2.4.1"
 __build__ = "a3f9b21"
 
 import os
@@ -421,11 +421,13 @@ class WebCompatibleAnalyzer:
             # 100玉以上の増加を検出
             if current_increase > min_payout:
                 # 次の点も上昇または維持していることを確認
-                if values[i+2] >= values[i+1] - 50:
+                if values[i+2] >= values[i+1] - 20:
                     # 重要：初当たりは必ずマイナス値でなければならない
                     if values[i] < 0:  # マイナス値のみを初当たりとして検出
-                        first_hit_idx = i
-                        first_hit_val = values[i]
+                        # 上昇開始の少し前の点を初当たりとする（実際の初当たりは上昇前に発生）
+                        actual_hit_idx = max(0, i - 3)  # 3点前を初当たりとする
+                        first_hit_idx = actual_hit_idx
+                        first_hit_val = values[actual_hit_idx]
                         break
         
         # 方法2: 通常パターン（減少→上昇）の検出
@@ -443,13 +445,16 @@ class WebCompatibleAnalyzer:
                     # 下降傾向から急上昇への転換を検出
                     if avg_slope < -20 and current_change > min_payout:
                         if values[i] < 0:  # マイナス値のみ
-                            first_hit_idx = i
-                            first_hit_val = values[i]
+                            # 上昇開始の少し前の点を初当たりとする
+                            actual_hit_idx = max(0, i - 3)  # 3点前を初当たりとする
+                            first_hit_idx = actual_hit_idx
+                            first_hit_val = values[actual_hit_idx]
                             break
         
         # 総獲得球数の計算（大当り時の増加分の合計）
         total_jackpot_balls = 0
         jackpot_count = 0  # 大当り回数をカウント
+        jackpot_details = []  # 各大当りの詳細情報
         increase_threshold = 100 if game_type == 'パチンコ' else 20  # 遊技種別に応じた閾値
         
         i = 0
@@ -458,22 +463,38 @@ class WebCompatibleAnalyzer:
             increase = values[i+1] - values[i]
             if increase >= increase_threshold:
                 # 大当りの開始点
+                start_idx = i
                 start_val = values[i]
                 # 大当りの終了点を探す（上昇が止まる、または急激に下降する点）
                 j = i + 1
+                max_during_jackpot = values[j]
+                
                 while j < len(values) - 1:
-                    if values[j+1] < values[j] - 50:  # 50玉以上の下降で大当り終了とみなす
+                    # この大当り中の最高値を記録
+                    if values[j] > max_during_jackpot:
+                        max_during_jackpot = values[j]
+                    
+                    # 終了条件を厳格化
+                    if values[j+1] < values[j] - 20:  # 20玉以上の下降で大当り終了
                         break
-                    if values[j+1] < values[j] + 10:  # 増加が緩やかになったら終了
-                        break
+                    if j > i + 2 and values[j+1] < values[j] + 5:  # 3点以上続いて増加が5玉未満なら終了
+                        # さらに次の点も確認
+                        if j + 2 < len(values) and values[j+2] < values[j+1] + 5:
+                            break
                     j += 1
                 
-                # この大当りでの獲得球数
-                end_val = values[j]
-                jackpot_balls = end_val - start_val
+                # この大当りでの獲得球数（開始点から最高値までの差）
+                jackpot_balls = max_during_jackpot - start_val
                 if jackpot_balls > 0:
                     total_jackpot_balls += jackpot_balls
                     jackpot_count += 1  # 大当りをカウント
+                    jackpot_details.append({
+                        'start_idx': start_idx,
+                        'end_idx': j,
+                        'start_val': start_val,
+                        'max_val': max_during_jackpot,
+                        'gained': jackpot_balls
+                    })
                 
                 # 次の検出開始点を更新
                 i = j
@@ -489,7 +510,8 @@ class WebCompatibleAnalyzer:
             'first_hit_value': int(first_hit_val),
             'final_value': int(current_val),
             'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数を追加
-            'jackpot_count': jackpot_count  # 大当り回数を追加
+            'jackpot_count': jackpot_count,  # 大当り回数を追加
+            'jackpot_details': jackpot_details  # 各大当りの詳細情報を追加
         }
     
     def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width, graph_info=None, ocr_data=None, game_type='パチンコ'):
@@ -576,7 +598,7 @@ class WebCompatibleAnalyzer:
                         j = i + 1
                         
                         # 上昇が続く限り追跡
-                        while j < len(values) - 1 and values[j+1] >= values[j] - 50:
+                        while j < len(values) - 1 and values[j+1] >= values[j] - 20:
                             j += 1
                         
                         # 上昇区間の幅（ピクセル）

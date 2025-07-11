@@ -3641,7 +3641,7 @@ footer_col1, footer_col2, footer_col3 = st.columns([2, 1, 1])
 
 with footer_col1:
     st.markdown(f"""
-    🎰 パチンコグラフ解析システム v2.1  
+    🎰 パチンコグラフ解析システム v2.4.1  
     更新日: {datetime.now().strftime('%Y/%m/%d')}  
     Produced by [PPタウン](https://pp-town.com/)  
     Created by [fivenine-design.com](https://fivenine-design.com)
