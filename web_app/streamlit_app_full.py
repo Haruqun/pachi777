@@ -289,7 +289,7 @@ def extract_site7_data(image):
             'current_start': None,
             'jackpot_probability': None,
             'max_payout': None,
-            'graph_max_value': None,  # グラフのY軸最大値
+            'max_value': None,  # 最大値（グラフの最高到達値）
             # パチスロ用追加フィールド
             'total_games': None,  # 累計ゲーム数
             'bb_count': None,  # BB回数
@@ -434,26 +434,22 @@ def extract_site7_data(image):
                     data['max_payout'] = str(value)
                     break
         
-        # グラフの最大値（Y軸の最大値）
-        graph_max_patterns = [
-            r'\+(\d{4,5})',  # +30000, +50000などの形式
-            r'＋(\d{4,5})',  # 全角プラス
-            r'十(\d{4,5})',  # プラスが「十」と誤認識される場合
+        # 最大値（グラフの最高到達値）
+        max_value_patterns = [
+            r'最大値\s*[:：]\s*(\d{3,5})',  # 最大値 : 21570
+            r'最大値\s*(\d{3,5})',         # 最大値 21570
+            r'最大\s*[:：]\s*(\d{3,5})',   # 最大 : 21570
+            r'MAX\s*[:：]\s*(\d{3,5})',    # MAX : 21570
         ]
         
-        # テキストを行に分割して、最初の方にある最大値を探す
-        lines = text.split('\n')
-        for i, line in enumerate(lines[:20]):  # 最初の20行をチェック
-            for pattern in graph_max_patterns:
-                max_match = re.search(pattern, line)
-                if max_match:
-                    value = int(max_match.group(1))
-                    # 妥当な範囲（10000-100000）かチェック
-                    if 10000 <= value <= 100000 and value % 1000 == 0:  # 1000の倍数
-                        data['graph_max_value'] = str(value)
-                        break
-            if data['graph_max_value']:
-                break
+        for pattern in max_value_patterns:
+            max_value_match = re.search(pattern, text)
+            if max_value_match:
+                value = int(max_value_match.group(1))
+                # 妥当な範囲（100-99999）かチェック
+                if 100 <= value <= 99999:
+                    data['max_value'] = str(value)
+                    break
         
         # パチスロ用データの抽出（game_typeがパチスロの場合のみ）
         if st.session_state.get('game_type', 'パチンコ') == 'パチスロ':
@@ -571,23 +567,8 @@ def get_unit_per_1000yen():
     """現在の遊技種別に応じた1000円あたりの単位数を返す"""
     return 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
 
-def get_graph_limit(ocr_data=None):
-    """現在の遊技種別に応じたグラフの上下限を返す
-    
-    Args:
-        ocr_data: OCRで読み取ったデータ（graph_max_valueを含む可能性がある）
-    
-    Returns:
-        int: グラフの上下限値
-    """
-    # OCRでグラフ最大値が検出されている場合はそれを使用
-    if ocr_data and ocr_data.get('graph_max_value'):
-        try:
-            return int(ocr_data['graph_max_value'])
-        except (ValueError, TypeError):
-            pass
-    
-    # デフォルト値
+def get_graph_limit():
+    """現在の遊技種別に応じたグラフの上下限を返す"""
     return 30000 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 5000
 
 
@@ -1331,8 +1312,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         # 注意：この変数はグリッドライン描画にのみ使用され、実際の解析には使用されない
         scale = 30000 / 246  # グリッドライン描画用のデフォルト値
         
-        # グラフの上下限値を取得（OCRデータがある場合はそれを使用）
-        graph_limit = get_graph_limit(ocr_data)
+        # グラフの上下限値を取得
+        graph_limit = get_graph_limit()
         
         # グリッドライン描画（設定値を使用）
         # +上限ライン（最上部）
@@ -1404,8 +1385,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         distance_to_plus_30k_adjusted = zero_line_in_crop - y_30k_adjusted
         distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_line_in_crop
         
-        # グラフの上下限値を取得（OCRデータがある場合はそれを使用）
-        graph_limit = get_graph_limit(ocr_data)
+        # グラフの上下限値を取得
+        graph_limit = get_graph_limit()
         
         # 通常の線形スケール計算
         if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
@@ -2157,8 +2138,9 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         if ocr.get('max_payout'):
                             unit_label = "玉" if st.session_state.game_type == 'パチンコ' else "枚"
                             ocr_html += f'<div class="ocr-item"><span class="ocr-label">💰 最高出{unit_label}</span><span class="ocr-value">{ocr["max_payout"]}{unit_label}</span></div>'
-                        if ocr.get('graph_max_value'):
-                            ocr_html += f'<div class="ocr-item"><span class="ocr-label">📊 グラフ最大値</span><span class="ocr-value">±{ocr["graph_max_value"]}</span></div>'
+                        if ocr.get('max_value'):
+                            unit_label = "玉" if st.session_state.game_type == 'パチンコ' else "枚"
+                            ocr_html += f'<div class="ocr-item"><span class="ocr-label">📊 最大値</span><span class="ocr-value">{ocr["max_value"]}{unit_label}</span></div>'
                         
                         # パチスロ特有のデータ表示
                         if st.session_state.game_type == 'パチスロ':
