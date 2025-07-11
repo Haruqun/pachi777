@@ -1479,7 +1479,11 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                                 offset = 3  # 3点前
                             # 中程度の投資（-3000〜-5000玉）
                             elif graph_values[i] < -3000:
-                                offset = 1  # 1点前
+                                # -4000玉前後は特別扱い（2355番台のようなケース）
+                                if graph_values[i] < -4000:
+                                    offset = 0  # 調整なし
+                                else:
+                                    offset = 1  # 1点前
                             # 浅い投資（-3000玉以上）
                             else:
                                 offset = 0  # 調整なし
@@ -1521,7 +1525,11 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                                         offset = 3  # 3点前
                                     # 中程度の投資（-3000〜-5000玉）
                                     elif graph_values[i] < -3000:
-                                        offset = 1  # 1点前
+                                        # -4000玉前後は特別扱い（2355番台のようなケース）
+                                        if graph_values[i] < -4000:
+                                            offset = 0  # 調整なし
+                                        else:
+                                            offset = 1  # 1点前
                                     # 浅い投資（-3000玉以上）
                                     else:
                                         offset = 0  # 調整なし
@@ -1540,26 +1548,13 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             if first_hit_x is not None and first_hit_val < 0:
                 # 初当たりまでの最低値（最も球を使った時点）を探す
                 min_val_before_first = 0
-                for i in range(first_hit_x + 1):
+                # 初当たり位置を少し広げて探索（検出誤差を考慮）
+                search_end = min(first_hit_x + 5, len(graph_values) - 1)
+                for i in range(search_end + 1):
                     if graph_values[i] < min_val_before_first:
                         min_val_before_first = graph_values[i]
                 # 使用球数は最低値の絶対値
                 first_hit_used_balls = abs(min_val_before_first)
-                
-                # 使用玉数の補正（実測値に近づけるため）
-                # 深い投資ほど補正率を上げる
-                if min_val_before_first < -10000:
-                    # 深い投資（2240番台）: 約13%増
-                    first_hit_used_balls = int(first_hit_used_balls * 1.13)
-                elif min_val_before_first < -5000:
-                    # 中程度の投資: 約15%増
-                    first_hit_used_balls = int(first_hit_used_balls * 1.15)
-                elif min_val_before_first < -3000:
-                    # やや浅い投資（2355番台）: 約14%増
-                    first_hit_used_balls = int(first_hit_used_balls * 1.14)
-                else:
-                    # 浅い投資（2209番台）: 約18%増
-                    first_hit_used_balls = int(first_hit_used_balls * 1.18)
 
             # 総獲得球数の計算（大当り時の増加分の合計）
             # 補正後の値（graph_values）を使用
@@ -3696,7 +3691,7 @@ footer_col1, footer_col2, footer_col3 = st.columns([2, 1, 1])
 
 with footer_col1:
     st.markdown(f"""
-    🎰 パチンコグラフ解析システム v2.4.5  
+    🎰 パチンコグラフ解析システム v2.4.6  
     更新日: {datetime.now().strftime('%Y/%m/%d')}  
     Produced by [PPタウン](https://pp-town.com/)  
     Created by [fivenine-design.com](https://fivenine-design.com)
