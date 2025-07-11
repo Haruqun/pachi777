@@ -1533,6 +1533,18 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             first_hit_debug_info['detected_position'] = first_hit_x
             first_hit_debug_info['detected_value'] = first_hit_val if first_hit_x is not None else None
             
+            # スケール情報を追加（1pxあたりの回転数と玉数）
+            if 'analyzer' in locals() and hasattr(analyzer, 'scale'):
+                first_hit_debug_info['scale_info'] = {
+                    'balls_per_pixel': analyzer.scale,
+                    'spins_per_pixel': None  # 後で計算
+                }
+            else:
+                first_hit_debug_info['scale_info'] = {
+                    'balls_per_pixel': None,
+                    'spins_per_pixel': None
+                }
+            
             # 初当たりまでの使用球数を計算
             first_hit_used_balls = 0
             if first_hit_x is not None and first_hit_val < 0:
@@ -1745,6 +1757,16 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     ocr_data,  # OCRデータを追加
                     st.session_state.get('game_type', 'パチンコ')  # 遊技種別を追加
                 )
+                # スケール情報を更新
+                if rotation_metrics and 'spins_per_pixel' in rotation_metrics:
+                    first_hit_debug_info['scale_info']['spins_per_pixel'] = rotation_metrics['spins_per_pixel']
+                # グラフ情報も追加
+                first_hit_debug_info['graph_info'] = {
+                    'graph_width': graph_width,
+                    'total_spins': int(ocr_data['total_start']) if ocr_data.get('total_start') else None,
+                    'graph_start_x': graph_info.get('start_x') if graph_info else None,
+                    'graph_end_x': graph_info.get('end_x') if graph_info else None
+                }
             
             analysis_results.append({
                 'name': uploaded_file.name,
@@ -2171,6 +2193,35 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 with col2:
                                     st.metric("検出方法", debug_info['detection_method'] or "未検出")
                                     st.metric("候補数", len(debug_info['candidates']))
+                                
+                                # スケール情報を表示
+                                if 'scale_info' in debug_info:
+                                    st.markdown("#### 📏 スケール情報（1pxあたりの数値）")
+                                    scale_col1, scale_col2 = st.columns(2)
+                                    with scale_col1:
+                                        balls_per_px = debug_info['scale_info'].get('balls_per_pixel')
+                                        if balls_per_px:
+                                            st.metric("玉数/px", f"{balls_per_px:.2f}玉")
+                                        else:
+                                            st.metric("玉数/px", "未計算")
+                                    with scale_col2:
+                                        spins_per_px = debug_info['scale_info'].get('spins_per_pixel')
+                                        if spins_per_px:
+                                            st.metric("回転数/px", f"{spins_per_px:.4f}回")
+                                        else:
+                                            st.metric("回転数/px", "未計算")
+                                    
+                                    # グラフ情報も表示
+                                    if 'graph_info' in debug_info:
+                                        graph_info = debug_info['graph_info']
+                                        st.markdown("##### グラフ情報")
+                                        col1, col2 = st.columns(2)
+                                        with col1:
+                                            st.write(f"グラフ幅: {graph_info.get('graph_width', 0)}px")
+                                            st.write(f"総回転数: {graph_info.get('total_spins', 0)}回")
+                                        with col2:
+                                            st.write(f"開始X: {graph_info.get('graph_start_x', 0)}")
+                                            st.write(f"終了X: {graph_info.get('graph_end_x', 0)}")
                                 
                                 if debug_info['candidates']:
                                     st.markdown("#### 検出候補")
