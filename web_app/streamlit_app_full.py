@@ -1465,8 +1465,19 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     if graph_values[i+2] >= graph_values[i+1] - noise_threshold:
                         # 初当たりは必ずマイナス値から
                         if graph_values[i] < 0:
-                            first_hit_val = graph_values[i]
-                            first_hit_x = i
+                            # 上昇の急峻さに応じて検出位置を調整
+                            if current_increase > 500:  # 500玉以上の急上昇
+                                offset = 8  # 8点前
+                            elif current_increase > 300:  # 300玉以上
+                                offset = 6  # 6点前
+                            elif current_increase > 200:  # 200玉以上
+                                offset = 4  # 4点前
+                            else:
+                                offset = 3  # それ以外は3点前
+                            
+                            actual_hit_idx = max(0, i - offset)
+                            first_hit_val = graph_values[actual_hit_idx]
+                            first_hit_x = actual_hit_idx
                             break
 
             # 方法2: 減少傾向からの急上昇を検出
@@ -1487,8 +1498,19 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                             if i + 2 < len(graph_values) and graph_values[i+2] > graph_values[i+1] - noise_threshold:
                                 # 初当たりは必ずマイナス値
                                 if graph_values[i] < 0:
-                                    first_hit_val = graph_values[i]
-                                    first_hit_x = i
+                                    # 上昇の急峻さに応じて検出位置を調整
+                                    if current_change > 500:  # 500玉以上の急上昇
+                                        offset = 8  # 8点前
+                                    elif current_change > 300:  # 300玉以上
+                                        offset = 6  # 6点前
+                                    elif current_change > 200:  # 200玉以上
+                                        offset = 4  # 4点前
+                                    else:
+                                        offset = 3  # それ以外は3点前
+                                    
+                                    actual_hit_idx = max(0, i - offset)
+                                    first_hit_val = graph_values[actual_hit_idx]
+                                    first_hit_x = actual_hit_idx
                                     break
 
             # 初当たり値がプラスの場合は0を表示
