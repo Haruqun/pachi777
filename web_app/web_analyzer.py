@@ -337,12 +337,13 @@ class WebCompatibleAnalyzer:
                     colored_pixels = np.where(col_mask > 0)[0]
                     
                     if len(colored_pixels) > 0:
-                        avg_y = np.mean(colored_pixels)
+                        # グラフ線の太さを考慮して中央値を使用（平均値だと太い線の影響を受ける）
+                        median_y = np.median(colored_pixels)
                         # 非線形スケールを使用する場合
                         if self.use_nonlinear_scale:
-                            value = self.calculate_value_nonlinear(avg_y)
+                            value = self.calculate_value_nonlinear(median_y)
                         else:
-                            value = (detected_zero - avg_y) * self.scale
+                            value = (detected_zero - median_y) * self.scale
                         # 値を±30,000の範囲にクリップ
                         value = max(-30000, min(30000, value))
                         data_points.append((x, value))
