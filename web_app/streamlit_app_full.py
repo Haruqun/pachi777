@@ -1453,6 +1453,14 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             first_hit_val = 0
             first_hit_x = None
             min_payout = 100 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 20  # 最低払い出し単位数
+            
+            # 初当たり検出デバッグ情報
+            first_hit_debug_info = {
+                'detected_position': None,
+                'detected_value': None,
+                'detection_method': None,
+                'candidates': []
+            }
 
             # 方法1: 閾値以上の急激な増加を検出
             for i in range(1, min(len(graph_values)-2, 150)):  # 最大150点まで探索
@@ -1521,13 +1529,9 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             if first_hit_val > 0:
                 first_hit_val = 0
             
-            # 初当たり検出デバッグ情報
-            first_hit_debug_info = {
-                'detected_position': first_hit_x,
-                'detected_value': first_hit_val if first_hit_x is not None else None,
-                'detection_method': None,
-                'candidates': []
-            }
+            # デバッグ情報に最終結果を設定
+            first_hit_debug_info['detected_position'] = first_hit_x
+            first_hit_debug_info['detected_value'] = first_hit_val if first_hit_x is not None else None
             
             # 初当たりまでの使用球数を計算
             first_hit_used_balls = 0
