@@ -646,6 +646,54 @@ class WebCompatibleAnalyzer:
                 normal_decline_spins = normal_total_spins
                 normal_decline_balls = normal_total_balls
             
+            # 現在スタートの計算（最後の大当たりからの回転数）
+            current_start_from_graph = 0
+            last_jackpot_end_x = 0
+            
+            # 最後の大当たり位置を探す
+            if analysis.get('jackpot_details') and len(analysis['jackpot_details']) > 0:
+                last_jackpot = analysis['jackpot_details'][-1]
+                last_jackpot_end_idx = last_jackpot['end_idx']
+                if last_jackpot_end_idx < len(data_points):
+                    last_jackpot_end_x = data_points[last_jackpot_end_idx][0]
+                    # 最後の大当たり終了から現在までの回転数
+                    end_x = data_points[-1][0]
+                    pixels_from_last_jackpot = end_x - last_jackpot_end_x
+                    current_start_from_graph = int(pixels_from_last_jackpot * spins_per_pixel)
+            else:
+                # 大当たりがない場合は全体が現在スタート
+                current_start_from_graph = total_spins
+            
+            # OCRの現在スタートとの比較
+            current_start_gap = 0
+            ocr_current_start = 0
+            rotation_rate_3 = 0  # 現在スタートベースの回転率
+            
+            if ocr_data and ocr_data.get('current_start'):
+                try:
+                    ocr_current_start = int(ocr_data['current_start'])
+                    current_start_gap = current_start_from_graph - ocr_current_start
+                    
+                    # 現在スタートを使った回転率計算（最後の大当たり後）
+                    if ocr_current_start > 0 and len(data_points) > 0:
+                        # 最後の大当たり後の使用玉数を計算
+                        if analysis.get('jackpot_details') and len(analysis['jackpot_details']) > 0:
+                            last_jackpot = analysis['jackpot_details'][-1]
+                            last_jackpot_end_idx = last_jackpot['end_idx']
+                            if last_jackpot_end_idx < len(data_points):
+                                # 最後の大当たり終了時の値
+                                last_jackpot_end_value = data_points[last_jackpot_end_idx][1]
+                                # 現在の値
+                                current_value = data_points[-1][1]
+                                # 使用玉数（減少分）
+                                balls_used_after_last = last_jackpot_end_value - current_value
+                                
+                                if balls_used_after_last > 0:
+                                    unit_per_1000yen = 250 if game_type == 'パチンコ' else 50
+                                    rotation_rate_3 = round((ocr_current_start / balls_used_after_last) * unit_per_1000yen, 1)
+                except (ValueError, TypeError):
+                    pass
+            
             # デバッグ情報を追加
             debug_info = {}
             if first_hit_spins > 0 or total_decline_balls > 0:
@@ -670,8 +718,12 @@ class WebCompatibleAnalyzer:
                 'first_hit_balls': int(first_hit_balls),
                 'rotation_rate_1': rotation_rate_1,
                 'rotation_rate_2': rotation_rate_2,
+                'rotation_rate_3': rotation_rate_3,  # 現在スタートベースの回転率
                 'normal_decline_spins': normal_decline_spins,
-                'normal_decline_balls': int(normal_decline_balls)
+                'normal_decline_balls': int(normal_decline_balls),
+                'current_start_from_graph': current_start_from_graph,
+                'ocr_current_start': ocr_current_start,
+                'current_start_gap': current_start_gap
             }
             
             if debug_info:
