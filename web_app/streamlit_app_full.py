@@ -2041,10 +2041,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         if metrics.get('rotation_rate_3', 0) > 0:
                             # 異常値チェック（現実的な範囲: 10-35回/千円）
                             warning = " ⚠️" if metrics['rotation_rate_3'] < 10 or metrics['rotation_rate_3'] > 35 else ""
-                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率③(現在)</span><span class="stat-value positive">{metrics["rotation_rate_3"]:.1f}回/千円{warning}</span></div>'
+                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率③(最終大当り後)</span><span class="stat-value positive">{metrics["rotation_rate_3"]:.1f}回/千円{warning}</span></div>'
                             # デバッグ情報（現在スタートベース）
                             if metrics.get('ocr_current_start', 0) > 0:
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 最後の大当り後: {metrics["ocr_current_start"]}回転</div>'
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 最終大当り後: {metrics["ocr_current_start"]}回転（OCRスタート値）</div>'
                     
                     # 初当たり関連のHTMLを条件分岐で生成
                     first_hit_html = ""
@@ -2125,7 +2125,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             # グラフから抽出した現在スタート
                             html_content += f"""
                         <div class="stat-item" style="background-color: #f5f5f5; margin-top: 10px;">
-                            <span class="stat-label">📊 現在スタート（グラフ）</span>
+                            <span class="stat-label">📊 最終大当り後の回転数（グラフ）</span>
                             <span class="stat-value">{graph_start}回</span>
                         </div>"""
                             
@@ -2135,7 +2135,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 gap_percent = (gap / ocr_start * 100) if ocr_start != 0 else 0
                                 html_content += f"""
                         <div class="stat-item" style="background-color: #f5f5f5;">
-                            <span class="stat-label">📊 スタートギャップ</span>
+                            <span class="stat-label">📊 回転数の差異</span>
                             <span class="stat-value {gap_class}">{gap:+}回 ({gap_percent:+.1f}%)</span>
                         </div>"""
                     
