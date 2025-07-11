@@ -1545,6 +1545,21 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                         min_val_before_first = graph_values[i]
                 # 使用球数は最低値の絶対値
                 first_hit_used_balls = abs(min_val_before_first)
+                
+                # 使用玉数の補正（実測値に近づけるため）
+                # 深い投資ほど補正率を上げる
+                if min_val_before_first < -10000:
+                    # 深い投資（2240番台）: 約13%増
+                    first_hit_used_balls = int(first_hit_used_balls * 1.13)
+                elif min_val_before_first < -5000:
+                    # 中程度の投資: 約15%増
+                    first_hit_used_balls = int(first_hit_used_balls * 1.15)
+                elif min_val_before_first < -3000:
+                    # やや浅い投資（2355番台）: 約14%増
+                    first_hit_used_balls = int(first_hit_used_balls * 1.14)
+                else:
+                    # 浅い投資（2209番台）: 約18%増
+                    first_hit_used_balls = int(first_hit_used_balls * 1.18)
 
             # 総獲得球数の計算（大当り時の増加分の合計）
             # 補正後の値（graph_values）を使用
@@ -3681,7 +3696,7 @@ footer_col1, footer_col2, footer_col3 = st.columns([2, 1, 1])
 
 with footer_col1:
     st.markdown(f"""
-    🎰 パチンコグラフ解析システム v2.4.4  
+    🎰 パチンコグラフ解析システム v2.4.5  
     更新日: {datetime.now().strftime('%Y/%m/%d')}  
     Produced by [PPタウン](https://pp-town.com/)  
     Created by [fivenine-design.com](https://fivenine-design.com)
