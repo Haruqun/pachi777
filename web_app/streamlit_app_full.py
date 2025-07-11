@@ -2115,30 +2115,29 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         html_content += rotation_detail
                     
                     # 現在スタートのギャップを表示（パチンコのみ）
-                    # 一旦無効化 - 計算ロジックに問題があるため
-                    # if st.session_state.game_type == 'パチンコ' and result.get('rotation_metrics'):
-                    #     metrics = result['rotation_metrics']
-                    #     if 'current_start_from_graph' in metrics and metrics['current_start_from_graph'] > 0:
-                    #         graph_start = metrics['current_start_from_graph']
-                    #         ocr_start = metrics.get('ocr_current_start', 0)
-                    #         gap = metrics.get('current_start_gap', 0)
-                    #         
-                    #         # グラフから抽出した現在スタート
-                    #         html_content += f"""
-                    #     <div class="stat-item" style="background-color: #f5f5f5; margin-top: 10px;">
-                    #         <span class="stat-label">📊 最終大当り後の回転数（グラフ）</span>
-                    #         <span class="stat-value">{graph_start}回</span>
-                    #     </div>"""
-                    #         
-                    #         # ギャップがある場合のみ表示
-                    #         if ocr_start > 0:
-                    #             gap_class = "positive" if gap >= 0 else "negative"
-                    #             gap_percent = (gap / ocr_start * 100) if ocr_start != 0 else 0
-                    #             html_content += f"""
-                    #     <div class="stat-item" style="background-color: #f5f5f5;">
-                    #         <span class="stat-label">📊 回転数の差異</span>
-                    #         <span class="stat-value {gap_class}">{gap:+}回 ({gap_percent:+.1f}%)</span>
-                    #     </div>"""
+                    if st.session_state.game_type == 'パチンコ' and result.get('rotation_metrics'):
+                        metrics = result['rotation_metrics']
+                        if 'current_start_from_graph' in metrics and metrics['current_start_from_graph'] > 0:
+                            graph_start = metrics['current_start_from_graph']
+                            ocr_start = metrics.get('ocr_current_start', 0)
+                            gap = metrics.get('current_start_gap', 0)
+                            
+                            # グラフから抽出した現在スタート
+                            html_content += f"""
+                        <div class="stat-item" style="background-color: #f5f5f5; margin-top: 10px;">
+                            <span class="stat-label">📊 最終大当り後の回転数（グラフ）</span>
+                            <span class="stat-value">{graph_start}回</span>
+                        </div>"""
+                            
+                            # ギャップがある場合のみ表示
+                            if ocr_start > 0:
+                                gap_class = "positive" if gap >= 0 else "negative"
+                                gap_percent = (gap / ocr_start * 100) if ocr_start != 0 else 0
+                                html_content += f"""
+                        <div class="stat-item" style="background-color: #f5f5f5;">
+                            <span class="stat-label">📊 回転数の差異</span>
+                            <span class="stat-value {gap_class}">{gap:+}回 ({gap_percent:+.1f}%)</span>
+                        </div>"""
                     
                     if correction_info:
                         html_content += correction_info

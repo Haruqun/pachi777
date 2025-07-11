@@ -668,21 +668,19 @@ class WebCompatibleAnalyzer:
                 if last_complete_jackpot:
                     last_jackpot_end_idx = last_complete_jackpot['end_idx']
                     last_jackpot_end_x = data_points[last_jackpot_end_idx][0]
-                    # 最後の大当たり終了から現在までの回転数
-                    end_x = data_points[-1][0]
-                    pixels_from_last_jackpot = end_x - last_jackpot_end_x
-                    current_start_from_graph = int(pixels_from_last_jackpot * spins_per_pixel)
+                    # 最後の大当たり終了時点の累計回転数を計算
+                    # グラフ開始位置を考慮
+                    relative_x = last_jackpot_end_x - graph_start_x
+                    last_jackpot_cumulative_spins = int(relative_x * spins_per_pixel)
+                    # 現在スタート = 累計スタート - 最後の大当たり時の累計回転数
+                    current_start_from_graph = total_spins - last_jackpot_cumulative_spins
                 else:
                     # 画面内で終了した大当たりがない場合は計算不可
                     current_start_from_graph = 0
             else:
-                # 大当たりがない場合
-                # グラフの最初から最後までの幅から計算
-                if len(data_points) > 0 and graph_info:
-                    graph_width_px = data_points[-1][0] - data_points[0][0]
-                    current_start_from_graph = int(graph_width_px * spins_per_pixel)
-                else:
-                    current_start_from_graph = 0
+                # 大当たりがない場合、全てが現在スタート
+                # つまり累計スタート = 現在スタート
+                current_start_from_graph = total_spins
             
             # OCRの現在スタートとの比較
             current_start_gap = 0
