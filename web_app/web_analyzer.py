@@ -589,8 +589,9 @@ class WebCompatibleAnalyzer:
                 i = 0
                 while i < len(values) - 1:
                     # 上昇区間の検出（大当り）
-                    # パチンコ: 100玉以上、パチスロ: 20枚以上
-                    threshold = 100 if game_type == 'パチンコ' else 20
+                    # より確実な大当りのみを検出するため閾値を上げる
+                    # パチンコ: 500玉以上、パチスロ: 100枚以上
+                    threshold = 500 if game_type == 'パチンコ' else 100
                     if values[i+1] > values[i] + threshold:
                         # 上昇開始
                         start_x = data_points[i][0]
@@ -602,11 +603,11 @@ class WebCompatibleAnalyzer:
                             if values[j] > max_val_during_jackpot:
                                 max_val_during_jackpot = values[j]
                             
-                            # 終了条件：最高値から100玉以上下降したら終了
-                            if values[j+1] < max_val_during_jackpot - 100:
+                            # 終了条件：最高値から200玉以上下降したら終了
+                            if values[j+1] < max_val_during_jackpot - 200:
                                 break
-                            # または20玉以上の急降下
-                            if values[j+1] < values[j] - 20:
+                            # または50玉以上の急降下
+                            if values[j+1] < values[j] - 50:
                                 break
                             j += 1
                         
