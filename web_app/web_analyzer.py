@@ -3,11 +3,11 @@
 Web環境対応版 パチンコグラフ解析モジュール
 ファイルパスを柔軟に扱える設計
 
-Version: 2.4.1
+Version: 2.4.2
 Last Updated: 2025-07-11
 """
 
-__version__ = "2.4.1"
+__version__ = "2.4.2"
 __build__ = "a3f9b21"
 
 import os
@@ -425,7 +425,17 @@ class WebCompatibleAnalyzer:
                     # 重要：初当たりは必ずマイナス値でなければならない
                     if values[i] < 0:  # マイナス値のみを初当たりとして検出
                         # 上昇開始の少し前の点を初当たりとする（実際の初当たりは上昇前に発生）
-                        actual_hit_idx = max(0, i - 3)  # 3点前を初当たりとする
+                        # 上昇の急峻さに応じて調整（急激な上昇ほど前に初当たりがある）
+                        if current_increase > 500:  # 500玉以上の急上昇
+                            offset = 8  # 8点前
+                        elif current_increase > 300:  # 300玉以上
+                            offset = 6  # 6点前
+                        elif current_increase > 200:  # 200玉以上
+                            offset = 4  # 4点前
+                        else:
+                            offset = 3  # それ以外は3点前
+                        
+                        actual_hit_idx = max(0, i - offset)
                         first_hit_idx = actual_hit_idx
                         first_hit_val = values[actual_hit_idx]
                         break
@@ -446,7 +456,17 @@ class WebCompatibleAnalyzer:
                     if avg_slope < -20 and current_change > min_payout:
                         if values[i] < 0:  # マイナス値のみ
                             # 上昇開始の少し前の点を初当たりとする
-                            actual_hit_idx = max(0, i - 3)  # 3点前を初当たりとする
+                            # 上昇の急峻さに応じて調整
+                            if current_change > 500:  # 500玉以上の急上昇
+                                offset = 8  # 8点前
+                            elif current_change > 300:  # 300玉以上
+                                offset = 6  # 6点前
+                            elif current_change > 200:  # 200玉以上
+                                offset = 4  # 4点前
+                            else:
+                                offset = 3  # それ以外は3点前
+                            
+                            actual_hit_idx = max(0, i - offset)
                             first_hit_idx = actual_hit_idx
                             first_hit_val = values[actual_hit_idx]
                             break
@@ -598,10 +618,20 @@ class WebCompatibleAnalyzer:
                         j = i + 1
                         
                         # 上昇が続く限り追跡
-                        while j < len(values) - 1 and values[j+1] >= values[j] - 20:
+                        max_val_during_jackpot = values[j]
+                        while j < len(values) - 1:
+                            if values[j] > max_val_during_jackpot:
+                                max_val_during_jackpot = values[j]
+                            
+                            # 終了条件：最高値から100玉以上下降したら終了
+                            if values[j+1] < max_val_during_jackpot - 100:
+                                break
+                            # または20玉以上の急降下
+                            if values[j+1] < values[j] - 20:
+                                break
                             j += 1
                         
-                        # 上昇区間の幅（ピクセル）
+                        # 上昇区間の幅（ピクセル）= 大当り中の回転数
                         end_x = data_points[j][0]
                         rise_pixels = end_x - start_x
                         total_rise_pixels += rise_pixels
