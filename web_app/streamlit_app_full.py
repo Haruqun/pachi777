@@ -1460,6 +1460,15 @@ if uploaded_files and st.session_state.get('start_analysis', False):
 
                 # 閾値以上の増加を検出
                 if current_increase > min_payout:
+                    # 候補として記録
+                    if graph_values[i] < 0:
+                        first_hit_debug_info['candidates'].append({
+                            'position': i,
+                            'value': graph_values[i],
+                            'increase': current_increase,
+                            'next_point': graph_values[i+1] if i+1 < len(graph_values) else None,
+                            'reason': f'{current_increase:.0f}玉の上昇検出'
+                        })
                     # 次の点も上昇または維持していることを確認（ノイズ除外）
                     noise_threshold = 50 if st.session_state.game_type == 'パチンコ' else 10
                     if graph_values[i+2] >= graph_values[i+1] - noise_threshold:
@@ -1468,6 +1477,13 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                             # 補正なしで純粋な検出位置を使用
                             first_hit_val = graph_values[i]
                             first_hit_x = i
+                            first_hit_debug_info['detection_method'] = '方法1: 急激な増加検出'
+                            first_hit_debug_info['candidates'].append({
+                                'position': i,
+                                'value': graph_values[i],
+                                'increase': current_increase,
+                                'reason': f'{current_increase:.0f}玉の急上昇'
+                            })
                             break
 
             # 方法2: 減少傾向からの急上昇を検出
@@ -1491,11 +1507,27 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                                     # 補正なしで純粋な検出位置を使用
                                     first_hit_val = graph_values[i]
                                     first_hit_x = i
+                                    first_hit_debug_info['detection_method'] = '方法2: 減少傾向からの急上昇'
+                                    first_hit_debug_info['candidates'].append({
+                                        'position': i,
+                                        'value': graph_values[i],
+                                        'slope': avg_slope,
+                                        'increase': current_change,
+                                        'reason': f'傾き{avg_slope:.1f}から{current_change:.0f}玉上昇'
+                                    })
                                     break
 
             # 初当たり値がプラスの場合は0を表示
             if first_hit_val > 0:
                 first_hit_val = 0
+            
+            # 初当たり検出デバッグ情報
+            first_hit_debug_info = {
+                'detected_position': first_hit_x,
+                'detected_value': first_hit_val if first_hit_x is not None else None,
+                'detection_method': None,
+                'candidates': []
+            }
             
             # 初当たりまでの使用球数を計算
             first_hit_used_balls = 0
@@ -1729,7 +1761,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 'ocr_data': ocr_data,  # OCRデータを追加
                 'ocr_text': ocr_data.get('ocr_text') if ocr_data else None,  # OCRテキストを追加
                 'correction_factor': correction_factor,  # 補正係数を追加
-                'rotation_metrics': rotation_metrics  # 回転率データを追加
+                'rotation_metrics': rotation_metrics,  # 回転率データを追加
+                'first_hit_debug': first_hit_debug_info  # 初当たり検出デバッグ情報を追加
             })
         else:
             # 解析失敗時
@@ -2120,6 +2153,36 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                     timing_data = result['ocr_data']['ocr_timings']
                                     for key, value in timing_data.items():
                                         st.write(f"- **{key}**: {value}")
+                        
+                        # 初当たり検出デバッグ情報を表示
+                        if result.get('first_hit_debug'):
+                            with st.expander("🎯 初当たり検出デバッグ情報"):
+                                debug_info = result['first_hit_debug']
+                                
+                                st.markdown("#### 検出結果")
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.metric("検出位置", f"{debug_info['detected_position']}点目" if debug_info['detected_position'] is not None else "未検出")
+                                    st.metric("検出値", f"{debug_info['detected_value']:,}玉" if debug_info['detected_value'] is not None else "なし")
+                                with col2:
+                                    st.metric("検出方法", debug_info['detection_method'] or "未検出")
+                                    st.metric("候補数", len(debug_info['candidates']))
+                                
+                                if debug_info['candidates']:
+                                    st.markdown("#### 検出候補")
+                                    for idx, candidate in enumerate(debug_info['candidates']):
+                                        st.markdown(f"**候補{idx+1}**")
+                                        col1, col2, col3 = st.columns(3)
+                                        with col1:
+                                            st.write(f"位置: {candidate['position']}点目")
+                                            st.write(f"値: {candidate['value']:,.0f}玉")
+                                        with col2:
+                                            st.write(f"上昇量: {candidate.get('increase', 0):,.0f}玉")
+                                            if 'slope' in candidate:
+                                                st.write(f"傾き: {candidate['slope']:.1f}")
+                                        with col3:
+                                            st.write(f"理由: {candidate['reason']}")
+                                        st.markdown("---")
 
                     else:
                         st.warning("⚠️ グラフデータを検出できませんでした")
