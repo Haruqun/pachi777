@@ -806,7 +806,7 @@ if not st.session_state.authenticated:
         )
         
         # 次回から自動ログインのチェックボックス
-        st.checkbox("次回から自動ログイン", key="remember_me", help="ブラウザにログイン情報を保存します")
+        st.checkbox("次回から自動ログイン", key="remember_me", help="チェックを入れてログインすると、URLに認証情報が追加されます。そのURLをブックマークすることで、次回から自動的にログインできます。")
         
         # ログインボタン
         if st.button("ログイン", type="primary", use_container_width=True):
@@ -815,6 +815,9 @@ if not st.session_state.authenticated:
         # ログイン成功時の処理
         if st.session_state.get('login_success', False):
             st.success("✅ ログインしました")
+            # 自動ログインが有効な場合の説明
+            if st.session_state.get('remember_me', False):
+                st.info("🔖 自動ログインが有効になりました。現在のURL（上部のアドレスバー）をブックマークしてください。次回からブックマークを開くだけで自動的にログインされます。")
             st.session_state.login_success = False
             time.sleep(0.3)
             st.rerun()
@@ -824,10 +827,33 @@ if not st.session_state.authenticated:
             st.error("❌ パスワードが違います")
             st.session_state.login_error = False
         
+        # 自動ログインの説明
+        with st.expander("💡 自動ログインの使い方", expanded=False):
+            st.markdown("""
+            ### 🔐 自動ログイン機能について
+            
+            毎回パスワードを入力する手間を省くことができます。
+            
+            **使い方：**
+            1. 「次回から自動ログイン」にチェックを入れる
+            2. パスワードを入力してログイン
+            3. ログイン後、ブラウザのアドレスバーのURLをコピー
+            4. ブックマークに登録
+            
+            **次回から：**
+            - ブックマークをクリックするだけでログイン完了！
+            - パスワード入力不要
+            
+            **注意事項：**
+            - URLに認証情報が含まれるため、他人と共有しないでください
+            - パスワードが変更されると自動ログインは無効になります
+            - ログアウトすると自動ログインは解除されます
+            """)
+        
         # フッター
         st.markdown(f"""
         <div class="login-footer">
-            AI Graph Analysis Report v2.4<br>
+            AI Graph Analysis Report v2.5<br>
             更新日: {datetime.now().strftime('%Y/%m/%d')}<br>
             Produced by <a href="https://pp-town.com/" target="_blank">PPタウン</a><br>
             Created by <a href="https://fivenine-design.com" target="_blank">fivenine-design.com</a>
