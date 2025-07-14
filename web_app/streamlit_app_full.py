@@ -637,7 +637,22 @@ if 'game_type' not in st.session_state:
     st.session_state.game_type = 'パチンコ'  # デフォルトはパチンコ
 
 
-# URLパラメータによる認証バイパスを削除（セキュリティ向上のため）
+# URLパラメータによる自動ログインチェック
+query_params = st.query_params
+if 'auth' in query_params and not st.session_state.authenticated:
+    auth_token = query_params['auth']
+    # トークンの検証（簡易的なハッシュチェック）
+    user_token = hashlib.sha256(f"user_{st._global_passwords['user']}_pachi777".encode()).hexdigest()[:16]
+    admin_token = hashlib.sha256(f"admin_{st._global_passwords['admin']}_pachi777".encode()).hexdigest()[:16]
+    
+    if auth_token == user_token:
+        st.session_state.authenticated = True
+        st.session_state.is_admin = False
+        st.rerun()
+    elif auth_token == admin_token:
+        st.session_state.authenticated = True
+        st.session_state.is_admin = True
+        st.rerun()
 
 # パスワード認証
 if not st.session_state.authenticated:
@@ -763,10 +778,18 @@ if not st.session_state.authenticated:
                 st.session_state.authenticated = True
                 st.session_state.is_admin = False
                 st.session_state.login_success = True
+                # 自動ログインが有効な場合、URLパラメータを設定
+                if st.session_state.get('remember_me', False):
+                    token = hashlib.sha256(f"user_{user_password}_pachi777".encode()).hexdigest()[:16]
+                    st.query_params['auth'] = token
             elif st.session_state.password_input == admin_password:
                 st.session_state.authenticated = True
                 st.session_state.is_admin = True
                 st.session_state.login_success = True
+                # 自動ログインが有効な場合、URLパラメータを設定
+                if st.session_state.get('remember_me', False):
+                    token = hashlib.sha256(f"admin_{admin_password}_pachi777".encode()).hexdigest()[:16]
+                    st.query_params['auth'] = token
             else:
                 st.session_state.login_error = True
         
@@ -782,6 +805,8 @@ if not st.session_state.authenticated:
             on_change=handle_login
         )
         
+        # 次回から自動ログインのチェックボックス
+        st.checkbox("次回から自動ログイン", key="remember_me", help="ブラウザにログイン情報を保存します")
         
         # ログインボタン
         if st.button("ログイン", type="primary", use_container_width=True):
@@ -1054,10 +1079,11 @@ if uploaded_files:
                     if preset_name == "デフォルト":
                         st.session_state.settings = default_settings.copy()
                     else:
+                        # 現在の遊技種別を保持
+                        current_game_type = st.session_state.get('game_type', 'パチンコ')
                         st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
-                        # プリセットに遊技種別情報がある場合は適用
-                        if 'game_type' in st.session_state.settings:
-                            st.session_state.game_type = st.session_state.settings['game_type']
+                        # プリセットに遊技種別情報がある場合でも、現在選択されている遊技種別を優先
+                        st.session_state.game_type = current_game_type
                     
                     # 現在のプリセット名を保存
                     st.session_state.current_preset_name = preset_name
@@ -1080,10 +1106,11 @@ if uploaded_files:
                             if preset_name == "デフォルト":
                                 st.session_state.settings = default_settings.copy()
                             else:
+                                # 現在の遊技種別を保持
+                                current_game_type = st.session_state.get('game_type', 'パチンコ')
                                 st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
-                                # プリセットに遊技種別情報がある場合は適用
-                                if 'game_type' in st.session_state.settings:
-                                    st.session_state.game_type = st.session_state.settings['game_type']
+                                # プリセットに遊技種別情報がある場合でも、現在選択されている遊技種別を優先
+                                st.session_state.game_type = current_game_type
                             
                             # 現在のプリセット名を保存
                             st.session_state.current_preset_name = preset_name
@@ -2683,6 +2710,19 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             edited_df.at[idx, '回転率①'] = f"{rate1:.1f}"
                         else:
                             edited_df.at[idx, '回転率①'] = '-'
+                    
+                    # 回転率②を自動計算（通常回転数列が存在する場合）
+                    if '通常回転数' in edited_df.columns and '初当り使用玉' in edited_df.columns:
+                        if pd.notna(edited_df.at[idx, '通常回転数']) and pd.notna(edited_df.at[idx, '初当り使用玉']):
+                            normal_spins = edited_df.at[idx, '通常回転数']
+                            normal_balls = abs(edited_df.at[idx, '初当り使用玉'])  # 絶対値を使用
+                            if normal_balls > 0:
+                                # パチンコの場合は250玉/千円、パチスロの場合は50枚/千円
+                                unit_per_1000yen = 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
+                                rate2 = round((normal_spins / normal_balls) * unit_per_1000yen, 1)
+                                edited_df.at[idx, '回転率②'] = f"{rate2:.1f}"
+                            else:
+                                edited_df.at[idx, '回転率②'] = '-'
                 
                 # セッションステートを更新
                 st.session_state.edited_df = edited_df.copy()
@@ -3915,8 +3955,10 @@ with footer_col3:
     if st.button("🚪 ログアウト", key="logout_button"):
         st.session_state.authenticated = False
         st.session_state.is_admin = False
-        # URLパラメータをクリア
-        st.query_params.clear()
+        st.session_state.remember_me = False
+        # URLパラメータから認証トークンを削除
+        if 'auth' in st.query_params:
+            del st.query_params['auth']
         time.sleep(0.3)
         st.rerun()
 
