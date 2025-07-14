@@ -2737,18 +2737,30 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         else:
                             edited_df.at[idx, '回転率①'] = '-'
                     
-                    # 回転率②を自動計算（通常回転数列が存在する場合）
-                    if '通常回転数' in edited_df.columns and '初当り使用玉' in edited_df.columns:
-                        if pd.notna(edited_df.at[idx, '通常回転数']) and pd.notna(edited_df.at[idx, '初当り使用玉']):
+                    # 回転率②を自動計算
+                    # 通常回転数と総獲得球数、現在値、最高値、最低値から計算
+                    if '通常回転数' in edited_df.columns:
+                        if pd.notna(edited_df.at[idx, '通常回転数']):
                             normal_spins = edited_df.at[idx, '通常回転数']
-                            normal_balls = abs(edited_df.at[idx, '初当り使用玉'])  # 絶対値を使用
-                            if normal_balls > 0:
-                                # パチンコの場合は250玉/千円、パチスロの場合は50枚/千円
-                                unit_per_1000yen = 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
-                                rate2 = round((normal_spins / normal_balls) * unit_per_1000yen, 1)
-                                edited_df.at[idx, '回転率②'] = f"{rate2:.1f}"
-                            else:
-                                edited_df.at[idx, '回転率②'] = '-'
+                            
+                            # 通常時の使用玉数を計算
+                            # 総獲得球数 - 現在値 - 初当たり球数（絶対値）
+                            normal_balls = 0
+                            if '総獲得球数' in edited_df.columns and pd.notna(edited_df.at[idx, '総獲得球数']):
+                                total_gained = edited_df.at[idx, '総獲得球数']
+                                current_val = edited_df.at[idx, '現在値'] if pd.notna(edited_df.at[idx, '現在値']) else 0
+                                first_hit_val = abs(edited_df.at[idx, '初当たり球数']) if pd.notna(edited_df.at[idx, '初当たり球数']) else 0
+                                
+                                # 通常時使用玉数 = 総獲得球数 - 現在値 + 初当たり使用玉数
+                                normal_balls = total_gained - current_val + first_hit_val
+                                
+                                if normal_balls > 0 and normal_spins > 0:
+                                    # パチンコの場合は250玉/千円、パチスロの場合は50枚/千円
+                                    unit_per_1000yen = 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
+                                    rate2 = round((normal_spins / normal_balls) * unit_per_1000yen, 1)
+                                    edited_df.at[idx, '回転率②'] = f"{rate2:.1f}"
+                                else:
+                                    edited_df.at[idx, '回転率②'] = '-'
                 
                 # セッションステートを更新
                 st.session_state.edited_df = edited_df.copy()
