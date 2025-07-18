@@ -3242,7 +3242,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             st.markdown("#### 📏 グリッドライン調整")
             
             # ゼロライン微調整を最初に配置
-            st.markdown("#### 🎯 ゼロライン微調整")
+            st.markdown("##### 🎯 ゼロライン微調整")
             st.caption("検出されたゼロラインを1ピクセル単位で調整できます")
             
             zero_line_adjustment = st.number_input(
@@ -3257,7 +3257,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             st.session_state.settings['zero_line_adjustment'] = zero_line_adjustment
             
             # グリッドライン手動調整
-            st.markdown("#### ⚙️ 手動調整")
+            st.markdown("##### ⚙️ 手動調整")
             # 遊技種別に応じた上下限値を取得
             graph_limit = get_graph_limit()
             st.caption(f"±{graph_limit:,}ラインの位置を微調整できます（単位：ピクセル）")
