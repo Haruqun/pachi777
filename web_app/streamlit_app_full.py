@@ -3186,9 +3186,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         
         # レイアウト用のメインカラム（画像を読み込んだ後）
         main_col1, main_col2 = st.columns([3, 2])
-    
-    # 画像がアップロードされている場合のみレイアウトを適用
-    if test_image:
+        
+        # 画像がアップロードされている場合のみレイアウトを適用
         with main_col2:
             # STEP 3: 設定用の入力フィールド
             st.markdown("### 🔍 STEP 3: 詳細設定（通常はデフォルトでOK）")
