@@ -2825,11 +2825,18 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     machine_number = image_name.rsplit('.', 1)[0]
                 
                 # 初当たり回転数
-                first_hit_spins = int(row.get('初当たり回転数', 0))
+                first_hit_spins_value = row.get('初当たり回転数', 0)
+                if pd.isna(first_hit_spins_value) or first_hit_spins_value is None:
+                    first_hit_spins = 0
+                else:
+                    try:
+                        first_hit_spins = int(first_hit_spins_value)
+                    except (ValueError, TypeError):
+                        first_hit_spins = 0
                 
                 # 初当たり玉数（絶対値）
                 first_hit_balls_value = row.get('初当たり球数', 0)
-                if first_hit_balls_value is None or first_hit_balls_value == 'なし':
+                if pd.isna(first_hit_balls_value) or first_hit_balls_value is None or first_hit_balls_value == 'なし':
                     first_hit_balls = 0
                 else:
                     try:
@@ -2857,10 +2864,24 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             break
                 
                 # 総獲得球数
-                total_win = int(row.get('総獲得球数', 0))
+                total_win_value = row.get('総獲得球数', 0)
+                if pd.isna(total_win_value) or total_win_value is None:
+                    total_win = 0
+                else:
+                    try:
+                        total_win = int(total_win_value)
+                    except (ValueError, TypeError):
+                        total_win = 0
                 
                 # 現在値
-                current_value = int(row.get('現在値', 0))
+                current_value_raw = row.get('現在値', 0)
+                if pd.isna(current_value_raw) or current_value_raw is None:
+                    current_value = 0
+                else:
+                    try:
+                        current_value = int(current_value_raw)
+                    except (ValueError, TypeError):
+                        current_value = 0
                 
                 # 回転率②
                 rotation_rate_2 = row.get('回転率②', '-')
