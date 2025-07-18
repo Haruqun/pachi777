@@ -583,7 +583,8 @@ default_settings = {
     # グリッドライン調整値
     'grid_30k_offset': 1,       # +30000ライン（最上部）
     'grid_minus_30k_offset': -34, # -30000ライン（最下部）
-    'exchange_rate': 3.57145    # 交換レート（円/玉）デフォルトは28玉交換
+    'exchange_rate': 3.57145,    # 交換レート（円/玉）デフォルトは28玉交換
+    'zero_line_adjustment': 0    # ゼロライン調整値
 }
 
 # セッションステートの初期化（エキスパンダーより前に行う）
@@ -1344,6 +1345,10 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             if score > best_score:
                 best_score = score
                 zero_line_y = y
+        
+        # ゼロライン調整値を適用
+        zero_line_adjustment = settings.get('zero_line_adjustment', 0)
+        zero_line_y += zero_line_adjustment
         
         # 切り抜き範囲を設定（最終調整値）
         top = max(0, zero_line_y - crop_top_offset)  # 0ラインから上
@@ -3237,6 +3242,21 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     step=1, help=f"下端の-{graph_limit:,}ラインの位置調整"
                 )
             
+            # ゼロライン微調整を追加
+            st.markdown("#### 🎯 ゼロライン微調整")
+            st.caption("検出されたゼロラインを1ピクセル単位で調整できます")
+            
+            zero_line_adjustment = st.number_input(
+                "ゼロライン位置調整",
+                min_value=-50, max_value=50, 
+                value=st.session_state.settings.get('zero_line_adjustment', 0),
+                step=1, 
+                help="検出されたゼロラインを上下に調整（プラス値で下方向、マイナス値で上方向）"
+            )
+            
+            # セッションステートに保存
+            st.session_state.settings['zero_line_adjustment'] = zero_line_adjustment
+            
             # 中間ライン用のダミー変数を設定（他のコードで参照されるため）
             
             # STEP 4: 最大値アライメント機能を統合
@@ -3306,6 +3326,10 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         if score > align_best_score:
                             align_best_score = score
                             align_zero_line_y = y
+                    
+                    # ゼロライン調整値を適用
+                    zero_line_adjustment = st.session_state.settings.get('zero_line_adjustment', 0)
+                    align_zero_line_y += zero_line_adjustment
                     
                     # 切り抜き
                     align_top = max(0, align_zero_line_y - crop_top)
@@ -3562,6 +3586,10 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 best_score = score
                 zero_line_y = y
         
+        # ゼロライン調整値を適用
+        zero_line_adjustment = st.session_state.settings.get('zero_line_adjustment', 0)
+        zero_line_y += zero_line_adjustment
+        
         # 切り抜き
         top = max(0, zero_line_y - crop_top)
         bottom = min(height_preview, zero_line_y + crop_bottom)
@@ -3591,7 +3619,9 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         
         # 検出したゼロラインを描画（赤）
         cv2.line(overlay_img, (0, zero_line_y), (width_preview, zero_line_y), (255, 0, 0), 3)
-        cv2.putText(overlay_img, f'Zero Line (score: {best_score:.3f})', (10, zero_line_y - 10), 
+        # 調整値がある場合は表示
+        adjustment_text = f' (adj: {zero_line_adjustment:+d}px)' if zero_line_adjustment != 0 else ''
+        cv2.putText(overlay_img, f'Zero Line (score: {best_score:.3f}){adjustment_text}', (10, zero_line_y - 10), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
         
         # 切り抜き範囲を描画（濃い青）
