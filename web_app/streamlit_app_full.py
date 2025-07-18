@@ -3237,11 +3237,10 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     step=25, help="右側から何ピクセル除外するか"
                 )
             
-            # グリッドライン調整
-            st.markdown("#### 📏 グリッドライン調整")
+            # ゼロライン微調整を独立したセクションとして配置
+            st.markdown("#### 🎯 ゼロライン微調整")
+            st.caption("検出されたゼロラインを1ピクセル単位で調整できます")
             
-            # ゼロライン微調整
-            st.caption("🎯 ゼロライン位置を1ピクセル単位で調整できます")
             zero_line_adjustment = st.number_input(
                 "ゼロライン位置調整",
                 min_value=-50, max_value=50, 
@@ -3253,7 +3252,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             # セッションステートに保存
             st.session_state.settings['zero_line_adjustment'] = zero_line_adjustment
             
-            # グリッドライン手動調整
+            # グリッドライン調整
+            st.markdown("#### 📏 グリッドライン調整")
             st.markdown("##### ⚙️ 手動調整")
             # 遊技種別に応じた上下限値を取得
             graph_limit = get_graph_limit()
