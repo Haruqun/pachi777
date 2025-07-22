@@ -3018,6 +3018,23 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     st.markdown("##### 端末ごとの調整設定")
     st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
     
+    # ゼロライン微調整（常に表示）
+    st.markdown("### 🎯 ゼロライン微調整")
+    st.caption("検出されたゼロラインを1ピクセル単位で調整できます")
+    
+    zero_line_adjustment = st.number_input(
+        "ゼロライン位置調整",
+        min_value=-50, max_value=50, 
+        value=st.session_state.settings.get('zero_line_adjustment', 0),
+        step=1, 
+        help="検出されたゼロラインを上下に調整（プラス値で下方向、マイナス値で上方向）",
+        key="zero_line_adjustment_main"
+    )
+    # セッションステートに保存
+    st.session_state.settings['zero_line_adjustment'] = zero_line_adjustment
+    
+    st.divider()
+    
     # 初心者向けの使い方説明
     show_help = st.checkbox("📖 調整機能の使い方を表示", value=False, key="show_adjustment_help")
     if show_help:
@@ -3281,6 +3298,9 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             if test_images:
                 st.markdown("### 🎯 STEP 4: 実際の最大値を入力して自動調整")
                 st.caption(f"アップロードされた{len(test_images)}枚の画像から最適な設定を自動計算します")
+                
+                # 追加テキスト
+                st.info("📝 ここに追加のテキストを表示します。このテキストはSTEP 4の後ろに表示されます。")
                 
                 # 複数画像の解析結果を保存
                 all_detections = []
