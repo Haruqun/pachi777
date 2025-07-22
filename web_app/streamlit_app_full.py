@@ -1079,6 +1079,25 @@ if uploaded_files:
     st.markdown("### 📋 STEP 2: 解析設定を選択")
     st.caption("保存されたプリセットを選択するか、デフォルト設定を使用します")
     
+    # プリセットに関する説明を追加
+    with st.expander("ℹ️ プリセットの精度について", expanded=False):
+        st.info("""
+        📱 **端末による差異について**
+        
+        プリセットは特定の端末・環境で最適化された設定です。
+        同じ機種でも以下の要因により微調整が必要な場合があります：
+        
+        • **端末の機種** - iPhone/Android、画面サイズの違い
+        • **OSバージョン** - システムのレンダリング方法の差異
+        • **ブラウザ** - Safari/Chrome等による表示の違い
+        • **画面の明るさ・色温度** - スクリーンショットの色調への影響
+        
+        💡 **推奨される使い方**
+        1. 似た端末のプリセットを選択して試す
+        2. 必要に応じてSTEP 3で微調整を行う
+        3. 調整後は新しいプリセットとして保存
+        """)
+    
     # デバッグ情報（一時的）
     if st.checkbox("🐛 デバッグ情報を表示", value=False):
         st.write(f"saved_presets の内容: {st.session_state.saved_presets}")
@@ -3099,6 +3118,24 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         st.markdown("### 📋 STEP 2: 設定の読み込み（任意）")
         st.caption("保存済みの設定がある場合は選択してください")
         
+        # プリセットに関する説明を追加
+        with st.expander("ℹ️ プリセットの互換性について", expanded=False):
+            st.info("""
+            📱 **端末差による調整の必要性**
+            
+            保存されたプリセットは作成時の端末環境に最適化されています。
+            異なる端末で使用する場合、以下の点にご注意ください：
+            
+            • **画面解像度の違い** - ピクセル単位の設定が影響を受ける可能性
+            • **表示倍率** - ブラウザのズーム設定やデバイスの画面密度
+            • **カラープロファイル** - 端末による色の表現の違い
+            
+            🎯 **最良の結果を得るために**
+            - 同一端末・同一ブラウザでの使用が最も精度が高い
+            - 異なる端末の場合は読み込み後に微調整を推奨
+            - 端末ごとに専用プリセットを作成することを推奨
+            """)
+        
         # 保存されたプリセット一覧
         preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
         
@@ -3834,7 +3871,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 selected_preset = st.selectbox(
                     "編集するプリセットを選択",
                     ["新規作成"] + list(st.session_state.saved_presets.keys()),
-                    key="edit_preset_select"
+                    key="edit_preset_select",
+                    help="既存のプリセットを選択して設定を更新できます"
                 )
                 
                 if selected_preset != "新規作成":
@@ -4010,6 +4048,9 @@ with st.expander("📤 プリセットのエクスポート/インポート"):
                     if "presets" in imported:
                         # 既存のプリセットに追加
                         for name, preset in imported["presets"].items():
+                            # zero_line_adjustmentがない場合は0を設定
+                            if 'zero_line_adjustment' not in preset:
+                                preset['zero_line_adjustment'] = 0
                             st.session_state.saved_presets[name] = preset
                             # データベースにも保存
                             save_preset_to_db(name, preset)
