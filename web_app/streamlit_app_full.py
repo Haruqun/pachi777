@@ -3018,23 +3018,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     st.markdown("##### 端末ごとの調整設定")
     st.caption("※ お使いの端末で撮影した画像に合わせて調整してください")
     
-    # ゼロライン微調整（常に表示）
-    st.markdown("### 🎯 ゼロライン微調整")
-    st.caption("検出されたゼロラインを1ピクセル単位で調整できます")
-    
-    zero_line_adjustment = st.number_input(
-        "ゼロライン位置調整",
-        min_value=-50, max_value=50, 
-        value=st.session_state.settings.get('zero_line_adjustment', 0),
-        step=1, 
-        help="検出されたゼロラインを上下に調整（プラス値で下方向、マイナス値で上方向）",
-        key="zero_line_adjustment_main"
-    )
-    # セッションステートに保存
-    st.session_state.settings['zero_line_adjustment'] = zero_line_adjustment
-    
-    st.divider()
-    
     # 初心者向けの使い方説明
     show_help = st.checkbox("📖 調整機能の使い方を表示", value=False, key="show_adjustment_help")
     if show_help:
@@ -3254,21 +3237,6 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     step=25, help="右側から何ピクセル除外するか"
                 )
             
-            # ゼロライン微調整を独立したセクションとして配置
-            st.markdown("#### 🎯 ゼロライン微調整")
-            st.caption("検出されたゼロラインを1ピクセル単位で調整できます")
-            
-            zero_line_adjustment = st.number_input(
-                "ゼロライン位置調整",
-                min_value=-50, max_value=50, 
-                value=st.session_state.settings.get('zero_line_adjustment', 0),
-                step=1, 
-                help="検出されたゼロラインを上下に調整（プラス値で下方向、マイナス値で上方向）",
-                key="zero_line_adj"
-            )
-            # セッションステートに保存
-            st.session_state.settings['zero_line_adjustment'] = zero_line_adjustment
-            
             # グリッドライン調整
             st.markdown("#### 📏 グリッドライン調整")
             st.markdown("##### ⚙️ 手動調整")
@@ -3293,6 +3261,21 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 )
             
             # 中間ライン用のダミー変数を設定（他のコードで参照されるため）
+            
+            # ゼロライン微調整（STEP 4の直前に配置）
+            st.markdown("### 🎯 ゼロライン微調整")
+            st.caption("検出されたゼロラインを1ピクセル単位で調整できます")
+            
+            zero_line_adjustment = st.number_input(
+                "ゼロライン位置調整",
+                min_value=-50, max_value=50, 
+                value=st.session_state.settings.get('zero_line_adjustment', 0),
+                step=1, 
+                help="検出されたゼロラインを上下に調整（プラス値で下方向、マイナス値で上方向）",
+                key="zero_line_adjustment_main"
+            )
+            # セッションステートに保存
+            st.session_state.settings['zero_line_adjustment'] = zero_line_adjustment
             
             # STEP 4: 最大値アライメント機能を統合
             if test_images:
@@ -3823,6 +3806,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 'right_margin': right_margin,
                 'grid_30k_offset': grid_30k_offset,
                 'grid_minus_30k_offset': grid_minus_30k_offset,
+                'zero_line_adjustment': st.session_state.settings.get('zero_line_adjustment', 0),  # ゼロライン調整値を追加
                 'game_type': st.session_state.game_type  # 遊技種別を追加
             }
             return settings
