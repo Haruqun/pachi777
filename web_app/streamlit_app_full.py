@@ -2023,33 +2023,24 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         st.markdown(f"#### {idx + 1}.")
                     with col_input:
                         # 手動入力用のセッションステートキー
-                        manual_key = f"manual_machine_{idx}"
-                        if manual_key not in st.session_state:
+                        input_key = f"machine_input_{idx}"
+                        
+                        # 初期値の設定（input_keyをセッションステートのキーとして使用）
+                        if input_key not in st.session_state:
                             # 初期値の決定：OCRで読み取れた場合はその値、なければファイル名
                             if result.get('ocr_data') and result['ocr_data'].get('machine_number'):
                                 initial_value = result['ocr_data']['machine_number']
                             else:
                                 initial_value = result['name'].rsplit('.', 1)[0]
-                            st.session_state[manual_key] = initial_value
+                            st.session_state[input_key] = initial_value
                         
-                        # テキスト入力フィールド
-                        input_key = f"machine_input_{idx}"
+                        # テキスト入力フィールド（keyパラメータでセッションステートに直接保存）
                         manual_machine = st.text_input(
                             "台番号を入力",
-                            value=st.session_state[manual_key],
                             key=input_key,
                             label_visibility="collapsed",
                             placeholder="台番号を入力してください"
                         )
-                        
-                        # 入力値が変更されたら更新
-                        if manual_machine != st.session_state[manual_key]:
-                            st.session_state[manual_key] = manual_machine
-                            # 解析結果にも反映
-                            if 'analysis_results' in st.session_state and idx < len(st.session_state.analysis_results):
-                                st.session_state.analysis_results[idx]['manual_machine_number'] = manual_machine
-                            # 再実行をトリガー
-                            st.rerun()
 
                     # 解析結果画像
                     st.image(result['overlay_image'], use_column_width=True)
@@ -2589,11 +2580,9 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 else:
                     # 手動入力された台番号があればそれを優先
                     idx = analysis_results.index(result)
-                    manual_key = f"manual_machine_{idx}"
-                    if manual_key in st.session_state:
-                        machine_number = st.session_state[manual_key]
-                    elif result.get('manual_machine_number'):
-                        machine_number = result['manual_machine_number']
+                    input_key = f"machine_input_{idx}"
+                    if input_key in st.session_state:
+                        machine_number = st.session_state[input_key]
                     else:
                         machine_number = result.get('ocr_data', {}).get('machine_number', result['name'])
                 
@@ -2671,11 +2660,9 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 else:
                     # 手動入力された台番号があればそれを優先
                     idx = analysis_results.index(result)
-                    manual_key = f"manual_machine_{idx}"
-                    if manual_key in st.session_state:
-                        machine_number = st.session_state[manual_key]
-                    elif result.get('manual_machine_number'):
-                        machine_number = result['manual_machine_number']
+                    input_key = f"machine_input_{idx}"
+                    if input_key in st.session_state:
+                        machine_number = st.session_state[input_key]
                     else:
                         machine_number = result.get('ocr_data', {}).get('machine_number', result['name'])
                     
