@@ -2034,12 +2034,17 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 initial_value = result['name'].rsplit('.', 1)[0]
                             st.session_state[input_key] = initial_value
                         
+                        # on_changeコールバック関数（ダミー関数で再実行をトリガー）
+                        def trigger_update():
+                            pass  # 何もしない（Streamlitが自動的に再実行される）
+                        
                         # テキスト入力フィールド（keyパラメータでセッションステートに直接保存）
                         manual_machine = st.text_input(
                             "台番号を入力",
                             key=input_key,
                             label_visibility="collapsed",
-                            placeholder="台番号を入力してください"
+                            placeholder="台番号を入力してください",
+                            on_change=trigger_update
                         )
 
                     # 解析結果画像
