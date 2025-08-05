@@ -2672,8 +2672,12 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             if 'edited_df' not in st.session_state:
                 st.session_state.edited_df = df.copy()
             
+            # 一時的な編集用データフレーム（セッションステートとは別に管理）
+            if 'temp_df' not in st.session_state:
+                st.session_state.temp_df = st.session_state.edited_df.copy()
+            
             edited_df = st.data_editor(
-                st.session_state.edited_df,
+                st.session_state.temp_df,
                 use_container_width=True,
                 hide_index=True,
                 num_rows="dynamic",  # 行の追加・削除を許可
@@ -2740,9 +2744,9 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 }
             )
             
-            # データが編集された場合、セッションステートを更新（自動計算はしない）
+            # 編集されたデータを一時保存（自動的な再計算や画面更新はしない）
             if edited_df is not None:
-                st.session_state.edited_df = edited_df.copy()
+                st.session_state.temp_df = edited_df
 
             # 再計算ボタンとCSVダウンロードボタン
             col1, col2, col3 = st.columns([1, 1, 3])
@@ -2752,35 +2756,38 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 現在の交換レートを取得
                     exchange_rate = st.session_state.settings.get('exchange_rate', 3.57145)
                     
+                    # 一時データフレームを取得
+                    calc_df = st.session_state.temp_df.copy()
+                    
                     # 各行について計算
-                    for idx in range(len(edited_df)):
+                    for idx in range(len(calc_df)):
                         # 収支（円）を現在値から計算
-                        if pd.notna(edited_df.at[idx, '現在値']):
-                            edited_df.at[idx, '収支（円）'] = int(edited_df.at[idx, '現在値'] * exchange_rate)
+                        if pd.notna(calc_df.at[idx, '現在値']):
+                            calc_df.at[idx, '収支（円）'] = int(calc_df.at[idx, '現在値'] * exchange_rate)
                         
                         # 回転率①を計算
-                        if pd.notna(edited_df.at[idx, '初当たり回転数']) and pd.notna(edited_df.at[idx, '初当たり球数']):
-                            spins = edited_df.at[idx, '初当たり回転数']
-                            balls = abs(edited_df.at[idx, '初当たり球数'])  # 絶対値を使用
+                        if pd.notna(calc_df.at[idx, '初当たり回転数']) and pd.notna(calc_df.at[idx, '初当たり球数']):
+                            spins = calc_df.at[idx, '初当たり回転数']
+                            balls = abs(calc_df.at[idx, '初当たり球数'])  # 絶対値を使用
                             if balls > 0:
                                 rate1 = round((spins / balls) * 250, 1)
-                                edited_df.at[idx, '回転率①'] = f"{rate1:.1f}"
+                                calc_df.at[idx, '回転率①'] = f"{rate1:.1f}"
                             else:
-                                edited_df.at[idx, '回転率①'] = '-'
+                                calc_df.at[idx, '回転率①'] = '-'
                         
                         # 回転率②を計算
                         # 通常回転数と総獲得球数、現在値、最高値、最低値から計算
-                        if '通常回転数' in edited_df.columns:
-                            if pd.notna(edited_df.at[idx, '通常回転数']):
-                                normal_spins = edited_df.at[idx, '通常回転数']
+                        if '通常回転数' in calc_df.columns:
+                            if pd.notna(calc_df.at[idx, '通常回転数']):
+                                normal_spins = calc_df.at[idx, '通常回転数']
                                 
                                 # 通常時の使用玉数を計算
                                 # 総獲得球数 - 現在値 - 初当たり球数（絶対値）
                                 normal_balls = 0
-                                if '総獲得球数' in edited_df.columns and pd.notna(edited_df.at[idx, '総獲得球数']):
-                                    total_gained = edited_df.at[idx, '総獲得球数']
-                                    current_val = edited_df.at[idx, '現在値'] if pd.notna(edited_df.at[idx, '現在値']) else 0
-                                    first_hit_val = abs(edited_df.at[idx, '初当たり球数']) if pd.notna(edited_df.at[idx, '初当たり球数']) else 0
+                                if '総獲得球数' in calc_df.columns and pd.notna(calc_df.at[idx, '総獲得球数']):
+                                    total_gained = calc_df.at[idx, '総獲得球数']
+                                    current_val = calc_df.at[idx, '現在値'] if pd.notna(calc_df.at[idx, '現在値']) else 0
+                                    first_hit_val = abs(calc_df.at[idx, '初当たり球数']) if pd.notna(calc_df.at[idx, '初当たり球数']) else 0
                                     
                                     # 通常時使用玉数 = 総獲得球数 - 現在値 + 初当たり使用玉数
                                     normal_balls = total_gained - current_val + first_hit_val
@@ -2789,18 +2796,21 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                         # パチンコの場合は250玉/千円、パチスロの場合は50枚/千円
                                         unit_per_1000yen = 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
                                         rate2 = round((normal_spins / normal_balls) * unit_per_1000yen, 1)
-                                        edited_df.at[idx, '回転率②'] = f"{rate2:.1f}"
+                                        calc_df.at[idx, '回転率②'] = f"{rate2:.1f}"
                                     else:
-                                        edited_df.at[idx, '回転率②'] = '-'
+                                        calc_df.at[idx, '回転率②'] = '-'
                     
-                    # セッションステートを更新
-                    st.session_state.edited_df = edited_df.copy()
+                    # 計算結果をセッションステートに保存
+                    st.session_state.edited_df = calc_df.copy()
+                    st.session_state.temp_df = calc_df.copy()
                     st.success("✅ 再計算が完了しました")
                     # 画面を再描画
                     st.rerun()
             
             with col2:
-                csv = edited_df.to_csv(index=False).encode('utf-8-sig')
+                # 最新のデータを使用（編集中のtemp_dfを使用）
+                csv_df = st.session_state.temp_df if 'temp_df' in st.session_state else edited_df
+                csv = csv_df.to_csv(index=False).encode('utf-8-sig')
                 st.download_button(
                     label="📥 CSV保存",
                     data=csv,
