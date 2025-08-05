@@ -2702,17 +2702,29 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             - 通常回転数・総獲得球数 → 回転率②
             """)
             
+            # 台番号入力フィールドの変更を反映するため、常に最新のdfを使用
+            # （上記のデータフレーム作成時にセッションステートから台番号を取得済み）
+            
             # セッションステートにデータフレームを保存（初回のみ）
             if 'edited_df' not in st.session_state:
                 st.session_state.edited_df = df.copy()
+            else:
+                # 台番号の更新を反映
+                for idx in range(len(df)):
+                    if idx < len(st.session_state.edited_df):
+                        st.session_state.edited_df.at[idx, '台番号'] = df.at[idx, '台番号']
             
             # 一時的な編集用データフレーム（セッションステートとは別に管理）
             if 'temp_df' not in st.session_state:
                 st.session_state.temp_df = st.session_state.edited_df.copy()
+            else:
+                # 台番号の更新を反映
+                for idx in range(len(df)):
+                    if idx < len(st.session_state.temp_df):
+                        st.session_state.temp_df.at[idx, '台番号'] = df.at[idx, '台番号']
             
             # データエディタ（直接DataFrameを編集）
-            # セッションステートを経由せずに直接表示
-            display_df = st.session_state.temp_df if 'temp_df' in st.session_state else df.copy()
+            display_df = st.session_state.temp_df
             
             edited_df = st.data_editor(
                 display_df,
