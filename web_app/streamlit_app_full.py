@@ -2676,8 +2676,12 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             if 'temp_df' not in st.session_state:
                 st.session_state.temp_df = st.session_state.edited_df.copy()
             
+            # データエディタ（直接DataFrameを編集）
+            # セッションステートを経由せずに直接表示
+            display_df = st.session_state.temp_df if 'temp_df' in st.session_state else df.copy()
+            
             edited_df = st.data_editor(
-                st.session_state.temp_df,
+                display_df,
                 use_container_width=True,
                 hide_index=True,
                 num_rows="dynamic",  # 行の追加・削除を許可
@@ -2744,9 +2748,9 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 }
             )
             
-            # 編集されたデータを一時保存（自動的な再計算や画面更新はしない）
-            if edited_df is not None:
-                st.session_state.temp_df = edited_df
+            # 編集されたデータは edited_df に保持されるが、
+            # セッションステートへの保存は再計算ボタンが押されるまで行わない
+            # これによりカーソルのリセットを防ぐ
 
             # 再計算ボタンとCSVダウンロードボタン
             col1, col2, col3 = st.columns([1, 1, 3])
@@ -2756,8 +2760,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 現在の交換レートを取得
                     exchange_rate = st.session_state.settings.get('exchange_rate', 3.57145)
                     
-                    # 一時データフレームを取得
-                    calc_df = st.session_state.temp_df.copy()
+                    # 編集されたデータを取得（edited_dfが最新の編集内容を持っている）
+                    calc_df = edited_df.copy()
                     
                     # 各行について計算
                     for idx in range(len(calc_df)):
@@ -2808,8 +2812,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     st.rerun()
             
             with col2:
-                # 最新のデータを使用（編集中のtemp_dfを使用）
-                csv_df = st.session_state.temp_df if 'temp_df' in st.session_state else edited_df
+                # 編集されたデータを使用
+                csv_df = edited_df
                 csv = csv_df.to_csv(index=False).encode('utf-8-sig')
                 st.download_button(
                     label="📥 CSV保存",
