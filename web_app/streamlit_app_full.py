@@ -2032,25 +2032,24 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 initial_value = result['name'].rsplit('.', 1)[0]
                             st.session_state[manual_key] = initial_value
                         
-                        # on_changeコールバック関数
-                        def update_machine_number(idx):
-                            manual_key = f"manual_machine_{idx}"
-                            input_key = f"machine_input_{idx}"
-                            st.session_state[manual_key] = st.session_state[input_key]
-                            # 解析結果にも反映
-                            if 'analysis_results' in st.session_state:
-                                st.session_state.analysis_results[idx]['manual_machine_number'] = st.session_state[input_key]
-                        
                         # テキスト入力フィールド
+                        input_key = f"machine_input_{idx}"
                         manual_machine = st.text_input(
                             "台番号を入力",
                             value=st.session_state[manual_key],
-                            key=f"machine_input_{idx}",
+                            key=input_key,
                             label_visibility="collapsed",
-                            placeholder="台番号を入力してください",
-                            on_change=update_machine_number,
-                            args=(idx,)
+                            placeholder="台番号を入力してください"
                         )
+                        
+                        # 入力値が変更されたら更新
+                        if manual_machine != st.session_state[manual_key]:
+                            st.session_state[manual_key] = manual_machine
+                            # 解析結果にも反映
+                            if 'analysis_results' in st.session_state and idx < len(st.session_state.analysis_results):
+                                st.session_state.analysis_results[idx]['manual_machine_number'] = manual_machine
+                            # 再実行をトリガー
+                            st.rerun()
 
                     # 解析結果画像
                     st.image(result['overlay_image'], use_column_width=True)
