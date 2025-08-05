@@ -2017,38 +2017,36 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 result = analysis_results[idx]
                 
                 with cols[col_idx]:
-                    # 台番号を表示、なければ編集可能なテキストフォームを表示
-                    if result.get('ocr_data') and result['ocr_data'].get('machine_number'):
-                        display_name = result['ocr_data']['machine_number']
-                        st.markdown(f"#### {idx + 1}. {display_name}")
-                    else:
-                        # OCRで台番号が取得できなかった場合は編集可能なテキストフォームを表示
-                        col_num, col_input = st.columns([1, 4])
-                        with col_num:
-                            st.markdown(f"#### {idx + 1}.")
-                        with col_input:
-                            # 手動入力用のセッションステートキー
-                            manual_key = f"manual_machine_{idx}"
-                            if manual_key not in st.session_state:
-                                # 初期値はファイル名から拡張子を除いたもの
+                    # 台番号を常に編集可能なテキストフォームで表示
+                    col_num, col_input = st.columns([1, 4])
+                    with col_num:
+                        st.markdown(f"#### {idx + 1}.")
+                    with col_input:
+                        # 手動入力用のセッションステートキー
+                        manual_key = f"manual_machine_{idx}"
+                        if manual_key not in st.session_state:
+                            # 初期値の決定：OCRで読み取れた場合はその値、なければファイル名
+                            if result.get('ocr_data') and result['ocr_data'].get('machine_number'):
+                                initial_value = result['ocr_data']['machine_number']
+                            else:
                                 initial_value = result['name'].rsplit('.', 1)[0]
-                                st.session_state[manual_key] = initial_value
-                            
-                            # テキスト入力フィールド
-                            manual_machine = st.text_input(
-                                "台番号を入力",
-                                value=st.session_state[manual_key],
-                                key=f"machine_input_{idx}",
-                                label_visibility="collapsed",
-                                placeholder="台番号を入力してください"
-                            )
-                            
-                            # 入力値が変更されたらセッションステートを更新
-                            if manual_machine != st.session_state[manual_key]:
-                                st.session_state[manual_key] = manual_machine
-                                # 解析結果にも反映
-                                if 'analysis_results' in st.session_state:
-                                    st.session_state.analysis_results[idx]['manual_machine_number'] = manual_machine
+                            st.session_state[manual_key] = initial_value
+                        
+                        # テキスト入力フィールド
+                        manual_machine = st.text_input(
+                            "台番号を入力",
+                            value=st.session_state[manual_key],
+                            key=f"machine_input_{idx}",
+                            label_visibility="collapsed",
+                            placeholder="台番号を入力してください"
+                        )
+                        
+                        # 入力値が変更されたらセッションステートを更新
+                        if manual_machine != st.session_state[manual_key]:
+                            st.session_state[manual_key] = manual_machine
+                            # 解析結果にも反映
+                            if 'analysis_results' in st.session_state:
+                                st.session_state.analysis_results[idx]['manual_machine_number'] = manual_machine
 
                     # 解析結果画像
                     st.image(result['overlay_image'], use_column_width=True)
