@@ -2894,6 +2894,15 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             st.markdown("### 📝 データ出力")
             st.caption("pachikeisan.x0.com用のフォーマットで一括出力します")
             
+            # 出力タイプの選択
+            output_type = st.radio(
+                "出力タイプを選択",
+                ["初のみ", "全のみ", "両方"],
+                index=2,  # デフォルトは「両方」
+                horizontal=True,
+                help="初: 初当たり関連データのみ、全: 全体データのみ、両方: 従来通り両方出力"
+            )
+            
             # 一括データ出力（常に表示）
             # 今日の日付を取得
             today = datetime.now().strftime("%-m/%-d")  # 例: 7/7
@@ -2979,26 +2988,44 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 else:
                     rotation_rate_2 = '0'
                 
-                # 1行目: (初) 台番#初当たり回転数#初当たり玉数(回転率①)
-                line1 = f"(初){machine_number}#{first_hit_spins}#{first_hit_balls}({rotation_rate_1})"
-                output_lines.append(line1)
+                # 出力タイプに応じてデータを追加
+                if output_type in ["初のみ", "両方"]:
+                    # 1行目: (初) 台番#初当たり回転数#初当たり玉数(回転率①)
+                    line1 = f"(初){machine_number}#{first_hit_spins}#{first_hit_balls}({rotation_rate_1})"
+                    output_lines.append(line1)
                 
-                # 2行目: (全) 台番#通常回転数#獲得数#現在値(回転率②)
-                line2 = f"(全){machine_number}#{normal_spins}#{total_win}#{current_value}({rotation_rate_2})"
-                output_lines.append(line2)
+                if output_type in ["全のみ", "両方"]:
+                    # 2行目: (全) 台番#通常回転数#獲得数#現在値(回転率②)
+                    line2 = f"(全){machine_number}#{normal_spins}#{total_win}#{current_value}({rotation_rate_2})"
+                    output_lines.append(line2)
             
             # 全データ出力
             all_data = "\n".join(output_lines)
             st.text_area("コピー用データ", value=all_data, height=300)
             
             # 出力フォーマット説明
-            st.info("""
-            📌 **出力フォーマット**
-            - 1行目: 日付
-            - 以降、1台につき2行で出力
-            - (初)台番#初当たり回転数#初当たり玉数(回転率①)
-            - (全)台番#通常回転数#獲得数#現在値(回転率②)
-            """)
+            if output_type == "初のみ":
+                st.info("""
+                📌 **出力フォーマット**
+                - 1行目: 日付
+                - 以降、1台につき1行で出力
+                - (初)台番#初当たり回転数#初当たり玉数(回転率①)
+                """)
+            elif output_type == "全のみ":
+                st.info("""
+                📌 **出力フォーマット**
+                - 1行目: 日付
+                - 以降、1台につき1行で出力
+                - (全)台番#通常回転数#獲得数#現在値(回転率②)
+                """)
+            else:
+                st.info("""
+                📌 **出力フォーマット**
+                - 1行目: 日付
+                - 以降、1台につき2行で出力
+                - (初)台番#初当たり回転数#初当たり玉数(回転率①)
+                - (全)台番#通常回転数#獲得数#現在値(回転率②)
+                """)
             
             # 調整設定の案内
             st.markdown("---")
