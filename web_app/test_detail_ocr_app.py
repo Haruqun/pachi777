@@ -34,9 +34,9 @@ if 'base_regions' not in st.session_state:
         'Total_Start': {'bbox': (545, 392, 673, 432), 'type': 'number'},
         'Normal': {'bbox': (496, 456, 580, 494), 'type': 'number'},
         'Chance': {'bbox': (609, 456, 693, 494), 'type': 'number'},
-        'Ultra': {'bbox': (74, 545, 118, 587), 'type': 'number'},
-        'Middle': {'bbox': (125, 545, 169, 587), 'type': 'number'},
-        'Small': {'bbox': (176, 545, 220, 587), 'type': 'number'},
+        'Ultra': {'bbox': (65, 545, 108, 587), 'type': 'red_number'},
+        'Middle': {'bbox': (118, 545, 161, 587), 'type': 'red_number'},
+        'Small': {'bbox': (171, 545, 214, 587), 'type': 'red_number'},
         'Start': {'bbox': (317, 540, 439, 596), 'type': 'number'},
         'Max_Payout': {'bbox': (519, 540, 681, 596), 'type': 'number'},
     }
@@ -227,6 +227,28 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                     roi = img[new_y1:new_y2, new_x1:new_x2]
                     st.markdown("**切り出し領域**")
                     st.image(cv2.cvtColor(roi, cv2.COLOR_BGR2RGB))
+                    
+                    # デバッグ用：処理後の画像も表示
+                    if st.checkbox("OCR前処理画像を表示", key=f"debug_{selected_region}"):
+                        info = st.session_state.regions[selected_region]
+                        if info['type'] == 'red_number':
+                            hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                            mask1 = cv2.inRange(hsv, np.array([0, 50, 50]), np.array([10, 255, 255]))
+                            mask2 = cv2.inRange(hsv, np.array([160, 50, 50]), np.array([180, 255, 255]))
+                            mask = cv2.bitwise_or(mask1, mask2)
+                            kernel = np.ones((2, 2), np.uint8)
+                            mask = cv2.dilate(mask, kernel, iterations=1)
+                            st.image(mask, caption="赤色抽出結果")
+                        elif info['type'] == 'blue_number':
+                            hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                            mask = cv2.inRange(hsv, np.array([90, 50, 50]), np.array([130, 255, 255]))
+                            kernel = np.ones((2, 2), np.uint8)
+                            mask = cv2.dilate(mask, kernel, iterations=1)
+                            st.image(mask, caption="青色抽出結果")
+                        elif info['type'] == 'number':
+                            gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                            _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+                            st.image(binary, caption="二値化結果")
         
         # 中央カラム：画像表示
         with col_image:
@@ -278,28 +300,48 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         
                         try:
                             if info['type'] == 'red_number':
-                                # 赤色抽出
+                                # 赤色抽出（より広い範囲）
                                 hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                                mask1 = cv2.inRange(hsv, np.array([0, 100, 100]), np.array([10, 255, 255]))
-                                mask2 = cv2.inRange(hsv, np.array([170, 100, 100]), np.array([180, 255, 255]))
+                                # 赤色の範囲を広げる
+                                mask1 = cv2.inRange(hsv, np.array([0, 50, 50]), np.array([10, 255, 255]))
+                                mask2 = cv2.inRange(hsv, np.array([160, 50, 50]), np.array([180, 255, 255]))
                                 mask = cv2.bitwise_or(mask1, mask2)
-                                text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789')
+                                # モルフォロジー処理で文字を太くする
+                                kernel = np.ones((2, 2), np.uint8)
+                                mask = cv2.dilate(mask, kernel, iterations=1)
+                                # 大当り回数は大きな数字なのでPSM 8を使用
+                                if name == 'Jackpot_Count':
+                                    text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                else:
+                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789()/- ')
                                 
                             elif info['type'] == 'blue_number':
-                                # 青色抽出
+                                # 青色抽出（より広い範囲）
                                 hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                                mask = cv2.inRange(hsv, np.array([100, 100, 100]), np.array([130, 255, 255]))
-                                text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789')
+                                mask = cv2.inRange(hsv, np.array([90, 50, 50]), np.array([130, 255, 255]))
+                                kernel = np.ones((2, 2), np.uint8)
+                                mask = cv2.dilate(mask, kernel, iterations=1)
+                                # 初当り回数は大きな数字なのでPSM 8を使用
+                                if name == 'First_Hit_Count':
+                                    text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                else:
+                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789()/- ')
                                 
                             elif info['type'] == 'number':
-                                # グレースケール+二値化
+                                # 白文字の抽出（黒背景）
                                 gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                                _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                                text = pytesseract.image_to_string(binary, config='--psm 7 -c tessedit_char_whitelist=0123456789')
+                                # 白い文字を抽出
+                                _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+                                # PSM 8: 単一の単語として扱う
+                                text = pytesseract.image_to_string(binary, config='--psm 8 -c tessedit_char_whitelist=0123456789')
                                 
                             else:
-                                # 通常のOCR
-                                text = pytesseract.image_to_string(roi, lang='jpn', config='--psm 7')
+                                # 通常のOCR（台番号など）
+                                gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                                # コントラスト強調
+                                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+                                enhanced = clahe.apply(gray)
+                                text = pytesseract.image_to_string(enhanced, lang='jpn', config='--psm 8')
                             
                             # 数値抽出
                             numbers = re.findall(r'\d+', text)
