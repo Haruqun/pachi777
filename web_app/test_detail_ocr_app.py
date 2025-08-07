@@ -26,19 +26,19 @@ st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出す�
 # 実際の画像サイズに応じて自動スケーリングされる
 if 'base_regions' not in st.session_state:
     st.session_state.base_regions = {
-        'Machine_No': {'bbox': (15, 211, 72, 240), 'type': 'text'},
-        'Jackpot_Count': {'bbox': (61, 310, 186, 391), 'type': 'red_number'},
-        'Jackpot_Prob': {'bbox': (64, 375, 165, 397), 'type': 'text'},
-        'First_Hit_Count': {'bbox': (251, 310, 335, 391), 'type': 'blue_number'},
-        'First_Hit_Prob': {'bbox': (254, 375, 332, 397), 'type': 'text'},
-        'Total_Start': {'bbox': (445, 316, 549, 349), 'type': 'number'},
-        'Normal': {'bbox': (405, 368, 474, 399), 'type': 'number'},
-        'Chance': {'bbox': (497, 368, 566, 399), 'type': 'number'},
-        'Ultra': {'bbox': (53, 440, 88, 474), 'type': 'red_number'},
-        'Middle': {'bbox': (96, 440, 131, 474), 'type': 'red_number'},
-        'Small': {'bbox': (140, 440, 175, 474), 'type': 'red_number'},
-        'Start': {'bbox': (259, 436, 358, 481), 'type': 'number'},
-        'Max_Payout': {'bbox': (424, 436, 556, 481), 'type': 'number'},
+        'Machine_No': {'bbox': (18, 262, 88, 298), 'type': 'text'},
+        'Jackpot_Count': {'bbox': (75, 385, 230, 460), 'type': 'red_number'},
+        'Jackpot_Prob': {'bbox': (78, 465, 202, 492), 'type': 'text'},
+        'First_Hit_Count': {'bbox': (305, 385, 415, 460), 'type': 'blue_number'},
+        'First_Hit_Prob': {'bbox': (310, 465, 410, 492), 'type': 'text'},
+        'Total_Start': {'bbox': (545, 392, 673, 432), 'type': 'number'},
+        'Normal': {'bbox': (496, 456, 580, 494), 'type': 'number'},
+        'Chance': {'bbox': (609, 456, 693, 494), 'type': 'number'},
+        'Ultra': {'bbox': (73, 545, 116, 587), 'type': 'red_number'},
+        'Middle': {'bbox': (126, 545, 169, 587), 'type': 'red_number'},
+        'Small': {'bbox': (179, 545, 222, 587), 'type': 'red_number'},
+        'Start': {'bbox': (318, 545, 441, 596), 'type': 'number'},
+        'Max_Payout': {'bbox': (520, 545, 681, 596), 'type': 'number'},
     }
 
 # セッションステートで座標を管理
