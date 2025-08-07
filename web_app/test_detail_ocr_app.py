@@ -26,19 +26,19 @@ st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出す�
 # 実際の画像サイズに応じて自動スケーリングされる
 if 'base_regions' not in st.session_state:
     st.session_state.base_regions = {
-        'Machine_No': {'bbox': (15, 259, 91, 301), 'type': 'text'},  # 3px余白追加
-        'Jackpot_Count': {'bbox': (70, 380, 235, 465), 'type': 'red_number'},  # 5px余白追加
-        'Jackpot_Prob': {'bbox': (75, 462, 205, 495), 'type': 'text'},  # 3px余白追加
-        'First_Hit_Count': {'bbox': (300, 380, 420, 465), 'type': 'blue_number'},  # 5px余白追加
-        'First_Hit_Prob': {'bbox': (307, 462, 413, 495), 'type': 'text'},  # 3px余白追加
-        'Total_Start': {'bbox': (542, 389, 676, 435), 'type': 'number'},  # 3px余白追加
-        'Normal': {'bbox': (493, 453, 583, 497), 'type': 'number'},  # 3px余白追加
-        'Chance': {'bbox': (606, 453, 696, 497), 'type': 'number'},  # 3px余白追加
-        'Ultra': {'bbox': (70, 542, 119, 590), 'type': 'red_number'},  # 3px余白追加
-        'Middle': {'bbox': (123, 542, 172, 590), 'type': 'red_number'},  # 3px余白追加
-        'Small': {'bbox': (176, 542, 225, 590), 'type': 'red_number'},  # 3px余白追加
-        'Start': {'bbox': (315, 542, 444, 599), 'type': 'number'},  # 3px余白追加
-        'Max_Payout': {'bbox': (517, 542, 684, 599), 'type': 'number'},  # 3px余白追加
+        'Machine_No': {'bbox': (18, 262, 88, 298), 'type': 'text'},
+        'Jackpot_Count': {'bbox': (75, 375, 235, 463), 'type': 'red_number'},
+        'Jackpot_Prob': {'bbox': (77, 461, 203, 491), 'type': 'text'},
+        'First_Hit_Count': {'bbox': (302, 375, 415, 463), 'type': 'blue_number'},
+        'First_Hit_Prob': {'bbox': (308, 461, 408, 491), 'type': 'text'},
+        'Total_Start': {'bbox': (544, 390, 678, 435), 'type': 'number'},
+        'Normal': {'bbox': (495, 455, 582, 495), 'type': 'number'},
+        'Chance': {'bbox': (608, 455, 695, 495), 'type': 'number'},
+        'Ultra': {'bbox': (72, 538, 118, 590), 'type': 'red_number'},
+        'Middle': {'bbox': (125, 538, 165, 590), 'type': 'red_number'},
+        'Small': {'bbox': (172, 538, 218, 590), 'type': 'red_number'},
+        'Start': {'bbox': (318, 535, 440, 600), 'type': 'number'},
+        'Max_Payout': {'bbox': (520, 535, 683, 600), 'type': 'number'},
     }
 
 # セッションステートで座標を管理
