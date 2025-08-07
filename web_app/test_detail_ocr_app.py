@@ -25,19 +25,19 @@ st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出す�
 # セッションステートで座標を管理
 if 'regions' not in st.session_state:
     st.session_state.regions = {
-        'Machine_No': {'bbox': (18, 256, 90, 296), 'type': 'text'},
-        'Jackpot_Count': {'bbox': (74, 360, 222, 492), 'type': 'red_number'},
-        'Jackpot_Prob': {'bbox': (74, 455, 222, 490), 'type': 'text'},
-        'First_Hit_Count': {'bbox': (300, 360, 448, 492), 'type': 'blue_number'},
-        'First_Hit_Prob': {'bbox': (300, 455, 448, 490), 'type': 'text'},
-        'Total_Start': {'bbox': (540, 390, 631, 430), 'type': 'number'},
-        'Normal': {'bbox': (495, 458, 565, 498), 'type': 'number'},
-        'Chance': {'bbox': (606, 458, 676, 498), 'type': 'number'},
-        'Ultra': {'bbox': (67, 545, 107, 593), 'type': 'number'},
-        'Middle': {'bbox': (127, 545, 167, 593), 'type': 'number'},
-        'Small': {'bbox': (187, 545, 229, 593), 'type': 'number'},
-        'Start': {'bbox': (320, 545, 406, 593), 'type': 'number'},
-        'Max_Payout': {'bbox': (520, 545, 657, 593), 'type': 'number'},
+        'Machine_No': {'bbox': (17, 260, 92, 300), 'type': 'text'},
+        'Jackpot_Count': {'bbox': (75, 380, 178, 490), 'type': 'red_number'},
+        'Jackpot_Prob': {'bbox': (78, 460, 175, 490), 'type': 'text'},
+        'First_Hit_Count': {'bbox': (355, 380, 405, 490), 'type': 'blue_number'},
+        'First_Hit_Prob': {'bbox': (287, 460, 397, 490), 'type': 'text'},
+        'Total_Start': {'bbox': (545, 385, 645, 425), 'type': 'number'},
+        'Normal': {'bbox': (497, 440, 557, 465), 'type': 'number'},
+        'Chance': {'bbox': (615, 440, 680, 465), 'type': 'number'},
+        'Ultra': {'bbox': (72, 515, 175, 555), 'type': 'number'},
+        'Middle': {'bbox': (72, 515, 175, 555), 'type': 'number'},
+        'Small': {'bbox': (72, 515, 175, 555), 'type': 'number'},
+        'Start': {'bbox': (320, 535, 405, 590), 'type': 'number'},
+        'Max_Payout': {'bbox': (520, 535, 680, 590), 'type': 'number'},
     }
 
 # テスト画像のBase64データを保持する辞書
@@ -161,19 +161,19 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             # デフォルト設定にリセット
             if st.button("🔄 デフォルト設定に戻す", use_container_width=True):
                 st.session_state.regions = {
-                    'Machine_No': {'bbox': (18, 256, 90, 296), 'type': 'text'},
-                    'Jackpot_Count': {'bbox': (74, 360, 222, 492), 'type': 'red_number'},
-                    'Jackpot_Prob': {'bbox': (74, 455, 222, 490), 'type': 'text'},
-                    'First_Hit_Count': {'bbox': (300, 360, 448, 492), 'type': 'blue_number'},
-                    'First_Hit_Prob': {'bbox': (300, 455, 448, 490), 'type': 'text'},
-                    'Total_Start': {'bbox': (540, 390, 631, 430), 'type': 'number'},
-                    'Normal': {'bbox': (495, 458, 565, 498), 'type': 'number'},
-                    'Chance': {'bbox': (606, 458, 676, 498), 'type': 'number'},
-                    'Ultra': {'bbox': (67, 545, 107, 593), 'type': 'number'},
-                    'Middle': {'bbox': (127, 545, 167, 593), 'type': 'number'},
-                    'Small': {'bbox': (187, 545, 229, 593), 'type': 'number'},
-                    'Start': {'bbox': (320, 545, 406, 593), 'type': 'number'},
-                    'Max_Payout': {'bbox': (520, 545, 657, 593), 'type': 'number'},
+                    'Machine_No': {'bbox': (17, 260, 92, 300), 'type': 'text'},
+                    'Jackpot_Count': {'bbox': (75, 380, 178, 490), 'type': 'red_number'},
+                    'Jackpot_Prob': {'bbox': (78, 460, 175, 490), 'type': 'text'},
+                    'First_Hit_Count': {'bbox': (355, 380, 405, 490), 'type': 'blue_number'},
+                    'First_Hit_Prob': {'bbox': (287, 460, 397, 490), 'type': 'text'},
+                    'Total_Start': {'bbox': (545, 385, 645, 425), 'type': 'number'},
+                    'Normal': {'bbox': (497, 440, 557, 465), 'type': 'number'},
+                    'Chance': {'bbox': (615, 440, 680, 465), 'type': 'number'},
+                    'Ultra': {'bbox': (72, 515, 175, 555), 'type': 'number'},
+                    'Middle': {'bbox': (72, 515, 175, 555), 'type': 'number'},
+                    'Small': {'bbox': (72, 515, 175, 555), 'type': 'number'},
+                    'Start': {'bbox': (320, 535, 405, 590), 'type': 'number'},
+                    'Max_Payout': {'bbox': (520, 535, 680, 590), 'type': 'number'},
                 }
                 st.success("デフォルト設定にリセットしました")
                 st.rerun()
