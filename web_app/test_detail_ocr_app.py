@@ -208,14 +208,40 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 
                 st.caption(f"現在: ({current_bbox[0]}, {current_bbox[1]}) - ({current_bbox[2]}, {current_bbox[3]})")
                 
-                # スライダーで座標を調整
+                # 数値入力で座標を調整（キーボードの上下キーで操作可能）
                 st.markdown("**開始座標**")
-                new_x1 = st.slider("X1 (左)", 0, width, current_bbox[0], step=5, key=f"x1_{selected_region}")
-                new_y1 = st.slider("Y1 (上)", 0, height, current_bbox[1], step=5, key=f"y1_{selected_region}")
+                col1, col2 = st.columns(2)
+                with col1:
+                    new_x1 = st.number_input("X1 (左)", 0, width, current_bbox[0], step=1, key=f"x1_{selected_region}")
+                with col2:
+                    new_y1 = st.number_input("Y1 (上)", 0, height, current_bbox[1], step=1, key=f"y1_{selected_region}")
                 
                 st.markdown("**終了座標**")
-                new_x2 = st.slider("X2 (右)", 0, width, current_bbox[2], step=5, key=f"x2_{selected_region}")
-                new_y2 = st.slider("Y2 (下)", 0, height, current_bbox[3], step=5, key=f"y2_{selected_region}")
+                col3, col4 = st.columns(2)
+                with col3:
+                    new_x2 = st.number_input("X2 (右)", 0, width, current_bbox[2], step=1, key=f"x2_{selected_region}")
+                with col4:
+                    new_y2 = st.number_input("Y2 (下)", 0, height, current_bbox[3], step=1, key=f"y2_{selected_region}")
+                
+                # 微調整ボタン
+                st.markdown("**微調整**")
+                col5, col6, col7, col8 = st.columns(4)
+                with col5:
+                    if st.button("⬅️ 左へ", use_container_width=True):
+                        st.session_state.regions[selected_region]['bbox'] = (new_x1-1, new_y1, new_x2-1, new_y2)
+                        st.rerun()
+                with col6:
+                    if st.button("➡️ 右へ", use_container_width=True):
+                        st.session_state.regions[selected_region]['bbox'] = (new_x1+1, new_y1, new_x2+1, new_y2)
+                        st.rerun()
+                with col7:
+                    if st.button("⬆️ 上へ", use_container_width=True):
+                        st.session_state.regions[selected_region]['bbox'] = (new_x1, new_y1-1, new_x2, new_y2-1)
+                        st.rerun()
+                with col8:
+                    if st.button("⬇️ 下へ", use_container_width=True):
+                        st.session_state.regions[selected_region]['bbox'] = (new_x1, new_y1+1, new_x2, new_y2+1)
+                        st.rerun()
                 
                 # 座標を更新
                 if st.button("座標を更新", type="primary"):
