@@ -298,6 +298,8 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         elif info['type'] == 'number':
                             gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
                             _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+                            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+                            binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
                             st.image(binary, caption="二値化結果")
         
         # 中央カラム：画像表示
@@ -366,8 +368,11 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                 mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
                                 
                                 # 大当り回数は大きな数字なのでPSM 8を使用
-                                if name == 'Jackpot_Count' or name == 'First_Hit_Count':
+                                if name in ['Jackpot_Count', 'First_Hit_Count']:
                                     text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                elif name in ['Ultra', 'Middle', 'Small']:
+                                    # 超/中/小は単一の数字
+                                    text = pytesseract.image_to_string(mask, config='--psm 10 -c tessedit_char_whitelist=0123456789')
                                 else:
                                     text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789')
                                 
@@ -390,10 +395,22 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                             elif info['type'] == 'number':
                                 # 白文字の抽出（黒背景）
                                 gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                                # 白い文字を抽出
-                                _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
-                                # PSM 8: 単一の単語として扱う
-                                text = pytesseract.image_to_string(binary, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                
+                                # 複数の閾値を試す
+                                best_text = ""
+                                for threshold_val in [180, 200, 220]:
+                                    _, binary = cv2.threshold(gray, threshold_val, 255, cv2.THRESH_BINARY)
+                                    
+                                    # ノイズ除去
+                                    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+                                    binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+                                    
+                                    # PSM 7: 単一のテキストライン
+                                    temp_text = pytesseract.image_to_string(binary, config='--psm 7 -c tessedit_char_whitelist=0123456789')
+                                    if temp_text.strip() and len(temp_text.strip()) > len(best_text):
+                                        best_text = temp_text.strip()
+                                
+                                text = best_text if best_text else pytesseract.image_to_string(gray, config='--psm 7 -c tessedit_char_whitelist=0123456789')
                                 
                             else:
                                 # 通常のOCR（台番号など）
