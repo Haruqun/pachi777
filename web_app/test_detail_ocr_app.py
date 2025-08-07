@@ -228,29 +228,29 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 col5, col6, col7, col8 = st.columns(4)
                 with col5:
                     if st.button("⬅️ 左へ", use_container_width=True):
-                        st.session_state.regions[selected_region]['bbox'] = (new_x1-1, new_y1, new_x2-1, new_y2)
+                        st.session_state.regions[selected_region]['bbox'] = (int(new_x1)-1, int(new_y1), int(new_x2)-1, int(new_y2))
                         st.rerun()
                 with col6:
                     if st.button("➡️ 右へ", use_container_width=True):
-                        st.session_state.regions[selected_region]['bbox'] = (new_x1+1, new_y1, new_x2+1, new_y2)
+                        st.session_state.regions[selected_region]['bbox'] = (int(new_x1)+1, int(new_y1), int(new_x2)+1, int(new_y2))
                         st.rerun()
                 with col7:
                     if st.button("⬆️ 上へ", use_container_width=True):
-                        st.session_state.regions[selected_region]['bbox'] = (new_x1, new_y1-1, new_x2, new_y2-1)
+                        st.session_state.regions[selected_region]['bbox'] = (int(new_x1), int(new_y1)-1, int(new_x2), int(new_y2)-1)
                         st.rerun()
                 with col8:
                     if st.button("⬇️ 下へ", use_container_width=True):
-                        st.session_state.regions[selected_region]['bbox'] = (new_x1, new_y1+1, new_x2, new_y2+1)
+                        st.session_state.regions[selected_region]['bbox'] = (int(new_x1), int(new_y1)+1, int(new_x2), int(new_y2)+1)
                         st.rerun()
                 
                 # 座標を更新
                 if st.button("座標を更新", type="primary"):
-                    st.session_state.regions[selected_region]['bbox'] = (new_x1, new_y1, new_x2, new_y2)
+                    st.session_state.regions[selected_region]['bbox'] = (int(new_x1), int(new_y1), int(new_x2), int(new_y2))
                     st.rerun()
                 
                 # 切り出し領域のプレビュー
                 if new_x2 > new_x1 and new_y2 > new_y1:
-                    roi = img[new_y1:new_y2, new_x1:new_x2]
+                    roi = img[int(new_y1):int(new_y2), int(new_x1):int(new_x2)]
                     st.markdown("**切り出し領域**")
                     st.image(cv2.cvtColor(roi, cv2.COLOR_BGR2RGB))
                     
