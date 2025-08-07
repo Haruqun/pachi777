@@ -26,19 +26,19 @@ st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出す�
 # 実際の画像サイズに応じて自動スケーリングされる
 if 'base_regions' not in st.session_state:
     st.session_state.base_regions = {
-        'Machine_No': {'bbox': (18, 262, 88, 298), 'type': 'text'},
-        'Jackpot_Count': {'bbox': (75, 385, 230, 460), 'type': 'red_number'},
-        'Jackpot_Prob': {'bbox': (78, 465, 202, 492), 'type': 'text'},
-        'First_Hit_Count': {'bbox': (305, 385, 415, 460), 'type': 'blue_number'},
-        'First_Hit_Prob': {'bbox': (310, 465, 410, 492), 'type': 'text'},
-        'Total_Start': {'bbox': (545, 392, 673, 432), 'type': 'number'},
-        'Normal': {'bbox': (496, 456, 580, 494), 'type': 'number'},
-        'Chance': {'bbox': (609, 456, 693, 494), 'type': 'number'},
-        'Ultra': {'bbox': (73, 545, 116, 587), 'type': 'red_number'},
-        'Middle': {'bbox': (126, 545, 169, 587), 'type': 'red_number'},
-        'Small': {'bbox': (179, 545, 222, 587), 'type': 'red_number'},
-        'Start': {'bbox': (318, 545, 441, 596), 'type': 'number'},
-        'Max_Payout': {'bbox': (520, 545, 681, 596), 'type': 'number'},
+        'Machine_No': {'bbox': (15, 259, 91, 301), 'type': 'text'},  # 3px余白追加
+        'Jackpot_Count': {'bbox': (70, 380, 235, 465), 'type': 'red_number'},  # 5px余白追加
+        'Jackpot_Prob': {'bbox': (75, 462, 205, 495), 'type': 'text'},  # 3px余白追加
+        'First_Hit_Count': {'bbox': (300, 380, 420, 465), 'type': 'blue_number'},  # 5px余白追加
+        'First_Hit_Prob': {'bbox': (307, 462, 413, 495), 'type': 'text'},  # 3px余白追加
+        'Total_Start': {'bbox': (542, 389, 676, 435), 'type': 'number'},  # 3px余白追加
+        'Normal': {'bbox': (493, 453, 583, 497), 'type': 'number'},  # 3px余白追加
+        'Chance': {'bbox': (606, 453, 696, 497), 'type': 'number'},  # 3px余白追加
+        'Ultra': {'bbox': (70, 542, 119, 590), 'type': 'red_number'},  # 3px余白追加
+        'Middle': {'bbox': (123, 542, 172, 590), 'type': 'red_number'},  # 3px余白追加
+        'Small': {'bbox': (176, 542, 225, 590), 'type': 'red_number'},  # 3px余白追加
+        'Start': {'bbox': (315, 542, 444, 599), 'type': 'number'},  # 3px余白追加
+        'Max_Payout': {'bbox': (517, 542, 684, 599), 'type': 'number'},  # 3px余白追加
     }
 
 # セッションステートで座標を管理
@@ -306,7 +306,10 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         thickness = 2
                     
                     cv2.rectangle(vis_img, (x1, y1), (x2, y2), color, thickness)
-                    cv2.putText(vis_img, name, (x1, y1-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                    # テキストを枠の中央上部に配置
+                    text_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+                    text_x = x1 + (x2 - x1 - text_size[0]) // 2
+                    cv2.putText(vis_img, name, (text_x, y1-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
                 
                 st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB))
         
