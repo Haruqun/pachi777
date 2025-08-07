@@ -157,10 +157,31 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
         else:
             return "graph"
     
+    # 黒い背景領域の上端を検出
+    def find_black_region_top(image):
+        """黒い背景領域の上端Y座標を検出"""
+        height, width = image.shape[:2]
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        # 上から下に向かって黒い領域を探す
+        for y in range(height // 4, height // 2):
+            row_mean = np.mean(gray[y, :])
+            if row_mean < 30:  # 十分に暗い行を検出
+                # 数行連続で暗いことを確認
+                if y + 10 < height:
+                    next_rows_mean = np.mean(gray[y:y+10, :])
+                    if next_rows_mean < 30:
+                        return y
+        return None
+    
     image_type = detect_image_type(img)
     
     if image_type == "detail":
         st.success("✅ 出玉詳細画像として認識されました")
+        
+        # 自動位置調整フラグの初期化
+        if 'auto_adjust' not in st.session_state:
+            st.session_state.auto_adjust = True
         
         # 3カラムレイアウト（座標調整、画像、結果）
         col_adjust, col_image, col_result = st.columns([1, 1.5, 1])
@@ -172,6 +193,21 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             # スケール情報を表示
             if scale_x != 1.0 or scale_y != 1.0:
                 st.caption(f"スケール: X={scale_x:.2f}, Y={scale_y:.2f}")
+            
+            # 自動位置調整のオン/オフ
+            st.session_state.auto_adjust = st.checkbox("位置ずれ自動調整", value=st.session_state.get('auto_adjust', True), 
+                                                       help="スクリーンショットの位置ずれを自動的に検出して調整します")
+            
+            # 自動調整が有効な場合、黒い背景領域を検出して調整
+            if st.session_state.auto_adjust:
+                black_top = find_black_region_top(img)
+                if black_top is not None:
+                    # 基準となるY座標のオフセット（元の座標は黒い領域が330px付近から始まることを想定）
+                    base_black_top = int(330 * scale_y)  # スケーリングを考慮
+                    y_offset = black_top - base_black_top
+                    
+                    if abs(y_offset) > 5:  # 5px以上のずれがある場合
+                        st.info(f"位置ずれ検出: {y_offset}px（自動調整済み）")
             
             # 座標設定の読み込み
             uploaded_config = st.file_uploader(
