@@ -108,45 +108,48 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
     st.success(f"画像サイズ: {img.shape[1]} x {img.shape[0]} px")
     
     # カラムレイアウト
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns([1.5, 1])
+    
+    # 画像タイプの判定
+    def detect_image_type(image):
+        """画像タイプを判別（グラフ or 詳細）"""
+        height, width = image.shape[:2]
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        
+        # 黒い背景の検出
+        center_y = height // 2
+        center_region = hsv[center_y-100:center_y+100, :]
+        black_mask = cv2.inRange(center_region, np.array([0, 0, 0]), np.array([180, 255, 30]))
+        black_ratio = np.sum(black_mask) / (black_mask.shape[0] * black_mask.shape[1] * 255)
+        
+        # 赤と青の大きな数字の検出
+        red_mask1 = cv2.inRange(hsv, np.array([0, 100, 100]), np.array([10, 255, 255]))
+        red_mask2 = cv2.inRange(hsv, np.array([170, 100, 100]), np.array([180, 255, 255]))
+        red_mask = cv2.bitwise_or(red_mask1, red_mask2)
+        red_ratio = np.sum(red_mask) / (height * width * 255)
+        
+        blue_mask = cv2.inRange(hsv, np.array([100, 100, 100]), np.array([130, 255, 255]))
+        blue_ratio = np.sum(blue_mask) / (height * width * 255)
+        
+        if black_ratio > 0.3 and red_ratio > 0.001 and blue_ratio > 0.001:
+            return "detail"
+        else:
+            return "graph"
+    
+    image_type = detect_image_type(img)
     
     with col1:
-        st.subheader("📷 元画像")
-        st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-    
-    with col2:
-        st.subheader("📊 抽出結果")
-        
-        # 画像タイプの判定
-        def detect_image_type(image):
-            """画像タイプを判別（グラフ or 詳細）"""
-            height, width = image.shape[:2]
-            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-            
-            # 黒い背景の検出
-            center_y = height // 2
-            center_region = hsv[center_y-100:center_y+100, :]
-            black_mask = cv2.inRange(center_region, np.array([0, 0, 0]), np.array([180, 255, 30]))
-            black_ratio = np.sum(black_mask) / (black_mask.shape[0] * black_mask.shape[1] * 255)
-            
-            # 赤と青の大きな数字の検出
-            red_mask1 = cv2.inRange(hsv, np.array([0, 100, 100]), np.array([10, 255, 255]))
-            red_mask2 = cv2.inRange(hsv, np.array([170, 100, 100]), np.array([180, 255, 255]))
-            red_mask = cv2.bitwise_or(red_mask1, red_mask2)
-            red_ratio = np.sum(red_mask) / (height * width * 255)
-            
-            blue_mask = cv2.inRange(hsv, np.array([100, 100, 100]), np.array([130, 255, 255]))
-            blue_ratio = np.sum(blue_mask) / (height * width * 255)
-            
-            if black_ratio > 0.3 and red_ratio > 0.001 and blue_ratio > 0.001:
-                return "detail"
-            else:
-                return "graph"
-        
-        image_type = detect_image_type(img)
-        
         if image_type == "detail":
             st.success("✅ 出玉詳細画像として認識されました")
+        
+        # タブで元画像と可視化画像を切り替え
+        tab1, tab2 = st.tabs(["元画像", "抽出領域"])
+        
+        with tab1:
+            st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        
+        with tab2:
+            if image_type == "detail":
             
             # OCR処理
             with st.spinner("OCR処理中..."):
