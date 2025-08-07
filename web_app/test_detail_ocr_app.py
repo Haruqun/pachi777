@@ -376,9 +376,13 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                         # 反転がダメなら元のマスクで再試行
                                         text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
                                 elif name in ['Ultra', 'Middle', 'Small']:
-                                    # 超/中/小は単一の数字
-                                    # PSM 8（単一単語）を試す
-                                    text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                    # 超/中/小は単一または2桁の数字
+                                    # まずマスクを反転してみる
+                                    mask_inv = cv2.bitwise_not(mask)
+                                    text = pytesseract.image_to_string(mask_inv, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                    if not text.strip() or (name == 'Ultra' and text.strip() == '1'):
+                                        # 反転がダメまたは「21」を「1」と認識した場合は元のマスクで再試行
+                                        text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
                                 else:
                                     text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789')
                                 
