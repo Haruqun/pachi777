@@ -333,21 +333,59 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 - 例: "B-200" = (x=200, y=100)
                 """)
                 
-                # 座標計算ツール
-                col1, col2 = st.columns(2)
-                with col1:
-                    grid_ref = st.text_input("グリッド参照（例: C-300）", "")
-                    if grid_ref and '-' in grid_ref:
-                        try:
-                            letter, number = grid_ref.split('-')
-                            y_coord = (ord(letter.upper()) - ord('A')) * 100
-                            x_coord = int(number)
-                            st.success(f"座標: ({x_coord}, {y_coord})")
-                        except:
-                            st.error("形式が正しくありません")
+                # 座標調整ツール
+                st.markdown("#### 🎯 座標調整ツール")
                 
-                with col2:
-                    st.markdown("**現在の領域設定:**")
+                # 調整する領域を選択
+                selected_region = st.selectbox(
+                    "調整する領域を選択",
+                    list(regions.keys())
+                )
+                
+                if selected_region:
+                    current_bbox = regions[selected_region]['bbox']
+                    st.info(f"現在の座標: ({current_bbox[0]}, {current_bbox[1]}) - ({current_bbox[2]}, {current_bbox[3]})")
+                    
+                    # スライダーで座標を調整
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("**開始座標**")
+                        new_x1 = st.slider("X1 (左)", 0, width, current_bbox[0], step=25, key=f"x1_{selected_region}")
+                        new_y1 = st.slider("Y1 (上)", 0, height, current_bbox[1], step=25, key=f"y1_{selected_region}")
+                    
+                    with col2:
+                        st.markdown("**終了座標**")
+                        new_x2 = st.slider("X2 (右)", 0, width, current_bbox[2], step=25, key=f"x2_{selected_region}")
+                        new_y2 = st.slider("Y2 (下)", 0, height, current_bbox[3], step=25, key=f"y2_{selected_region}")
+                    
+                    # プレビュー画像
+                    if st.checkbox("調整後のプレビューを表示", key="preview_check"):
+                        preview_img = img.copy()
+                        # グリッドを描画
+                        for x in range(0, width, 100):
+                            cv2.line(preview_img, (x, 0), (x, height), (200, 200, 200), 1)
+                        for y in range(0, height, 100):
+                            cv2.line(preview_img, (0, y), (width, y), (200, 200, 200), 1)
+                        
+                        # 新しい領域を描画
+                        cv2.rectangle(preview_img, (new_x1, new_y1), (new_x2, new_y2), (0, 255, 255), 3)
+                        cv2.putText(preview_img, selected_region, (new_x1, new_y1-5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                        
+                        # 切り出し領域を表示
+                        if new_x2 > new_x1 and new_y2 > new_y1:
+                            roi = img[new_y1:new_y2, new_x1:new_x2]
+                            col_preview, col_roi = st.columns([2, 1])
+                            with col_preview:
+                                st.image(cv2.cvtColor(preview_img, cv2.COLOR_BGR2RGB), caption="プレビュー")
+                            with col_roi:
+                                st.image(cv2.cvtColor(roi, cv2.COLOR_BGR2RGB), caption="切り出し領域")
+                    
+                    # 新しい座標をコピー用に表示
+                    st.code(f"'{selected_region}': {{'bbox': ({new_x1}, {new_y1}, {new_x2}, {new_y2}), 'type': '{regions[selected_region]['type']}'}},")
+                
+                # 現在の全領域設定
+                with st.expander("現在の全領域設定"):
                     for name, info in regions.items():
                         x1, y1, x2, y2 = info['bbox']
                         st.text(f"{name}: ({x1},{y1})-({x2},{y2})")
