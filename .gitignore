@@ -60,3 +60,4 @@ pptown_graph_analysis_report_*
 !docs/CLAUDE.md
 !requirements.txt
 !web_app/requirements.txt
+data_image/
