@@ -367,15 +367,18 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                 mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
                                 mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
                                 
-                                # 大当り回数は大きな数字なのでPSM 13を使用（Raw line）
                                 if name in ['Jackpot_Count', 'First_Hit_Count']:
-                                    # より大きなカーネルでモルフォロジー処理
-                                    kernel_large = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-                                    mask = cv2.dilate(mask, kernel_large, iterations=1)
-                                    text = pytesseract.image_to_string(mask, config='--psm 13 -c tessedit_char_whitelist=0123456789')
+                                    # 大当り/初当り回数の大きな数字
+                                    # マスクを反転（白背景に黒文字）してみる
+                                    mask_inv = cv2.bitwise_not(mask)
+                                    text = pytesseract.image_to_string(mask_inv, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                    if not text.strip():
+                                        # 反転がダメなら元のマスクで再試行
+                                        text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
                                 elif name in ['Ultra', 'Middle', 'Small']:
                                     # 超/中/小は単一の数字
-                                    text = pytesseract.image_to_string(mask, config='--psm 10 -c tessedit_char_whitelist=0123456789')
+                                    # PSM 8（単一単語）を試す
+                                    text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
                                 else:
                                     text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789')
                                 
@@ -389,12 +392,13 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                 mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
                                 mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
                                 
-                                # 初当り回数は大きな数字なのでPSM 13を使用
                                 if name == 'First_Hit_Count':
-                                    # より大きなカーネルでモルフォロジー処理
-                                    kernel_large = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-                                    mask = cv2.dilate(mask, kernel_large, iterations=1)
-                                    text = pytesseract.image_to_string(mask, config='--psm 13 -c tessedit_char_whitelist=0123456789')
+                                    # 初当り回数の大きな数字
+                                    # マスクを反転してみる
+                                    mask_inv = cv2.bitwise_not(mask)
+                                    text = pytesseract.image_to_string(mask_inv, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                    if not text.strip():
+                                        text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
                                 else:
                                     text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789')
                                 
