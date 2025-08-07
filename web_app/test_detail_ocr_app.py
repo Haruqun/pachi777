@@ -42,17 +42,67 @@ with st.sidebar:
     - その他詳細データ
     """)
 
-# メインエリア
-uploaded_file = st.file_uploader(
-    "出玉詳細画像をアップロード",
-    type=['png', 'jpg', 'jpeg'],
-    help="site777の出玉詳細画面のスクリーンショットをアップロードしてください"
-)
+# テスト画像をBase64エンコード（事前準備）
+import base64
+import os
+
+# テスト画像のBase64データを保持する辞書
+test_images_data = {}
+
+# ローカルの画像ファイルを読み込んでBase64エンコード
+test_image_files = [
+    ("IMG_2074.PNG", "0026"),
+    ("IMG_2075.PNG", "0027"),
+    ("IMG_2076.PNG", "0028"),
+    ("IMG_2077.PNG", "0030")
+]
+
+for filename, machine_num in test_image_files:
+    local_path = os.path.join(os.path.dirname(__file__), "..", "data_image", filename)
+    if os.path.exists(local_path):
+        with open(local_path, "rb") as f:
+            img_data = f.read()
+            test_images_data[f"{filename} (台番号: {machine_num})"] = img_data
+
+# 画像選択方法
+if test_images_data:
+    image_source = st.radio(
+        "画像の選択方法",
+        ["テスト画像を使用", "画像をアップロード"],
+        horizontal=True
+    )
+else:
+    image_source = "画像をアップロード"
+    st.info("テスト画像が見つかりません。画像をアップロードしてください。")
+
+uploaded_file = None
+selected_test_image = None
+img = None
+
+if image_source == "テスト画像を使用" and test_images_data:
+    selected_test_image = st.selectbox(
+        "テスト画像を選択",
+        list(test_images_data.keys())
+    )
+    # 選択された画像データを取得
+    img_data = test_images_data[selected_test_image]
+    file_bytes = np.frombuffer(img_data, dtype=np.uint8)
+    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+else:
+    # メインエリア
+    uploaded_file = st.file_uploader(
+        "出玉詳細画像をアップロード",
+        type=['png', 'jpg', 'jpeg'],
+        help="site777の出玉詳細画面のスクリーンショットをアップロードしてください"
+    )
 
 if uploaded_file is not None:
     # 画像を読み込み
     file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+
+# テスト画像またはアップロード画像がある場合
+if (image_source == "テスト画像を使用" and selected_test_image and 'img' in locals() and img is not None) or uploaded_file is not None:
     
     # 画像情報を表示
     st.success(f"画像サイズ: {img.shape[1]} x {img.shape[0]} px")
