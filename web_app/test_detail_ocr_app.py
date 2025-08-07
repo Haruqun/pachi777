@@ -27,18 +27,18 @@ st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出す�
 if 'base_regions' not in st.session_state:
     st.session_state.base_regions = {
         'Machine_No': {'bbox': (18, 260, 88, 298), 'type': 'text'},
-        'Jackpot_Count': {'bbox': (75, 380, 235, 460), 'type': 'red_number'},
-        'Jackpot_Prob': {'bbox': (78, 460, 205, 490), 'type': 'text'},
-        'First_Hit_Count': {'bbox': (305, 380, 415, 460), 'type': 'blue_number'},
-        'First_Hit_Prob': {'bbox': (310, 460, 410, 490), 'type': 'text'},
-        'Total_Start': {'bbox': (540, 390, 676, 435), 'type': 'number'},
-        'Normal': {'bbox': (495, 455, 582, 495), 'type': 'number'},
-        'Chance': {'bbox': (609, 455, 696, 495), 'type': 'number'},
-        'Ultra': {'bbox': (74, 545, 118, 590), 'type': 'red_number'},
-        'Middle': {'bbox': (125, 545, 161, 590), 'type': 'red_number'},
-        'Small': {'bbox': (168, 545, 215, 590), 'type': 'red_number'},
-        'Start': {'bbox': (317, 540, 442, 596), 'type': 'number'},
-        'Max_Payout': {'bbox': (520, 540, 680, 596), 'type': 'number'},
+        'Jackpot_Count': {'bbox': (75, 385, 230, 490), 'type': 'red_number'},
+        'Jackpot_Prob': {'bbox': (78, 470, 205, 495), 'type': 'text'},
+        'First_Hit_Count': {'bbox': (310, 385, 415, 490), 'type': 'blue_number'},
+        'First_Hit_Prob': {'bbox': (313, 470, 410, 495), 'type': 'text'},
+        'Total_Start': {'bbox': (548, 396, 678, 435), 'type': 'number'},
+        'Normal': {'bbox': (500, 460, 583, 495), 'type': 'number'},
+        'Chance': {'bbox': (614, 460, 697, 495), 'type': 'number'},
+        'Ultra': {'bbox': (66, 550, 108, 592), 'type': 'red_number'},
+        'Middle': {'bbox': (119, 550, 161, 592), 'type': 'red_number'},
+        'Small': {'bbox': (172, 550, 214, 592), 'type': 'red_number'},
+        'Start': {'bbox': (318, 545, 441, 603), 'type': 'number'},
+        'Max_Payout': {'bbox': (525, 545, 686, 603), 'type': 'number'},
     }
 
 # セッションステートで座標を管理
@@ -329,29 +329,36 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                 # 赤色抽出（より広い範囲）
                                 hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
                                 # 赤色の範囲を広げる
-                                mask1 = cv2.inRange(hsv, np.array([0, 50, 50]), np.array([10, 255, 255]))
-                                mask2 = cv2.inRange(hsv, np.array([160, 50, 50]), np.array([180, 255, 255]))
+                                mask1 = cv2.inRange(hsv, np.array([0, 30, 30]), np.array([10, 255, 255]))
+                                mask2 = cv2.inRange(hsv, np.array([160, 30, 30]), np.array([180, 255, 255]))
                                 mask = cv2.bitwise_or(mask1, mask2)
-                                # モルフォロジー処理で文字を太くする
-                                kernel = np.ones((2, 2), np.uint8)
-                                mask = cv2.dilate(mask, kernel, iterations=1)
+                                
+                                # ノイズ除去
+                                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+                                mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+                                mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+                                
                                 # 大当り回数は大きな数字なのでPSM 8を使用
-                                if name == 'Jackpot_Count':
+                                if name == 'Jackpot_Count' or name == 'First_Hit_Count':
                                     text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
                                 else:
-                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789()/- ')
+                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789')
                                 
                             elif info['type'] == 'blue_number':
                                 # 青色抽出（より広い範囲）
                                 hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                                mask = cv2.inRange(hsv, np.array([90, 50, 50]), np.array([130, 255, 255]))
-                                kernel = np.ones((2, 2), np.uint8)
-                                mask = cv2.dilate(mask, kernel, iterations=1)
+                                mask = cv2.inRange(hsv, np.array([90, 30, 30]), np.array([130, 255, 255]))
+                                
+                                # ノイズ除去
+                                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+                                mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+                                mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+                                
                                 # 初当り回数は大きな数字なのでPSM 8を使用
                                 if name == 'First_Hit_Count':
                                     text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
                                 else:
-                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789()/- ')
+                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789')
                                 
                             elif info['type'] == 'number':
                                 # 白文字の抽出（黒背景）
@@ -369,18 +376,35 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                 enhanced = clahe.apply(gray)
                                 text = pytesseract.image_to_string(enhanced, lang='jpn', config='--psm 8')
                             
-                            # 数値抽出
-                            numbers = re.findall(r'\d+', text)
-                            if numbers:
-                                if 'Prob' in name and len(numbers) > 0:
-                                    results[name] = f"1/{numbers[0]}"
-                                elif name in ['Jackpot_Count', 'First_Hit_Count']:
-                                    # 大当り/初当り回数は最初の数字のみ
+                            # 結果の処理
+                            text = text.strip()
+                            
+                            if name == 'Machine_No':
+                                # 台番号は4桁の数字
+                                numbers = re.findall(r'\d{4}', text)
+                                results[name] = numbers[0] if numbers else text if text else "認識失敗"
+                            elif 'Prob' in name:
+                                # 確率は括弧内の数値
+                                numbers = re.findall(r'\d+', text)
+                                if numbers:
+                                    results[name] = f"1/{numbers[-1]}"  # 最後の数字を使用
+                                else:
+                                    results[name] = text if text else "認識失敗"
+                            elif name in ['Jackpot_Count', 'First_Hit_Count']:
+                                # 大当り/初当り回数は大きな数字
+                                numbers = re.findall(r'\d+', text)
+                                if numbers:
+                                    # 最も大きい数字を選択（通常は最初の数字）
+                                    results[name] = max(numbers, key=lambda x: len(x))
+                                else:
+                                    results[name] = text if text else "0"
+                            else:
+                                # その他は最初の数字
+                                numbers = re.findall(r'\d+', text)
+                                if numbers:
                                     results[name] = numbers[0]
                                 else:
-                                    results[name] = numbers[0]
-                            else:
-                                results[name] = text.strip() if text.strip() else "認識失敗"
+                                    results[name] = text if text else "認識失敗"
                                 
                         except Exception as e:
                             results[name] = f"エラー: {str(e)}"
