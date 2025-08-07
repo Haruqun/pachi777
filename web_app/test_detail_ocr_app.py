@@ -287,6 +287,30 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 st.markdown("### 🔍 抽出領域の可視化")
                 vis_img = img.copy()
                 
+                # グリッドを描画
+                height, width = img.shape[:2]
+                
+                # 縦線（数字：50ピクセルごと）
+                for i, x in enumerate(range(0, width, 50)):
+                    cv2.line(vis_img, (x, 0), (x, height), (200, 200, 200), 1)
+                    if x % 100 == 0:  # 100ピクセルごとに太線
+                        cv2.line(vis_img, (x, 0), (x, height), (150, 150, 150), 2)
+                        cv2.putText(vis_img, str(x), (x+2, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                
+                # 横線（アルファベット：100ピクセルごと）
+                alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                for i, y in enumerate(range(0, height, 100)):
+                    cv2.line(vis_img, (0, y), (width, y), (200, 200, 200), 1)
+                    if i < len(alphabet):
+                        cv2.putText(vis_img, alphabet[i], (5, y+20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+                        # 右側にも表示
+                        cv2.putText(vis_img, alphabet[i], (width-30, y+20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+                
+                # 追加の細かいグリッド（25ピクセルごと）
+                for y in range(0, height, 25):
+                    if y % 100 != 0:  # 100の倍数以外
+                        cv2.line(vis_img, (0, y), (width, y), (230, 230, 230), 1)
+                
                 for name, info in regions.items():
                     x1, y1, x2, y2 = info['bbox']
                     color = (0, 255, 0)  # 緑
@@ -299,6 +323,34 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                     cv2.putText(vis_img, name, (x1, y1-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
                 
                 st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB))
+                
+                # グリッド座標ヘルパー
+                st.markdown("#### 📐 座標ヘルパー")
+                st.info("""
+                **グリッドの見方:**
+                - 横軸（X座標）: 数字（0, 100, 200, 300...）
+                - 縦軸（Y座標）: アルファベット（A=0, B=100, C=200, D=300...）
+                - 例: "B-200" = (x=200, y=100)
+                """)
+                
+                # 座標計算ツール
+                col1, col2 = st.columns(2)
+                with col1:
+                    grid_ref = st.text_input("グリッド参照（例: C-300）", "")
+                    if grid_ref and '-' in grid_ref:
+                        try:
+                            letter, number = grid_ref.split('-')
+                            y_coord = (ord(letter.upper()) - ord('A')) * 100
+                            x_coord = int(number)
+                            st.success(f"座標: ({x_coord}, {y_coord})")
+                        except:
+                            st.error("形式が正しくありません")
+                
+                with col2:
+                    st.markdown("**現在の領域設定:**")
+                    for name, info in regions.items():
+                        x1, y1, x2, y2 = info['bbox']
+                        st.text(f"{name}: ({x1},{y1})-({x2},{y2})")
             
             # 生のOCRテキスト
             if show_raw_text:
