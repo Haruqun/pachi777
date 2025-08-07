@@ -169,6 +169,10 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
         with col_adjust:
             st.subheader("🎯 座標調整")
             
+            # スケール情報を表示
+            if scale_x != 1.0 or scale_y != 1.0:
+                st.caption(f"スケール: X={scale_x:.2f}, Y={scale_y:.2f}")
+            
             # 座標設定の読み込み
             uploaded_config = st.file_uploader(
                 "座標設定を読み込み",
@@ -228,23 +232,43 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 col5, col6, col7, col8 = st.columns(4)
                 with col5:
                     if st.button("⬅️ 左へ", use_container_width=True):
+                        if scale_x != 1.0 or scale_y != 1.0:
+                            # 元の座標を更新
+                            orig_bbox = st.session_state.base_regions[selected_region]['bbox']
+                            st.session_state.base_regions[selected_region]['bbox'] = (orig_bbox[0]-1, orig_bbox[1], orig_bbox[2]-1, orig_bbox[3])
                         st.session_state.regions[selected_region]['bbox'] = (int(new_x1)-1, int(new_y1), int(new_x2)-1, int(new_y2))
                         st.rerun()
                 with col6:
                     if st.button("➡️ 右へ", use_container_width=True):
+                        if scale_x != 1.0 or scale_y != 1.0:
+                            orig_bbox = st.session_state.base_regions[selected_region]['bbox']
+                            st.session_state.base_regions[selected_region]['bbox'] = (orig_bbox[0]+1, orig_bbox[1], orig_bbox[2]+1, orig_bbox[3])
                         st.session_state.regions[selected_region]['bbox'] = (int(new_x1)+1, int(new_y1), int(new_x2)+1, int(new_y2))
                         st.rerun()
                 with col7:
                     if st.button("⬆️ 上へ", use_container_width=True):
+                        if scale_x != 1.0 or scale_y != 1.0:
+                            orig_bbox = st.session_state.base_regions[selected_region]['bbox']
+                            st.session_state.base_regions[selected_region]['bbox'] = (orig_bbox[0], orig_bbox[1]-1, orig_bbox[2], orig_bbox[3]-1)
                         st.session_state.regions[selected_region]['bbox'] = (int(new_x1), int(new_y1)-1, int(new_x2), int(new_y2)-1)
                         st.rerun()
                 with col8:
                     if st.button("⬇️ 下へ", use_container_width=True):
+                        if scale_x != 1.0 or scale_y != 1.0:
+                            orig_bbox = st.session_state.base_regions[selected_region]['bbox']
+                            st.session_state.base_regions[selected_region]['bbox'] = (orig_bbox[0], orig_bbox[1]+1, orig_bbox[2], orig_bbox[3]+1)
                         st.session_state.regions[selected_region]['bbox'] = (int(new_x1), int(new_y1)+1, int(new_x2), int(new_y2)+1)
                         st.rerun()
                 
                 # 座標を更新
                 if st.button("座標を更新", type="primary"):
+                    # スケーリングを考慮して元のサイズの座標として保存
+                    if 'scale_x' in locals() and 'scale_y' in locals():
+                        original_x1 = int(new_x1 / scale_x)
+                        original_y1 = int(new_y1 / scale_y)
+                        original_x2 = int(new_x2 / scale_x)
+                        original_y2 = int(new_y2 / scale_y)
+                        st.session_state.base_regions[selected_region]['bbox'] = (original_x1, original_y1, original_x2, original_y2)
                     st.session_state.regions[selected_region]['bbox'] = (int(new_x1), int(new_y1), int(new_x2), int(new_y2))
                     st.rerun()
                 
