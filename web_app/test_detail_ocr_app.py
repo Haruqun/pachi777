@@ -22,23 +22,28 @@ st.set_page_config(
 st.title("🔍 出玉詳細画像OCRテスト")
 st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出するテスト")
 
+# 元画像のサイズ（722x1584）に基づく座標
+# 実際の画像サイズに応じて自動スケーリングされる
+if 'base_regions' not in st.session_state:
+    st.session_state.base_regions = {
+        'Machine_No': {'bbox': (18, 262, 88, 298), 'type': 'text'},
+        'Jackpot_Count': {'bbox': (75, 385, 228, 485), 'type': 'red_number'},
+        'Jackpot_Prob': {'bbox': (78, 465, 202, 492), 'type': 'text'},
+        'First_Hit_Count': {'bbox': (308, 385, 410, 485), 'type': 'blue_number'},
+        'First_Hit_Prob': {'bbox': (311, 465, 407, 492), 'type': 'text'},
+        'Total_Start': {'bbox': (545, 392, 673, 432), 'type': 'number'},
+        'Normal': {'bbox': (496, 456, 580, 494), 'type': 'number'},
+        'Chance': {'bbox': (609, 456, 693, 494), 'type': 'number'},
+        'Ultra': {'bbox': (74, 545, 118, 587), 'type': 'number'},
+        'Middle': {'bbox': (125, 545, 169, 587), 'type': 'number'},
+        'Small': {'bbox': (176, 545, 220, 587), 'type': 'number'},
+        'Start': {'bbox': (317, 540, 439, 596), 'type': 'number'},
+        'Max_Payout': {'bbox': (519, 540, 681, 596), 'type': 'number'},
+    }
+
 # セッションステートで座標を管理
 if 'regions' not in st.session_state:
-    st.session_state.regions = {
-        'Machine_No': {'bbox': (10, 130, 60, 165), 'type': 'text'},
-        'Jackpot_Count': {'bbox': (40, 195, 140, 295), 'type': 'red_number'},
-        'Jackpot_Prob': {'bbox': (40, 245, 140, 265), 'type': 'text'},
-        'First_Hit_Count': {'bbox': (160, 195, 220, 295), 'type': 'blue_number'},
-        'First_Hit_Prob': {'bbox': (160, 245, 260, 265), 'type': 'text'},
-        'Total_Start': {'bbox': (285, 205, 360, 235), 'type': 'number'},
-        'Normal': {'bbox': (265, 240, 310, 265), 'type': 'number'},
-        'Chance': {'bbox': (325, 240, 370, 265), 'type': 'number'},
-        'Ultra': {'bbox': (40, 290, 70, 315), 'type': 'number'},
-        'Middle': {'bbox': (75, 290, 105, 315), 'type': 'number'},
-        'Small': {'bbox': (110, 290, 140, 315), 'type': 'number'},
-        'Start': {'bbox': (170, 290, 230, 325), 'type': 'number'},
-        'Max_Payout': {'bbox': (280, 290, 360, 325), 'type': 'number'},
-    }
+    st.session_state.regions = st.session_state.base_regions.copy()
 
 # テスト画像のBase64データを保持する辞書
 test_images_data = {}
@@ -104,6 +109,28 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
     # デバッグ用：画像の実際のサイズと期待されるサイズを表示
     st.info(f"デバッグ情報 - 幅: {img.shape[1]}px, 高さ: {img.shape[0]}px")
     
+    # 元画像サイズとのスケール比を計算
+    original_width = 722
+    original_height = 1584
+    scale_x = img.shape[1] / original_width
+    scale_y = img.shape[0] / original_height
+    
+    # スケーリングされた座標を計算
+    if scale_x != 1.0 or scale_y != 1.0:
+        st.warning(f"画像がスケーリングされています。スケール比 - X: {scale_x:.2f}, Y: {scale_y:.2f}")
+        # 座標を自動調整
+        for region_name, region_info in st.session_state.base_regions.items():
+            x1, y1, x2, y2 = region_info['bbox']
+            st.session_state.regions[region_name] = {
+                'bbox': (
+                    int(x1 * scale_x),
+                    int(y1 * scale_y),
+                    int(x2 * scale_x),
+                    int(y2 * scale_y)
+                ),
+                'type': region_info['type']
+            }
+    
     # 画像タイプの判定
     def detect_image_type(image):
         """画像タイプを判別（グラフ or 詳細）"""
@@ -163,21 +190,7 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             
             # デフォルト設定にリセット
             if st.button("🔄 デフォルト設定に戻す", use_container_width=True):
-                st.session_state.regions = {
-                    'Machine_No': {'bbox': (10, 130, 60, 165), 'type': 'text'},
-                    'Jackpot_Count': {'bbox': (40, 195, 140, 295), 'type': 'red_number'},
-                    'Jackpot_Prob': {'bbox': (40, 245, 140, 265), 'type': 'text'},
-                    'First_Hit_Count': {'bbox': (160, 195, 220, 295), 'type': 'blue_number'},
-                    'First_Hit_Prob': {'bbox': (160, 245, 260, 265), 'type': 'text'},
-                    'Total_Start': {'bbox': (285, 205, 360, 235), 'type': 'number'},
-                    'Normal': {'bbox': (265, 240, 310, 265), 'type': 'number'},
-                    'Chance': {'bbox': (325, 240, 370, 265), 'type': 'number'},
-                    'Ultra': {'bbox': (40, 290, 70, 315), 'type': 'number'},
-                    'Middle': {'bbox': (75, 290, 105, 315), 'type': 'number'},
-                    'Small': {'bbox': (110, 290, 140, 315), 'type': 'number'},
-                    'Start': {'bbox': (170, 290, 230, 325), 'type': 'number'},
-                    'Max_Payout': {'bbox': (280, 290, 360, 325), 'type': 'number'},
-                }
+                st.session_state.regions = st.session_state.base_regions.copy()
                 st.success("デフォルト設定にリセットしました")
                 st.rerun()
             
