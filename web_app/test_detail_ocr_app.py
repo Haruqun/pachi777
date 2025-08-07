@@ -154,19 +154,19 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 
                 # 座標定義（IMG_2074.PNGベース）
                 regions = {
-                    '台番号': {'bbox': (15, 250, 140, 310), 'type': 'text'},
-                    '大当り回数': {'bbox': (65, 370, 230, 480), 'type': 'red_number'},
-                    '大当り確率': {'bbox': (65, 455, 230, 490), 'type': 'text'},
-                    '初当り回数': {'bbox': (300, 370, 465, 480), 'type': 'blue_number'},
-                    '初当り確率': {'bbox': (300, 455, 465, 490), 'type': 'text'},
-                    '累計スタート': {'bbox': (540, 390, 690, 430), 'type': 'number'},
-                    '通常': {'bbox': (495, 460, 595, 500), 'type': 'number'},
-                    'チャンス中': {'bbox': (615, 460, 715, 500), 'type': 'number'},
-                    '超': {'bbox': (65, 530, 110, 585), 'type': 'number'},
-                    '中': {'bbox': (125, 530, 160, 585), 'type': 'number'},
-                    '小': {'bbox': (175, 530, 210, 585), 'type': 'number'},
-                    'スタート': {'bbox': (315, 530, 425, 585), 'type': 'number'},
-                    '最高出玉': {'bbox': (520, 530, 680, 585), 'type': 'number'},
+                    'Machine_No': {'bbox': (15, 250, 140, 310), 'type': 'text'},
+                    'Jackpot_Count': {'bbox': (65, 370, 230, 480), 'type': 'red_number'},
+                    'Jackpot_Prob': {'bbox': (65, 455, 230, 490), 'type': 'text'},
+                    'First_Hit_Count': {'bbox': (300, 370, 465, 480), 'type': 'blue_number'},
+                    'First_Hit_Prob': {'bbox': (300, 455, 465, 490), 'type': 'text'},
+                    'Total_Start': {'bbox': (540, 390, 690, 430), 'type': 'number'},
+                    'Normal': {'bbox': (495, 460, 595, 500), 'type': 'number'},
+                    'Chance': {'bbox': (615, 460, 715, 500), 'type': 'number'},
+                    'Ultra': {'bbox': (65, 530, 110, 585), 'type': 'number'},
+                    'Middle': {'bbox': (125, 530, 160, 585), 'type': 'number'},
+                    'Small': {'bbox': (175, 530, 210, 585), 'type': 'number'},
+                    'Start': {'bbox': (315, 530, 425, 585), 'type': 'number'},
+                    'Max_Payout': {'bbox': (520, 530, 680, 585), 'type': 'number'},
                 }
                 
                 # 各領域を処理
@@ -218,52 +218,52 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 # 基本データ
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    st.metric("台番号", results.get('台番号', '-'))
-                    st.metric("大当り回数", results.get('大当り回数', '-'))
-                    st.metric("初当り回数", results.get('初当り回数', '-'))
+                    st.metric("台番号", results.get('Machine_No', '-'))
+                    st.metric("大当り回数", results.get('Jackpot_Count', '-'))
+                    st.metric("初当り回数", results.get('First_Hit_Count', '-'))
                     
                 with col_b:
-                    st.metric("累計スタート", results.get('累計スタート', '-'))
-                    st.metric("大当り確率", results.get('大当り確率', '-'))
-                    st.metric("初当り確率", results.get('初当り確率', '-'))
+                    st.metric("累計スタート", results.get('Total_Start', '-'))
+                    st.metric("大当り確率", results.get('Jackpot_Prob', '-'))
+                    st.metric("初当り確率", results.get('First_Hit_Prob', '-'))
                 
                 # 詳細データ
                 st.markdown("#### 📈 詳細データ")
                 col_c, col_d, col_e = st.columns(3)
                 
                 with col_c:
-                    st.metric("超", results.get('超', '-'))
-                    st.metric("中", results.get('中', '-'))
-                    st.metric("小", results.get('小', '-'))
+                    st.metric("超", results.get('Ultra', '-'))
+                    st.metric("中", results.get('Middle', '-'))
+                    st.metric("小", results.get('Small', '-'))
                     
                 with col_d:
-                    st.metric("スタート", results.get('スタート', '-'))
-                    st.metric("通常", results.get('通常', '-'))
-                    st.metric("チャンス中", results.get('チャンス中', '-'))
+                    st.metric("スタート", results.get('Start', '-'))
+                    st.metric("通常", results.get('Normal', '-'))
+                    st.metric("チャンス中", results.get('Chance', '-'))
                     
                 with col_e:
-                    st.metric("最高出玉", results.get('最高出玉', '-'))
+                    st.metric("最高出玉", results.get('Max_Payout', '-'))
                 
                 # JSON出力
                 st.markdown("#### 💾 JSON形式")
                 st.json(results)
                 
                 # 期待値との比較（IMG_2074.PNGの場合）
-                if "0026" in str(results.get('台番号', '')):
+                if "0026" in str(results.get('Machine_No', '')):
                     expected = {
-                        '台番号': '0026',
-                        '大当り回数': '25',
-                        '大当り確率': '1/148',
-                        '初当り回数': '4',
-                        '初当り確率': '1/469',
-                        '累計スタート': '3721',
-                        '通常': '1877',
-                        'チャンス中': '1844',
-                        '超': '21',
-                        '中': '0',
-                        '小': '4',
-                        'スタート': '369',
-                        '最高出玉': '26830'
+                        'Machine_No': '0026',
+                        'Jackpot_Count': '25',
+                        'Jackpot_Prob': '1/148',
+                        'First_Hit_Count': '4',
+                        'First_Hit_Prob': '1/469',
+                        'Total_Start': '3721',
+                        'Normal': '1877',
+                        'Chance': '1844',
+                        'Ultra': '21',
+                        'Middle': '0',
+                        'Small': '4',
+                        'Start': '369',
+                        'Max_Payout': '26830'
                     }
                     
                     st.markdown("#### 🎯 精度確認（IMG_2074.PNG）")
