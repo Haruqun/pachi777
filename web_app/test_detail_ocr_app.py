@@ -26,19 +26,19 @@ st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出す�
 # 実際の画像サイズに応じて自動スケーリングされる
 if 'base_regions' not in st.session_state:
     st.session_state.base_regions = {
-        'Machine_No': {'bbox': (18, 262, 88, 298), 'type': 'text'},
-        'Jackpot_Count': {'bbox': (75, 375, 235, 463), 'type': 'red_number'},
-        'Jackpot_Prob': {'bbox': (77, 461, 203, 491), 'type': 'text'},
-        'First_Hit_Count': {'bbox': (302, 375, 415, 463), 'type': 'blue_number'},
-        'First_Hit_Prob': {'bbox': (308, 461, 408, 491), 'type': 'text'},
-        'Total_Start': {'bbox': (544, 390, 678, 435), 'type': 'number'},
-        'Normal': {'bbox': (495, 455, 582, 495), 'type': 'number'},
-        'Chance': {'bbox': (608, 455, 695, 495), 'type': 'number'},
-        'Ultra': {'bbox': (72, 538, 118, 590), 'type': 'red_number'},
-        'Middle': {'bbox': (125, 538, 165, 590), 'type': 'red_number'},
-        'Small': {'bbox': (172, 538, 218, 590), 'type': 'red_number'},
-        'Start': {'bbox': (318, 535, 440, 600), 'type': 'number'},
-        'Max_Payout': {'bbox': (520, 535, 683, 600), 'type': 'number'},
+        'Machine_No': {'bbox': (29, 419, 143, 480), 'type': 'text'},
+        'Jackpot_Count': {'bbox': (104, 619, 373, 747), 'type': 'red_number'},
+        'Jackpot_Prob': {'bbox': (104, 742, 333, 797), 'type': 'text'},
+        'First_Hit_Count': {'bbox': (504, 621, 676, 747), 'type': 'blue_number'},
+        'First_Hit_Prob': {'bbox': (509, 743, 667, 797), 'type': 'text'},
+        'Total_Start': {'bbox': (850, 627, 1105, 700), 'type': 'number'},
+        'Normal': {'bbox': (780, 747, 969, 803), 'type': 'number'},
+        'Chance': {'bbox': (1002, 742, 1138, 798), 'type': 'number'},
+        'Ultra': {'bbox': (96, 892, 164, 960), 'type': 'red_number'},
+        'Middle': {'bbox': (194, 887, 262, 955), 'type': 'red_number'},
+        'Small': {'bbox': (258, 895, 326, 963), 'type': 'red_number'},
+        'Start': {'bbox': (519, 879, 720, 973), 'type': 'number'},
+        'Max_Payout': {'bbox': (857, 879, 1120, 973), 'type': 'number'},
     }
 
 # セッションステートで座標を管理
@@ -110,8 +110,8 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
     st.info(f"デバッグ情報 - 幅: {img.shape[1]}px, 高さ: {img.shape[0]}px")
     
     # 元画像サイズとのスケール比を計算
-    original_width = 722
-    original_height = 1584
+    original_width = 1170
+    original_height = 2532
     scale_x = img.shape[1] / original_width
     scale_y = img.shape[0] / original_height
     
