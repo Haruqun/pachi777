@@ -287,29 +287,7 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 st.markdown("### 🔍 抽出領域の可視化")
                 vis_img = img.copy()
                 
-                # グリッドを描画
                 height, width = img.shape[:2]
-                
-                # 縦線（数字：50ピクセルごと）
-                for i, x in enumerate(range(0, width, 50)):
-                    cv2.line(vis_img, (x, 0), (x, height), (200, 200, 200), 1)
-                    if x % 100 == 0:  # 100ピクセルごとに太線
-                        cv2.line(vis_img, (x, 0), (x, height), (150, 150, 150), 2)
-                        cv2.putText(vis_img, str(x), (x+2, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                
-                # 横線（アルファベット：100ピクセルごと）
-                alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                for i, y in enumerate(range(0, height, 100)):
-                    cv2.line(vis_img, (0, y), (width, y), (200, 200, 200), 1)
-                    if i < len(alphabet):
-                        cv2.putText(vis_img, alphabet[i], (5, y+20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
-                        # 右側にも表示
-                        cv2.putText(vis_img, alphabet[i], (width-30, y+20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
-                
-                # 追加の細かいグリッド（25ピクセルごと）
-                for y in range(0, height, 25):
-                    if y % 100 != 0:  # 100の倍数以外
-                        cv2.line(vis_img, (0, y), (width, y), (230, 230, 230), 1)
                 
                 for name, info in regions.items():
                     x1, y1, x2, y2 = info['bbox']
@@ -324,14 +302,6 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 
                 st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB))
                 
-                # グリッド座標ヘルパー
-                st.markdown("#### 📐 座標ヘルパー")
-                st.info("""
-                **グリッドの見方:**
-                - 横軸（X座標）: 数字（0, 100, 200, 300...）
-                - 縦軸（Y座標）: アルファベット（A=0, B=100, C=200, D=300...）
-                - 例: "B-200" = (x=200, y=100)
-                """)
                 
                 # 座標調整ツール
                 st.markdown("#### 🎯 座標調整ツール")
@@ -362,11 +332,6 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                     # プレビュー画像
                     if st.checkbox("調整後のプレビューを表示", key="preview_check"):
                         preview_img = img.copy()
-                        # グリッドを描画
-                        for x in range(0, width, 100):
-                            cv2.line(preview_img, (x, 0), (x, height), (200, 200, 200), 1)
-                        for y in range(0, height, 100):
-                            cv2.line(preview_img, (0, y), (width, y), (200, 200, 200), 1)
                         
                         # 新しい領域を描画
                         cv2.rectangle(preview_img, (new_x1, new_y1), (new_x2, new_y2), (0, 255, 255), 3)
