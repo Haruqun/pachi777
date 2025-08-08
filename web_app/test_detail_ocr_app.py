@@ -29,98 +29,155 @@ if 'relative_regions' not in st.session_state:
     # 黒背景左上を原点とした絶対座標
     st.session_state.relative_regions = {
         'Jackpot_Count': {
-            'bbox': (67, 351, 188, 495),  # 大当り回数 1 (赤大数字)
+            'bbox': (70, 50, 200, 140),  # 大当り回数 (赤大数字)
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'large'
         },
         'First_Hit_Count': {
-            'bbox': (299, 351, 421, 495),  # 初当り回数 4 (青大数字)
+            'bbox': (290, 50, 420, 140),  # 初当り回数 (青大数字)
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'large'
         },
         'Jackpot_Prob_Red': {
-            'bbox': (79, 459, 175, 489),  # (1/148) 赤括弧
+            'bbox': (75, 140, 185, 170),  # (1/xxx) 赤括弧
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Jackpot_Prob_Blue': {
-            'bbox': (312, 459, 408, 489),  # (1/469) 青括弧
+            'bbox': (305, 140, 415, 170),  # (1/xxx) 青括弧
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Total_Start': {
-            'bbox': (522, 549, 665, 586),  # 累計スタート 26830
+            'bbox': (530, 50, 670, 85),  # 累計スタート
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'medium'
         },
-        'Start': {
-            'bbox': (318, 549, 421, 586),  # スタート 369
+        'Normal': {
+            'bbox': (505, 90, 580, 115),  # 通常
             'type': 'number',
             'inside_black': True,
-            'size_pattern': 'medium'
+            'size_pattern': 'small'
         },
-        'Normal_Chance': {
-            'bbox': (65, 555, 189, 583),  # 通常/チャンス 7 (赤)
+        'Chance': {
+            'bbox': (615, 90, 690, 115),  # チャンス中
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Ultra': {
+            'bbox': (75, 210, 110, 240),  # 超 (赤数字)
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
+        'Middle': {
+            'bbox': (120, 210, 155, 240),  # 中 (赤数字)
+            'type': 'red_number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Small': {
+            'bbox': (165, 210, 200, 240),  # 小 (赤数字)
+            'type': 'red_number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Start': {
+            'bbox': (315, 205, 420, 250),  # スタート
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'large_white'
+        },
         'Max_Payout': {
-            'bbox': (40, 653, 130, 674),  # 最高出玉 25760
+            'bbox': (520, 205, 650, 250),  # 最高出玉
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'large_white'
+        },
+        # テーブル1行目
+        'Table1_1': {
+            'bbox': (0, 310, 140, 340),  # 最高一撃獲得
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Current_Prob': {
-            'bbox': (340, 653, 405, 676),  # 現在確率 1/87
+        'Table1_2': {
+            'bbox': (145, 310, 285, 340),  # チャンス中大当り
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Machine_No': {
-            'bbox': (59, 725, 111, 747),  # 台番号 220
+        'Table1_3': {
+            'bbox': (290, 310, 430, 340),  # チャンス中確率
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        # テーブル下部（日付・確率・最高出玉）
+        'Table1_4': {
+            'bbox': (435, 310, 575, 340),  # 低確中大当り
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Table1_5': {
+            'bbox': (580, 310, 720, 340),  # 低確中確率
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        # テーブル2行目
+        'Table2_2': {
+            'bbox': (145, 345, 285, 375),  # 前日最終スタート
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        # テーブル3行目（下部）
         'Date1': {
-            'bbox': (31, 813, 76, 835),  # 8/6 (日付1行目)
+            'bbox': (20, 405, 95, 430),  # 日付1
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Start1': {
+            'bbox': (100, 405, 215, 430),  # スタート数1
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Prob1': {
-            'bbox': (425, 813, 509, 835),  # 1/166 (確率1行目)
+            'bbox': (220, 405, 355, 430),  # 確率1
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Total_Bottom1': {
-            'bbox': (584, 812, 673, 834),  # 14670 (累計スタート1行目)
+        'Max1': {
+            'bbox': (580, 405, 680, 430),  # 最高出玉1
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
+        # テーブル4行目
         'Date2': {
-            'bbox': (31, 849, 76, 872),  # 8/5 (日付2行目)
+            'bbox': (20, 440, 95, 465),  # 日付2
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'First_Times': {
-            'bbox': (125, 849, 196, 870),  # 3213 (初当り回数)
+        'Start2': {
+            'bbox': (100, 440, 215, 465),  # スタート数2
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Prob2': {
-            'bbox': (434, 849, 499, 872),  # 1/79 (確率2行目)
+            'bbox': (220, 440, 355, 465),  # 確率2
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
