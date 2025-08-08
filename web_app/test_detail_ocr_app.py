@@ -25,68 +25,104 @@ st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出す�
 # 黒背景領域内での相対位置（比率）で定義
 # 黒背景の左上を(0,0)、右下を(1,1)とした相対座標
 if 'relative_regions' not in st.session_state:
-    # 黒背景領域の幅は722px、高さは約480px
+    # 黒背景領域の幅は722px、高さは1246px（実際の検出結果より）
     # 以下の座標は黒背景左上を基準とした相対位置
     st.session_state.relative_regions = {
+        'Machine_No': {
+            'bbox': (178/722, 320/1246, 227/722, 357/1246),  # 台番号 178
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'medium'
+        },
         'Jackpot_Count': {
-            'bbox': (75/722, 7/480, 210/722, 71/480),  # 大当り回数 25 (赤大数字)
+            'bbox': (70/722, 10/1246, 200/722, 80/1246),  # 大当り回数 (赤大数字)
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'large'
         },
         'First_Hit_Count': {
-            'bbox': (295/722, 7/480, 380/722, 71/480),  # 初当り回数 4 (青大数字)
+            'bbox': (299/722, 351/1246, 421/722, 495/1246),  # 初当り回数 1 (青大数字)
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'large'
         },
+        'Jackpot_Prob_Red': {
+            'bbox': (79/722, 459/1246, 175/722, 489/1246),  # (1/176) 赤括弧
+            'type': 'red_number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Jackpot_Prob_Blue': {
+            'bbox': (312/722, 459/1246, 408/722, 489/1246),  # (1/976) 青括弧
+            'type': 'blue_number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Normal_Chance': {
+            'bbox': (75/722, 555/1246, 173/722, 583/1246),  # 通常/チャンス 701
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
         'Total_Start': {
-            'bbox': (540/722, 10/480, 670/722, 46/480),  # 累計スタート 3721
-            'type': 'number',
-            'inside_black': True,
-            'size_pattern': 'medium_wide'
-        },
-        'Normal': {
-            'bbox': (495/722, 70/480, 590/722, 98/480),  # 通常 1877
+            'bbox': (524/722, 549/1246, 613/722, 586/1246),  # 累計スタート 10150
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'medium'
-        },
-        'Chance': {
-            'bbox': (615/722, 70/480, 710/722, 98/480),  # チャンス中 1844
-            'type': 'number',
-            'inside_black': True,
-            'size_pattern': 'medium'
-        },
-        'Ultra': {
-            'bbox': (70/722, 140/480, 105/722, 175/480),  # 超 21 (赤小数字)
-            'type': 'red_number',
-            'inside_black': True,
-            'size_pattern': 'small_red'
-        },
-        'Middle': {
-            'bbox': (125/722, 140/480, 145/722, 175/480),  # 中 0 (赤小数字)
-            'type': 'red_number',
-            'inside_black': True,
-            'size_pattern': 'small_red'
-        },
-        'Small': {
-            'bbox': (170/722, 140/480, 205/722, 175/480),  # 小 4 (赤小数字)
-            'type': 'red_number',
-            'inside_black': True,
-            'size_pattern': 'small_red'
         },
         'Start': {
-            'bbox': (320/722, 136/480, 420/722, 183/480),  # スタート 369
+            'bbox': (41/722, 653/1246, 104/722, 674/1246),  # スタート 10100
             'type': 'number',
             'inside_black': True,
-            'size_pattern': 'large_white'
+            'size_pattern': 'small'
         },
-        'Max_Payout': {
-            'bbox': (520/722, 136/480, 650/722, 183/480),  # 最高出玉 26830
+        'Current_Payout': {
+            'bbox': (228/722, 653/1246, 242/722, 674/1246),  # 現在出玉 7
             'type': 'number',
             'inside_black': True,
-            'size_pattern': 'large_white'
+            'size_pattern': 'small'
+        },
+        'Jackpot_Date_1': {
+            'bbox': (31/722, 813/1246, 76/722, 835/1246),  # 8/6 (大当り日付1)
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Jackpot_Prob_Small': {
+            'bbox': (265/722, 812/1246, 348/722, 835/1246),  # 1/999 (大当り確率)
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Total_Starts_Bottom': {
+            'bbox': (584/722, 812/1246, 673/722, 834/1246),  # 10150 (累計スタート下部)
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'First_Hit_Date': {
+            'bbox': (31/722, 849/1246, 76/722, 872/1246),  # 8/5 (初当り日付)
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'First_Hit_Times': {
+            'bbox': (125/722, 849/1246, 196/722, 870/1246),  # 3675 (初当り回数)
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'First_Hit_Prob': {
+            'bbox': (265/722, 849/1246, 348/722, 872/1246),  # 1/267 (初当り確率)
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Normal_Prob': {
+            'bbox': (425/722, 849/1246, 509/722, 872/1246),  # 1/106 (通常確率)
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
         },
     }
 
@@ -561,7 +597,8 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                         # PSM 8: 単一単語として認識
                                         text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789').strip()
                                     else:
-                                        text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                                        # 小さい赤数字（括弧付きも含む）
+                                        text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789/()').strip()
                                     color = (0, 0, 255)
                                     
                                 elif region_info['type'] == 'blue_number':
@@ -577,7 +614,8 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                         mask = cv2.resize(mask, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
                                         text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789').strip()
                                     else:
-                                        text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                                        # 小さい青数字（括弧付きも含む）
+                                        text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789/()').strip()
                                     color = (255, 0, 0)
                                     
                                 elif region_info['type'] == 'number':
