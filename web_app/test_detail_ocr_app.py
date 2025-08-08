@@ -193,7 +193,7 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
         
         # リサイズ実行
         img = cv2.resize(img, (target_width, target_height), interpolation=cv2.INTER_LANCZOS4)
-        st.success(f"画像を横幅 {target_width}px にリサイズしました ({新サイズ: {target_width}x{target_height}}")
+        st.success(f"画像を横幅 {target_width}px にリサイズしました (新サイズ: {target_width}x{target_height})")
     else:
         st.success(f"画像サイズ: {img.shape[1]} x {img.shape[0]} px (リサイズ不要)")
         target_height = img.shape[0]
