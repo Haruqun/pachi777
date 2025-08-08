@@ -513,6 +513,14 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         first_region = list(st.session_state.relative_regions.items())[0]
                         st.info(f"デバッグ: {first_region[0]} = {first_region[1]['bbox']}")
                         
+                        # 想定と実際の差を表示
+                        expected_y = 310
+                        st.warning(f"⚠️ 黒背景Y座標: 実際={y}px, 想定={expected_y}px, 差={y - expected_y}px")
+                        
+                        # 実際の座標計算を表示
+                        x1, y1, x2, y2 = first_region[1]['bbox']
+                        st.info(f"座標計算: 相対({x1},{y1}) + 黒背景({x},{y}) = 絶対({x+x1},{y+y1})")
+                        
                         # 各領域の座標を表形式で表示
                         st.markdown("### OCR領域の絶対座標")
                         coord_data = []
