@@ -519,6 +519,117 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         # セッションステートに黒背景情報を保存
                         st.session_state.black_region = (x, y, w, h)
             
+            # 定義済み領域でOCRテスト
+            if st.button("🎯 定義済み領域でOCRテスト", use_container_width=True):
+                with st.spinner("OCR処理中..."):
+                    import pytesseract
+                    
+                    # 黒背景領域を検出
+                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    _, black_mask = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)
+                    kernel = np.ones((5, 5), np.uint8)
+                    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
+                    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
+                    contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    
+                    if contours:
+                        largest = max(contours, key=cv2.contourArea)
+                        x_black, y_black, w_black, h_black = cv2.boundingRect(largest)
+                        
+                        # 結果格納用
+                        ocr_results = {}
+                        debug_img = img.copy()
+                        
+                        # 各領域を処理
+                        for name, region_info in st.session_state.relative_regions.items():
+                            rel_x1, rel_y1, rel_x2, rel_y2 = region_info['bbox']
+                            
+                            if region_info['inside_black']:
+                                # 黒背景内の座標
+                                abs_x1 = int(x_black + rel_x1 * w_black)
+                                abs_y1 = int(y_black + rel_y1 * h_black)
+                                abs_x2 = int(x_black + rel_x2 * w_black)
+                                abs_y2 = int(y_black + rel_y2 * h_black)
+                            else:
+                                # 黒背景外の座標
+                                abs_x1 = int(rel_x1 * img.shape[1])
+                                abs_y1 = int((rel_y1 * h_black) + y_black)
+                                abs_x2 = int(rel_x2 * img.shape[1])
+                                abs_y2 = int((rel_y2 * h_black) + y_black)
+                            
+                            # 領域を切り出し
+                            roi = img[abs_y1:abs_y2, abs_x1:abs_x2]
+                            
+                            if roi.size > 0:
+                                # タイプに応じた処理
+                                if region_info['type'] == 'red_number':
+                                    # 赤数字抽出
+                                    hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                                    mask1 = cv2.inRange(hsv_roi, np.array([0, 50, 50]), np.array([10, 255, 255]))
+                                    mask2 = cv2.inRange(hsv_roi, np.array([170, 50, 50]), np.array([180, 255, 255]))
+                                    mask = cv2.bitwise_or(mask1, mask2)
+                                    # サイズに応じた処理
+                                    if region_info.get('size_pattern') == 'large':
+                                        # 大きい数字は膨張して結合
+                                        kernel_d = np.ones((3, 3), np.uint8)
+                                        mask = cv2.dilate(mask, kernel_d, iterations=2)
+                                    # OCR
+                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                                    color = (0, 0, 255)
+                                    
+                                elif region_info['type'] == 'blue_number':
+                                    # 青数字抽出
+                                    hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                                    mask = cv2.inRange(hsv_roi, np.array([100, 50, 50]), np.array([130, 255, 255]))
+                                    if region_info.get('size_pattern') == 'large':
+                                        kernel_d = np.ones((3, 3), np.uint8)
+                                        mask = cv2.dilate(mask, kernel_d, iterations=2)
+                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                                    color = (255, 0, 0)
+                                    
+                                elif region_info['type'] == 'number':
+                                    # 白数字抽出
+                                    gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                                    _, mask = cv2.threshold(gray_roi, 200, 255, cv2.THRESH_BINARY)
+                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                                    color = (255, 255, 255)
+                                    
+                                else:  # text
+                                    # テキスト
+                                    gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                                    text = pytesseract.image_to_string(gray_roi, lang='jpn', config='--psm 7').strip()
+                                    color = (0, 255, 0)
+                                
+                                # 結果を保存
+                                ocr_results[name] = text
+                                
+                                # 枠とテキストを描画
+                                cv2.rectangle(debug_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, 2)
+                                label = f"{name}: {text[:20] if text else 'N/A'}"
+                                cv2.putText(debug_img, label, (abs_x1, abs_y1 - 5), 
+                                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                        
+                        # 結果表示
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            # 画像表示
+                            display_scale = 0.7
+                            display_img = cv2.resize(debug_img, (int(img.shape[1]*display_scale), int(img.shape[0]*display_scale)))
+                            st.image(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB), 
+                                   caption="OCR結果")
+                        
+                        with col2:
+                            # OCR結果表示
+                            st.markdown("### OCR結果")
+                            for name, text in ocr_results.items():
+                                if text:
+                                    st.success(f"**{name}**: {text}")
+                                else:
+                                    st.warning(f"**{name}**: 未検出")
+                    else:
+                        st.error("黒背景領域が検出できませんでした")
+            
             # OCR検出領域表示ボタン
             if st.button("🔤 OCR検出領域を表示", use_container_width=True):
                 with st.spinner("OCR検出中..."):
