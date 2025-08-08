@@ -29,55 +29,61 @@ if 'relative_regions' not in st.session_state:
     # 以下の座標は黒背景左上を基準とした相対位置
     st.session_state.relative_regions = {
         'Machine_No': {
-            'bbox': (178/722, 320/1246, 227/722, 357/1246),  # 台番号 178
+            'bbox': (59/722, 725/1246, 111/722, 747/1246),  # 台番号 220
             'type': 'number',
             'inside_black': True,
-            'size_pattern': 'medium'
+            'size_pattern': 'small'
         },
         'Jackpot_Count': {
-            'bbox': (70/722, 10/1246, 200/722, 80/1246),  # 大当り回数 (赤大数字)
+            'bbox': (67/722, 351/1246, 188/722, 495/1246),  # 大当り回数 1 (赤大数字)
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'large'
         },
         'First_Hit_Count': {
-            'bbox': (299/722, 351/1246, 421/722, 495/1246),  # 初当り回数 1 (青大数字)
+            'bbox': (299/722, 351/1246, 421/722, 495/1246),  # 初当り回数 4 (青大数字)
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'large'
         },
         'Jackpot_Prob_Red': {
-            'bbox': (79/722, 459/1246, 175/722, 489/1246),  # (1/176) 赤括弧
+            'bbox': (79/722, 459/1246, 175/722, 489/1246),  # (1/148) 赤括弧
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Jackpot_Prob_Blue': {
-            'bbox': (312/722, 459/1246, 408/722, 489/1246),  # (1/976) 青括弧
+            'bbox': (312/722, 459/1246, 408/722, 489/1246),  # (1/469) 青括弧
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Normal_Chance': {
-            'bbox': (75/722, 555/1246, 173/722, 583/1246),  # 通常/チャンス 701
-            'type': 'number',
+            'bbox': (65/722, 555/1246, 189/722, 583/1246),  # 通常/チャンス 7 (赤)
+            'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Total_Start': {
-            'bbox': (524/722, 549/1246, 613/722, 586/1246),  # 累計スタート 10150
+            'bbox': (522/722, 549/1246, 665/722, 586/1246),  # 累計スタート 26830
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'medium'
         },
         'Start': {
-            'bbox': (41/722, 653/1246, 104/722, 674/1246),  # スタート 10100
+            'bbox': (318/722, 549/1246, 421/722, 586/1246),  # スタート 369
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'medium'
+        },
+        'Max_Payout': {
+            'bbox': (40/722, 653/1246, 130/722, 674/1246),  # 最高出玉 25760
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Current_Payout': {
-            'bbox': (228/722, 653/1246, 242/722, 674/1246),  # 現在出玉 7
+        'Current_Prob': {
+            'bbox': (340/722, 653/1246, 405/722, 676/1246),  # 現在確率 1/87
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
@@ -89,13 +95,13 @@ if 'relative_regions' not in st.session_state:
             'size_pattern': 'small'
         },
         'Jackpot_Prob_Small': {
-            'bbox': (265/722, 812/1246, 348/722, 835/1246),  # 1/999 (大当り確率)
+            'bbox': (425/722, 813/1246, 509/722, 835/1246),  # 1/166 (大当り確率)
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Total_Starts_Bottom': {
-            'bbox': (584/722, 812/1246, 673/722, 834/1246),  # 10150 (累計スタート下部)
+            'bbox': (584/722, 812/1246, 673/722, 834/1246),  # 14670 (累計スタート下部)
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
@@ -107,19 +113,31 @@ if 'relative_regions' not in st.session_state:
             'size_pattern': 'small'
         },
         'First_Hit_Times': {
-            'bbox': (125/722, 849/1246, 196/722, 870/1246),  # 3675 (初当り回数)
-            'type': 'number',
-            'inside_black': True,
-            'size_pattern': 'small'
-        },
-        'First_Hit_Prob': {
-            'bbox': (265/722, 849/1246, 348/722, 872/1246),  # 1/267 (初当り確率)
+            'bbox': (125/722, 849/1246, 196/722, 870/1246),  # 3213 (初当り回数)
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Normal_Prob': {
-            'bbox': (425/722, 849/1246, 509/722, 872/1246),  # 1/106 (通常確率)
+            'bbox': (434/722, 849/1246, 499/722, 872/1246),  # 1/79 (通常確率)
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Ultra': {
+            'bbox': (173/722, 1246/1246, 198/722, 1263/1246),  # 超 49
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Middle': {
+            'bbox': (238/722, 1246/1246, 271/722, 1263/1246),  # 中 121
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Small': {
+            'bbox': (314/722, 1246/1246, 338/722, 1263/1246),  # 小 96
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
