@@ -588,15 +588,47 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                     hsv_black = cv2.cvtColor(black_region, cv2.COLOR_BGR2HSV)
                     
                     # 赤色検出（大当り回数など）
-                    red_mask1 = cv2.inRange(hsv_black, np.array([0, 100, 100]), np.array([10, 255, 255]))
-                    red_mask2 = cv2.inRange(hsv_black, np.array([170, 100, 100]), np.array([180, 255, 255]))
+                    red_mask1 = cv2.inRange(hsv_black, np.array([0, 50, 50]), np.array([10, 255, 255]))
+                    red_mask2 = cv2.inRange(hsv_black, np.array([170, 50, 50]), np.array([180, 255, 255]))
                     red_mask = cv2.bitwise_or(red_mask1, red_mask2)
                     
-                    # ノイズ除去
-                    kernel_red = np.ones((2, 2), np.uint8)
-                    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel_red)
+                    # 膨張処理で数字を結合
+                    kernel_dilate = np.ones((3, 3), np.uint8)
+                    red_mask_dilated = cv2.dilate(red_mask, kernel_dilate, iterations=2)
                     
-                    # 赤色領域でOCR
+                    # 輪郭検出で大きい数字領域を特定
+                    red_contours, _ = cv2.findContours(red_mask_dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    
+                    for contour in red_contours:
+                        x, y, w, h = cv2.boundingRect(contour)
+                        # 大きい数字サイズ（幅30px以上、高さ40px以上）
+                        if w > 30 and h > 40:
+                            # この領域を切り出してOCR
+                            roi = red_mask[y:y+h, x:x+w]
+                            # 画像を拡大してOCR精度向上
+                            roi_scaled = cv2.resize(roi, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+                            text = pytesseract.image_to_string(roi_scaled, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                            
+                            if text:
+                                # 元画像での座標
+                                abs_x = x + x_black
+                                abs_y = y + y_black
+                                cv2.rectangle(ocr_img, (abs_x, abs_y), (abs_x + w, abs_y + h), (0, 0, 255), 3)
+                                label = f"R-Large:{text}"
+                                cv2.putText(ocr_img, label, (abs_x, abs_y - 5), 
+                                          cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                                
+                                detected_regions.append({
+                                    "タイプ": "赤大数字",
+                                    "テキスト": text,
+                                    "X": abs_x,
+                                    "Y": abs_y,
+                                    "幅": w,
+                                    "高さ": h,
+                                    "信頼度": "輪郭検出"
+                                })
+                    
+                    # 小さい赤数字用のOCR（既存の処理）
                     red_data = pytesseract.image_to_data(red_mask, config='--psm 11 -c tessedit_char_whitelist=0123456789', output_type=pytesseract.Output.DICT)
                     
                     for i in range(len(red_data['text'])):
@@ -620,13 +652,42 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                             })
                     
                     # 青色検出（初当り回数）
-                    blue_mask = cv2.inRange(hsv_black, np.array([100, 100, 100]), np.array([130, 255, 255]))
+                    blue_mask = cv2.inRange(hsv_black, np.array([100, 50, 50]), np.array([130, 255, 255]))
                     
-                    # ノイズ除去
-                    kernel_blue = np.ones((2, 2), np.uint8)
-                    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, kernel_blue)
+                    # 膨張処理で数字を結合
+                    blue_mask_dilated = cv2.dilate(blue_mask, kernel_dilate, iterations=2)
                     
-                    # 青色領域でOCR
+                    # 輪郭検出で大きい数字領域を特定
+                    blue_contours, _ = cv2.findContours(blue_mask_dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    
+                    for contour in blue_contours:
+                        x, y, w, h = cv2.boundingRect(contour)
+                        # 大きい数字サイズ
+                        if w > 30 and h > 40:
+                            # この領域を切り出してOCR
+                            roi = blue_mask[y:y+h, x:x+w]
+                            roi_scaled = cv2.resize(roi, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+                            text = pytesseract.image_to_string(roi_scaled, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                            
+                            if text:
+                                abs_x = x + x_black
+                                abs_y = y + y_black
+                                cv2.rectangle(ocr_img, (abs_x, abs_y), (abs_x + w, abs_y + h), (255, 0, 0), 3)
+                                label = f"B-Large:{text}"
+                                cv2.putText(ocr_img, label, (abs_x, abs_y - 5), 
+                                          cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+                                
+                                detected_regions.append({
+                                    "タイプ": "青大数字",
+                                    "テキスト": text,
+                                    "X": abs_x,
+                                    "Y": abs_y,
+                                    "幅": w,
+                                    "高さ": h,
+                                    "信頼度": "輪郭検出"
+                                })
+                    
+                    # 小さい青数字用のOCR
                     blue_data = pytesseract.image_to_data(blue_mask, config='--psm 11 -c tessedit_char_whitelist=0123456789', output_type=pytesseract.Output.DICT)
                     
                     for i in range(len(blue_data['text'])):
