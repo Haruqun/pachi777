@@ -186,6 +186,80 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         return y
         return None
     
+    # スケールを自動検出
+    def auto_detect_scale(image):
+        """画像内の4パチボタンからスケールを自動検出"""
+        height, width = image.shape[:2]
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        
+        # 青色の範囲（4パチボタンの青）
+        blue_mask = cv2.inRange(hsv, np.array([100, 50, 50]), np.array([130, 255, 255]))
+        
+        # ノイズ除去
+        kernel = np.ones((3, 3), np.uint8)
+        blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, kernel)
+        blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel)
+        
+        # 輪郭検出
+        contours, _ = cv2.findContours(blue_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # 4パチボタンの候補を探す
+        best_scale_x = 1.0
+        best_scale_y = 1.0
+        found_button = False
+        
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            
+            # 4パチボタンの特徴：
+            # - 画面上部（台番号の近く）にある
+            # - 横長の矩形
+            # - 適度な大きさ
+            if y < height // 3 and width // 8 < x < width // 2:
+                aspect_ratio = w / h if h > 0 else 0
+                if 1.5 < aspect_ratio < 3.0 and 30 < w < 150 and 15 < h < 60:
+                    # 領域内の青色の充填率を確認
+                    roi_mask = blue_mask[y:y+h, x:x+w]
+                    fill_ratio = np.sum(roi_mask) / (255 * w * h)
+                    
+                    if fill_ratio > 0.3:  # 30%以上が青色
+                        # 元画像での4パチボタンのサイズ
+                        # 幅: 約56px、高さ: 約27px
+                        calc_scale_x = w / 56.0
+                        calc_scale_y = h / 27.0
+                        
+                        # スケールが同じくらいか確認（歪みチェック）
+                        if abs(calc_scale_x - calc_scale_y) < 0.2:
+                            best_scale_x = calc_scale_x
+                            best_scale_y = calc_scale_y
+                            found_button = True
+                            break
+        
+        # 4パチボタンが見つからない場合は、大きな赤い数字で代替
+        if not found_button:
+            red_mask1 = cv2.inRange(hsv, np.array([0, 100, 100]), np.array([10, 255, 255]))
+            red_mask2 = cv2.inRange(hsv, np.array([170, 100, 100]), np.array([180, 255, 255]))
+            red_mask = cv2.bitwise_or(red_mask1, red_mask2)
+            
+            kernel = np.ones((5, 5), np.uint8)
+            red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel)
+            red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel)
+            
+            contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            large_red_regions = []
+            for contour in contours:
+                x, y, w, h = cv2.boundingRect(contour)
+                if w > 50 and h > 30 and x < width // 2 and 200 < y < height // 2:
+                    large_red_regions.append((x, y, w, h))
+            
+            if large_red_regions:
+                largest_red = max(large_red_regions, key=lambda r: r[2] * r[3])
+                best_scale_x = largest_red[2] / 135.0
+                best_scale_y = largest_red[3] / 64.0
+        
+        return best_scale_x, best_scale_y, found_button
+    
     # 台番号の白い領域を検出
     def find_machine_number_box(image):
         """台番号の白い領域を検出して位置を返す"""
@@ -257,6 +331,33 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             # スケール情報を表示
             if scale_x != 1.0 or scale_y != 1.0:
                 st.caption(f"スケール: X={scale_x:.2f}, Y={scale_y:.2f}")
+            
+            # スケール自動検出ボタン
+            if st.button("🔍 スケール自動検出 (4パチボタン基準)", use_container_width=True):
+                with st.spinner("スケールを検出中..."):
+                    auto_scale_x, auto_scale_y, found_4pachi = auto_detect_scale(img)
+                    if auto_scale_x > 0.5 and auto_scale_x < 3.0 and auto_scale_y > 0.5 and auto_scale_y < 3.0:
+                        if found_4pachi:
+                            st.success(f"✅ 4パチボタンを検出！ スケール: X={auto_scale_x:.2f}, Y={auto_scale_y:.2f}")
+                        else:
+                            st.info(f"🔴 大当り回数から推定: X={auto_scale_x:.2f}, Y={auto_scale_y:.2f}")
+                        
+                        # 手動モードを有効にして検出値を設定
+                        st.session_state.manual_mode = True
+                        st.session_state.manual_scale_x = auto_scale_x
+                        st.session_state.manual_scale_y = auto_scale_y
+                        # 基準点も自動調整
+                        machine_box = find_machine_number_box(img)
+                        if machine_box:
+                            st.session_state.manual_base_x = machine_box[0]
+                            st.session_state.manual_base_y = machine_box[1]
+                        else:
+                            # デフォルト基準点をスケールに合わせて調整
+                            st.session_state.manual_base_x = int(15 * auto_scale_x)
+                            st.session_state.manual_base_y = int(210 * auto_scale_y)
+                        st.rerun()
+                    else:
+                        st.warning("スケールの自動検出に失敗しました。手動で調整してください。")
             
             # 自動位置調整のオン/オフ
             st.session_state.auto_adjust = st.checkbox("位置ずれ自動調整", value=st.session_state.get('auto_adjust', True), 
