@@ -183,16 +183,20 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
     original_size = (img.shape[1], img.shape[0])
     st.info(f"オリジナル画像サイズ: {original_size[0]} x {original_size[1]} px")
     
-    # 統一サイズにリサイズ
+    # 横幅を722pxに統一し、アスペクト比を保持
     target_width = 722
-    target_height = 1584
     
-    if img.shape[1] != target_width or img.shape[0] != target_height:
+    if img.shape[1] != target_width:
+        # アスペクト比を計算
+        aspect_ratio = img.shape[0] / img.shape[1]
+        target_height = int(target_width * aspect_ratio)
+        
         # リサイズ実行
         img = cv2.resize(img, (target_width, target_height), interpolation=cv2.INTER_LANCZOS4)
-        st.success(f"画像を統一サイズ {target_width}x{target_height} にリサイズしました")
+        st.success(f"画像を横幅 {target_width}px にリサイズしました ({新サイズ: {target_width}x{target_height}}")
     else:
         st.success(f"画像サイズ: {img.shape[1]} x {img.shape[0]} px (リサイズ不要)")
+        target_height = img.shape[0]
     
     # スケールは常に1.0になる
     scale_x = 1.0
@@ -288,17 +292,17 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 center_x = x + w / 2
                 center_y = y + h / 2
                 if abs(center_x - width / 2) < width * 0.3 and y < height * 0.5:
-                    # 元画像での黒い背景領域のサイズ
-                    # 幅: 722px（画面全幅）、高さ: 約480px
-                    calc_scale_x = w / 722.0
-                    calc_scale_y = h / 480.0
+                    # 黒背景領域の幅は画面全幅と同じはず
+                    # 高さは画像によって異なるため、幅のみで判定
+                    calc_scale = w / width
                     
-                    # スケールが同じくらいか確認
-                    if abs(calc_scale_x - calc_scale_y) < 0.3:
-                        best_scale_x = (calc_scale_x + calc_scale_y) / 2  # 平均値を使用
-                        best_scale_y = best_scale_x
+                    # 黒背景が画面全幅の90%以上を占める場合は正しいと判定
+                    if calc_scale > 0.9:
+                        best_scale_x = 1.0
+                        best_scale_y = 1.0
                         found_black_region = True
                         black_region_rect = (x, y, w, h)
+                    
         
         # 4パチボタンが見つからない場合は、大きな赤い数字で代替
         if not found_button:
@@ -394,8 +398,8 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             st.subheader("🎯 座標調整")
             
             # リサイズ情報を表示
-            if original_size != (target_width, target_height):
-                st.caption(f"リサイズ済: {original_size[0]}x{original_size[1]} → {target_width}x{target_height}")
+            if original_size[0] != target_width:
+                st.caption(f"リサイズ済: {original_size[0]}x{original_size[1]} → {img.shape[1]}x{img.shape[0]}")
             
             # 黒背景検出デバッグボタン
             if st.button("🔍 黒背景領域を検出して表示", use_container_width=True):
