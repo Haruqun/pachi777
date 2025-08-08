@@ -28,35 +28,17 @@ if 'relative_regions' not in st.session_state:
     # 黒背景領域の幅は722px、高さは約480px
     # 以下の座標は黒背景左上を基準とした相対位置
     st.session_state.relative_regions = {
-        'Machine_No': {
-            'bbox': (15/722, -94/480, 72/722, -64/480),  # 台番号は黒背景の上にある
-            'type': 'text',
-            'inside_black': False,
-            'size_pattern': 'small'
-        },
         'Jackpot_Count': {
             'bbox': (75/722, 7/480, 210/722, 71/480),  # 大当り回数 25 (赤大数字)
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'large'
         },
-        'Jackpot_Prob': {
-            'bbox': (75/722, 70/480, 210/722, 98/480),  # 大当り確率 (1/148)
-            'type': 'text',
-            'inside_black': True,
-            'size_pattern': 'medium'
-        },
         'First_Hit_Count': {
             'bbox': (295/722, 7/480, 380/722, 71/480),  # 初当り回数 4 (青大数字)
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'large'
-        },
-        'First_Hit_Prob': {
-            'bbox': (295/722, 70/480, 380/722, 98/480),  # 初当り確率 (1/469)
-            'type': 'text',
-            'inside_black': True,
-            'size_pattern': 'medium'
         },
         'Total_Start': {
             'bbox': (540/722, 10/480, 670/722, 46/480),  # 累計スタート 3721
@@ -565,33 +547,55 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                 if region_info['type'] == 'red_number':
                                     # 赤数字抽出
                                     hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                                    mask1 = cv2.inRange(hsv_roi, np.array([0, 50, 50]), np.array([10, 255, 255]))
-                                    mask2 = cv2.inRange(hsv_roi, np.array([170, 50, 50]), np.array([180, 255, 255]))
+                                    # より広い色範囲で赤を検出
+                                    mask1 = cv2.inRange(hsv_roi, np.array([0, 30, 30]), np.array([15, 255, 255]))
+                                    mask2 = cv2.inRange(hsv_roi, np.array([165, 30, 30]), np.array([180, 255, 255]))
                                     mask = cv2.bitwise_or(mask1, mask2)
+                                    
                                     # サイズに応じた処理
                                     if region_info.get('size_pattern') == 'large':
-                                        # 大きい数字は膨張して結合
-                                        kernel_d = np.ones((3, 3), np.uint8)
-                                        mask = cv2.dilate(mask, kernel_d, iterations=2)
-                                    # OCR
-                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                                        # 大きい数字は膨張して結合後、2倍に拡大
+                                        kernel_d = np.ones((5, 5), np.uint8)
+                                        mask = cv2.dilate(mask, kernel_d, iterations=3)
+                                        mask = cv2.resize(mask, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+                                        # PSM 8: 単一単語として認識
+                                        text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789').strip()
+                                    else:
+                                        text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
                                     color = (0, 0, 255)
                                     
                                 elif region_info['type'] == 'blue_number':
                                     # 青数字抽出
                                     hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                                    mask = cv2.inRange(hsv_roi, np.array([100, 50, 50]), np.array([130, 255, 255]))
+                                    # より広い色範囲で青を検出
+                                    mask = cv2.inRange(hsv_roi, np.array([95, 30, 30]), np.array([135, 255, 255]))
+                                    
                                     if region_info.get('size_pattern') == 'large':
-                                        kernel_d = np.ones((3, 3), np.uint8)
-                                        mask = cv2.dilate(mask, kernel_d, iterations=2)
-                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                                        # 大きい数字は膨張して結合後、2倍に拡大
+                                        kernel_d = np.ones((5, 5), np.uint8)
+                                        mask = cv2.dilate(mask, kernel_d, iterations=3)
+                                        mask = cv2.resize(mask, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+                                        text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789').strip()
+                                    else:
+                                        text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
                                     color = (255, 0, 0)
                                     
                                 elif region_info['type'] == 'number':
                                     # 白数字抽出
                                     gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                                    _, mask = cv2.threshold(gray_roi, 200, 255, cv2.THRESH_BINARY)
-                                    text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                                    # 適応的二値化で白文字を抽出
+                                    mask = cv2.adaptiveThreshold(gray_roi, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                                                cv2.THRESH_BINARY, 11, 2)
+                                    # 反転（白背景に黒文字にする）
+                                    mask = cv2.bitwise_not(mask)
+                                    
+                                    # サイズに応じた処理
+                                    if region_info.get('size_pattern') in ['large_white', 'medium_wide']:
+                                        # 大きい/中サイズの白数字は拡大してOCR
+                                        mask = cv2.resize(mask, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+                                        text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789/()').strip()
+                                    else:
+                                        text = pytesseract.image_to_string(mask, config='--psm 7 -c tessedit_char_whitelist=0123456789/()').strip()
                                     color = (255, 255, 255)
                                     
                                 else:  # text
@@ -665,8 +669,8 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                     gray_enhanced = cv2.cvtColor(enhanced, cv2.COLOR_BGR2GRAY)
                     _, white_text = cv2.threshold(gray_enhanced, 200, 255, cv2.THRESH_BINARY)
                     
-                    # 白文字OCR
-                    white_data = pytesseract.image_to_data(white_text, lang='jpn', config='--psm 11', output_type=pytesseract.Output.DICT)
+                    # 白文字OCR（数字と記号のみ）
+                    white_data = pytesseract.image_to_data(white_text, config='--psm 11 -c tessedit_char_whitelist=0123456789/()', output_type=pytesseract.Output.DICT)
                     
                     # デバッグ画像を作成
                     ocr_img = img.copy()
@@ -698,14 +702,14 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                     # 色付き文字の検出（黒背景領域内）
                     hsv_black = cv2.cvtColor(black_region, cv2.COLOR_BGR2HSV)
                     
-                    # 赤色検出（大当り回数など）
-                    red_mask1 = cv2.inRange(hsv_black, np.array([0, 50, 50]), np.array([10, 255, 255]))
-                    red_mask2 = cv2.inRange(hsv_black, np.array([170, 50, 50]), np.array([180, 255, 255]))
+                    # 赤色検出（大当り回数など）- より広い範囲
+                    red_mask1 = cv2.inRange(hsv_black, np.array([0, 30, 30]), np.array([15, 255, 255]))
+                    red_mask2 = cv2.inRange(hsv_black, np.array([165, 30, 30]), np.array([180, 255, 255]))
                     red_mask = cv2.bitwise_or(red_mask1, red_mask2)
                     
-                    # 膨張処理で数字を結合
-                    kernel_dilate = np.ones((3, 3), np.uint8)
-                    red_mask_dilated = cv2.dilate(red_mask, kernel_dilate, iterations=2)
+                    # 膨張処理で数字を結合（より強く）
+                    kernel_dilate = np.ones((5, 5), np.uint8)
+                    red_mask_dilated = cv2.dilate(red_mask, kernel_dilate, iterations=3)
                     
                     # 輪郭検出で大きい数字領域を特定
                     red_contours, _ = cv2.findContours(red_mask_dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -717,8 +721,9 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                             # この領域を切り出してOCR
                             roi = red_mask[y:y+h, x:x+w]
                             # 画像を拡大してOCR精度向上
-                            roi_scaled = cv2.resize(roi, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-                            text = pytesseract.image_to_string(roi_scaled, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                            roi_scaled = cv2.resize(roi, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+                            # PSM 8: 単一単語として認識
+                            text = pytesseract.image_to_string(roi_scaled, config='--psm 8 -c tessedit_char_whitelist=0123456789').strip()
                             
                             if text:
                                 # 元画像での座標
@@ -740,7 +745,7 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                 })
                     
                     # 小さい赤数字用のOCR（既存の処理）
-                    red_data = pytesseract.image_to_data(red_mask, config='--psm 11 -c tessedit_char_whitelist=0123456789', output_type=pytesseract.Output.DICT)
+                    red_data = pytesseract.image_to_data(red_mask, config='--psm 11 -c tessedit_char_whitelist=0123456789/()', output_type=pytesseract.Output.DICT)
                     
                     for i in range(len(red_data['text'])):
                         if int(red_data['conf'][i]) > 20 and red_data['text'][i].strip():
@@ -762,11 +767,11 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                 "信頼度": red_data['conf'][i]
                             })
                     
-                    # 青色検出（初当り回数）
-                    blue_mask = cv2.inRange(hsv_black, np.array([100, 50, 50]), np.array([130, 255, 255]))
+                    # 青色検出（初当り回数）- より広い範囲
+                    blue_mask = cv2.inRange(hsv_black, np.array([95, 30, 30]), np.array([135, 255, 255]))
                     
-                    # 膨張処理で数字を結合
-                    blue_mask_dilated = cv2.dilate(blue_mask, kernel_dilate, iterations=2)
+                    # 膨張処理で数字を結合（より強く）
+                    blue_mask_dilated = cv2.dilate(blue_mask, kernel_dilate, iterations=3)
                     
                     # 輪郭検出で大きい数字領域を特定
                     blue_contours, _ = cv2.findContours(blue_mask_dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -777,8 +782,9 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         if w > 30 and h > 40:
                             # この領域を切り出してOCR
                             roi = blue_mask[y:y+h, x:x+w]
-                            roi_scaled = cv2.resize(roi, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-                            text = pytesseract.image_to_string(roi_scaled, config='--psm 7 -c tessedit_char_whitelist=0123456789').strip()
+                            roi_scaled = cv2.resize(roi, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+                            # PSM 8: 単一単語として認識
+                            text = pytesseract.image_to_string(roi_scaled, config='--psm 8 -c tessedit_char_whitelist=0123456789').strip()
                             
                             if text:
                                 abs_x = x + x_black
@@ -799,7 +805,7 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                 })
                     
                     # 小さい青数字用のOCR
-                    blue_data = pytesseract.image_to_data(blue_mask, config='--psm 11 -c tessedit_char_whitelist=0123456789', output_type=pytesseract.Output.DICT)
+                    blue_data = pytesseract.image_to_data(blue_mask, config='--psm 11 -c tessedit_char_whitelist=0123456789/()', output_type=pytesseract.Output.DICT)
                     
                     for i in range(len(blue_data['text'])):
                         if int(blue_data['conf'][i]) > 20 and blue_data['text'][i].strip():
