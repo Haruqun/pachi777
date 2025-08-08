@@ -188,54 +188,55 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
     
     # スケールを自動検出
     def auto_detect_scale(image):
-        """画像内の4パチボタンからスケールを自動検出"""
+        """黒い背景領域のサイズからスケールを自動検出"""
         height, width = image.shape[:2]
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         
-        # 青色の範囲（4パチボタンの青）
-        blue_mask = cv2.inRange(hsv, np.array([100, 50, 50]), np.array([130, 255, 255]))
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        # 黒い背景領域を検出
+        # 黒い領域（暗いピクセル）を検出
+        _, black_mask = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)
         
         # ノイズ除去
-        kernel = np.ones((3, 3), np.uint8)
-        blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, kernel)
-        blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel)
+        kernel = np.ones((5, 5), np.uint8)
+        black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
+        black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
         
         # 輪郭検出
-        contours, _ = cv2.findContours(blue_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        # 4パチボタンの候補を探す
+        # 最大の黒い領域を探す（メインの黒背景）
         best_scale_x = 1.0
         best_scale_y = 1.0
-        found_button = False
-        button_rect = None
+        found_black_region = False
+        black_region_rect = None
         
-        for contour in contours:
-            x, y, w, h = cv2.boundingRect(contour)
+        if contours:
+            # 最大の輪郭を取得
+            largest_contour = max(contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(largest_contour)
             
-            # 4パチボタンの特徴：
-            # - 画面上部（台番号の近く）にある
-            # - 横長の矩形
-            # - 適度な大きさ
-            if y < height // 3 and width // 8 < x < width // 2:
-                aspect_ratio = w / h if h > 0 else 0
-                if 1.5 < aspect_ratio < 3.0 and 30 < w < 150 and 15 < h < 60:
-                    # 領域内の青色の充填率を確認
-                    roi_mask = blue_mask[y:y+h, x:x+w]
-                    fill_ratio = np.sum(roi_mask) / (255 * w * h)
+            # 黒い背景領域の特徴を確認
+            # - 画面の大部分を占める
+            # - 中央付近にある
+            area_ratio = (w * h) / (width * height)
+            if area_ratio > 0.3 and area_ratio < 0.8:  # 画面の30%～80%
+                # 中央部分が含まれているか確認
+                center_x = x + w / 2
+                center_y = y + h / 2
+                if abs(center_x - width / 2) < width * 0.3 and y < height * 0.5:
+                    # 元画像での黒い背景領域のサイズ
+                    # 幅: 722px（画面全幅）、高さ: 約480px
+                    calc_scale_x = w / 722.0
+                    calc_scale_y = h / 480.0
                     
-                    if fill_ratio > 0.3:  # 30%以上が青色
-                        # 元画像での4パチボタンのサイズ
-                        # 幅: 約56px、高さ: 約27px
-                        calc_scale_x = w / 56.0
-                        calc_scale_y = h / 27.0
-                        
-                        # スケールが同じくらいか確認（歪みチェック）
-                        if abs(calc_scale_x - calc_scale_y) < 0.2:
-                            best_scale_x = calc_scale_x
-                            best_scale_y = calc_scale_y
-                            found_button = True
-                            button_rect = (x, y, w, h)
-                            break
+                    # スケールが同じくらいか確認
+                    if abs(calc_scale_x - calc_scale_y) < 0.3:
+                        best_scale_x = (calc_scale_x + calc_scale_y) / 2  # 平均値を使用
+                        best_scale_y = best_scale_x
+                        found_black_region = True
+                        black_region_rect = (x, y, w, h)
         
         # 4パチボタンが見つからない場合は、大きな赤い数字で代替
         if not found_button:
@@ -260,7 +261,7 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 best_scale_x = largest_red[2] / 135.0
                 best_scale_y = largest_red[3] / 64.0
         
-        return best_scale_x, best_scale_y, found_button, button_rect
+        return best_scale_x, best_scale_y, found_black_region, black_region_rect
     
     # 台番号の白い領域を検出
     def find_machine_number_box(image):
@@ -334,31 +335,69 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             if scale_x != 1.0 or scale_y != 1.0:
                 st.caption(f"スケール: X={scale_x:.2f}, Y={scale_y:.2f}")
             
+            # 黒背景検出デバッグボタン
+            if st.button("🔍 黒背景領域を検出して表示", use_container_width=True):
+                with st.spinner("黒背景領域を検出中..."):
+                    # 黒い領域を全て検出してデバッグ表示
+                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    _, black_mask = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)
+                    
+                    kernel = np.ones((5, 5), np.uint8)
+                    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
+                    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
+                    
+                    contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    
+                    # 全ての輪郭を表示
+                    debug_img = img.copy()
+                    for i, contour in enumerate(contours):
+                        area = cv2.contourArea(contour)
+                        if area > 100:  # 小さすぎる領域は無視
+                            x, y, w, h = cv2.boundingRect(contour)
+                            cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                            cv2.putText(debug_img, f"{i}: {w}x{h}", (x+5, y+20), 
+                                      cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+                    
+                    # 縮小して表示
+                    display_scale = 0.5
+                    display_img = cv2.resize(debug_img, (int(img.shape[1]*display_scale), int(img.shape[0]*display_scale)))
+                    st.image(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB), 
+                           caption="黒い領域の検出結果（赤枠）")
+                    
+                    # 最大の領域情報を表示
+                    if contours:
+                        largest = max(contours, key=cv2.contourArea)
+                        x, y, w, h = cv2.boundingRect(largest)
+                        st.info(f"最大の黒領域: {w}x{h}px (位置: {x}, {y})")
+                        st.info(f"推定スケール: {w/722:.2f}")
+            
             # スケール自動検出ボタン
-            if st.button("🔍 スケール自動検出 (4パチボタン基準)", use_container_width=True):
+            if st.button("🔍 スケール自動検出 (黒背景基準)", use_container_width=True):
                 with st.spinner("スケールを検出中..."):
-                    auto_scale_x, auto_scale_y, found_4pachi, button_rect = auto_detect_scale(img)
+                    auto_scale_x, auto_scale_y, found_region, region_rect = auto_detect_scale(img)
                     
                     # 検出結果の可視化
-                    if found_4pachi and button_rect:
+                    if found_region and region_rect:
                         detection_img = img.copy()
-                        x, y, w, h = button_rect
-                        # 4パチボタンを緑枠で囲む
-                        cv2.rectangle(detection_img, (x, y), (x+w, y+h), (0, 255, 0), 3)
-                        cv2.putText(detection_img, "4PACHI", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                        x, y, w, h = region_rect
+                        # 黒い背景領域を赤枠で囲む
+                        cv2.rectangle(detection_img, (x, y), (x+w, y+h), (0, 0, 255), 3)
+                        cv2.putText(detection_img, "BLACK REGION", (x+10, y+30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
                         
                         # 検出結果を表示
-                        with st.expander("4パチボタン検出結果", expanded=True):
-                            st.image(cv2.cvtColor(detection_img[:height//2, :], cv2.COLOR_BGR2RGB), 
-                                   caption=f"検出された4パチボタン (サイズ: {w}x{h}px)")
-                            st.caption(f"元画像での4パチボタンサイズ: 56x27px")
-                            st.caption(f"計算されたスケール: X={auto_scale_x:.3f}, Y={auto_scale_y:.3f}")
+                        with st.expander("黒背景領域検出結果", expanded=True):
+                            # 画像を縮小して表示
+                            display_img = cv2.resize(detection_img, (width//3, height//3))
+                            st.image(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB), 
+                                   caption=f"検出された黒背景領域 (サイズ: {w}x{h}px)")
+                            st.caption(f"元画像での黒背景サイズ: 700x490px")
+                            st.caption(f"計算されたスケール: {auto_scale_x:.3f}")
                     
                     if auto_scale_x > 0.5 and auto_scale_x < 3.0 and auto_scale_y > 0.5 and auto_scale_y < 3.0:
-                        if found_4pachi:
-                            st.success(f"✅ 4パチボタンを検出！ スケール: X={auto_scale_x:.2f}, Y={auto_scale_y:.2f}")
+                        if found_region:
+                            st.success(f"✅ 黒背景領域を検出！ スケール: {auto_scale_x:.2f}")
                         else:
-                            st.info(f"🔴 大当り回数から推定: X={auto_scale_x:.2f}, Y={auto_scale_y:.2f}")
+                            st.warning("黒背景領域の検出に失敗しました。")
                         
                         # 手動モードを有効にして検出値を設定
                         st.session_state.manual_mode = True
