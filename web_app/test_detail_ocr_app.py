@@ -304,28 +304,8 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         black_region_rect = (x, y, w, h)
                     
         
-        # 4パチボタンが見つからない場合は、大きな赤い数字で代替
-        if not found_button:
-            red_mask1 = cv2.inRange(hsv, np.array([0, 100, 100]), np.array([10, 255, 255]))
-            red_mask2 = cv2.inRange(hsv, np.array([170, 100, 100]), np.array([180, 255, 255]))
-            red_mask = cv2.bitwise_or(red_mask1, red_mask2)
-            
-            kernel = np.ones((5, 5), np.uint8)
-            red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel)
-            red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel)
-            
-            contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            large_red_regions = []
-            for contour in contours:
-                x, y, w, h = cv2.boundingRect(contour)
-                if w > 50 and h > 30 and x < width // 2 and 200 < y < height // 2:
-                    large_red_regions.append((x, y, w, h))
-            
-            if large_red_regions:
-                largest_red = max(large_red_regions, key=lambda r: r[2] * r[3])
-                best_scale_x = largest_red[2] / 135.0
-                best_scale_y = largest_red[3] / 64.0
+        # 黒背景が見つからない場合のフォールバック処理
+        # （現在は黒背景検出のみに特化）
         
         return best_scale_x, best_scale_y, found_black_region, black_region_rect
     
