@@ -524,81 +524,146 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 with st.spinner("OCR検出中..."):
                     import pytesseract
                     
-                    # OCRで文字領域を検出
+                    # 黒背景領域を検出
                     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    _, black_mask = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)
+                    kernel = np.ones((5, 5), np.uint8)
+                    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
+                    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
+                    contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                     
-                    # pytesseractで文字領域を検出
-                    data = pytesseract.image_to_data(gray, lang='jpn', output_type=pytesseract.Output.DICT)
+                    # 黒背景領域を切り出し
+                    if contours:
+                        largest = max(contours, key=cv2.contourArea)
+                        x_black, y_black, w_black, h_black = cv2.boundingRect(largest)
+                        black_region = img[y_black:y_black+h_black, x_black:x_black+w_black]
+                    else:
+                        black_region = img
+                        x_black, y_black = 0, 0
+                    
+                    # 黒背景領域に対して前処理
+                    # 1. コントラストを強化
+                    lab = cv2.cvtColor(black_region, cv2.COLOR_BGR2LAB)
+                    l, a, b = cv2.split(lab)
+                    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+                    l = clahe.apply(l)
+                    enhanced = cv2.merge([l, a, b])
+                    enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
+                    
+                    # 2. 白文字を抽出（黒背景に白文字）
+                    gray_enhanced = cv2.cvtColor(enhanced, cv2.COLOR_BGR2GRAY)
+                    _, white_text = cv2.threshold(gray_enhanced, 200, 255, cv2.THRESH_BINARY)
+                    
+                    # 白文字OCR
+                    white_data = pytesseract.image_to_data(white_text, lang='jpn', config='--psm 11', output_type=pytesseract.Output.DICT)
                     
                     # デバッグ画像を作成
                     ocr_img = img.copy()
-                    
-                    # 検出された文字領域を描画
-                    n_boxes = len(data['text'])
                     detected_regions = []
                     
-                    for i in range(n_boxes):
-                        # 信頼度が高く、テキストが存在する場合のみ
-                        if int(data['conf'][i]) > 30 and data['text'][i].strip():
-                            (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
+                    # 白文字のOCR結果を描画
+                    for i in range(len(white_data['text'])):
+                        if int(white_data['conf'][i]) > 20 and white_data['text'][i].strip():
+                            (x, y, w, h) = (white_data['left'][i], white_data['top'][i], white_data['width'][i], white_data['height'][i])
+                            # 黒背景領域のオフセットを考慮
+                            x += x_black
+                            y += y_black
                             
-                            # 領域を緑枠で囲む
-                            cv2.rectangle(ocr_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                            
-                            # テキストと信頼度を表示
-                            text = data['text'][i]
-                            conf = data['conf'][i]
-                            label = f"{text[:10]} ({conf}%)"
+                            cv2.rectangle(ocr_img, (x, y), (x + w, y + h), (255, 255, 255), 2)  # 白枠
+                            label = f"W:{white_data['text'][i][:10]} ({white_data['conf'][i]}%)"
                             cv2.putText(ocr_img, label, (x, y - 5), 
-                                      cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+                                      cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
                             
                             detected_regions.append({
-                                "テキスト": text,
+                                "タイプ": "白文字",
+                                "テキスト": white_data['text'][i],
                                 "X": x,
-                                "Y": y, 
+                                "Y": y,
                                 "幅": w,
                                 "高さ": h,
-                                "信頼度": conf
+                                "信頼度": white_data['conf'][i]
                             })
                     
-                    # 色付き文字の検出も試す
-                    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+                    # 色付き文字の検出（黒背景領域内）
+                    hsv_black = cv2.cvtColor(black_region, cv2.COLOR_BGR2HSV)
                     
-                    # 赤色検出
-                    red_mask1 = cv2.inRange(hsv, np.array([0, 50, 50]), np.array([10, 255, 255]))
-                    red_mask2 = cv2.inRange(hsv, np.array([170, 50, 50]), np.array([180, 255, 255]))
+                    # 赤色検出（大当り回数など）
+                    red_mask1 = cv2.inRange(hsv_black, np.array([0, 100, 100]), np.array([10, 255, 255]))
+                    red_mask2 = cv2.inRange(hsv_black, np.array([170, 100, 100]), np.array([180, 255, 255]))
                     red_mask = cv2.bitwise_or(red_mask1, red_mask2)
+                    
+                    # ノイズ除去
+                    kernel_red = np.ones((2, 2), np.uint8)
+                    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel_red)
                     
                     # 赤色領域でOCR
                     red_data = pytesseract.image_to_data(red_mask, config='--psm 11 -c tessedit_char_whitelist=0123456789', output_type=pytesseract.Output.DICT)
                     
                     for i in range(len(red_data['text'])):
-                        if int(red_data['conf'][i]) > 30 and red_data['text'][i].strip():
+                        if int(red_data['conf'][i]) > 20 and red_data['text'][i].strip():
                             (x, y, w, h) = (red_data['left'][i], red_data['top'][i], red_data['width'][i], red_data['height'][i])
+                            x += x_black
+                            y += y_black
                             cv2.rectangle(ocr_img, (x, y), (x + w, y + h), (0, 0, 255), 2)
-                            label = f"RED:{red_data['text'][i]} ({red_data['conf'][i]}%)"
+                            label = f"R:{red_data['text'][i]} ({red_data['conf'][i]}%)"
                             cv2.putText(ocr_img, label, (x, y - 5), 
                                       cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
+                            
+                            detected_regions.append({
+                                "タイプ": "赤数字",
+                                "テキスト": red_data['text'][i],
+                                "X": x,
+                                "Y": y,
+                                "幅": w,
+                                "高さ": h,
+                                "信頼度": red_data['conf'][i]
+                            })
                     
-                    # 青色検出
-                    blue_mask = cv2.inRange(hsv, np.array([100, 50, 50]), np.array([130, 255, 255]))
+                    # 青色検出（初当り回数）
+                    blue_mask = cv2.inRange(hsv_black, np.array([100, 100, 100]), np.array([130, 255, 255]))
+                    
+                    # ノイズ除去
+                    kernel_blue = np.ones((2, 2), np.uint8)
+                    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, kernel_blue)
                     
                     # 青色領域でOCR
                     blue_data = pytesseract.image_to_data(blue_mask, config='--psm 11 -c tessedit_char_whitelist=0123456789', output_type=pytesseract.Output.DICT)
                     
                     for i in range(len(blue_data['text'])):
-                        if int(blue_data['conf'][i]) > 30 and blue_data['text'][i].strip():
+                        if int(blue_data['conf'][i]) > 20 and blue_data['text'][i].strip():
                             (x, y, w, h) = (blue_data['left'][i], blue_data['top'][i], blue_data['width'][i], blue_data['height'][i])
+                            x += x_black
+                            y += y_black
                             cv2.rectangle(ocr_img, (x, y), (x + w, y + h), (255, 0, 0), 2)
-                            label = f"BLUE:{blue_data['text'][i]} ({blue_data['conf'][i]}%)"
+                            label = f"B:{blue_data['text'][i]} ({blue_data['conf'][i]}%)"
                             cv2.putText(ocr_img, label, (x, y - 5), 
                                       cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+                            
+                            detected_regions.append({
+                                "タイプ": "青数字",
+                                "テキスト": blue_data['text'][i],
+                                "X": x,
+                                "Y": y,
+                                "幅": w,
+                                "高さ": h,
+                                "信頼度": blue_data['conf'][i]
+                            })
+                    
+                    # マスク画像も表示（デバッグ用）
+                    with st.expander("マスク画像（デバッグ用）"):
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.image(white_text, caption="白文字マスク", use_column_width=True)
+                        with col2:
+                            st.image(red_mask, caption="赤文字マスク", use_column_width=True)
+                        with col3:
+                            st.image(blue_mask, caption="青文字マスク", use_column_width=True)
                     
                     # 画像を表示
                     display_scale = 0.7
                     display_img = cv2.resize(ocr_img, (int(img.shape[1]*display_scale), int(img.shape[0]*display_scale)))
                     st.image(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB), 
-                           caption="OCR検出領域（緑：通常、赤：赤文字、青：青文字）")
+                           caption="OCR検出領域（白：白文字、赤：赤数字、青：青数字）")
                     
                     # 検出されたテキストを表形式で表示
                     if detected_regions:
