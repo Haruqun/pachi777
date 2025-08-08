@@ -267,36 +267,46 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             st.markdown("**手動調整**")
             
             # 基準点の手動設定
-            manual_mode = st.checkbox("手動で基準点を設定", value=False)
+            manual_mode = st.checkbox("手動で基準点を設定", value=st.session_state.get('manual_mode', False), key='manual_mode')
             
             if manual_mode:
+                # 手動モードが有効な場合は自動調整を無効化
+                st.session_state.auto_adjust = False
+                
                 col1, col2 = st.columns(2)
                 with col1:
-                    base_x = st.number_input("基準X座標", 0, img.shape[1], 15, help="台番号の左端X座標")
-                    base_y = st.number_input("基準Y座標", 0, img.shape[0], 210, help="台番号の上端Y座標")
+                    base_x = st.number_input("基準X座標", 0, img.shape[1], 
+                                           st.session_state.get('manual_base_x', 15), 
+                                           key='manual_base_x', help="台番号の左端X座標")
+                    base_y = st.number_input("基準Y座標", 0, img.shape[0], 
+                                           st.session_state.get('manual_base_y', 210), 
+                                           key='manual_base_y', help="台番号の上端Y座標")
                 with col2:
-                    manual_scale_x = st.number_input("X拡大率", 0.1, 3.0, 1.0, step=0.1, help="横方向の拡大率")
-                    manual_scale_y = st.number_input("Y拡大率", 0.1, 3.0, 1.0, step=0.1, help="縦方向の拡大率")
+                    manual_scale_x = st.number_input("X拡大率", 0.1, 3.0, 
+                                                   st.session_state.get('manual_scale_x', scale_x), 
+                                                   step=0.1, key='manual_scale_x', help="横方向の拡大率")
+                    manual_scale_y = st.number_input("Y拡大率", 0.1, 3.0, 
+                                                   st.session_state.get('manual_scale_y', scale_y), 
+                                                   step=0.1, key='manual_scale_y', help="縦方向の拡大率")
                 
-                if st.button("手動設定を適用", type="primary"):
-                    # 手動設定で座標を更新
+                # リアルタイムで座標を更新（ボタン不要）
+                if 'manual_base_x' in st.session_state:
                     for region_name in list(st.session_state.regions.keys()):
                         original_bbox = st.session_state.base_regions[region_name]['bbox']
                         # 元の座標を手動設定の基準点とスケールで変換
-                        new_x1 = int(base_x + (original_bbox[0] - 15) * manual_scale_x)
-                        new_y1 = int(base_y + (original_bbox[1] - 210) * manual_scale_y)
-                        new_x2 = int(base_x + (original_bbox[2] - 15) * manual_scale_x)
-                        new_y2 = int(base_y + (original_bbox[3] - 210) * manual_scale_y)
+                        new_x1 = int(st.session_state.manual_base_x + (original_bbox[0] - 15) * st.session_state.manual_scale_x)
+                        new_y1 = int(st.session_state.manual_base_y + (original_bbox[1] - 210) * st.session_state.manual_scale_y)
+                        new_x2 = int(st.session_state.manual_base_x + (original_bbox[2] - 15) * st.session_state.manual_scale_x)
+                        new_y2 = int(st.session_state.manual_base_y + (original_bbox[3] - 210) * st.session_state.manual_scale_y)
                         
                         st.session_state.regions[region_name] = {
                             'bbox': (new_x1, new_y1, new_x2, new_y2),
                             'type': st.session_state.regions[region_name]['type']
                         }
                     st.session_state.manual_adjusted = True
-                    st.rerun()
             
             # 自動調整が有効な場合、要素を検出して調整
-            if st.session_state.auto_adjust:
+            if st.session_state.auto_adjust and not manual_mode:
                 # 台番号の位置を検出
                 machine_box = find_machine_number_box(img)
                 x_offset = 0
