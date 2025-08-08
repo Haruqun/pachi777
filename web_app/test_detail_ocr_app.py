@@ -186,6 +186,30 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         return y
         return None
     
+    # 台番号の白い領域を検出
+    def find_machine_number_box(image):
+        """台番号の白い領域を検出して位置を返す"""
+        height, width = image.shape[:2]
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        # 左上の領域を探索（画像の左1/3、上1/3）
+        search_region = gray[:height//3, :width//3]
+        
+        # 白い領域を検出
+        _, binary = cv2.threshold(search_region, 200, 255, cv2.THRESH_BINARY)
+        
+        # 輪郭検出
+        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # 適切なサイズの白い矩形を探す
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            # 台番号のボックスとして妥当なサイズか確認
+            if 30 < w < 150 and 20 < h < 80 and 0.3 < w/h < 3:
+                return (x, y, x+w, y+h)
+        
+        return None
+    
     image_type = detect_image_type(img)
     
     if image_type == "detail":
@@ -210,31 +234,56 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             st.session_state.auto_adjust = st.checkbox("位置ずれ自動調整", value=st.session_state.get('auto_adjust', True), 
                                                        help="スクリーンショットの位置ずれを自動的に検出して調整します")
             
-            # 自動調整が有効な場合、黒い背景領域を検出して調整
+            # 自動調整が有効な場合、要素を検出して調整
             if st.session_state.auto_adjust:
-                black_top = find_black_region_top(img)
-                if black_top is not None:
-                    # 基準となるY座標のオフセット（元の座標は黒い領域が330px付近から始まることを想定）
-                    base_black_top = int(330 * scale_y)  # スケーリングを考慮
-                    y_offset = black_top - base_black_top
+                # 台番号の位置を検出
+                machine_box = find_machine_number_box(img)
+                x_offset = 0
+                y_offset = 0
+                
+                if machine_box is not None:
+                    # 基準となる台番号の位置
+                    base_machine_x = int(15 * scale_x)
+                    base_machine_y = int(210 * scale_y)
                     
-                    if abs(y_offset) > 5:  # 5px以上のずれがある場合
-                        st.info(f"位置ずれ検出: {y_offset}px（自動調整中）")
-                        
-                        # リアルタイムで座標を調整
-                        if 'y_offset_applied' not in st.session_state or st.session_state.y_offset_applied != y_offset:
-                            for region_name in list(st.session_state.regions.keys()):
-                                region_info = st.session_state.regions[region_name]
-                                x1, y1, x2, y2 = region_info['bbox']
-                                # 元の座標からのオフセットを適用
-                                original_bbox = st.session_state.base_regions[region_name]['bbox']
-                                scaled_y1 = int(original_bbox[1] * scale_y)
-                                scaled_y2 = int(original_bbox[3] * scale_y)
-                                st.session_state.regions[region_name] = {
-                                    'bbox': (x1, scaled_y1 + y_offset, x2, scaled_y2 + y_offset),
-                                    'type': region_info['type']
-                                }
-                            st.session_state.y_offset_applied = y_offset
+                    # オフセットを計算
+                    x_offset = machine_box[0] - base_machine_x
+                    y_offset = machine_box[1] - base_machine_y
+                else:
+                    # 台番号が見つからない場合は黒い背景で調整
+                    black_top = find_black_region_top(img)
+                    if black_top is not None:
+                        if scale_y < 0.6:
+                            base_black_top = 165
+                        else:
+                            base_black_top = int(330 * scale_y)
+                        y_offset = black_top - base_black_top
+                
+                # デバッグ情報
+                with st.expander("位置検出デバッグ情報"):
+                    if machine_box:
+                        st.write(f"台番号検出: {machine_box}")
+                    st.write(f"オフセット: X={x_offset}px, Y={y_offset}px")
+                
+                if abs(x_offset) > 5 or abs(y_offset) > 5:  # 5px以上のずれがある場合
+                    st.info(f"位置ずれ検出: X={x_offset}px, Y={y_offset}px（自動調整中）")
+                    
+                    # リアルタイムで座標を調整
+                    offset_key = f"{x_offset},{y_offset}"
+                    if 'offset_applied' not in st.session_state or st.session_state.offset_applied != offset_key:
+                        for region_name in list(st.session_state.regions.keys()):
+                            region_info = st.session_state.regions[region_name]
+                            original_bbox = st.session_state.base_regions[region_name]['bbox']
+                            scaled_x1 = int(original_bbox[0] * scale_x)
+                            scaled_y1 = int(original_bbox[1] * scale_y)
+                            scaled_x2 = int(original_bbox[2] * scale_x)
+                            scaled_y2 = int(original_bbox[3] * scale_y)
+                            st.session_state.regions[region_name] = {
+                                'bbox': (scaled_x1 + x_offset, scaled_y1 + y_offset, 
+                                       scaled_x2 + x_offset, scaled_y2 + y_offset),
+                                'type': region_info['type']
+                            }
+                        st.session_state.offset_applied = offset_key
             
             # 座標設定の読み込み
             uploaded_config = st.file_uploader(
