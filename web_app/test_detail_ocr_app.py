@@ -31,68 +31,92 @@ if 'relative_regions' not in st.session_state:
         'Machine_No': {
             'bbox': (15/722, -94/480, 72/722, -64/480),  # 台番号は黒背景の上にある
             'type': 'text',
-            'inside_black': False
+            'inside_black': False,
+            'size_pattern': 'small'
         },
         'Jackpot_Count': {
-            'bbox': (75/722, 6/480, 210/722, 70/480),  # 大当り回数（赤い大きな数字）
+            'bbox': (52/722, 7/480, 190/722, 71/480),  # 大当り回数（赤い大きな数字）
             'type': 'red_number',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'large'  # 大きい数字
         },
         'Jackpot_Prob': {
-            'bbox': (78/722, 67/480, 202/722, 95/480),  # 大当り確率
+            'bbox': (78/722, 67/480, 203/722, 95/480),  # 大当り確率 (1/148)
             'type': 'text',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'medium'
         },
         'First_Hit_Count': {
-            'bbox': (295/722, 6/480, 381/722, 70/480),  # 初当り回数（青い大きな数字）
+            'bbox': (272/722, 7/480, 340/722, 71/480),  # 初当り回数（青い大きな数字）
             'type': 'blue_number',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'large'  # 大きい数字
         },
         'First_Hit_Prob': {
-            'bbox': (298/722, 67/480, 377/722, 95/480),  # 初当り確率
+            'bbox': (278/722, 67/480, 360/722, 95/480),  # 初当り確率 (1/469)
             'type': 'text',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'medium'
         },
         'Total_Start': {
-            'bbox': (468/722, 10/480, 596/722, 46/480),  # 累計スタート
+            'bbox': (478/722, 10/480, 606/722, 46/480),  # 累計スタート 3721
             'type': 'number',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'medium_wide'  # 中サイズで横長
         },
         'Normal': {
-            'bbox': (495/722, 70/480, 590/722, 98/480),  # 通常
+            'bbox': (496/722, 70/480, 591/722, 98/480),  # 通常 1877
             'type': 'number',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'medium'
         },
         'Chance': {
-            'bbox': (606/722, 67/480, 674/722, 95/480),  # チャンス中
+            'bbox': (616/722, 70/480, 711/722, 98/480),  # チャンス中 1844
             'type': 'number',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'medium'
         },
         'Ultra': {
-            'bbox': (72/722, 142/480, 106/722, 176/480),  # 超（赤数字）
+            'bbox': (73/722, 142/480, 107/722, 176/480),  # 超 21（赤数字）
             'type': 'red_number',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'small_red'  # 小さい赤数字
         },
         'Middle': {
-            'bbox': (124/722, 140/480, 158/722, 174/480),  # 中（赤数字）
+            'bbox': (125/722, 142/480, 145/722, 176/480),  # 中 0（赤数字）
             'type': 'red_number',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'small_red'  # 小さい赤数字
         },
         'Small': {
-            'bbox': (176/722, 144/480, 210/722, 178/480),  # 小（赤数字）
+            'bbox': (172/722, 142/480, 206/722, 176/480),  # 小 4（赤数字）
             'type': 'red_number',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'small_red'  # 小さい赤数字
         },
         'Start': {
-            'bbox': (316/722, 136/480, 416/722, 183/480),  # スタート
+            'bbox': (319/722, 136/480, 419/722, 183/480),  # スタート 369
             'type': 'number',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'large_white'  # 大きい白数字
         },
         'Max_Payout': {
-            'bbox': (518/722, 136/480, 649/722, 183/480),  # 最高出玉
+            'bbox': (521/722, 136/480, 652/722, 183/480),  # 最高出玉 26830
             'type': 'number',
-            'inside_black': True
+            'inside_black': True,
+            'size_pattern': 'large_white'  # 大きい白数字
         },
+    }
+
+# 文字サイズパターンに応じた微調整オフセット
+if 'size_adjustments' not in st.session_state:
+    st.session_state.size_adjustments = {
+        'large': {'padding': 5},  # 大きい数字用の余白
+        'large_white': {'padding': 3},  # 大きい白数字用
+        'medium': {'padding': 2},  # 中サイズ
+        'medium_wide': {'padding': 2},  # 中サイズ横長
+        'small': {'padding': 1},  # 小サイズ
+        'small_red': {'padding': 2},  # 小さい赤数字
     }
 
 # 元画像のサイズ（722x1584）に基づく座標（後方互換性のため残す）
@@ -445,100 +469,11 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         # セッションステートに黒背景情報を保存
                         st.session_state.black_region = (x, y, w, h)
             
-            # スケール自動検出ボタン
-            if st.button("🔍 スケール自動検出 (黒背景基準)", use_container_width=True):
-                with st.spinner("スケールを検出中..."):
-                    auto_scale_x, auto_scale_y, found_region, region_rect = auto_detect_scale(img)
-                    
-                    # 検出結果の可視化
-                    if found_region and region_rect:
-                        detection_img = img.copy()
-                        x, y, w, h = region_rect
-                        # 黒い背景領域を赤枠で囲む
-                        cv2.rectangle(detection_img, (x, y), (x+w, y+h), (0, 0, 255), 3)
-                        cv2.putText(detection_img, "BLACK REGION", (x+10, y+30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
-                        
-                        # 検出結果を表示
-                        with st.expander("黒背景領域検出結果", expanded=True):
-                            # 画像を縮小して表示
-                            display_img = cv2.resize(detection_img, (width//3, height//3))
-                            st.image(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB), 
-                                   caption=f"検出された黒背景領域 (サイズ: {w}x{h}px)")
-                            st.caption(f"元画像での黒背景サイズ: 700x490px")
-                            st.caption(f"計算されたスケール: {auto_scale_x:.3f}")
-                    
-                    if auto_scale_x > 0.5 and auto_scale_x < 3.0 and auto_scale_y > 0.5 and auto_scale_y < 3.0:
-                        if found_region:
-                            st.success(f"✅ 黒背景領域を検出！ スケール: {auto_scale_x:.2f}")
-                        else:
-                            st.warning("黒背景領域の検出に失敗しました。")
-                        
-                        # 手動モードを有効にして検出値を設定
-                        st.session_state.manual_mode = True
-                        st.session_state.manual_scale_x = auto_scale_x
-                        st.session_state.manual_scale_y = auto_scale_y
-                        # 基準点も自動調整
-                        machine_box = find_machine_number_box(img)
-                        if machine_box:
-                            st.session_state.manual_base_x = machine_box[0]
-                            st.session_state.manual_base_y = machine_box[1]
-                        else:
-                            # デフォルト基準点をスケールに合わせて調整
-                            st.session_state.manual_base_x = int(15 * auto_scale_x)
-                            st.session_state.manual_base_y = int(210 * auto_scale_y)
-                        st.rerun()
-                    else:
-                        st.warning("スケールの自動検出に失敗しました。手動で調整してください。")
             
-            # 自動位置調整のオン/オフ
-            st.session_state.auto_adjust = st.checkbox("位置ずれ自動調整", value=st.session_state.get('auto_adjust', True), 
-                                                       help="スクリーンショットの位置ずれを自動的に検出して調整します")
             
-            # 手動調整モード
-            st.divider()
-            st.markdown("**手動調整**")
-            
-            # 基準点の手動設定
-            manual_mode = st.checkbox("手動で基準点を設定", value=st.session_state.get('manual_mode', False), key='manual_mode')
-            
-            if manual_mode:
-                # 手動モードが有効な場合は自動調整を無効化
-                st.session_state.auto_adjust = False
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    base_x = st.number_input("基準X座標", 0, img.shape[1], 
-                                           st.session_state.get('manual_base_x', 15), 
-                                           key='manual_base_x', help="台番号の左端X座標")
-                    base_y = st.number_input("基準Y座標", 0, img.shape[0], 
-                                           st.session_state.get('manual_base_y', 210), 
-                                           key='manual_base_y', help="台番号の上端Y座標")
-                with col2:
-                    manual_scale_x = st.number_input("X拡大率", 0.1, 3.0, 
-                                                   st.session_state.get('manual_scale_x', scale_x), 
-                                                   step=0.1, key='manual_scale_x', help="横方向の拡大率")
-                    manual_scale_y = st.number_input("Y拡大率", 0.1, 3.0, 
-                                                   st.session_state.get('manual_scale_y', scale_y), 
-                                                   step=0.1, key='manual_scale_y', help="縦方向の拡大率")
-                
-                # リアルタイムで座標を更新（ボタン不要）
-                if 'manual_base_x' in st.session_state:
-                    for region_name in list(st.session_state.regions.keys()):
-                        original_bbox = st.session_state.base_regions[region_name]['bbox']
-                        # 元の座標を手動設定の基準点とスケールで変換
-                        new_x1 = int(st.session_state.manual_base_x + (original_bbox[0] - 15) * st.session_state.manual_scale_x)
-                        new_y1 = int(st.session_state.manual_base_y + (original_bbox[1] - 210) * st.session_state.manual_scale_y)
-                        new_x2 = int(st.session_state.manual_base_x + (original_bbox[2] - 15) * st.session_state.manual_scale_x)
-                        new_y2 = int(st.session_state.manual_base_y + (original_bbox[3] - 210) * st.session_state.manual_scale_y)
-                        
-                        st.session_state.regions[region_name] = {
-                            'bbox': (new_x1, new_y1, new_x2, new_y2),
-                            'type': st.session_state.regions[region_name]['type']
-                        }
-                    st.session_state.manual_adjusted = True
             
             # 黒背景が検出されている場合、相対座標から絶対座標に変換
-            if 'black_region' in st.session_state and not manual_mode:
+            if 'black_region' in st.session_state:
                 x, y, w, h = st.session_state.black_region
                 st.info(f"黒背景基準で座標を自動設定中")
                 
