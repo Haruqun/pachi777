@@ -22,122 +22,105 @@ st.set_page_config(
 st.title("🔍 出玉詳細画像OCRテスト")
 st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出するテスト")
 
-# 黒背景領域内での相対位置（比率）で定義
-# 黒背景の左上を(0,0)、右下を(1,1)とした相対座標
+# 黒背景領域内での座標定義
+# 黒背景の左上を(0,0)とした絶対座標（ピクセル単位）
 if 'relative_regions' not in st.session_state:
-    # 黒背景領域の幅は722px、高さは1246px（実際の検出結果より）
-    # 以下の座標は黒背景左上を基準とした相対位置
+    # 座標は(left, top, right, bottom)の形式で定義
+    # 黒背景左上を原点とした絶対座標
     st.session_state.relative_regions = {
-        'Machine_No': {
-            'bbox': (59/722, 725/1246, 111/722, 747/1246),  # 台番号 220
-            'type': 'number',
-            'inside_black': True,
-            'size_pattern': 'small'
-        },
         'Jackpot_Count': {
-            'bbox': (67/722, 351/1246, 188/722, 495/1246),  # 大当り回数 1 (赤大数字)
+            'bbox': (67, 351, 188, 495),  # 大当り回数 1 (赤大数字)
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'large'
         },
         'First_Hit_Count': {
-            'bbox': (299/722, 351/1246, 421/722, 495/1246),  # 初当り回数 4 (青大数字)
+            'bbox': (299, 351, 421, 495),  # 初当り回数 4 (青大数字)
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'large'
         },
         'Jackpot_Prob_Red': {
-            'bbox': (79/722, 459/1246, 175/722, 489/1246),  # (1/148) 赤括弧
+            'bbox': (79, 459, 175, 489),  # (1/148) 赤括弧
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Jackpot_Prob_Blue': {
-            'bbox': (312/722, 459/1246, 408/722, 489/1246),  # (1/469) 青括弧
+            'bbox': (312, 459, 408, 489),  # (1/469) 青括弧
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Normal_Chance': {
-            'bbox': (65/722, 555/1246, 189/722, 583/1246),  # 通常/チャンス 7 (赤)
-            'type': 'red_number',
-            'inside_black': True,
-            'size_pattern': 'small'
-        },
         'Total_Start': {
-            'bbox': (522/722, 549/1246, 665/722, 586/1246),  # 累計スタート 26830
+            'bbox': (522, 549, 665, 586),  # 累計スタート 26830
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'medium'
         },
         'Start': {
-            'bbox': (318/722, 549/1246, 421/722, 586/1246),  # スタート 369
+            'bbox': (318, 549, 421, 586),  # スタート 369
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'medium'
         },
+        'Normal_Chance': {
+            'bbox': (65, 555, 189, 583),  # 通常/チャンス 7 (赤)
+            'type': 'red_number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
         'Max_Payout': {
-            'bbox': (40/722, 653/1246, 130/722, 674/1246),  # 最高出玉 25760
+            'bbox': (40, 653, 130, 674),  # 最高出玉 25760
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Current_Prob': {
-            'bbox': (340/722, 653/1246, 405/722, 676/1246),  # 現在確率 1/87
+            'bbox': (340, 653, 405, 676),  # 現在確率 1/87
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Jackpot_Date_1': {
-            'bbox': (31/722, 813/1246, 76/722, 835/1246),  # 8/6 (大当り日付1)
+        'Machine_No': {
+            'bbox': (59, 725, 111, 747),  # 台番号 220
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Jackpot_Prob_Small': {
-            'bbox': (425/722, 813/1246, 509/722, 835/1246),  # 1/166 (大当り確率)
+        # テーブル下部（日付・確率・最高出玉）
+        'Date1': {
+            'bbox': (31, 813, 76, 835),  # 8/6 (日付1行目)
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Total_Starts_Bottom': {
-            'bbox': (584/722, 812/1246, 673/722, 834/1246),  # 14670 (累計スタート下部)
+        'Prob1': {
+            'bbox': (425, 813, 509, 835),  # 1/166 (確率1行目)
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'First_Hit_Date': {
-            'bbox': (31/722, 849/1246, 76/722, 872/1246),  # 8/5 (初当り日付)
+        'Total_Bottom1': {
+            'bbox': (584, 812, 673, 834),  # 14670 (累計スタート1行目)
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'First_Hit_Times': {
-            'bbox': (125/722, 849/1246, 196/722, 870/1246),  # 3213 (初当り回数)
+        'Date2': {
+            'bbox': (31, 849, 76, 872),  # 8/5 (日付2行目)
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Normal_Prob': {
-            'bbox': (434/722, 849/1246, 499/722, 872/1246),  # 1/79 (通常確率)
+        'First_Times': {
+            'bbox': (125, 849, 196, 870),  # 3213 (初当り回数)
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Ultra': {
-            'bbox': (173/722, 1246/1246, 198/722, 1263/1246),  # 超 49
-            'type': 'number',
-            'inside_black': True,
-            'size_pattern': 'small'
-        },
-        'Middle': {
-            'bbox': (238/722, 1246/1246, 271/722, 1263/1246),  # 中 121
-            'type': 'number',
-            'inside_black': True,
-            'size_pattern': 'small'
-        },
-        'Small': {
-            'bbox': (314/722, 1246/1246, 338/722, 1263/1246),  # 小 96
+        'Prob2': {
+            'bbox': (434, 849, 499, 872),  # 1/79 (確率2行目)
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
@@ -489,19 +472,12 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         
                         # 相対座標でOCR領域を描画
                         for name, region_info in st.session_state.relative_regions.items():
-                            rel_x1, rel_y1, rel_x2, rel_y2 = region_info['bbox']
-                            if region_info['inside_black']:
-                                # 黒背景内の座標
-                                abs_x1 = int(x + rel_x1 * w)
-                                abs_y1 = int(y + rel_y1 * h)
-                                abs_x2 = int(x + rel_x2 * w)
-                                abs_y2 = int(y + rel_y2 * h)
-                            else:
-                                # 黒背景外の座標（台番号など）
-                                abs_x1 = int(rel_x1 * img.shape[1])
-                                abs_y1 = int((rel_y1 * h) + y)
-                                abs_x2 = int(rel_x2 * img.shape[1])
-                                abs_y2 = int((rel_y2 * h) + y)
+                            x1, y1, x2, y2 = region_info['bbox']
+                            # 黒背景左上基準の絶対座標
+                            abs_x1 = int(x + x1)
+                            abs_y1 = int(y + y1)
+                            abs_x2 = int(x + x2)
+                            abs_y2 = int(y + y2)
                             
                             # 領域の色を決定
                             color = (0, 255, 0)  # 緑
@@ -578,20 +554,13 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         
                         # 各領域を処理
                         for name, region_info in st.session_state.relative_regions.items():
-                            rel_x1, rel_y1, rel_x2, rel_y2 = region_info['bbox']
+                            x1, y1, x2, y2 = region_info['bbox']
                             
-                            if region_info['inside_black']:
-                                # 黒背景内の座標
-                                abs_x1 = int(x_black + rel_x1 * w_black)
-                                abs_y1 = int(y_black + rel_y1 * h_black)
-                                abs_x2 = int(x_black + rel_x2 * w_black)
-                                abs_y2 = int(y_black + rel_y2 * h_black)
-                            else:
-                                # 黒背景外の座標
-                                abs_x1 = int(rel_x1 * img.shape[1])
-                                abs_y1 = int((rel_y1 * h_black) + y_black)
-                                abs_x2 = int(rel_x2 * img.shape[1])
-                                abs_y2 = int((rel_y2 * h_black) + y_black)
+                            # 黒背景左上基準の絶対座標
+                            abs_x1 = x_black + x1
+                            abs_y1 = y_black + y1
+                            abs_x2 = x_black + x2
+                            abs_y2 = y_black + y2
                             
                             # 領域を切り出し
                             roi = img[abs_y1:abs_y2, abs_x1:abs_x2]
