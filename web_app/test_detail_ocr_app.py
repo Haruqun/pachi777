@@ -500,21 +500,20 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         
                         st.info(f"黒背景領域: 左上({x}, {y}) サイズ{w}x{h}px")
                         
+                        # デバッグ用: 最初の領域の座標を表示
+                        first_region = list(st.session_state.relative_regions.items())[0]
+                        st.info(f"デバッグ: {first_region[0]} = {first_region[1]['bbox']}")
+                        
                         # 各領域の座標を表形式で表示
                         st.markdown("### OCR領域の絶対座標")
                         coord_data = []
                         for name, region_info in st.session_state.relative_regions.items():
-                            rel_x1, rel_y1, rel_x2, rel_y2 = region_info['bbox']
-                            if region_info['inside_black']:
-                                abs_x1 = int(x + rel_x1 * w)
-                                abs_y1 = int(y + rel_y1 * h)
-                                abs_x2 = int(x + rel_x2 * w)
-                                abs_y2 = int(y + rel_y2 * h)
-                            else:
-                                abs_x1 = int(rel_x1 * img.shape[1])
-                                abs_y1 = int((rel_y1 * h) + y)
-                                abs_x2 = int(rel_x2 * img.shape[1])
-                                abs_y2 = int((rel_y2 * h) + y)
+                            x1, y1, x2, y2 = region_info['bbox']
+                            # 黒背景左上基準の絶対座標
+                            abs_x1 = int(x + x1)
+                            abs_y1 = int(y + y1)
+                            abs_x2 = int(x + x2)
+                            abs_y2 = int(y + y2)
                             coord_data.append({
                                 "領域名": name,
                                 "左上X": abs_x1,
@@ -561,6 +560,12 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                             abs_y1 = y_black + y1
                             abs_x2 = x_black + x2
                             abs_y2 = y_black + y2
+                            
+                            # 境界チェック
+                            abs_x1 = max(0, min(abs_x1, img.shape[1]))
+                            abs_y1 = max(0, min(abs_y1, img.shape[0]))
+                            abs_x2 = max(0, min(abs_x2, img.shape[1]))
+                            abs_y2 = max(0, min(abs_y2, img.shape[0]))
                             
                             # 領域を切り出し
                             roi = img[abs_y1:abs_y2, abs_x1:abs_x2]
@@ -904,19 +909,12 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         
                         # 相対座標でOCR領域を描画
                         for name, region_info in st.session_state.relative_regions.items():
-                            rel_x1, rel_y1, rel_x2, rel_y2 = region_info['bbox']
-                            if region_info['inside_black']:
-                                # 黒背景内の座標
-                                abs_x1 = int(x + rel_x1 * w)
-                                abs_y1 = int(y + rel_y1 * h)
-                                abs_x2 = int(x + rel_x2 * w)
-                                abs_y2 = int(y + rel_y2 * h)
-                            else:
-                                # 黒背景外の座標（画面全体に対する相対座標）
-                                abs_x1 = int(rel_x1 * img.shape[1])
-                                abs_y1 = int((rel_y1 * h) + y)  # Y座標は黒背景のYを基準に
-                                abs_x2 = int(rel_x2 * img.shape[1])
-                                abs_y2 = int((rel_y2 * h) + y)
+                            x1, y1, x2, y2 = region_info['bbox']
+                            # 黒背景左上基準の絶対座標
+                            abs_x1 = int(x + x1)
+                            abs_y1 = int(y + y1)
+                            abs_x2 = int(x + x2)
+                            abs_y2 = int(y + y2)
                             
                             # 領域の色を決定
                             color = (0, 255, 0)  # 緑
@@ -950,21 +948,13 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 
                 # 相対座標から絶対座標に変換
                 for region_name, region_info in st.session_state.relative_regions.items():
-                    rel_x1, rel_y1, rel_x2, rel_y2 = region_info['bbox']
+                    x1, y1, x2, y2 = region_info['bbox']
                     
-                    if region_info['inside_black']:
-                        # 黒背景内の座標
-                        abs_x1 = int(x + rel_x1 * w)
-                        abs_y1 = int(y + rel_y1 * h)
-                        abs_x2 = int(x + rel_x2 * w)
-                        abs_y2 = int(y + rel_y2 * h)
-                    else:
-                        # 黒背景外の座標（台番号など）
-                        # 画面全体の幅と黒背景の位置を基準に計算
-                        abs_x1 = int(rel_x1 * img.shape[1])
-                        abs_y1 = int((rel_y1 * h) + y)
-                        abs_x2 = int(rel_x2 * img.shape[1])
-                        abs_y2 = int((rel_y2 * h) + y)
+                    # 黒背景左上基準の絶対座標
+                    abs_x1 = int(x + x1)
+                    abs_y1 = int(y + y1)
+                    abs_x2 = int(x + x2)
+                    abs_y2 = int(y + y2)
                     
                     st.session_state.regions[region_name] = {
                         'bbox': (abs_x1, abs_y1, abs_x2, abs_y2),
