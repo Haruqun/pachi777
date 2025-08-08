@@ -22,8 +22,79 @@ st.set_page_config(
 st.title("🔍 出玉詳細画像OCRテスト")
 st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出するテスト")
 
-# 元画像のサイズ（722x1584）に基づく座標
-# 実際の画像サイズに応じて自動スケーリングされる
+# 黒背景領域内での相対位置（比率）で定義
+# 黒背景の左上を(0,0)、右下を(1,1)とした相対座標
+if 'relative_regions' not in st.session_state:
+    # 元画像での黒背景領域: (0, 304, 722, 784) - 幅722px, 高さ480px
+    st.session_state.relative_regions = {
+        'Machine_No': {
+            'bbox': (15/722, (210-304)/480, 72/722, (240-304)/480),  # 台番号は黒背景の外
+            'type': 'text',
+            'inside_black': False
+        },
+        'Jackpot_Count': {
+            'bbox': (52/722, (310-304)/480, 187/722, (374-304)/480),
+            'type': 'red_number',
+            'inside_black': True
+        },
+        'Jackpot_Prob': {
+            'bbox': (52/722, (371-304)/480, 167/722, (399-304)/480),
+            'type': 'text',
+            'inside_black': True
+        },
+        'First_Hit_Count': {
+            'bbox': (252/722, (311-304)/480, 338/722, (374-304)/480),
+            'type': 'blue_number',
+            'inside_black': True
+        },
+        'First_Hit_Prob': {
+            'bbox': (255/722, (372-304)/480, 334/722, (399-304)/480),
+            'type': 'text',
+            'inside_black': True
+        },
+        'Total_Start': {
+            'bbox': (425/722, (314-304)/480, 553/722, (350-304)/480),
+            'type': 'number',
+            'inside_black': True
+        },
+        'Normal': {
+            'bbox': (390/722, (374-304)/480, 485/722, (402-304)/480),
+            'type': 'number',
+            'inside_black': True
+        },
+        'Chance': {
+            'bbox': (501/722, (371-304)/480, 569/722, (399-304)/480),
+            'type': 'number',
+            'inside_black': True
+        },
+        'Ultra': {
+            'bbox': (48/722, (446-304)/480, 82/722, (480-304)/480),
+            'type': 'red_number',
+            'inside_black': True
+        },
+        'Middle': {
+            'bbox': (97/722, (444-304)/480, 131/722, (478-304)/480),
+            'type': 'red_number',
+            'inside_black': True
+        },
+        'Small': {
+            'bbox': (129/722, (448-304)/480, 163/722, (482-304)/480),
+            'type': 'red_number',
+            'inside_black': True
+        },
+        'Start': {
+            'bbox': (260/722, (440-304)/480, 360/722, (487-304)/480),
+            'type': 'number',
+            'inside_black': True
+        },
+        'Max_Payout': {
+            'bbox': (429/722, (440-304)/480, 560/722, (487-304)/480),
+            'type': 'number',
+            'inside_black': True
+        },
+    }
+
+# 元画像のサイズ（722x1584）に基づく座標（後方互換性のため残す）
 if 'base_regions' not in st.session_state:
     st.session_state.base_regions = {
         'Machine_No': {'bbox': (15, 210, 72, 240), 'type': 'text'},
@@ -108,33 +179,24 @@ if uploaded_file is not None:
 # テスト画像またはアップロード画像がある場合
 if (image_source == "テスト画像を使用" and selected_test_image and 'img' in locals() and img is not None) or uploaded_file is not None:
     
-    # 画像情報を表示
-    st.success(f"画像サイズ: {img.shape[1]} x {img.shape[0]} px")
+    # オリジナル画像情報を表示
+    original_size = (img.shape[1], img.shape[0])
+    st.info(f"オリジナル画像サイズ: {original_size[0]} x {original_size[1]} px")
     
-    # デバッグ用：画像の実際のサイズと期待されるサイズを表示
-    st.info(f"デバッグ情報 - 幅: {img.shape[1]}px, 高さ: {img.shape[0]}px")
+    # 統一サイズにリサイズ
+    target_width = 722
+    target_height = 1584
     
-    # 元画像サイズとのスケール比を計算
-    original_width = 722
-    original_height = 1584
-    scale_x = img.shape[1] / original_width
-    scale_y = img.shape[0] / original_height
+    if img.shape[1] != target_width or img.shape[0] != target_height:
+        # リサイズ実行
+        img = cv2.resize(img, (target_width, target_height), interpolation=cv2.INTER_LANCZOS4)
+        st.success(f"画像を統一サイズ {target_width}x{target_height} にリサイズしました")
+    else:
+        st.success(f"画像サイズ: {img.shape[1]} x {img.shape[0]} px (リサイズ不要)")
     
-    # スケーリングされた座標を計算
-    if scale_x != 1.0 or scale_y != 1.0:
-        st.warning(f"画像がスケーリングされています。スケール比 - X: {scale_x:.2f}, Y: {scale_y:.2f}")
-        # 座標を自動調整
-        for region_name, region_info in st.session_state.base_regions.items():
-            x1, y1, x2, y2 = region_info['bbox']
-            st.session_state.regions[region_name] = {
-                'bbox': (
-                    int(x1 * scale_x),
-                    int(y1 * scale_y),
-                    int(x2 * scale_x),
-                    int(y2 * scale_y)
-                ),
-                'type': region_info['type']
-            }
+    # スケールは常に1.0になる
+    scale_x = 1.0
+    scale_y = 1.0
     
     # 画像タイプの判定
     def detect_image_type(image):
@@ -331,14 +393,14 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
         with col_adjust:
             st.subheader("🎯 座標調整")
             
-            # スケール情報を表示
-            if scale_x != 1.0 or scale_y != 1.0:
-                st.caption(f"スケール: X={scale_x:.2f}, Y={scale_y:.2f}")
+            # リサイズ情報を表示
+            if original_size != (target_width, target_height):
+                st.caption(f"リサイズ済: {original_size[0]}x{original_size[1]} → {target_width}x{target_height}")
             
             # 黒背景検出デバッグボタン
             if st.button("🔍 黒背景領域を検出して表示", use_container_width=True):
                 with st.spinner("黒背景領域を検出中..."):
-                    # 黒い領域を全て検出してデバッグ表示
+                    # 黒い領域を検出
                     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                     _, black_mask = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)
                     
@@ -348,28 +410,55 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                     
                     contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                     
-                    # 全ての輪郭を表示
-                    debug_img = img.copy()
-                    for i, contour in enumerate(contours):
-                        area = cv2.contourArea(contour)
-                        if area > 100:  # 小さすぎる領域は無視
-                            x, y, w, h = cv2.boundingRect(contour)
-                            cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                            cv2.putText(debug_img, f"{i}: {w}x{h}", (x+5, y+20), 
-                                      cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
-                    
-                    # 縮小して表示
-                    display_scale = 0.5
-                    display_img = cv2.resize(debug_img, (int(img.shape[1]*display_scale), int(img.shape[0]*display_scale)))
-                    st.image(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB), 
-                           caption="黒い領域の検出結果（赤枠）")
-                    
-                    # 最大の領域情報を表示
                     if contours:
+                        # 最大の領域のみを使用
                         largest = max(contours, key=cv2.contourArea)
                         x, y, w, h = cv2.boundingRect(largest)
-                        st.info(f"最大の黒領域: {w}x{h}px (位置: {x}, {y})")
-                        st.info(f"推定スケール: {w/722:.2f}")
+                        
+                        # デバッグ画像を作成
+                        debug_img = img.copy()
+                        # 黒背景領域を赤枠で囲む
+                        cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0, 0, 255), 3)
+                        cv2.putText(debug_img, f"Black Region: {w}x{h}", (x+10, y+30), 
+                                  cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+                        
+                        # 相対座標でOCR領域を描画
+                        for name, region_info in st.session_state.relative_regions.items():
+                            rel_x1, rel_y1, rel_x2, rel_y2 = region_info['bbox']
+                            if region_info['inside_black']:
+                                # 黒背景内の座標
+                                abs_x1 = int(x + rel_x1 * w)
+                                abs_y1 = int(y + rel_y1 * h)
+                                abs_x2 = int(x + rel_x2 * w)
+                                abs_y2 = int(y + rel_y2 * h)
+                            else:
+                                # 黒背景外の座標（画面全体に対する相対座標）
+                                abs_x1 = int(rel_x1 * img.shape[1])
+                                abs_y1 = int((rel_y1 * h) + y)  # Y座標は黒背景のYを基準に
+                                abs_x2 = int(rel_x2 * img.shape[1])
+                                abs_y2 = int((rel_y2 * h) + y)
+                            
+                            # 領域の色を決定
+                            color = (0, 255, 0)  # 緑
+                            if 'red' in region_info['type']:
+                                color = (0, 0, 255)  # 赤
+                            elif 'blue' in region_info['type']:
+                                color = (255, 0, 0)  # 青
+                            
+                            cv2.rectangle(debug_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, 2)
+                            cv2.putText(debug_img, name, (abs_x1, abs_y1-5), 
+                                      cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                        
+                        # 縮小して表示
+                        display_scale = 0.5
+                        display_img = cv2.resize(debug_img, (int(img.shape[1]*display_scale), int(img.shape[0]*display_scale)))
+                        st.image(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB), 
+                               caption="黒背景領域とOCR領域")
+                        
+                        st.info(f"黒背景領域: {w}x{h}px (位置: {x}, {y})")
+                        
+                        # セッションステートに黒背景情報を保存
+                        st.session_state.black_region = (x, y, w, h)
             
             # スケール自動検出ボタン
             if st.button("🔍 スケール自動検出 (黒背景基準)", use_container_width=True):
@@ -463,64 +552,33 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         }
                     st.session_state.manual_adjusted = True
             
-            # 自動調整が有効な場合、要素を検出して調整
-            if st.session_state.auto_adjust and not manual_mode:
-                # 台番号の位置を検出
-                machine_box = find_machine_number_box(img)
-                x_offset = 0
-                y_offset = 0
+            # 黒背景が検出されている場合、相対座標から絶対座標に変換
+            if 'black_region' in st.session_state and not manual_mode:
+                x, y, w, h = st.session_state.black_region
+                st.info(f"黒背景基準で座標を自動設定中")
                 
-                if machine_box is not None:
-                    # 基準となる台番号の位置
-                    base_machine_x = int(15 * scale_x)
-                    base_machine_y = int(210 * scale_y)
+                # 相対座標から絶対座標に変換
+                for region_name, region_info in st.session_state.relative_regions.items():
+                    rel_x1, rel_y1, rel_x2, rel_y2 = region_info['bbox']
                     
-                    # オフセットを計算
-                    x_offset = machine_box[0] - base_machine_x
-                    y_offset = machine_box[1] - base_machine_y
-                else:
-                    # 台番号が見つからない場合は黒い背景で調整
-                    black_top = find_black_region_top(img)
-                    if black_top is not None:
-                        if scale_y < 0.6:
-                            base_black_top = 165
-                        else:
-                            base_black_top = int(330 * scale_y)
-                        y_offset = black_top - base_black_top
-                
-                # デバッグ情報
-                with st.expander("位置検出デバッグ情報"):
-                    if machine_box:
-                        st.write(f"台番号検出: {machine_box}")
-                        # 検出された領域を表示
-                        debug_img = img.copy()
-                        cv2.rectangle(debug_img, (machine_box[0], machine_box[1]), 
-                                    (machine_box[2], machine_box[3]), (0, 255, 0), 2)
-                        st.image(cv2.cvtColor(debug_img[:400, :400], cv2.COLOR_BGR2RGB), 
-                               caption="台番号検出結果（緑枠）", width=200)
+                    if region_info['inside_black']:
+                        # 黒背景内の座標
+                        abs_x1 = int(x + rel_x1 * w)
+                        abs_y1 = int(y + rel_y1 * h)
+                        abs_x2 = int(x + rel_x2 * w)
+                        abs_y2 = int(y + rel_y2 * h)
                     else:
-                        st.write("台番号が検出できませんでした")
-                    st.write(f"オフセット: X={x_offset}px, Y={y_offset}px")
-                
-                if abs(x_offset) > 5 or abs(y_offset) > 5:  # 5px以上のずれがある場合
-                    st.info(f"位置ずれ検出: X={x_offset}px, Y={y_offset}px（自動調整中）")
+                        # 黒背景外の座標（台番号など）
+                        # 画面全体の幅と黒背景の位置を基準に計算
+                        abs_x1 = int(rel_x1 * img.shape[1])
+                        abs_y1 = int((rel_y1 * h) + y)
+                        abs_x2 = int(rel_x2 * img.shape[1])
+                        abs_y2 = int((rel_y2 * h) + y)
                     
-                    # リアルタイムで座標を調整
-                    offset_key = f"{x_offset},{y_offset}"
-                    if 'offset_applied' not in st.session_state or st.session_state.offset_applied != offset_key:
-                        for region_name in list(st.session_state.regions.keys()):
-                            region_info = st.session_state.regions[region_name]
-                            original_bbox = st.session_state.base_regions[region_name]['bbox']
-                            scaled_x1 = int(original_bbox[0] * scale_x)
-                            scaled_y1 = int(original_bbox[1] * scale_y)
-                            scaled_x2 = int(original_bbox[2] * scale_x)
-                            scaled_y2 = int(original_bbox[3] * scale_y)
-                            st.session_state.regions[region_name] = {
-                                'bbox': (scaled_x1 + x_offset, scaled_y1 + y_offset, 
-                                       scaled_x2 + x_offset, scaled_y2 + y_offset),
-                                'type': region_info['type']
-                            }
-                        st.session_state.offset_applied = offset_key
+                    st.session_state.regions[region_name] = {
+                        'bbox': (abs_x1, abs_y1, abs_x2, abs_y2),
+                        'type': region_info['type']
+                    }
             
             # 座標設定の読み込み
             uploaded_config = st.file_uploader(
