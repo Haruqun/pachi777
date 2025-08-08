@@ -519,6 +519,96 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         # セッションステートに黒背景情報を保存
                         st.session_state.black_region = (x, y, w, h)
             
+            # OCR検出領域表示ボタン
+            if st.button("🔤 OCR検出領域を表示", use_container_width=True):
+                with st.spinner("OCR検出中..."):
+                    import pytesseract
+                    
+                    # OCRで文字領域を検出
+                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    
+                    # pytesseractで文字領域を検出
+                    data = pytesseract.image_to_data(gray, lang='jpn', output_type=pytesseract.Output.DICT)
+                    
+                    # デバッグ画像を作成
+                    ocr_img = img.copy()
+                    
+                    # 検出された文字領域を描画
+                    n_boxes = len(data['text'])
+                    detected_regions = []
+                    
+                    for i in range(n_boxes):
+                        # 信頼度が高く、テキストが存在する場合のみ
+                        if int(data['conf'][i]) > 30 and data['text'][i].strip():
+                            (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
+                            
+                            # 領域を緑枠で囲む
+                            cv2.rectangle(ocr_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                            
+                            # テキストと信頼度を表示
+                            text = data['text'][i]
+                            conf = data['conf'][i]
+                            label = f"{text[:10]} ({conf}%)"
+                            cv2.putText(ocr_img, label, (x, y - 5), 
+                                      cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+                            
+                            detected_regions.append({
+                                "テキスト": text,
+                                "X": x,
+                                "Y": y, 
+                                "幅": w,
+                                "高さ": h,
+                                "信頼度": conf
+                            })
+                    
+                    # 色付き文字の検出も試す
+                    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+                    
+                    # 赤色検出
+                    red_mask1 = cv2.inRange(hsv, np.array([0, 50, 50]), np.array([10, 255, 255]))
+                    red_mask2 = cv2.inRange(hsv, np.array([170, 50, 50]), np.array([180, 255, 255]))
+                    red_mask = cv2.bitwise_or(red_mask1, red_mask2)
+                    
+                    # 赤色領域でOCR
+                    red_data = pytesseract.image_to_data(red_mask, config='--psm 11 -c tessedit_char_whitelist=0123456789', output_type=pytesseract.Output.DICT)
+                    
+                    for i in range(len(red_data['text'])):
+                        if int(red_data['conf'][i]) > 30 and red_data['text'][i].strip():
+                            (x, y, w, h) = (red_data['left'][i], red_data['top'][i], red_data['width'][i], red_data['height'][i])
+                            cv2.rectangle(ocr_img, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                            label = f"RED:{red_data['text'][i]} ({red_data['conf'][i]}%)"
+                            cv2.putText(ocr_img, label, (x, y - 5), 
+                                      cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
+                    
+                    # 青色検出
+                    blue_mask = cv2.inRange(hsv, np.array([100, 50, 50]), np.array([130, 255, 255]))
+                    
+                    # 青色領域でOCR
+                    blue_data = pytesseract.image_to_data(blue_mask, config='--psm 11 -c tessedit_char_whitelist=0123456789', output_type=pytesseract.Output.DICT)
+                    
+                    for i in range(len(blue_data['text'])):
+                        if int(blue_data['conf'][i]) > 30 and blue_data['text'][i].strip():
+                            (x, y, w, h) = (blue_data['left'][i], blue_data['top'][i], blue_data['width'][i], blue_data['height'][i])
+                            cv2.rectangle(ocr_img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+                            label = f"BLUE:{blue_data['text'][i]} ({blue_data['conf'][i]}%)"
+                            cv2.putText(ocr_img, label, (x, y - 5), 
+                                      cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+                    
+                    # 画像を表示
+                    display_scale = 0.7
+                    display_img = cv2.resize(ocr_img, (int(img.shape[1]*display_scale), int(img.shape[0]*display_scale)))
+                    st.image(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB), 
+                           caption="OCR検出領域（緑：通常、赤：赤文字、青：青文字）")
+                    
+                    # 検出されたテキストを表形式で表示
+                    if detected_regions:
+                        st.markdown("### 検出されたテキスト")
+                        import pandas as pd
+                        df = pd.DataFrame(detected_regions)
+                        st.dataframe(df, use_container_width=True)
+                    else:
+                        st.warning("テキストが検出されませんでした")
+            
             # 黒背景検出デバッグボタン
             if st.button("🔍 黒背景領域を検出して表示", use_container_width=True):
                 with st.spinner("黒背景領域を検出中..."):
