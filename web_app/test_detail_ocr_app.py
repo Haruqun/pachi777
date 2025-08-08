@@ -193,22 +193,43 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
         # 左上の領域を探索（画像の左1/3、上1/3）
-        search_region = gray[:height//3, :width//3]
+        search_height = min(height//3, 400)  # 最大400pxまで
+        search_width = min(width//3, 200)   # 最大200pxまで
+        search_region = gray[:search_height, :search_width]
         
-        # 白い領域を検出
-        _, binary = cv2.threshold(search_region, 200, 255, cv2.THRESH_BINARY)
+        # 白い領域を検出（閾値を調整）
+        _, binary = cv2.threshold(search_region, 220, 255, cv2.THRESH_BINARY)
+        
+        # ノイズ除去
+        kernel = np.ones((3,3), np.uint8)
+        binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+        binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
         
         # 輪郭検出
         contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         # 適切なサイズの白い矩形を探す
+        best_box = None
+        best_score = 0
+        
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
             # 台番号のボックスとして妥当なサイズか確認
-            if 30 < w < 150 and 20 < h < 80 and 0.3 < w/h < 3:
-                return (x, y, x+w, y+h)
+            if 20 < w < 100 and 15 < h < 60:
+                # 位置スコア（左上に近いほど高い）
+                position_score = 1.0 - (x + y) / (search_width + search_height)
+                # サイズスコア（適切なサイズほど高い）
+                size_score = 1.0 - abs(w/h - 1.5) / 3.0  # 縦横比1.5が理想
+                # 面積スコア
+                area_score = min(w * h / 2000.0, 1.0)
+                
+                total_score = position_score * 0.5 + size_score * 0.3 + area_score * 0.2
+                
+                if total_score > best_score:
+                    best_score = total_score
+                    best_box = (x, y, x+w, y+h)
         
-        return None
+        return best_box
     
     image_type = detect_image_type(img)
     
@@ -263,6 +284,14 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 with st.expander("位置検出デバッグ情報"):
                     if machine_box:
                         st.write(f"台番号検出: {machine_box}")
+                        # 検出された領域を表示
+                        debug_img = img.copy()
+                        cv2.rectangle(debug_img, (machine_box[0], machine_box[1]), 
+                                    (machine_box[2], machine_box[3]), (0, 255, 0), 2)
+                        st.image(cv2.cvtColor(debug_img[:400, :400], cv2.COLOR_BGR2RGB), 
+                               caption="台番号検出結果（緑枠）", width=200)
+                    else:
+                        st.write("台番号が検出できませんでした")
                     st.write(f"オフセット: X={x_offset}px, Y={y_offset}px")
                 
                 if abs(x_offset) > 5 or abs(y_offset) > 5:  # 5px以上のずれがある場合
