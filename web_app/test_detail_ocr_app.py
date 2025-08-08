@@ -168,14 +168,21 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
         height, width = image.shape[:2]
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
-        # 上から下に向かって黒い領域を探す
-        for y in range(height // 4, height // 2):
+        # より広い範囲で黒い領域を探す（画像の上部1/5から）
+        for y in range(height // 5, height * 2 // 3):
             row_mean = np.mean(gray[y, :])
-            if row_mean < 30:  # 十分に暗い行を検出
+            if row_mean < 50:  # 閾値を緩和（30→50）
                 # 数行連続で暗いことを確認
-                if y + 10 < height:
-                    next_rows_mean = np.mean(gray[y:y+10, :])
-                    if next_rows_mean < 30:
+                if y + 20 < height:
+                    next_rows_mean = np.mean(gray[y:y+20, :])
+                    if next_rows_mean < 50:
+                        # エッジ検出で境界をより正確に
+                        edges = cv2.Canny(gray[max(0, y-10):y+30, :], 50, 150)
+                        edge_rows = np.sum(edges, axis=1)
+                        # 最もエッジが強い行を境界とする
+                        if len(edge_rows) > 0:
+                            max_edge_idx = np.argmax(edge_rows)
+                            return max(0, y - 10) + max_edge_idx
                         return y
         return None
     
@@ -212,7 +219,22 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                     y_offset = black_top - base_black_top
                     
                     if abs(y_offset) > 5:  # 5px以上のずれがある場合
-                        st.info(f"位置ずれ検出: {y_offset}px（自動調整済み）")
+                        st.info(f"位置ずれ検出: {y_offset}px（自動調整中）")
+                        
+                        # リアルタイムで座標を調整
+                        if 'y_offset_applied' not in st.session_state or st.session_state.y_offset_applied != y_offset:
+                            for region_name in list(st.session_state.regions.keys()):
+                                region_info = st.session_state.regions[region_name]
+                                x1, y1, x2, y2 = region_info['bbox']
+                                # 元の座標からのオフセットを適用
+                                original_bbox = st.session_state.base_regions[region_name]['bbox']
+                                scaled_y1 = int(original_bbox[1] * scale_y)
+                                scaled_y2 = int(original_bbox[3] * scale_y)
+                                st.session_state.regions[region_name] = {
+                                    'bbox': (x1, scaled_y1 + y_offset, x2, scaled_y2 + y_offset),
+                                    'type': region_info['type']
+                                }
+                            st.session_state.y_offset_applied = y_offset
             
             # 座標設定の読み込み
             uploaded_config = st.file_uploader(
