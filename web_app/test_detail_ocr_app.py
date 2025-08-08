@@ -207,6 +207,7 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
         best_scale_x = 1.0
         best_scale_y = 1.0
         found_button = False
+        button_rect = None
         
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
@@ -233,6 +234,7 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                             best_scale_x = calc_scale_x
                             best_scale_y = calc_scale_y
                             found_button = True
+                            button_rect = (x, y, w, h)
                             break
         
         # 4パチボタンが見つからない場合は、大きな赤い数字で代替
@@ -258,7 +260,7 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 best_scale_x = largest_red[2] / 135.0
                 best_scale_y = largest_red[3] / 64.0
         
-        return best_scale_x, best_scale_y, found_button
+        return best_scale_x, best_scale_y, found_button, button_rect
     
     # 台番号の白い領域を検出
     def find_machine_number_box(image):
@@ -335,7 +337,23 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             # スケール自動検出ボタン
             if st.button("🔍 スケール自動検出 (4パチボタン基準)", use_container_width=True):
                 with st.spinner("スケールを検出中..."):
-                    auto_scale_x, auto_scale_y, found_4pachi = auto_detect_scale(img)
+                    auto_scale_x, auto_scale_y, found_4pachi, button_rect = auto_detect_scale(img)
+                    
+                    # 検出結果の可視化
+                    if found_4pachi and button_rect:
+                        detection_img = img.copy()
+                        x, y, w, h = button_rect
+                        # 4パチボタンを緑枠で囲む
+                        cv2.rectangle(detection_img, (x, y), (x+w, y+h), (0, 255, 0), 3)
+                        cv2.putText(detection_img, "4PACHI", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                        
+                        # 検出結果を表示
+                        with st.expander("4パチボタン検出結果", expanded=True):
+                            st.image(cv2.cvtColor(detection_img[:height//2, :], cv2.COLOR_BGR2RGB), 
+                                   caption=f"検出された4パチボタン (サイズ: {w}x{h}px)")
+                            st.caption(f"元画像での4パチボタンサイズ: 56x27px")
+                            st.caption(f"計算されたスケール: X={auto_scale_x:.3f}, Y={auto_scale_y:.3f}")
+                    
                     if auto_scale_x > 0.5 and auto_scale_x < 3.0 and auto_scale_y > 0.5 and auto_scale_y < 3.0:
                         if found_4pachi:
                             st.success(f"✅ 4パチボタンを検出！ スケール: X={auto_scale_x:.2f}, Y={auto_scale_y:.2f}")
