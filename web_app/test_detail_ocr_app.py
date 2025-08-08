@@ -192,13 +192,13 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
         height, width = image.shape[:2]
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
-        # 左上の領域を探索（画像の左1/3、上1/3）
-        search_height = min(height//3, 400)  # 最大400pxまで
-        search_width = min(width//3, 200)   # 最大200pxまで
+        # 左上の領域を探索（画像の左側上部）
+        search_height = min(height//2, 500)  # 上半分まで探索
+        search_width = min(width//4, 150)    # 左1/4まで探索
         search_region = gray[:search_height, :search_width]
         
-        # 白い領域を検出（閾値を調整）
-        _, binary = cv2.threshold(search_region, 220, 255, cv2.THRESH_BINARY)
+        # 白い領域を検出（より低い閾値で）
+        _, binary = cv2.threshold(search_region, 200, 255, cv2.THRESH_BINARY)
         
         # ノイズ除去
         kernel = np.ones((3,3), np.uint8)
@@ -215,19 +215,26 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
             # 台番号のボックスとして妥当なサイズか確認
-            if 20 < w < 100 and 15 < h < 60:
-                # 位置スコア（左上に近いほど高い）
-                position_score = 1.0 - (x + y) / (search_width + search_height)
-                # サイズスコア（適切なサイズほど高い）
-                size_score = 1.0 - abs(w/h - 1.5) / 3.0  # 縦横比1.5が理想
-                # 面積スコア
-                area_score = min(w * h / 2000.0, 1.0)
-                
-                total_score = position_score * 0.5 + size_score * 0.3 + area_score * 0.2
-                
-                if total_score > best_score:
-                    best_score = total_score
-                    best_box = (x, y, x+w, y+h)
+            # サイズ条件を緩和
+            if 15 < w < 120 and 10 < h < 80 and w > h:
+                # 左上の特定の領域にあるかチェック（台番号は通常左端から10-30px、上から100-300px）
+                if x < 50 and 50 < y < 350:
+                    # 白い領域の充填率を計算
+                    roi = binary[y:y+h, x:x+w]
+                    fill_ratio = np.sum(roi) / (255 * w * h)
+                    
+                    # 充填率が高い（0.7以上）場合は台番号の可能性が高い
+                    if fill_ratio > 0.7:
+                        # 位置スコア（左上に近いほど高い）
+                        position_score = 1.0 - (x + y) / (search_width + search_height)
+                        # サイズスコア（適切なサイズほど高い）
+                        size_score = 1.0 - abs(w/h - 2.0) / 3.0  # 縦横比2.0が理想
+                        
+                        total_score = position_score * 0.6 + size_score * 0.2 + fill_ratio * 0.2
+                        
+                        if total_score > best_score:
+                            best_score = total_score
+                            best_box = (x, y, x+w, y+h)
         
         return best_box
     
@@ -254,6 +261,39 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             # 自動位置調整のオン/オフ
             st.session_state.auto_adjust = st.checkbox("位置ずれ自動調整", value=st.session_state.get('auto_adjust', True), 
                                                        help="スクリーンショットの位置ずれを自動的に検出して調整します")
+            
+            # 手動調整モード
+            st.divider()
+            st.markdown("**手動調整**")
+            
+            # 基準点の手動設定
+            manual_mode = st.checkbox("手動で基準点を設定", value=False)
+            
+            if manual_mode:
+                col1, col2 = st.columns(2)
+                with col1:
+                    base_x = st.number_input("基準X座標", 0, img.shape[1], 15, help="台番号の左端X座標")
+                    base_y = st.number_input("基準Y座標", 0, img.shape[0], 210, help="台番号の上端Y座標")
+                with col2:
+                    manual_scale_x = st.number_input("X拡大率", 0.1, 3.0, 1.0, step=0.1, help="横方向の拡大率")
+                    manual_scale_y = st.number_input("Y拡大率", 0.1, 3.0, 1.0, step=0.1, help="縦方向の拡大率")
+                
+                if st.button("手動設定を適用", type="primary"):
+                    # 手動設定で座標を更新
+                    for region_name in list(st.session_state.regions.keys()):
+                        original_bbox = st.session_state.base_regions[region_name]['bbox']
+                        # 元の座標を手動設定の基準点とスケールで変換
+                        new_x1 = int(base_x + (original_bbox[0] - 15) * manual_scale_x)
+                        new_y1 = int(base_y + (original_bbox[1] - 210) * manual_scale_y)
+                        new_x2 = int(base_x + (original_bbox[2] - 15) * manual_scale_x)
+                        new_y2 = int(base_y + (original_bbox[3] - 210) * manual_scale_y)
+                        
+                        st.session_state.regions[region_name] = {
+                            'bbox': (new_x1, new_y1, new_x2, new_y2),
+                            'type': st.session_state.regions[region_name]['type']
+                        }
+                    st.session_state.manual_adjusted = True
+                    st.rerun()
             
             # 自動調整が有効な場合、要素を検出して調整
             if st.session_state.auto_adjust:
