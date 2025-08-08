@@ -22,9 +22,15 @@ st.set_page_config(
 st.title("🔍 出玉詳細画像OCRテスト")
 st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出するテスト")
 
+# 座標定義をリセット
+if st.button("🔄 座標定義をリセット", key="reset_coords"):
+    if 'relative_regions' in st.session_state:
+        del st.session_state.relative_regions
+    st.rerun()
+
 # 黒背景領域内での座標定義
 # 検出結果の座標から黒背景位置を引いた相対座標
-if 'relative_regions' not in st.session_state:
+if 'relative_regions' not in st.session_state or st.button("座標を強制更新", key="force_update"):
     # 座標は(left, top, right, bottom)の形式で定義
     # 黒背景位置を差し引いた相対座標として保存
     # 実際の検出結果に基づく座標（黒背景内での相対座標）
