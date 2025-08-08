@@ -406,6 +406,119 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             if original_size[0] != target_width:
                 st.caption(f"リサイズ済: {original_size[0]}x{original_size[1]} → {img.shape[1]}x{img.shape[0]}")
             
+            # グリッド表示ボタン
+            if st.button("📐 10pxグリッドで検証", use_container_width=True):
+                with st.spinner("グリッドを生成中..."):
+                    # 黒い領域を検出
+                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    _, black_mask = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)
+                    
+                    kernel = np.ones((5, 5), np.uint8)
+                    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
+                    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
+                    
+                    contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    
+                    if contours:
+                        # 最大の領域のみを使用
+                        largest = max(contours, key=cv2.contourArea)
+                        x, y, w, h = cv2.boundingRect(largest)
+                        
+                        # デバッグ画像を作成
+                        debug_img = img.copy()
+                        
+                        # 10pxグリッドを描画
+                        grid_color = (200, 200, 200)  # 薄いグレー
+                        # 縦線
+                        for i in range(0, img.shape[1], 10):
+                            cv2.line(debug_img, (i, 0), (i, img.shape[0]), grid_color, 1)
+                            if i % 50 == 0:  # 50px毎に太線
+                                cv2.line(debug_img, (i, 0), (i, img.shape[0]), (150, 150, 150), 2)
+                                cv2.putText(debug_img, str(i), (i+2, 20), 
+                                          cv2.FONT_HERSHEY_SIMPLEX, 0.4, (100, 100, 100), 1)
+                        
+                        # 横線
+                        for i in range(0, img.shape[0], 10):
+                            cv2.line(debug_img, (0, i), (img.shape[1], i), grid_color, 1)
+                            if i % 50 == 0:  # 50px毎に太線
+                                cv2.line(debug_img, (0, i), (img.shape[1], i), (150, 150, 150), 2)
+                                if i > 0:
+                                    cv2.putText(debug_img, str(i), (5, i-2), 
+                                              cv2.FONT_HERSHEY_SIMPLEX, 0.4, (100, 100, 100), 1)
+                        
+                        # 黒背景領域を赤枠で囲む
+                        cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0, 0, 255), 3)
+                        cv2.putText(debug_img, f"Black: ({x},{y}) {w}x{h}", (x+10, y+30), 
+                                  cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+                        
+                        # 相対座標でOCR領域を描画
+                        for name, region_info in st.session_state.relative_regions.items():
+                            rel_x1, rel_y1, rel_x2, rel_y2 = region_info['bbox']
+                            if region_info['inside_black']:
+                                # 黒背景内の座標
+                                abs_x1 = int(x + rel_x1 * w)
+                                abs_y1 = int(y + rel_y1 * h)
+                                abs_x2 = int(x + rel_x2 * w)
+                                abs_y2 = int(y + rel_y2 * h)
+                            else:
+                                # 黒背景外の座標（台番号など）
+                                abs_x1 = int(rel_x1 * img.shape[1])
+                                abs_y1 = int((rel_y1 * h) + y)
+                                abs_x2 = int(rel_x2 * img.shape[1])
+                                abs_y2 = int((rel_y2 * h) + y)
+                            
+                            # 領域の色を決定
+                            color = (0, 255, 0)  # 緑
+                            if 'red' in region_info['type']:
+                                color = (0, 0, 255)  # 赤
+                            elif 'blue' in region_info['type']:
+                                color = (255, 0, 0)  # 青
+                            
+                            cv2.rectangle(debug_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, 2)
+                            # 座標情報も表示
+                            coord_text = f"{name[:8]} ({abs_x1},{abs_y1})"
+                            cv2.putText(debug_img, coord_text, (abs_x1, abs_y1-5), 
+                                      cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+                        
+                        # 縮小して表示
+                        display_scale = 0.7
+                        display_img = cv2.resize(debug_img, (int(img.shape[1]*display_scale), int(img.shape[0]*display_scale)))
+                        st.image(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB), 
+                               caption="10pxグリッド検証画面")
+                        
+                        st.info(f"黒背景領域: 左上({x}, {y}) サイズ{w}x{h}px")
+                        
+                        # 各領域の座標を表形式で表示
+                        st.markdown("### OCR領域の絶対座標")
+                        coord_data = []
+                        for name, region_info in st.session_state.relative_regions.items():
+                            rel_x1, rel_y1, rel_x2, rel_y2 = region_info['bbox']
+                            if region_info['inside_black']:
+                                abs_x1 = int(x + rel_x1 * w)
+                                abs_y1 = int(y + rel_y1 * h)
+                                abs_x2 = int(x + rel_x2 * w)
+                                abs_y2 = int(y + rel_y2 * h)
+                            else:
+                                abs_x1 = int(rel_x1 * img.shape[1])
+                                abs_y1 = int((rel_y1 * h) + y)
+                                abs_x2 = int(rel_x2 * img.shape[1])
+                                abs_y2 = int((rel_y2 * h) + y)
+                            coord_data.append({
+                                "領域名": name,
+                                "左上X": abs_x1,
+                                "左上Y": abs_y1,
+                                "右下X": abs_x2,
+                                "右下Y": abs_y2,
+                                "幅": abs_x2 - abs_x1,
+                                "高さ": abs_y2 - abs_y1
+                            })
+                        import pandas as pd
+                        df = pd.DataFrame(coord_data)
+                        st.dataframe(df, use_container_width=True)
+                        
+                        # セッションステートに黒背景情報を保存
+                        st.session_state.black_region = (x, y, w, h)
+            
             # 黒背景検出デバッグボタン
             if st.button("🔍 黒背景領域を検出して表示", use_container_width=True):
                 with st.spinner("黒背景領域を検出中..."):
