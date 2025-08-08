@@ -57,11 +57,16 @@ test_image_files = [
 ]
 
 for filename, machine_num in test_image_files:
-    local_path = os.path.join(os.path.dirname(__file__), "..", "data_image", filename)
-    if os.path.exists(local_path):
-        with open(local_path, "rb") as f:
-            img_data = f.read()
-            test_images_data[f"{filename} (台番号: {machine_num})"] = img_data
+    # PNGとJPEGの両方を試す
+    for ext in ['.PNG', '.png', '.JPG', '.jpg', '.JPEG', '.jpeg']:
+        base_name = filename.rsplit('.', 1)[0]
+        test_filename = base_name + ext
+        local_path = os.path.join(os.path.dirname(__file__), "..", "data_image", test_filename)
+        if os.path.exists(local_path):
+            with open(local_path, "rb") as f:
+                img_data = f.read()
+                test_images_data[f"{test_filename} (台番号: {machine_num})"] = img_data
+            break
 
 # 画像選択方法
 if test_images_data:
@@ -91,8 +96,8 @@ else:
     # メインエリア
     uploaded_file = st.file_uploader(
         "出玉詳細画像をアップロード",
-        type=['png', 'jpg', 'jpeg'],
-        help="site777の出玉詳細画面のスクリーンショットをアップロードしてください"
+        type=['png', 'jpg', 'jpeg', 'PNG', 'JPG', 'JPEG'],
+        help="site777の出玉詳細画面のスクリーンショットをアップロードしてください（PNG/JPEG対応）"
     )
 
 if uploaded_file is not None:
