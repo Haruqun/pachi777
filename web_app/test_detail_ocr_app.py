@@ -23,10 +23,17 @@ st.title("🔍 出玉詳細画像OCRテスト")
 st.caption("IMG_2074.PNGなどの出玉詳細画像からデータを抽出するテスト")
 
 # 座標定義をリセット
-if st.button("🔄 座標定義をリセット", key="reset_coords"):
-    if 'relative_regions' in st.session_state:
-        del st.session_state.relative_regions
-    st.rerun()
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("🔄 座標定義をリセット", key="reset_coords"):
+        if 'relative_regions' in st.session_state:
+            del st.session_state.relative_regions
+        st.rerun()
+with col2:
+    if st.button("🗑️ 全セッションをクリア", key="clear_all"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
 
 # 黒背景領域内での座標定義
 # 検出結果の座標から黒背景位置を引いた相対座標
