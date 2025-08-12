@@ -40,24 +40,28 @@ with col2:
 if 'relative_regions' not in st.session_state or st.button("座標を強制更新", key="force_update"):
     # 座標は(left, top, right, bottom)の形式で定義
     # OCR検出結果に基づく絶対座標として定義
+    # リサイズ後の722px幅に合わせた座標
+    # 元画像1179x2556 -> 722x1565へのスケール: 722/1179 = 0.612
+    scale_factor = 722 / 1179
+    
     st.session_state.relative_regions = {
         # メイン数値（赤・青の大きい数字）
         'big_hit_count': {
-            'bbox': (52, 0, 187, 64),  # 大当り回数 25 (赤大数字) - 黒背景Y=310から
+            'bbox': (32, 190, 115, 229),  # 大当り回数 25 (赤大数字) リサイズ後座標
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'large',
             'name': '大当り回数'
         },
         'first_hit_count': {
-            'bbox': (252, 1, 338, 64),  # 初当り回数 4 (青大数字) - 黒背景Y=310から
+            'bbox': (154, 190, 207, 229),  # 初当り回数 4 (青大数字) リサイズ後座標
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'large',
             'name': '初当り回数'
         },
         'cumulative_start': {
-            'bbox': (425, 4, 553, 40),  # 累計スタート 3721
+            'bbox': (260, 192, 339, 215),  # 累計スタート 3721 リサイズ後座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
@@ -66,35 +70,35 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 中段の数値
         'ultra_count': {
-            'bbox': (48, 136, 82, 170),  # 超 21
+            'bbox': (29, 273, 50, 294),  # 超 21 リサイズ後座標
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '超'
         },
         'medium_count': {
-            'bbox': (97, 134, 131, 168),  # 中 0
+            'bbox': (59, 273, 80, 294),  # 中 0 リサイズ後座標
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '中'
         },
         'small_count': {
-            'bbox': (129, 138, 163, 172),  # 小 4
+            'bbox': (79, 273, 100, 294),  # 小 4 リサイズ後座標
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '小'
         },
         'start_number': {
-            'bbox': (318, 239, 402, 276),  # スタート 369 - 絶対座標から黒背景位置を引く
+            'bbox': (195, 268, 246, 299),  # スタート 369 リサイズ後座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
             'name': 'スタート'
         },
         'max_payout': {
-            'bbox': (522, 239, 665, 276),  # 最高出玉 26830 - 絶対座標から黒背景位置を引く
+            'bbox': (320, 268, 407, 299),  # 最高出玉 26830 リサイズ後座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
@@ -103,7 +107,7 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 最高一撃獲得セクション  
         'highest_single_win': {
-            'bbox': (40, 343, 130, 364),  # 最高一撃獲得 25760 - 絶対座標から黒背景位置を引く
+            'bbox': (24, 400, 80, 413),  # 最高一撃獲得 25760 リサイズ後座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
