@@ -403,8 +403,10 @@ if uploaded_file is not None:
                     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
                     enhanced = clahe.apply(gray)
                     
-                    # OCR実行（バウンディングボックス情報も取得）
-                    data = pytesseract.image_to_data(enhanced, lang='jpn', output_type=pytesseract.Output.DICT)
+                    # OCR実行（数字のみ検出するように設定）
+                    # 数字認識に特化した設定
+                    custom_config = '--psm 11 -c tessedit_char_whitelist=0123456789/-'
+                    data = pytesseract.image_to_data(enhanced, config=custom_config, output_type=pytesseract.Output.DICT)
                     
                     # 検出結果をフィルタリング
                     detected_regions = []
@@ -484,12 +486,12 @@ if uploaded_file is not None:
                 st.markdown("### 🎯 領域定義生成")
                 st.info("検出されたテキストから重要な領域を選択して定義できます")
                 
-                # 検出された主要な数値をフィルタリング
+                # 検出された数値をフィルタリング（2桁以上の数字と分数形式）
                 important_texts = []
                 for region in detected_regions:
                     text = region['text']
-                    # 数値のみ、または重要なキーワードを含むテキスト
-                    if (text.isdigit() and len(text) >= 2) or any(kw in text for kw in ['大当り', '初当り', '累計', 'スタート', '出玉']):
+                    # 数値のみ（2桁以上）または分数形式（1/xxx）
+                    if (text.replace('/', '').isdigit() and len(text.replace('/', '')) >= 2):
                         important_texts.append(region)
                 
                 if important_texts:
@@ -508,45 +510,89 @@ if uploaded_file is not None:
                             text = region['text']
                             bbox = region['bbox']
                             
-                            # 領域名を自動生成
-                            if '大当り' in text:
-                                name = 'big_hit_label'
-                                display_name = '大当りラベル'
-                                color = 'red'
-                            elif '初当り' in text:
-                                name = 'first_hit_label'
-                                display_name = '初当りラベル'
-                                color = 'blue'
-                            elif '累計' in text:
-                                name = 'total_label'
-                                display_name = '累計ラベル'
+                            # 領域名を自動生成（数値ベース）
+                            # Y座標で位置を判定
+                            y_pos = bbox[1]
+                            
+                            # 上部（600-750px）: メイン数値
+                            if 600 <= y_pos <= 750:
+                                if bbox[0] < 300:  # 左側
+                                    name = 'big_hit_value'
+                                    display_name = '大当り回数'
+                                    color = 'red'
+                                elif bbox[0] < 600:  # 中央
+                                    name = 'first_hit_value'
+                                    display_name = '初当り回数'
+                                    color = 'blue'
+                                else:  # 右側
+                                    name = 'total_start'
+                                    display_name = '累計スタート'
+                                    color = 'white'
+                            
+                            # 中段（850-1000px）: 超中小、スタート、最高出玉
+                            elif 850 <= y_pos <= 1000:
+                                if text == '21':
+                                    name = 'ultra'
+                                    display_name = '超'
+                                    color = 'red'
+                                elif text == '0':
+                                    name = 'middle'
+                                    display_name = '中'
+                                    color = 'red'
+                                elif text == '4':
+                                    name = 'small'
+                                    display_name = '小'
+                                    color = 'red'
+                                elif text == '369':
+                                    name = 'start'
+                                    display_name = 'スタート'
+                                    color = 'white'
+                                elif text == '26830':
+                                    name = 'max_payout'
+                                    display_name = '最高出玉'
+                                    color = 'white'
+                                else:
+                                    name = f'mid_{text}'
+                                    display_name = f'中段_{text}'
+                                    color = 'white'
+                            
+                            # 下段テーブル（1000-1250px）
+                            elif 1000 <= y_pos <= 1250:
+                                if text == '25760':
+                                    name = 'max_hit'
+                                    display_name = '最高一撃獲得'
+                                elif text == '220':
+                                    name = 'initial_start'
+                                    display_name = '初回特賞スタート'
+                                elif text == '107':
+                                    name = 'prev_final'
+                                    display_name = '前日最終スタート'
+                                elif '/' in text:
+                                    name = f'rate_{text.replace("/", "_")}'
+                                    display_name = f'確率_{text}'
+                                else:
+                                    name = f'lower_{text}'
+                                    display_name = f'下段_{text}'
                                 color = 'white'
-                            elif text == '25':
-                                name = 'big_hit_value'
-                                display_name = '大当り回数値'
-                                color = 'red'
-                            elif text == '4':
-                                name = 'first_hit_value'
-                                display_name = '初当り回数値'
-                                color = 'blue'
-                            elif text in ['3721', '_3721']:
-                                name = 'total_start'
-                                display_name = '累計スタート'
+                            
+                            # 累計テーブル（1300px以降）
+                            elif y_pos >= 1300:
+                                if '/' in text:
+                                    name = f'table_rate_{text.replace("/", "_")}'
+                                    display_name = f'テーブル確率_{text}'
+                                elif text in ['3772', '3213']:
+                                    name = f'table_total_{text}'
+                                    display_name = f'累計_{text}'
+                                elif text in ['14670', '22100']:
+                                    name = f'table_payout_{text}'
+                                    display_name = f'出玉_{text}'
+                                else:
+                                    name = f'table_{text}'
+                                    display_name = f'テーブル_{text}'
                                 color = 'white'
-                            elif text == '26830':
-                                name = 'max_payout'
-                                display_name = '最高出玉'
-                                color = 'white'
-                            elif text == '369':
-                                name = 'start'
-                                display_name = 'スタート'
-                                color = 'white'
-                            elif text in ['1877', '1844']:
-                                name = f'value_{text}'
-                                display_name = f'数値 {text}'
-                                color = 'white'
+                            
                             else:
-                                name = f'region_{idx}'
+                                name = f'value_{text}'
                                 display_name = text
                                 color = 'white'
                             
