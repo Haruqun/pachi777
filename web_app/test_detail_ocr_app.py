@@ -37,62 +37,50 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
     # 黒背景の開始位置を約310pxと仮定し、そこからの相対座標で定義
     black_y = 310
     st.session_state.relative_regions = {
-        'Jackpot_Count': {
-            'bbox': (67, 41, 188, 185),  # 大当り回数 1 (赤大数字) 351-310=41
-            'type': 'red_number',
-            'inside_black': True,
-            'size_pattern': 'large'
-        },
-        'First_Hit_Count': {
-            'bbox': (299, 41, 421, 185),  # 初当り回数 4 (青大数字) 351-310=41
-            'type': 'blue_number',
-            'inside_black': True,
-            'size_pattern': 'large'
-        },
-        'Jackpot_Prob_Red': {
-            'bbox': (79, 149, 175, 179),  # (1/148) 赤括弧 459-310=149
-            'type': 'red_number',
-            'inside_black': True,
-            'size_pattern': 'small'
-        },
-        'Jackpot_Prob_Blue': {
-            'bbox': (312, 149, 408, 179),  # (1/469) 青括弧 459-310=149
-            'type': 'blue_number',
-            'inside_black': True,
-            'size_pattern': 'small'
-        },
-        'Start': {
-            'bbox': (318, 239, 421, 276),  # スタート 369 (549-310=239)
+        'Machine_No': {
+            'bbox': (320, 239, 357, 276),  # 台番号 178
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'medium'
         },
         'Total_Start': {
-            'bbox': (522, 239, 665, 276),  # 累計スタート 26830 (549-310=239)
+            'bbox': (524, 239, 665, 276),  # 累計スタート 10150
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'medium'
         },
-        'Normal_Chance': {
-            'bbox': (65, 245, 189, 273),  # 通常/チャンス 7 赤 (555-310=245)
+        'First_Hit_Count': {
+            'bbox': (299, 41, 421, 185),  # 初当り回数 (青大数字)
+            'type': 'blue_number',
+            'inside_black': True,
+            'size_pattern': 'large'
+        },
+        'Jackpot_Prob_Red': {
+            'bbox': (79, 149, 175, 179),  # (1/176) 赤括弧
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Max_Payout': {
-            'bbox': (40, 343, 130, 364),  # 最高出玉 25760 (653-310=343)
+        'Jackpot_Prob_Blue': {
+            'bbox': (312, 149, 408, 179),  # (1/976) 青括弧
+            'type': 'blue_number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Normal_Chance': {
+            'bbox': (75, 245, 173, 273),  # 通常/チャンス 701 赤
+            'type': 'red_number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Start': {
+            'bbox': (41, 343, 130, 364),  # スタート 10100
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
-        'Current_Prob': {
-            'bbox': (340, 343, 405, 366),  # 現在確率 1/87 (653-310=343)
-            'type': 'number',
-            'inside_black': True,
-            'size_pattern': 'small'
-        },
-        'Machine_No': {
-            'bbox': (59, 415, 111, 437),  # 台番号 220 (725-310=415)
+        'Current_Payout': {
+            'bbox': (228, 343, 242, 364),  # 現在出玉 7
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
@@ -105,7 +93,7 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
             'size_pattern': 'small'
         },
         'Prob1_1': {
-            'bbox': (425, 503, 509, 525),  # 1/166 (813-310=503)
+            'bbox': (265, 502, 348, 525),  # 1/999
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
@@ -123,13 +111,19 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
             'size_pattern': 'small'
         },
         'First_Hit_Times': {
-            'bbox': (125, 539, 196, 560),  # 3213 (849-310=539)
+            'bbox': (125, 539, 196, 560),  # 3675
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Prob2_1': {
-            'bbox': (434, 539, 499, 562),  # 1/79 (849-310=539)
+            'bbox': (265, 539, 348, 562),  # 1/267
+            'type': 'number',
+            'inside_black': True,
+            'size_pattern': 'small'
+        },
+        'Prob2_2': {
+            'bbox': (425, 539, 509, 562),  # 1/106
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
