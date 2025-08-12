@@ -40,28 +40,25 @@ with col2:
 if 'relative_regions' not in st.session_state or st.button("座標を強制更新", key="force_update"):
     # 座標は(left, top, right, bottom)の形式で定義
     # OCR検出結果に基づく絶対座標として定義
-    # リサイズ後の722px幅に合わせた座標
-    # 元画像1179x2556 -> 722x1565へのスケール: 722/1179 = 0.612
-    scale_factor = 722 / 1179
-    
+    # 1179px幅の画像での座標
     st.session_state.relative_regions = {
         # メイン数値（赤・青の大きい数字）
         'big_hit_count': {
-            'bbox': (32, 190, 115, 229),  # 大当り回数 25 (赤大数字) リサイズ後座標
+            'bbox': (85, 506, 305, 611),  # 大当り回数 25 (赤大数字) 
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'large',
             'name': '大当り回数'
         },
         'first_hit_count': {
-            'bbox': (154, 190, 207, 229),  # 初当り回数 4 (青大数字) リサイズ後座標
+            'bbox': (252, 311, 338, 374),  # 初当り回数 4 (青大数字)
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'large',
             'name': '初当り回数'
         },
         'cumulative_start': {
-            'bbox': (260, 192, 339, 215),  # 累計スタート 3721 リサイズ後座標
+            'bbox': (425, 314, 553, 350),  # 累計スタート 3721
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
@@ -70,35 +67,35 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 中段の数値
         'ultra_count': {
-            'bbox': (29, 273, 50, 294),  # 超 21 リサイズ後座標
+            'bbox': (48, 446, 82, 480),  # 超 21
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '超'
         },
         'medium_count': {
-            'bbox': (59, 273, 80, 294),  # 中 0 リサイズ後座標
+            'bbox': (97, 444, 131, 478),  # 中 0
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '中'
         },
         'small_count': {
-            'bbox': (79, 273, 100, 294),  # 小 4 リサイズ後座標
+            'bbox': (129, 448, 163, 482),  # 小 4
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '小'
         },
         'start_number': {
-            'bbox': (195, 268, 246, 299),  # スタート 369 リサイズ後座標
+            'bbox': (318, 549, 402, 586),  # スタート 369 - OCR検出座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
             'name': 'スタート'
         },
         'max_payout': {
-            'bbox': (320, 268, 407, 299),  # 最高出玉 26830 リサイズ後座標
+            'bbox': (522, 549, 665, 586),  # 最高出玉 26830 - OCR検出座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
@@ -107,21 +104,21 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 最高一撃獲得セクション  
         'highest_single_win': {
-            'bbox': (24, 400, 80, 413),  # 最高一撃獲得 25760 リサイズ後座標
+            'bbox': (40, 653, 130, 674),  # 最高一撃獲得 25760 - OCR検出座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '最高一撃獲得'
         },
         'chance_bonus_count': {
-            'bbox': (171, 343, 223, 364),  # チャンス中大当り 21
+            'bbox': (171, 653, 223, 674),  # チャンス中大当り 21
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': 'チャンス中大当り'
         },
         'chance_probability': {
-            'bbox': (340, 343, 405, 366),  # チャンス中確率 1/87
+            'bbox': (340, 653, 405, 676),  # チャンス中確率 1/87 - OCR検出座標
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
@@ -130,14 +127,14 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 初回特賞・前日最終セクション
         'initial_bonus_start': {
-            'bbox': (59, 415, 111, 437),  # 初回特賞スタート 220
+            'bbox': (59, 725, 111, 747),  # 初回特賞スタート 220 - OCR検出座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '初回特賞スタート'
         },
         'previous_day_final': {
-            'bbox': (156, 415, 208, 437),  # 前日最終スタート 107
+            'bbox': (156, 725, 208, 747),  # 前日最終スタート 107
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
@@ -146,35 +143,35 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # テーブルデータ（1行目）
         'date_1': {
-            'bbox': (31, 503, 76, 525),  # 8/6
+            'bbox': (31, 813, 76, 835),  # 8/6 - OCR検出座標
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '日付1'
         },
         'cumulative_start_1': {
-            'bbox': (125, 503, 196, 524),  # 3772
+            'bbox': (125, 813, 196, 834),  # 3772 - OCR検出座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '累計スタート1'
         },
         'first_hit_prob_1': {
-            'bbox': (238, 503, 317, 525),  # 1/277
+            'bbox': (238, 813, 317, 835),  # 1/277
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '初当り確率1'
         },
         'chance_hit_prob_1': {
-            'bbox': (425, 503, 509, 525),  # 1/166
+            'bbox': (425, 813, 509, 835),  # 1/166 - OCR検出座標
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': 'チャンス中確率1'
         },
         'highest_payout_1': {
-            'bbox': (584, 502, 673, 524),  # 14670
+            'bbox': (584, 812, 673, 834),  # 14670 - OCR検出座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
@@ -183,35 +180,35 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # テーブルデータ（2行目）
         'date_2': {
-            'bbox': (31, 539, 76, 562),  # 8/5
+            'bbox': (31, 849, 76, 872),  # 8/5 - OCR検出座標
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '日付2'
         },
         'cumulative_start_2': {
-            'bbox': (125, 539, 196, 560),  # 3213
+            'bbox': (125, 849, 196, 870),  # 3213 - OCR検出座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '累計スタート2'
         },
         'first_hit_prob_2': {
-            'bbox': (238, 539, 317, 562),  # 1/324
+            'bbox': (238, 849, 317, 872),  # 1/324
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '初当り確率2'
         },
         'chance_hit_prob_2': {
-            'bbox': (434, 539, 499, 562),  # 1/79
+            'bbox': (434, 849, 499, 872),  # 1/79 - OCR検出座標
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': 'チャンス中確率2'
         },
         'highest_payout_2': {
-            'bbox': (584, 538, 673, 560),  # 22100
+            'bbox': (584, 848, 673, 870),  # 22100
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
@@ -344,8 +341,8 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
     original_size = (img.shape[1], img.shape[0])
     st.info(f"オリジナル画像サイズ: {original_size[0]} x {original_size[1]} px")
     
-    # 横幅を722pxに統一し、アスペクト比を保持
-    target_width = 722
+    # 横幅を1179pxに統一し、アスペクト比を保持
+    target_width = 1179
     
     if img.shape[1] != target_width:
         # アスペクト比を計算
