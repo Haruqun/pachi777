@@ -43,79 +43,79 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
     # 実際の検出結果に基づく座標（黒背景内での相対座標）
     # 黒背景内での相対座標で定義（黒背景左上を0,0とする）
     st.session_state.relative_regions = {
-        # 上部エリア（大きな数字）
+        # 上部エリア（大きな数字） - 黒背景内の相対座標
         'Jackpot_Count': {
-            'bbox': (70, 50, 200, 140),  # 大当り回数 (赤大数字)
+            'bbox': (70, 40, 190, 140),  # 大当り回数 (赤大数字)
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'large'
         },
         'First_Hit_Count': {
-            'bbox': (290, 50, 420, 140),  # 初当り回数 (青大数字)
+            'bbox': (300, 40, 420, 140),  # 初当り回数 (青大数字)
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'large'
         },
         'Total_Start_Top': {
-            'bbox': (530, 50, 670, 90),  # 累計スタート（上部）
+            'bbox': (530, 40, 670, 80),  # 累計スタート（上部）
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'medium'
         },
         # 括弧付き確率
         'Jackpot_Prob_Red': {
-            'bbox': (75, 140, 185, 170),  # (1/xxx) 赤括弧
+            'bbox': (75, 145, 175, 175),  # (1/xxx) 赤括弧
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Jackpot_Prob_Blue': {
-            'bbox': (305, 140, 415, 170),  # (1/xxx) 青括弧
+            'bbox': (305, 145, 405, 175),  # (1/xxx) 青括弧
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         # 通常/チャンスエリア
         'Normal': {
-            'bbox': (505, 90, 580, 115),  # 通常
+            'bbox': (500, 80, 575, 105),  # 通常
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Chance': {
-            'bbox': (615, 90, 690, 115),  # チャンス中
+            'bbox': (610, 80, 685, 105),  # チャンス中
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         # 超/中/小エリア
         'Ultra': {
-            'bbox': (75, 210, 110, 240),  # 超
+            'bbox': (75, 200, 105, 230),  # 超
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Middle': {
-            'bbox': (120, 210, 155, 240),  # 中
+            'bbox': (120, 200, 150, 230),  # 中
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         'Small': {
-            'bbox': (165, 210, 200, 240),  # 小
+            'bbox': (165, 200, 195, 230),  # 小
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small'
         },
         # スタート・最高出玉
         'Start': {
-            'bbox': (315, 205, 420, 250),  # スタート
+            'bbox': (315, 195, 415, 240),  # スタート
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'large_white'
         },
         'Max_Payout': {
-            'bbox': (520, 205, 650, 250),  # 最高出玉
+            'bbox': (520, 195, 650, 240),  # 最高出玉
             'type': 'number',
             'inside_black': True,
             'size_pattern': 'large_white'
@@ -553,27 +553,8 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         cv2.putText(debug_img, f"Black: ({x},{y}) {w}x{h}", (x+10, y+30), 
                                   cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
                         
-                        # 相対座標でOCR領域を描画
-                        for name, region_info in st.session_state.relative_regions.items():
-                            x1, y1, x2, y2 = region_info['bbox']
-                            # 黒背景左上基準の絶対座標
-                            abs_x1 = int(x + x1)
-                            abs_y1 = int(y + y1)
-                            abs_x2 = int(x + x2)
-                            abs_y2 = int(y + y2)
-                            
-                            # 領域の色を決定
-                            color = (0, 255, 0)  # 緑
-                            if 'red' in region_info['type']:
-                                color = (0, 0, 255)  # 赤
-                            elif 'blue' in region_info['type']:
-                                color = (255, 0, 0)  # 青
-                            
-                            cv2.rectangle(debug_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, 2)
-                            # 座標情報も表示
-                            coord_text = f"{name[:8]} ({abs_x1},{abs_y1})"
-                            cv2.putText(debug_img, coord_text, (abs_x1, abs_y1-5), 
-                                      cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+                        # オーバーレイ描画を一時的に無効化（デバッグ用）
+                        st.warning("⚠️ OCR領域のオーバーレイ描画を無効化しています")
                         
                         # 縮小して表示
                         display_scale = 0.7
