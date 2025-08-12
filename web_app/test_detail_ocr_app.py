@@ -240,6 +240,15 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
             'name': '低確中確率'
         },
     }
+    
+    # relative_regionsをregionsにコピー
+    st.session_state.regions = {}
+    for name, info in st.session_state.relative_regions.items():
+        st.session_state.regions[name] = {
+            'bbox': info['bbox'],
+            'type': info['type'],
+            'name': info.get('name', name)
+        }
 
 # 文字サイズパターンに応じた微調整オフセット
 if 'size_adjustments' not in st.session_state:
@@ -272,6 +281,10 @@ if 'base_regions' not in st.session_state:
 
 # セッションステートで座標を管理
 if 'regions' not in st.session_state:
+    # relative_regionsが存在しない場合は、まずそれを作成
+    if 'relative_regions' not in st.session_state:
+        # ダミーの初期値を設定（後で上書きされる）
+        st.session_state.relative_regions = {}
     st.session_state.regions = st.session_state.base_regions.copy()
 
 # テスト画像のBase64データを保持する辞書
