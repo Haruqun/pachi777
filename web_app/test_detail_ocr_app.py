@@ -30,12 +30,8 @@ if uploaded_file is not None:
     else:
         img_bgr = img_array
     
-    # 画像を表示
-    st.image(image, caption="アップロードされた画像", use_column_width=True)
-    
-    # 画像サイズを表示
+    # 画像サイズを取得
     height, width = img_bgr.shape[:2]
-    st.info(f"画像サイズ: {width} x {height} px")
     
     # 画像を1179px幅にリサイズ（アスペクト比保持）
     target_width = 1179
@@ -44,7 +40,6 @@ if uploaded_file is not None:
         new_height = int(height * scale)
         img_bgr = cv2.resize(img_bgr, (target_width, new_height), interpolation=cv2.INTER_AREA)
         height, width = img_bgr.shape[:2]
-        st.info(f"リサイズ後: {width} x {height} px")
     
     # 黒背景領域を検出
     def detect_black_region(img):
@@ -75,15 +70,9 @@ if uploaded_file is not None:
     
     black_region = detect_black_region(img_bgr)
     
-    if black_region:
-        bx1, by1, bx2, by2 = black_region
-        st.success(f"黒背景領域を検出: ({bx1}, {by1}) - ({bx2}, {by2})")
-    else:
-        st.warning("黒背景領域が検出できませんでした。画像全体を使用します。")
-        bx1, by1, bx2, by2 = 0, 0, width, height
-    
     # 座標定義（黒背景領域内の相対座標で定義）
     if black_region:
+        bx1, by1, bx2, by2 = black_region
         # 黒背景内での相対座標を絶対座標に変換
         regions = {
             # メイン数値（黒背景内での位置）
@@ -114,6 +103,7 @@ if uploaded_file is not None:
             },
         }
     else:
+        bx1, by1, bx2, by2 = 0, 0, width, height
         # 黒背景が検出できない場合は絶対座標を使用
         regions = {
             'big_hit': {
@@ -143,11 +133,12 @@ if uploaded_file is not None:
             },
         }
     
-    # 2カラムレイアウト
-    col1, col2 = st.columns([2, 1])
+    # メインレイアウト：左に画像、右に操作
+    col1, col2 = st.columns([1, 1])
     
     with col1:
         st.subheader("📷 検出領域")
+        
         # 画像のコピーを作成
         vis_img = img_bgr.copy()
         
@@ -173,9 +164,16 @@ if uploaded_file is not None:
         # 表示
         st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB), 
                 caption="OCR対象領域", use_column_width=True)
+        
+        # 画像情報
+        st.info(f"画像サイズ: {width} x {height} px")
+        if black_region:
+            st.success(f"黒背景領域: ({bx1}, {by1}) - ({bx2}, {by2})")
+        else:
+            st.warning("黒背景領域が検出できませんでした")
     
     with col2:
-        st.subheader("📊 OCR結果")
+        st.subheader("📊 OCR操作")
         
         if st.button("🔍 OCR実行", type="primary", use_container_width=True):
             results = {}
@@ -213,8 +211,50 @@ if uploaded_file is not None:
             
             # 結果表示
             st.success("OCR完了！")
-            for name, value in results.items():
-                if value and value != "エラー":
-                    st.metric(name, value)
+            st.divider()
+            
+            # 結果をメトリクスで表示
+            st.markdown("### 抽出結果")
+            
+            # 上段：大当り・初当り・累計
+            col_a, col_b, col_c = st.columns(3)
+            with col_a:
+                value = results.get('大当り回数', '')
+                if value and not value.startswith('エラー'):
+                    st.metric("大当り回数", value)
                 else:
-                    st.error(f"{name}: 認識失敗")
+                    st.error("大当り回数: 認識失敗")
+            
+            with col_b:
+                value = results.get('初当り回数', '')
+                if value and not value.startswith('エラー'):
+                    st.metric("初当り回数", value)
+                else:
+                    st.error("初当り回数: 認識失敗")
+            
+            with col_c:
+                value = results.get('累計スタート', '')
+                if value and not value.startswith('エラー'):
+                    st.metric("累計スタート", value)
+                else:
+                    st.error("累計スタート: 認識失敗")
+            
+            # 下段：スタート・最高出玉
+            col_d, col_e = st.columns(2)
+            with col_d:
+                value = results.get('スタート', '')
+                if value and not value.startswith('エラー'):
+                    st.metric("スタート", value)
+                else:
+                    st.error("スタート: 認識失敗")
+            
+            with col_e:
+                value = results.get('最高出玉', '')
+                if value and not value.startswith('エラー'):
+                    st.metric("最高出玉", value)
+                else:
+                    st.error("最高出玉: 認識失敗")
+            
+            # JSON出力
+            with st.expander("詳細データ (JSON)"):
+                st.json(results)
