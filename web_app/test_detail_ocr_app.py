@@ -89,14 +89,14 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
             'name': '小'
         },
         'start_number': {
-            'bbox': (200, 155, 300, 185),  # スタート 369 (318, 549から)
+            'bbox': (318, 239, 402, 276),  # スタート 369 - 黒背景左上からの相対座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
             'name': 'スタート'
         },
         'max_payout': {
-            'bbox': (340, 155, 465, 185),  # 最高出玉 26830 (522, 549から)
+            'bbox': (522, 239, 665, 276),  # 最高出玉 26830 - 黒背景左上からの相対座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
@@ -105,7 +105,7 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 最高一撃獲得セクション  
         'highest_single_win': {
-            'bbox': (15, 210, 110, 235),  # 最高一撃獲得 25760 (40, 653から)
+            'bbox': (40, 343, 130, 364),  # 最高一撃獲得 25760 - 黒背景左上からの相対座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
@@ -128,7 +128,7 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 初回特賞・前日最終セクション
         'initial_bonus_start': {
-            'bbox': (15, 255, 100, 280),  # 初回特賞スタート 220 (59, 725から)
+            'bbox': (59, 415, 111, 437),  # 初回特賞スタート 220 - 黒背景左上からの相対座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
@@ -144,14 +144,14 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # テーブルデータ（1行目）
         'date_1': {
-            'bbox': (10, 315, 65, 340),  # 8/6 (31, 813から)
+            'bbox': (31, 503, 76, 525),  # 8/6 - 黒背景左上からの相対座標
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '日付1'
         },
         'cumulative_start_1': {
-            'bbox': (80, 315, 150, 340),  # 3772
+            'bbox': (125, 503, 196, 524),  # 3772 - 黒背景左上からの相対座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
@@ -172,7 +172,7 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
             'name': 'チャンス中確率1'
         },
         'highest_payout_1': {
-            'bbox': (405, 315, 475, 340),  # 14670 (584, 812から)
+            'bbox': (584, 502, 673, 524),  # 14670 - 黒背景左上からの相対座標
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
