@@ -1023,42 +1023,104 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         largest = max(contours, key=cv2.contourArea)
                         x, y, w, h = cv2.boundingRect(largest)
                         
+                        # 座標分析
+                        st.markdown("### 🎯 座標分析")
+                        st.info(f"**黒背景領域**: X={x}, Y={y}, 幅={w}px, 高さ={h}px")
+                        
+                        # OCR検出座標から相対座標を計算
+                        st.markdown("### 📐 OCR検出座標からの相対座標計算")
+                        st.caption("左サイドバーのOCR検出結果の座標を使用して、黒背景からの相対座標を計算")
+                        
+                        # 代表的なOCR検出座標（サイドバーの表から）
+                        ocr_coords = {
+                            'スタート(369)': {'x': 318, 'y': 549, 'w': 84, 'h': 37},
+                            '最高出玉(26830)': {'x': 522, 'y': 549, 'w': 143, 'h': 37},
+                            '最高一撃(25760)': {'x': 40, 'y': 653, 'w': 90, 'h': 21},
+                            '初回特賞(220)': {'x': 59, 'y': 725, 'w': 52, 'h': 22},
+                            '日付(8/6)': {'x': 31, 'y': 813, 'w': 45, 'h': 22},
+                            '累計(3772)': {'x': 125, 'y': 813, 'w': 71, 'h': 21},
+                            '最高出玉1(14670)': {'x': 584, 'y': 812, 'w': 89, 'h': 22}
+                        }
+                        
+                        relative_coords = []
+                        for name, coord in ocr_coords.items():
+                            rel_x = coord['x'] - x
+                            rel_y = coord['y'] - y
+                            relative_coords.append({
+                                'テキスト': name,
+                                '絶対X': coord['x'],
+                                '絶対Y': coord['y'],
+                                '相対X': rel_x,
+                                '相対Y': rel_y,
+                                '幅': coord['w'],
+                                '高さ': coord['h']
+                            })
+                        
+                        import pandas as pd
+                        df = pd.DataFrame(relative_coords)
+                        st.dataframe(df, use_container_width=True)
+                        
+                        # 推奨座標を生成
+                        st.markdown("### 💡 正しい座標定義（コピー用）")
+                        st.code(f"""
+# 黒背景位置: X={x}, Y={y}
+# OCR検出結果に基づく正確な座標
+
+'start_number': {{
+    'bbox': ({318-x}, {549-y}, {318-x+84}, {549-y+37}),  # スタート 369
+    'type': 'white_number',
+    'name': 'スタート'
+}},
+
+'max_payout': {{
+    'bbox': ({522-x}, {549-y}, {522-x+143}, {549-y+37}),  # 最高出玉 26830
+    'type': 'white_number',
+    'name': '最高出玉'
+}},
+
+'highest_single_win': {{
+    'bbox': ({40-x}, {653-y}, {40-x+90}, {653-y+21}),  # 最高一撃獲得 25760
+    'type': 'white_number',
+    'name': '最高一撃獲得'
+}},
+
+'initial_bonus_start': {{
+    'bbox': ({59-x}, {725-y}, {59-x+52}, {725-y+22}),  # 初回特賞スタート 220
+    'type': 'white_number',
+    'name': '初回特賞スタート'
+}},
+
+'date_1': {{
+    'bbox': ({31-x}, {813-y}, {31-x+45}, {813-y+22}),  # 8/6
+    'type': 'white_text',
+    'name': '日付1'
+}},
+
+'cumulative_start_1': {{
+    'bbox': ({125-x}, {813-y}, {125-x+71}, {813-y+21}),  # 3772
+    'type': 'white_number',
+    'name': '累計スタート1'
+}},
+
+'highest_payout_1': {{
+    'bbox': ({584-x}, {812-y}, {584-x+89}, {812-y+22}),  # 14670
+    'type': 'white_number',
+    'name': '最高出玉1'
+}}
+                        """)
+                        
                         # デバッグ画像を作成
                         debug_img = img.copy()
                         # 黒背景領域を赤枠で囲む
                         cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0, 0, 255), 3)
-                        cv2.putText(debug_img, f"Black Region: {w}x{h}", (x+10, y+30), 
+                        cv2.putText(debug_img, f"Black Region: ({x},{y})", (x+10, y+30), 
                                   cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
-                        
-                        # 相対座標でOCR領域を描画
-                        for name, region_info in st.session_state.relative_regions.items():
-                            x1, y1, x2, y2 = region_info['bbox']
-                            # 黒背景左上基準の絶対座標
-                            abs_x1 = int(x + x1)
-                            abs_y1 = int(y + y1)
-                            abs_x2 = int(x + x2)
-                            abs_y2 = int(y + y2)
-                            
-                            # 領域の色を決定
-                            color = (0, 255, 0)  # 緑
-                            if 'red' in region_info['type']:
-                                color = (0, 0, 255)  # 赤
-                            elif 'blue' in region_info['type']:
-                                color = (255, 0, 0)  # 青
-                            
-                            # First_Hit_Countのみ描画
-                            if name == 'First_Hit_Count':
-                                cv2.rectangle(debug_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, 2)
-                                cv2.putText(debug_img, name, (abs_x1, abs_y1-5), 
-                                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
                         
                         # 縮小して表示
                         display_scale = 0.5
                         display_img = cv2.resize(debug_img, (int(img.shape[1]*display_scale), int(img.shape[0]*display_scale)))
                         st.image(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB), 
-                               caption="黒背景領域とOCR領域")
-                        
-                        st.info(f"黒背景領域: {w}x{h}px (位置: {x}, {y})")
+                               caption="黒背景領域")
                         
                         # セッションステートに黒背景情報を保存
                         st.session_state.black_region = (x, y, w, h)
