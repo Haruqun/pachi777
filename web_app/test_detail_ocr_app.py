@@ -1275,57 +1275,45 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             # 抽出領域の可視化 - OCR検出領域と同じロジックを使用
             vis_img = img.copy()
             
-            # 黒背景領域を検出
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            _, black_mask = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)
-            kernel = np.ones((5, 5), np.uint8)
-            black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
-            black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
-            contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            if contours:
-                largest = max(contours, key=cv2.contourArea)
-                x_black, y_black, w_black, h_black = cv2.boundingRect(largest)
+            # relative_regions の座標は既に絶対座標なので、そのまま使用
+            for name, info in st.session_state.relative_regions.items():
+                x1, y1, x2, y2 = info['bbox']
                 
-                # relative_regions の座標を黒背景基準で描画
-                for name, info in st.session_state.relative_regions.items():
-                    x1, y1, x2, y2 = info['bbox']
+                # 絶対座標をそのまま使用
+                abs_x1 = x1
+                abs_y1 = y1
+                abs_x2 = x2
+                abs_y2 = y2
                     
-                    # 黒背景左上基準の絶対座標に変換（OCR検出領域と同じ計算）
-                    abs_x1 = x_black + x1
-                    abs_y1 = y_black + y1
-                    abs_x2 = x_black + x2
-                    abs_y2 = y_black + y2
-                    
-                    # 色設定（OCR検出領域と同じ色分け）
-                    color = (255, 255, 255)  # デフォルトは白
-                    if info['type'] == 'red_number':
-                        color = (0, 0, 255)  # 赤
-                    elif info['type'] == 'blue_number':
-                        color = (255, 0, 0)  # 青
-                    elif info['type'] == 'white_number' or info['type'] == 'white_text':
-                        color = (255, 255, 255)  # 白
-                    
-                    # 枠を描画（OCR検出領域と同じ太さ）
-                    thickness = 2
-                    
-                    # 境界チェック
-                    abs_x1 = max(0, min(abs_x1, img.shape[1]))
-                    abs_y1 = max(0, min(abs_y1, img.shape[0]))
-                    abs_x2 = max(0, min(abs_x2, img.shape[1]))
-                    abs_y2 = max(0, min(abs_y2, img.shape[0]))
-                    
-                    cv2.rectangle(vis_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, thickness)
-                    
-                    # 名前表示（OCR検出領域と同じスタイル）
-                    if 'name' in info:
-                        label = info['name']
-                    else:
-                        label = name
-                    
-                    # テキストを枠の上に配置（OCR検出領域と同じ）
-                    cv2.putText(vis_img, label, (abs_x1, abs_y1-5), 
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+                # 色設定（OCR検出領域と同じ色分け）
+                color = (255, 255, 255)  # デフォルトは白
+                if info['type'] == 'red_number':
+                    color = (0, 0, 255)  # 赤
+                elif info['type'] == 'blue_number':
+                    color = (255, 0, 0)  # 青
+                elif info['type'] == 'white_number' or info['type'] == 'white_text':
+                    color = (255, 255, 255)  # 白
+                
+                # 枠を描画（OCR検出領域と同じ太さ）
+                thickness = 2
+                
+                # 境界チェック
+                abs_x1 = max(0, min(abs_x1, img.shape[1]))
+                abs_y1 = max(0, min(abs_y1, img.shape[0]))
+                abs_x2 = max(0, min(abs_x2, img.shape[1]))
+                abs_y2 = max(0, min(abs_y2, img.shape[0]))
+                
+                cv2.rectangle(vis_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, thickness)
+                
+                # 名前表示（OCR検出領域と同じスタイル）
+                if 'name' in info:
+                    label = info['name']
+                else:
+                    label = name
+                
+                # テキストを枠の上に配置（OCR検出領域と同じ）
+                cv2.putText(vis_img, label, (abs_x1, abs_y1-5), 
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
             
             # OCR検出領域と同じキャプションスタイル
             st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB), 
