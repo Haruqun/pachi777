@@ -727,11 +727,12 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                                 # 結果を保存
                                 ocr_results[name] = text
                                 
-                                # 枠とテキストを描画
-                                cv2.rectangle(debug_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, 2)
-                                label = f"{name}: {text[:20] if text else 'N/A'}"
-                                cv2.putText(debug_img, label, (abs_x1, abs_y1 - 5), 
-                                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                                # First_Hit_Countのみ枠とテキストを描画
+                                if name == 'First_Hit_Count':
+                                    cv2.rectangle(debug_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, 2)
+                                    label = f"{name}: {text[:20] if text else 'N/A'}"
+                                    cv2.putText(debug_img, label, (abs_x1, abs_y1 - 5), 
+                                              cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
                         
                         # 結果表示
                         col1, col2 = st.columns(2)
@@ -1013,9 +1014,11 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                             elif 'blue' in region_info['type']:
                                 color = (255, 0, 0)  # 青
                             
-                            cv2.rectangle(debug_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, 2)
-                            cv2.putText(debug_img, name, (abs_x1, abs_y1-5), 
-                                      cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                            # First_Hit_Countのみ描画
+                            if name == 'First_Hit_Count':
+                                cv2.rectangle(debug_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, 2)
+                                cv2.putText(debug_img, name, (abs_x1, abs_y1-5), 
+                                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
                         
                         # 縮小して表示
                         display_scale = 0.5
