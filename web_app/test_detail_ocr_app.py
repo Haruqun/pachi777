@@ -45,21 +45,21 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
     st.session_state.relative_regions = {
         # メイン数値（赤・青の大きい数字）
         'big_hit_count': {
-            'bbox': (30, 50, 120, 120),  # 大当り回数 25 (赤大数字)
+            'bbox': (30, 60, 130, 130),  # 大当り回数 25 (赤大数字)
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'large',
             'name': '大当り回数'
         },
         'first_hit_count': {
-            'bbox': (180, 50, 260, 120),  # 初当り回数 4 (青大数字)
+            'bbox': (180, 60, 270, 130),  # 初当り回数 4 (青大数字)
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'large',
             'name': '初当り回数'
         },
         'cumulative_start': {
-            'bbox': (330, 50, 410, 90),  # 累計スタート 3721
+            'bbox': (330, 60, 430, 95),  # 累計スタート 3721
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
@@ -68,58 +68,58 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 中段の数値
         'ultra_count': {
-            'bbox': (20, 140, 60, 165),  # 超 21
+            'bbox': (20, 155, 70, 180),  # 超 21
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '超'
         },
         'medium_count': {
-            'bbox': (65, 140, 105, 165),  # 中 0
+            'bbox': (75, 155, 110, 180),  # 中 0
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '中'
         },
         'small_count': {
-            'bbox': (110, 140, 150, 165),  # 小 4
+            'bbox': (115, 155, 155, 180),  # 小 4
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '小'
         },
         'start_number': {
-            'bbox': (200, 140, 280, 165),  # スタート 369
+            'bbox': (200, 155, 300, 185),  # スタート 369 (318, 549から)
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
             'name': 'スタート'
         },
         'max_payout': {
-            'bbox': (340, 140, 430, 165),  # 最高出玉 26830
+            'bbox': (340, 155, 465, 185),  # 最高出玉 26830 (522, 549から)
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
             'name': '最高出玉'
         },
         
-        # 最高一撃獲得セクション
+        # 最高一撃獲得セクション  
         'highest_single_win': {
-            'bbox': (15, 195, 100, 220),  # 最高一撃獲得 25760
+            'bbox': (15, 210, 110, 235),  # 最高一撃獲得 25760 (40, 653から)
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '最高一撃獲得'
         },
         'chance_bonus_count': {
-            'bbox': (105, 195, 155, 220),  # チャンス中大当り 21
+            'bbox': (115, 210, 165, 235),  # チャンス中大当り 21
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': 'チャンス中大当り'
         },
         'chance_probability': {
-            'bbox': (165, 195, 215, 220),  # チャンス中確率 1/87
+            'bbox': (210, 210, 280, 235),  # チャンス中確率 1/87 (340, 653から)
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
@@ -128,14 +128,14 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 初回特賞・前日最終セクション
         'initial_bonus_start': {
-            'bbox': (15, 235, 85, 260),  # 初回特賞スタート 220
+            'bbox': (15, 255, 100, 280),  # 初回特賞スタート 220 (59, 725から)
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '初回特賞スタート'
         },
         'previous_day_final': {
-            'bbox': (105, 235, 175, 260),  # 前日最終スタート 107
+            'bbox': (105, 255, 185, 280),  # 前日最終スタート 107
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
@@ -144,35 +144,35 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # テーブルデータ（1行目）
         'date_1': {
-            'bbox': (10, 285, 55, 310),  # 8/6
+            'bbox': (10, 315, 65, 340),  # 8/6 (31, 813から)
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '日付1'
         },
         'cumulative_start_1': {
-            'bbox': (60, 285, 120, 310),  # 3772
+            'bbox': (80, 315, 150, 340),  # 3772
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '累計スタート1'
         },
         'first_hit_prob_1': {
-            'bbox': (125, 285, 195, 310),  # 1/277
+            'bbox': (160, 315, 235, 340),  # 1/277
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '初当り確率1'
         },
         'chance_hit_prob_1': {
-            'bbox': (200, 285, 270, 310),  # 1/166
+            'bbox': (245, 315, 320, 340),  # 1/166 (425, 813から)
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': 'チャンス中確率1'
         },
         'highest_payout_1': {
-            'bbox': (280, 285, 350, 310),  # 14670
+            'bbox': (405, 315, 475, 340),  # 14670 (584, 812から)
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
@@ -181,35 +181,35 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # テーブルデータ（2行目）
         'date_2': {
-            'bbox': (10, 315, 55, 340),  # 8/5
+            'bbox': (10, 350, 65, 375),  # 8/5 (31, 849から)
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '日付2'
         },
         'cumulative_start_2': {
-            'bbox': (60, 315, 120, 340),  # 3213
+            'bbox': (80, 350, 165, 375),  # 3213 (125, 849から)
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '累計スタート2'
         },
         'first_hit_prob_2': {
-            'bbox': (125, 315, 195, 340),  # 1/324
+            'bbox': (180, 350, 255, 375),  # 1/324
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '初当り確率2'
         },
         'chance_hit_prob_2': {
-            'bbox': (200, 315, 270, 340),  # 1/79
+            'bbox': (270, 350, 340, 375),  # 1/79 (434, 849から)
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': 'チャンス中確率2'
         },
         'highest_payout_2': {
-            'bbox': (280, 315, 350, 340),  # 22100
+            'bbox': (405, 350, 475, 375),  # 22100
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
