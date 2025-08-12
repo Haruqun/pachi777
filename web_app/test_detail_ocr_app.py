@@ -281,11 +281,17 @@ if 'base_regions' not in st.session_state:
 
 # セッションステートで座標を管理
 if 'regions' not in st.session_state:
-    # relative_regionsが存在しない場合は、まずそれを作成
-    if 'relative_regions' not in st.session_state:
-        # ダミーの初期値を設定（後で上書きされる）
-        st.session_state.relative_regions = {}
-    st.session_state.regions = st.session_state.base_regions.copy()
+    # relative_regionsが既に定義されていればそれを使う、そうでなければbase_regionsを使う
+    if 'relative_regions' in st.session_state:
+        st.session_state.regions = {}
+        for name, info in st.session_state.relative_regions.items():
+            st.session_state.regions[name] = {
+                'bbox': info['bbox'],
+                'type': info['type'],
+                'name': info.get('name', name)
+            }
+    else:
+        st.session_state.regions = st.session_state.base_regions.copy()
 
 # テスト画像のBase64データを保持する辞書
 test_images_data = {}
@@ -1170,7 +1176,11 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             
             # デフォルト設定にリセット
             if st.button("🔄 デフォルト設定に戻す", use_container_width=True):
-                st.session_state.regions = st.session_state.base_regions.copy()
+                # relative_regionsを再定義させるために削除
+                if 'relative_regions' in st.session_state:
+                    del st.session_state.relative_regions
+                if 'regions' in st.session_state:
+                    del st.session_state.regions
                 st.success("デフォルト設定にリセットしました")
                 st.rerun()
             
@@ -1285,8 +1295,8 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             # 抽出領域の可視化 - OCR検出領域と同じロジックを使用
             vis_img = img.copy()
             
-            # relative_regions の座標は既に絶対座標なので、そのまま使用
-            for name, info in st.session_state.relative_regions.items():
+            # regions を使用（OCR実行時と同じ）
+            for name, info in st.session_state.regions.items():
                 x1, y1, x2, y2 = info['bbox']
                 
                 # 絶対座標をそのまま使用
