@@ -553,8 +553,26 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                         cv2.putText(debug_img, f"Black: ({x},{y}) {w}x{h}", (x+10, y+30), 
                                   cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
                         
-                        # オーバーレイ描画を一時的に無効化（デバッグ用）
-                        st.warning("⚠️ OCR領域のオーバーレイ描画を無効化しています")
+                        # First_Hit_Countだけを描画
+                        for name, region_info in st.session_state.relative_regions.items():
+                            if name == 'First_Hit_Count':
+                                x1, y1, x2, y2 = region_info['bbox']
+                                # 黒背景左上基準の絶対座標
+                                abs_x1 = int(x + x1)
+                                abs_y1 = int(y + y1)
+                                abs_x2 = int(x + x2)
+                                abs_y2 = int(y + y2)
+                                
+                                # 青色で描画
+                                color = (255, 0, 0)  # 青
+                                cv2.rectangle(debug_img, (abs_x1, abs_y1), (abs_x2, abs_y2), color, 3)
+                                # 座標情報も表示
+                                coord_text = f"First_Hit_Count ({x1},{y1})-({x2},{y2})"
+                                cv2.putText(debug_img, coord_text, (abs_x1, abs_y1-10), 
+                                          cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                                
+                                # 詳細情報を表示
+                                st.info(f"First_Hit_Count: 相対座標({x1},{y1})-({x2},{y2}) → 絶対座標({abs_x1},{abs_y1})-({abs_x2},{abs_y2})")
                         
                         # 縮小して表示
                         display_scale = 0.7
