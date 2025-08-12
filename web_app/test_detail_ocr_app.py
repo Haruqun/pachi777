@@ -184,88 +184,88 @@ if uploaded_file is not None:
         
         if st.button("🔍 OCR実行", type="primary", use_container_width=True):
             if ocr_mode == "5項目抽出":
-            results = {}
-            
-            with st.spinner("OCR処理中..."):
-                for key, region in regions.items():
-                    x1, y1, x2, y2 = region['bbox']
-                    roi = img_bgr[y1:y2, x1:x2]
-                    
-                    try:
-                        if region['color'] == 'red':
-                            # 赤色抽出
-                            hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                            mask1 = cv2.inRange(hsv, np.array([0, 50, 50]), np.array([10, 255, 255]))
-                            mask2 = cv2.inRange(hsv, np.array([170, 50, 50]), np.array([180, 255, 255]))
-                            mask = cv2.bitwise_or(mask1, mask2)
-                            text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
-                            
-                        elif region['color'] == 'blue':
-                            # 青色抽出
-                            hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                            mask = cv2.inRange(hsv, np.array([100, 50, 50]), np.array([130, 255, 255]))
-                            text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
-                            
-                        else:  # white
-                            # 白色抽出（グレースケール + 二値化）
-                            gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                            _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
-                            text = pytesseract.image_to_string(binary, config='--psm 7 -c tessedit_char_whitelist=0123456789')
+                results = {}
+                
+                with st.spinner("OCR処理中..."):
+                    for key, region in regions.items():
+                        x1, y1, x2, y2 = region['bbox']
+                        roi = img_bgr[y1:y2, x1:x2]
                         
-                        results[region['name']] = text.strip()
-                        
-                    except Exception as e:
-                        results[region['name']] = f"エラー: {str(e)}"
-            
-            # 結果表示
-            st.success("OCR完了！")
-            st.divider()
-            
-            # 結果をメトリクスで表示
-            st.markdown("### 抽出結果")
-            
-            # 上段：大当り・初当り・累計
-            col_a, col_b, col_c = st.columns(3)
-            with col_a:
-                value = results.get('大当り回数', '')
-                if value and not value.startswith('エラー'):
-                    st.metric("大当り回数", value)
-                else:
-                    st.error("大当り回数: 認識失敗")
-            
-            with col_b:
-                value = results.get('初当り回数', '')
-                if value and not value.startswith('エラー'):
-                    st.metric("初当り回数", value)
-                else:
-                    st.error("初当り回数: 認識失敗")
-            
-            with col_c:
-                value = results.get('累計スタート', '')
-                if value and not value.startswith('エラー'):
-                    st.metric("累計スタート", value)
-                else:
-                    st.error("累計スタート: 認識失敗")
-            
-            # 下段：スタート・最高出玉
-            col_d, col_e = st.columns(2)
-            with col_d:
-                value = results.get('スタート', '')
-                if value and not value.startswith('エラー'):
-                    st.metric("スタート", value)
-                else:
-                    st.error("スタート: 認識失敗")
-            
-            with col_e:
-                value = results.get('最高出玉', '')
-                if value and not value.startswith('エラー'):
-                    st.metric("最高出玉", value)
-                else:
-                    st.error("最高出玉: 認識失敗")
-            
-            # JSON出力
-            with st.expander("詳細データ (JSON)"):
-                st.json(results)
+                        try:
+                            if region['color'] == 'red':
+                                # 赤色抽出
+                                hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                                mask1 = cv2.inRange(hsv, np.array([0, 50, 50]), np.array([10, 255, 255]))
+                                mask2 = cv2.inRange(hsv, np.array([170, 50, 50]), np.array([180, 255, 255]))
+                                mask = cv2.bitwise_or(mask1, mask2)
+                                text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                
+                            elif region['color'] == 'blue':
+                                # 青色抽出
+                                hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                                mask = cv2.inRange(hsv, np.array([100, 50, 50]), np.array([130, 255, 255]))
+                                text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                
+                            else:  # white
+                                # 白色抽出（グレースケール + 二値化）
+                                gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                                _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+                                text = pytesseract.image_to_string(binary, config='--psm 7 -c tessedit_char_whitelist=0123456789')
+                            
+                            results[region['name']] = text.strip()
+                            
+                        except Exception as e:
+                            results[region['name']] = f"エラー: {str(e)}"
+                
+                # 結果表示
+                st.success("OCR完了！")
+                st.divider()
+                
+                # 結果をメトリクスで表示
+                st.markdown("### 抽出結果")
+                
+                # 上段：大当り・初当り・累計
+                col_a, col_b, col_c = st.columns(3)
+                with col_a:
+                    value = results.get('大当り回数', '')
+                    if value and not value.startswith('エラー'):
+                        st.metric("大当り回数", value)
+                    else:
+                        st.error("大当り回数: 認識失敗")
+                
+                with col_b:
+                    value = results.get('初当り回数', '')
+                    if value and not value.startswith('エラー'):
+                        st.metric("初当り回数", value)
+                    else:
+                        st.error("初当り回数: 認識失敗")
+                
+                with col_c:
+                    value = results.get('累計スタート', '')
+                    if value and not value.startswith('エラー'):
+                        st.metric("累計スタート", value)
+                    else:
+                        st.error("累計スタート: 認識失敗")
+                
+                # 下段：スタート・最高出玉
+                col_d, col_e = st.columns(2)
+                with col_d:
+                    value = results.get('スタート', '')
+                    if value and not value.startswith('エラー'):
+                        st.metric("スタート", value)
+                    else:
+                        st.error("スタート: 認識失敗")
+                
+                with col_e:
+                    value = results.get('最高出玉', '')
+                    if value and not value.startswith('エラー'):
+                        st.metric("最高出玉", value)
+                    else:
+                        st.error("最高出玉: 認識失敗")
+                
+                # JSON出力
+                with st.expander("詳細データ (JSON)"):
+                    st.json(results)
             
             elif ocr_mode == "全体OCR検出":
                 # 黒背景領域内でOCR実行
