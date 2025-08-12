@@ -40,25 +40,25 @@ with col2:
 if 'relative_regions' not in st.session_state or st.button("座標を強制更新", key="force_update"):
     # 座標は(left, top, right, bottom)の形式で定義
     # OCR検出結果に基づく絶対座標として定義
-    # 1179px幅の画像での座標
+    # 1179px幅の画像でのOCR検出座標に基づく定義
     st.session_state.relative_regions = {
         # メイン数値（赤・青の大きい数字）
         'big_hit_count': {
-            'bbox': (85, 506, 305, 611),  # 大当り回数 25 (赤大数字) 
+            'bbox': (114, 578, 304, 623),  # 大当り回数 4 (赤大数字) - 検出結果15
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'large',
             'name': '大当り回数'
         },
         'first_hit_count': {
-            'bbox': (252, 311, 338, 374),  # 初当り回数 4 (青大数字)
+            'bbox': (493, 578, 684, 623),  # 初当り回数 4 (青大数字) - 検出結果19
             'type': 'blue_number',
             'inside_black': True,
             'size_pattern': 'large',
             'name': '初当り回数'
         },
         'cumulative_start': {
-            'bbox': (425, 314, 553, 350),  # 累計スタート 3721
+            'bbox': (845, 717, 937, 798),  # 累計スタート 877 - 検出結果0
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
@@ -67,35 +67,35 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 中段の数値
         'ultra_count': {
-            'bbox': (48, 446, 82, 480),  # 超 21
+            'bbox': (100, 901, 169, 957),  # 超 21 - 検出結果14
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '超'
         },
         'medium_count': {
-            'bbox': (97, 444, 131, 478),  # 中 0
+            'bbox': (202, 901, 243, 958),  # 中 0 - 検出結果13
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '中'
         },
         'small_count': {
-            'bbox': (129, 448, 163, 482),  # 小 4
+            'bbox': (106, 907, 308, 940),  # 小 2104 - 検出結果16 (数値が違うが位置はこれ)
             'type': 'red_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '小'
         },
         'start_number': {
-            'bbox': (318, 549, 402, 586),  # スタート 369 - OCR検出座標
+            'bbox': (520, 897, 656, 957),  # スタート 369 - 検出結果1
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
             'name': 'スタート'
         },
         'max_payout': {
-            'bbox': (522, 549, 665, 586),  # 最高出玉 26830 - OCR検出座標
+            'bbox': (845, 717, 937, 798),  # 最高出玉 877 - 検出結果0 (数値が違うが位置参考)
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'medium',
@@ -104,21 +104,21 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 最高一撃獲得セクション  
         'highest_single_win': {
-            'bbox': (40, 653, 130, 674),  # 最高一撃獲得 25760 - OCR検出座標
+            'bbox': (65, 1066, 213, 1102),  # 最高一撃獲得 25760 - 検出結果2
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '最高一撃獲得'
         },
         'chance_bonus_count': {
-            'bbox': (171, 653, 223, 674),  # チャンス中大当り 21
+            'bbox': (504, 744, 672, 805),  # チャンス中大当り 1469 - 検出結果17 (参考)
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': 'チャンス中大当り'
         },
         'chance_probability': {
-            'bbox': (340, 653, 405, 676),  # チャンス中確率 1/87 - OCR検出座標
+            'bbox': (542, 631, 633, 746),  # チャンス中確率 1 - 検出結果18 (参考)
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
@@ -127,14 +127,14 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # 初回特賞・前日最終セクション
         'initial_bonus_start': {
-            'bbox': (59, 725, 111, 747),  # 初回特賞スタート 220 - OCR検出座標
+            'bbox': (96, 1184, 182, 1219),  # 初回特賞スタート 220 - 検出結果3
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '初回特賞スタート'
         },
         'previous_day_final': {
-            'bbox': (156, 725, 208, 747),  # 前日最終スタート 107
+            'bbox': (256, 1184, 342, 1219),  # 前日最終スタート (参考位置)
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
@@ -143,35 +143,35 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # テーブルデータ（1行目）
         'date_1': {
-            'bbox': (31, 813, 76, 835),  # 8/6 - OCR検出座標
+            'bbox': (51, 1327, 124, 1364),  # 8/6 - 検出結果4
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '日付1'
         },
         'cumulative_start_1': {
-            'bbox': (125, 813, 196, 834),  # 3772 - OCR検出座標
+            'bbox': (204, 1326, 321, 1361),  # 3772 - 検出結果5
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '累計スタート1'
         },
         'first_hit_prob_1': {
-            'bbox': (238, 813, 317, 835),  # 1/277
+            'bbox': (389, 1326, 507, 1361),  # 1/277 (参考位置)
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '初当り確率1'
         },
         'chance_hit_prob_1': {
-            'bbox': (425, 813, 509, 835),  # 1/166 - OCR検出座標
+            'bbox': (693, 1327, 831, 1364),  # 1/166 - 検出結果6
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': 'チャンス中確率1'
         },
         'highest_payout_1': {
-            'bbox': (584, 812, 673, 834),  # 14670 - OCR検出座標
+            'bbox': (953, 1326, 1098, 1361),  # 14670 - 検出結果7
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
@@ -180,35 +180,35 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
         
         # テーブルデータ（2行目）
         'date_2': {
-            'bbox': (31, 849, 76, 872),  # 8/5 - OCR検出座標
+            'bbox': (51, 1387, 124, 1424),  # 8/5 - 検出結果8
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '日付2'
         },
         'cumulative_start_2': {
-            'bbox': (125, 849, 196, 870),  # 3213 - OCR検出座標
+            'bbox': (204, 1386, 320, 1421),  # 3213 - 検出結果9
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '累計スタート2'
         },
         'first_hit_prob_2': {
-            'bbox': (238, 849, 317, 872),  # 1/324
+            'bbox': (389, 1386, 507, 1421),  # 1/324 (参考位置)
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': '初当り確率2'
         },
         'chance_hit_prob_2': {
-            'bbox': (434, 849, 499, 872),  # 1/79 - OCR検出座標
+            'bbox': (707, 1386, 817, 1421),  # 1/79 (参考位置)
             'type': 'white_text',
             'inside_black': True,
             'size_pattern': 'small',
             'name': 'チャンス中確率2'
         },
         'highest_payout_2': {
-            'bbox': (584, 848, 673, 870),  # 22100
+            'bbox': (951, 1386, 1098, 1421),  # 22100 - 検出結果10
             'type': 'white_number',
             'inside_black': True,
             'size_pattern': 'small',
