@@ -43,170 +43,202 @@ if 'relative_regions' not in st.session_state or st.button("座標を強制更�
     # 実際の検出結果に基づく座標（黒背景内での相対座標）
     # 黒背景内での相対座標で定義（黒背景左上を0,0とする）
     st.session_state.relative_regions = {
-        # 上部エリア（大きな数字） - 黒背景内の相対座標
-        'Jackpot_Count': {
-            'bbox': (70, 40, 190, 140),  # 大当り回数 (赤大数字)
+        # メイン数値（赤・青の大きい数字）
+        'big_hit_count': {
+            'bbox': (30, 50, 120, 120),  # 大当り回数 25 (赤大数字)
             'type': 'red_number',
             'inside_black': True,
-            'size_pattern': 'large'
+            'size_pattern': 'large',
+            'name': '大当り回数'
         },
-        'First_Hit_Count': {
-            'bbox': (300, 40, 420, 140),  # 初当り回数 (青大数字)
+        'first_hit_count': {
+            'bbox': (180, 50, 260, 120),  # 初当り回数 4 (青大数字)
             'type': 'blue_number',
             'inside_black': True,
-            'size_pattern': 'large'
+            'size_pattern': 'large',
+            'name': '初当り回数'
         },
-        'Total_Start_Top': {
-            'bbox': (530, 40, 670, 80),  # 累計スタート（上部）
-            'type': 'number',
+        'cumulative_start': {
+            'bbox': (330, 50, 410, 90),  # 累計スタート 3721
+            'type': 'white_number',
             'inside_black': True,
-            'size_pattern': 'medium'
+            'size_pattern': 'medium',
+            'name': '累計スタート'
         },
-        # 括弧付き確率
-        'Jackpot_Prob_Red': {
-            'bbox': (75, 145, 175, 175),  # (1/xxx) 赤括弧
+        
+        # 中段の数値
+        'ultra_count': {
+            'bbox': (20, 140, 60, 165),  # 超 21
             'type': 'red_number',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': '超'
         },
-        'Jackpot_Prob_Blue': {
-            'bbox': (305, 145, 405, 175),  # (1/xxx) 青括弧
-            'type': 'blue_number',
-            'inside_black': True,
-            'size_pattern': 'small'
-        },
-        # 通常/チャンスエリア
-        'Normal': {
-            'bbox': (500, 80, 575, 105),  # 通常
-            'type': 'number',
-            'inside_black': True,
-            'size_pattern': 'small'
-        },
-        'Chance': {
-            'bbox': (610, 80, 685, 105),  # チャンス中
-            'type': 'number',
-            'inside_black': True,
-            'size_pattern': 'small'
-        },
-        # 超/中/小エリア
-        'Ultra': {
-            'bbox': (75, 200, 105, 230),  # 超
+        'medium_count': {
+            'bbox': (65, 140, 105, 165),  # 中 0
             'type': 'red_number',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': '中'
         },
-        'Middle': {
-            'bbox': (120, 200, 150, 230),  # 中
+        'small_count': {
+            'bbox': (110, 140, 150, 165),  # 小 4
             'type': 'red_number',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': '小'
         },
-        'Small': {
-            'bbox': (165, 200, 195, 230),  # 小
-            'type': 'red_number',
+        'start_number': {
+            'bbox': (200, 140, 280, 165),  # スタート 369
+            'type': 'white_number',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'medium',
+            'name': 'スタート'
         },
-        # スタート・最高出玉
-        'Start': {
-            'bbox': (315, 195, 415, 240),  # スタート
-            'type': 'number',
+        'max_payout': {
+            'bbox': (340, 140, 430, 165),  # 最高出玉 26830
+            'type': 'white_number',
             'inside_black': True,
-            'size_pattern': 'large_white'
+            'size_pattern': 'medium',
+            'name': '最高出玉'
         },
-        'Max_Payout': {
-            'bbox': (520, 195, 650, 240),  # 最高出玉
-            'type': 'number',
+        
+        # 最高一撃獲得セクション
+        'highest_single_win': {
+            'bbox': (15, 195, 100, 220),  # 最高一撃獲得 25760
+            'type': 'white_number',
             'inside_black': True,
-            'size_pattern': 'large_white'
+            'size_pattern': 'small',
+            'name': '最高一撃獲得'
         },
-        # テーブル1行目（最高一撃獲得など）
-        'Table1_Col1': {
-            'bbox': (0, 310, 140, 340),  # 最高一撃獲得
-            'type': 'number',
+        'chance_bonus_count': {
+            'bbox': (105, 195, 155, 220),  # チャンス中大当り 21
+            'type': 'white_number',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': 'チャンス中大当り'
         },
-        'Table1_Col2': {
-            'bbox': (145, 310, 285, 340),  # チャンス中大当り
-            'type': 'number',
+        'chance_probability': {
+            'bbox': (165, 195, 215, 220),  # チャンス中確率 1/87
+            'type': 'white_text',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': 'チャンス中確率'
         },
-        'Table1_Col3': {
-            'bbox': (290, 310, 430, 340),  # チャンス中確率
-            'type': 'number',
+        
+        # 初回特賞・前日最終セクション
+        'initial_bonus_start': {
+            'bbox': (15, 235, 85, 260),  # 初回特賞スタート 220
+            'type': 'white_number',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': '初回特賞スタート'
         },
-        'Table1_Col4': {
-            'bbox': (435, 310, 575, 340),  # 低確中大当り
-            'type': 'number',
+        'previous_day_final': {
+            'bbox': (105, 235, 175, 260),  # 前日最終スタート 107
+            'type': 'white_number',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': '前日最終スタート'
         },
-        'Table1_Col5': {
-            'bbox': (580, 310, 720, 340),  # 低確中確率
-            'type': 'number',
+        
+        # テーブルデータ（1行目）
+        'date_1': {
+            'bbox': (10, 285, 55, 310),  # 8/6
+            'type': 'white_text',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': '日付1'
         },
-        # テーブル2行目
-        'Table2_Col2': {
-            'bbox': (145, 345, 285, 375),  # 前日最終スタート
-            'type': 'number',
+        'cumulative_start_1': {
+            'bbox': (60, 285, 120, 310),  # 3772
+            'type': 'white_number',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': '累計スタート1'
         },
-        # テーブル3行目（日付・確率・最高出玉）
-        'Date1': {
-            'bbox': (20, 405, 95, 430),  # 日付1
-            'type': 'number',
+        'first_hit_prob_1': {
+            'bbox': (125, 285, 195, 310),  # 1/277
+            'type': 'white_text',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': '初当り確率1'
         },
-        'Start1': {
-            'bbox': (100, 405, 215, 430),  # スタート数1
-            'type': 'number',
+        'chance_hit_prob_1': {
+            'bbox': (200, 285, 270, 310),  # 1/166
+            'type': 'white_text',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': 'チャンス中確率1'
         },
-        'Prob1': {
-            'bbox': (220, 405, 355, 430),  # 確率1
-            'type': 'number',
+        'highest_payout_1': {
+            'bbox': (280, 285, 350, 310),  # 14670
+            'type': 'white_number',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': '最高出玉1'
         },
-        'Max1': {
-            'bbox': (570, 405, 690, 430),  # 最高出玉1 (5文字対応)
-            'type': 'number',
+        
+        # テーブルデータ（2行目）
+        'date_2': {
+            'bbox': (10, 315, 55, 340),  # 8/5
+            'type': 'white_text',
             'inside_black': True,
-            'size_pattern': 'medium'
+            'size_pattern': 'small',
+            'name': '日付2'
         },
-        # テーブル4行目
-        'Date2': {
-            'bbox': (20, 440, 95, 465),  # 日付2
-            'type': 'number',
+        'cumulative_start_2': {
+            'bbox': (60, 315, 120, 340),  # 3213
+            'type': 'white_number',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': '累計スタート2'
         },
-        'Start2': {
-            'bbox': (100, 440, 215, 465),  # スタート数2
-            'type': 'number',
+        'first_hit_prob_2': {
+            'bbox': (125, 315, 195, 340),  # 1/324
+            'type': 'white_text',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': '初当り確率2'
         },
-        'Prob2': {
-            'bbox': (220, 440, 355, 465),  # 確率2
-            'type': 'number',
+        'chance_hit_prob_2': {
+            'bbox': (200, 315, 270, 340),  # 1/79
+            'type': 'white_text',
             'inside_black': True,
-            'size_pattern': 'small'
+            'size_pattern': 'small',
+            'name': 'チャンス中確率2'
         },
-        'Max2': {
-            'bbox': (570, 440, 690, 465),  # 最高出玉2 (5文字対応)
-            'type': 'number',
+        'highest_payout_2': {
+            'bbox': (280, 315, 350, 340),  # 22100
+            'type': 'white_number',
             'inside_black': True,
-            'size_pattern': 'medium'
+            'size_pattern': 'small',
+            'name': '最高出玉2'
+        },
+        
+        # 右上の数値（モツ中など）
+        'top_right_values': {
+            'bbox': (340, 90, 430, 120),  # 1877 1844など
+            'type': 'white_number',
+            'inside_black': True,
+            'size_pattern': 'small',
+            'name': '右上数値'
+        },
+        
+        # その他の統計（低確中大当りなど）  
+        'low_prob_hit': {
+            'bbox': (230, 195, 300, 220),  # 低確中大当り
+            'type': 'white_text',
+            'inside_black': True,
+            'size_pattern': 'small',
+            'name': '低確中大当り'
+        },
+        'low_prob_rate': {
+            'bbox': (305, 195, 375, 220),  # 低確中確率
+            'type': 'white_text',
+            'inside_black': True,
+            'size_pattern': 'small',
+            'name': '低確中確率'
         },
     }
 
