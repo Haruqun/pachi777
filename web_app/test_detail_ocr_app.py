@@ -70,8 +70,33 @@ if uploaded_file is not None:
     
     black_region = detect_black_region(img_bgr)
     
-    # 座標定義（黒背景領域内の相対座標で定義）
-    if black_region:
+    # カスタム領域定義の読み込み
+    custom_regions_loaded = None
+    uploaded_region_file = st.sidebar.file_uploader(
+        "領域定義ファイルを読み込み",
+        type=['json'],
+        help="保存した領域定義ファイル(region_definitions.json)をアップロード"
+    )
+    
+    if uploaded_region_file is not None:
+        try:
+            import json
+            custom_regions_loaded = json.loads(uploaded_region_file.read())
+            st.sidebar.success(f"{len(custom_regions_loaded)}個の領域を読み込みました")
+        except Exception as e:
+            st.sidebar.error(f"読み込みエラー: {str(e)}")
+    
+    # 座標定義（カスタム定義があればそれを使用、なければデフォルト）
+    if custom_regions_loaded:
+        # カスタム領域定義を使用
+        regions = {}
+        for key, value in custom_regions_loaded.items():
+            regions[key] = {
+                'name': value['name'],
+                'bbox': tuple(value['bbox']),
+                'color': value['color']
+            }
+    elif black_region:
         bx1, by1, bx2, by2 = black_region
         # 黒背景内での相対座標を絶対座標に変換
         regions = {
@@ -359,3 +384,97 @@ if uploaded_file is not None:
                     mime="application/json",
                     use_container_width=True
                 )
+                
+                # 領域定義生成機能
+                st.markdown("### 🎯 領域定義生成")
+                st.info("検出されたテキストから重要な領域を選択して定義できます")
+                
+                # 検出された主要な数値をフィルタリング
+                important_texts = []
+                for region in detected_regions:
+                    text = region['text']
+                    # 数値のみ、または重要なキーワードを含むテキスト
+                    if (text.isdigit() and len(text) >= 2) or any(kw in text for kw in ['大当り', '初当り', '累計', 'スタート', '出玉']):
+                        important_texts.append(region)
+                
+                if important_texts:
+                    selected_regions = st.multiselect(
+                        "定義したい領域を選択",
+                        options=range(len(important_texts)),
+                        format_func=lambda x: f"{important_texts[x]['text']} (座標: {important_texts[x]['bbox']})",
+                        default=[]
+                    )
+                    
+                    if selected_regions:
+                        # 選択された領域から定義を生成
+                        custom_regions = {}
+                        for idx in selected_regions:
+                            region = important_texts[idx]
+                            text = region['text']
+                            bbox = region['bbox']
+                            
+                            # 領域名を自動生成
+                            if '大当り' in text:
+                                name = 'big_hit_label'
+                                display_name = '大当りラベル'
+                                color = 'red'
+                            elif '初当り' in text:
+                                name = 'first_hit_label'
+                                display_name = '初当りラベル'
+                                color = 'blue'
+                            elif '累計' in text:
+                                name = 'total_label'
+                                display_name = '累計ラベル'
+                                color = 'white'
+                            elif text == '25':
+                                name = 'big_hit_value'
+                                display_name = '大当り回数値'
+                                color = 'red'
+                            elif text == '4':
+                                name = 'first_hit_value'
+                                display_name = '初当り回数値'
+                                color = 'blue'
+                            elif text in ['3721', '_3721']:
+                                name = 'total_start'
+                                display_name = '累計スタート'
+                                color = 'white'
+                            elif text == '26830':
+                                name = 'max_payout'
+                                display_name = '最高出玉'
+                                color = 'white'
+                            elif text == '369':
+                                name = 'start'
+                                display_name = 'スタート'
+                                color = 'white'
+                            elif text in ['1877', '1844']:
+                                name = f'value_{text}'
+                                display_name = f'数値 {text}'
+                                color = 'white'
+                            else:
+                                name = f'region_{idx}'
+                                display_name = text
+                                color = 'white'
+                            
+                            custom_regions[name] = {
+                                'name': display_name,
+                                'bbox': bbox,
+                                'color': color,
+                                'detected_text': text
+                            }
+                        
+                        # 定義を表示
+                        st.success(f"{len(custom_regions)}個の領域を定義しました")
+                        
+                        # 定義をJSONで表示
+                        with st.expander("領域定義 (JSON)"):
+                            st.json(custom_regions)
+                        
+                        # 定義をダウンロード
+                        region_json = json.dumps(custom_regions, ensure_ascii=False, indent=2)
+                        st.download_button(
+                            label="💾 領域定義をダウンロード",
+                            data=region_json,
+                            file_name="region_definitions.json",
+                            mime="application/json",
+                            use_container_width=True
+                        )
