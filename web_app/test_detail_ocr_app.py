@@ -39,9 +39,7 @@ with col2:
 # 検出結果の座標から黒背景位置を引いた相対座標
 if 'relative_regions' not in st.session_state or st.button("座標を強制更新", key="force_update"):
     # 座標は(left, top, right, bottom)の形式で定義
-    # 黒背景位置を差し引いた相対座標として保存
-    # 実際の検出結果に基づく座標（黒背景内での相対座標）
-    # 黒背景内での相対座標で定義（黒背景左上を0,0とする）
+    # OCR検出結果に基づく絶対座標として定義
     st.session_state.relative_regions = {
         # メイン数値（赤・青の大きい数字）
         'big_hit_count': {
@@ -1128,24 +1126,13 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             
             
             
-            # 黒背景が検出されている場合、相対座標から絶対座標に変換
-            if 'black_region' in st.session_state:
-                x, y, w, h = st.session_state.black_region
-                st.info(f"黒背景基準で座標を自動設定中")
-                
-                # 相対座標から絶対座標に変換
+            # relative_regionsの座標は既に絶対座標なので、そのまま使用
+            if True:  # 常に実行
                 for region_name, region_info in st.session_state.relative_regions.items():
-                    x1, y1, x2, y2 = region_info['bbox']
-                    
-                    # 黒背景左上基準の絶対座標
-                    abs_x1 = int(x + x1)
-                    abs_y1 = int(y + y1)
-                    abs_x2 = int(x + x2)
-                    abs_y2 = int(y + y2)
-                    
                     st.session_state.regions[region_name] = {
-                        'bbox': (abs_x1, abs_y1, abs_x2, abs_y2),
-                        'type': region_info['type']
+                        'bbox': region_info['bbox'],
+                        'type': region_info['type'],
+                        'name': region_info.get('name', region_name)
                     }
             
             # 座標設定の読み込み
