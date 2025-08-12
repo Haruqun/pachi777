@@ -36,3 +36,185 @@ if uploaded_file is not None:
     # 画像サイズを表示
     height, width = img_bgr.shape[:2]
     st.info(f"画像サイズ: {width} x {height} px")
+    
+    # 画像を1179px幅にリサイズ（アスペクト比保持）
+    target_width = 1179
+    if width != target_width:
+        scale = target_width / width
+        new_height = int(height * scale)
+        img_bgr = cv2.resize(img_bgr, (target_width, new_height), interpolation=cv2.INTER_AREA)
+        height, width = img_bgr.shape[:2]
+        st.info(f"リサイズ後: {width} x {height} px")
+    
+    # 黒背景領域を検出
+    def detect_black_region(img):
+        """黒背景領域を検出して座標を返す"""
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # 黒い領域を検出（閾値20以下を黒とする）
+        _, black_mask = cv2.threshold(gray, 20, 255, cv2.THRESH_BINARY_INV)
+        
+        # ノイズ除去
+        kernel = np.ones((5,5), np.uint8)
+        black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
+        black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
+        
+        # 輪郭検出
+        contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        if contours:
+            # 最大の輪郭を黒背景とする
+            largest_contour = max(contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(largest_contour)
+            
+            # 面積が画像の30%以上なら有効な黒背景とする
+            if w * h > img.shape[0] * img.shape[1] * 0.3:
+                return (x, y, x + w, y + h)
+        
+        return None
+    
+    black_region = detect_black_region(img_bgr)
+    
+    if black_region:
+        bx1, by1, bx2, by2 = black_region
+        st.success(f"黒背景領域を検出: ({bx1}, {by1}) - ({bx2}, {by2})")
+    else:
+        st.warning("黒背景領域が検出できませんでした。画像全体を使用します。")
+        bx1, by1, bx2, by2 = 0, 0, width, height
+    
+    # 座標定義（黒背景領域内の相対座標で定義）
+    if black_region:
+        # 黒背景内での相対座標を絶対座標に変換
+        regions = {
+            # メイン数値（黒背景内での位置）
+            'big_hit': {
+                'name': '大当り回数',
+                'bbox': (bx1 + 70, by1 + 150, bx1 + 260, by1 + 230),  # 赤い大きな数字
+                'color': 'red'
+            },
+            'first_hit': {
+                'name': '初当り回数',
+                'bbox': (bx1 + 450, by1 + 150, bx1 + 640, by1 + 230),  # 青い大きな数字
+                'color': 'blue'
+            },
+            'total_start': {
+                'name': '累計スタート',
+                'bbox': (bx1 + 820, by1 + 150, bx1 + 1000, by1 + 230),  # 白い数字
+                'color': 'white'
+            },
+            'start': {
+                'name': 'スタート',
+                'bbox': (bx1 + 480, by1 + 460, bx1 + 660, by1 + 530),  # スタート数
+                'color': 'white'
+            },
+            'max_payout': {
+                'name': '最高出玉',
+                'bbox': (bx1 + 820, by1 + 460, bx1 + 1030, by1 + 530),  # 最高出玉
+                'color': 'white'
+            },
+        }
+    else:
+        # 黒背景が検出できない場合は絶対座標を使用
+        regions = {
+            'big_hit': {
+                'name': '大当り回数',
+                'bbox': (70, 578, 260, 660),
+                'color': 'red'
+            },
+            'first_hit': {
+                'name': '初当り回数',
+                'bbox': (450, 578, 640, 660),
+                'color': 'blue'
+            },
+            'total_start': {
+                'name': '累計スタート',
+                'bbox': (840, 578, 1020, 660),
+                'color': 'white'
+            },
+            'start': {
+                'name': 'スタート',
+                'bbox': (500, 890, 680, 960),
+                'color': 'white'
+            },
+            'max_payout': {
+                'name': '最高出玉',
+                'bbox': (840, 890, 1050, 960),
+                'color': 'white'
+            },
+        }
+    
+    # 2カラムレイアウト
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.subheader("📷 検出領域")
+        # 画像のコピーを作成
+        vis_img = img_bgr.copy()
+        
+        # 黒背景領域を表示
+        if black_region:
+            cv2.rectangle(vis_img, (bx1, by1), (bx2, by2), (0, 255, 0), 3)
+            cv2.putText(vis_img, "Black Region", (bx1, by1-10), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        
+        # 領域を描画
+        for key, region in regions.items():
+            x1, y1, x2, y2 = region['bbox']
+            color_map = {
+                'red': (0, 0, 255),
+                'blue': (255, 0, 0),
+                'white': (255, 255, 255)
+            }
+            color = color_map.get(region['color'], (255, 255, 255))
+            cv2.rectangle(vis_img, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(vis_img, region['name'], (x1, y1-5), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+        
+        # 表示
+        st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB), 
+                caption="OCR対象領域", use_column_width=True)
+    
+    with col2:
+        st.subheader("📊 OCR結果")
+        
+        if st.button("🔍 OCR実行", type="primary", use_container_width=True):
+            results = {}
+            
+            with st.spinner("OCR処理中..."):
+                for key, region in regions.items():
+                    x1, y1, x2, y2 = region['bbox']
+                    roi = img_bgr[y1:y2, x1:x2]
+                    
+                    try:
+                        if region['color'] == 'red':
+                            # 赤色抽出
+                            hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                            mask1 = cv2.inRange(hsv, np.array([0, 50, 50]), np.array([10, 255, 255]))
+                            mask2 = cv2.inRange(hsv, np.array([170, 50, 50]), np.array([180, 255, 255]))
+                            mask = cv2.bitwise_or(mask1, mask2)
+                            text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                            
+                        elif region['color'] == 'blue':
+                            # 青色抽出
+                            hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                            mask = cv2.inRange(hsv, np.array([100, 50, 50]), np.array([130, 255, 255]))
+                            text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                            
+                        else:  # white
+                            # 白色抽出（グレースケール + 二値化）
+                            gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                            _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+                            text = pytesseract.image_to_string(binary, config='--psm 7 -c tessedit_char_whitelist=0123456789')
+                        
+                        results[region['name']] = text.strip()
+                        
+                    except Exception as e:
+                        results[region['name']] = f"エラー: {str(e)}"
+            
+            # 結果表示
+            st.success("OCR完了！")
+            for name, value in results.items():
+                if value and value != "エラー":
+                    st.metric(name, value)
+                else:
+                    st.error(f"{name}: 認識失敗")
