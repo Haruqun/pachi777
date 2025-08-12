@@ -175,7 +175,15 @@ if uploaded_file is not None:
     with col2:
         st.subheader("📊 OCR操作")
         
+        # OCRモード選択
+        ocr_mode = st.radio(
+            "OCRモード",
+            ["5項目抽出", "全体OCR検出"],
+            help="5項目抽出：主要データのみ\n全体OCR検出：すべての文字を検出"
+        )
+        
         if st.button("🔍 OCR実行", type="primary", use_container_width=True):
+            if ocr_mode == "5項目抽出":
             results = {}
             
             with st.spinner("OCR処理中..."):
@@ -258,3 +266,96 @@ if uploaded_file is not None:
             # JSON出力
             with st.expander("詳細データ (JSON)"):
                 st.json(results)
+            
+            elif ocr_mode == "全体OCR検出":
+                # 黒背景領域内でOCR実行
+                if black_region:
+                    target_img = img_bgr[by1:by2, bx1:bx2]
+                else:
+                    target_img = img_bgr
+                
+                # Tesseractで文字検出
+                with st.spinner("文字検出中..."):
+                    # グレースケール化
+                    gray = cv2.cvtColor(target_img, cv2.COLOR_BGR2GRAY)
+                    
+                    # コントラスト調整
+                    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+                    enhanced = clahe.apply(gray)
+                    
+                    # OCR実行（バウンディングボックス情報も取得）
+                    data = pytesseract.image_to_data(enhanced, lang='jpn', output_type=pytesseract.Output.DICT)
+                    
+                    # 検出結果をフィルタリング
+                    detected_regions = []
+                    vis_full_img = img_bgr.copy()
+                    
+                    for i in range(len(data['text'])):
+                        text = str(data['text'][i]).strip()
+                        conf = int(data['conf'][i])
+                        
+                        # 信頼度30以上かつ空でないテキストのみ
+                        if conf > 30 and text and text != '':
+                            # バウンディングボックス情報
+                            x = int(data['left'][i])
+                            y = int(data['top'][i])
+                            w = int(data['width'][i])
+                            h = int(data['height'][i])
+                            
+                            # 黒背景領域からのオフセットを考慮
+                            if black_region:
+                                abs_x = bx1 + x
+                                abs_y = by1 + y
+                            else:
+                                abs_x = x
+                                abs_y = y
+                            
+                            # 検出情報を保存
+                            region_info = {
+                                'text': text,
+                                'confidence': conf,
+                                'bbox': [abs_x, abs_y, abs_x + w, abs_y + h]
+                            }
+                            detected_regions.append(region_info)
+                            
+                            # 枠線を描画
+                            cv2.rectangle(vis_full_img, (abs_x, abs_y), (abs_x + w, abs_y + h), (0, 255, 0), 2)
+                            cv2.putText(vis_full_img, text[:10], (abs_x, abs_y - 5),
+                                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                
+                # 結果表示
+                st.success(f"OCR完了！ {len(detected_regions)}個のテキストを検出")
+                st.divider()
+                
+                # 検出結果画像
+                st.markdown("### 検出結果")
+                st.image(cv2.cvtColor(vis_full_img, cv2.COLOR_BGR2RGB), 
+                        caption="検出されたテキスト領域", use_column_width=True)
+                
+                # 検出データの表示
+                with st.expander(f"検出データ ({len(detected_regions)}件)"):
+                    for idx, region in enumerate(detected_regions):
+                        st.text(f"{idx+1}. テキスト: '{region['text']}' (信頼度: {region['confidence']}%)")
+                
+                # JSONエクスポート
+                st.markdown("### データエクスポート")
+                json_data = {
+                    'image_size': {'width': width, 'height': height},
+                    'black_region': list(black_region) if black_region else None,
+                    'detected_regions': detected_regions
+                }
+                
+                # JSON表示
+                with st.expander("JSONデータ"):
+                    st.json(json_data)
+                
+                # ダウンロードボタン
+                import json
+                json_str = json.dumps(json_data, ensure_ascii=False, indent=2)
+                st.download_button(
+                    label="💾 JSONデータをダウンロード",
+                    data=json_str,
+                    file_name="ocr_detection_result.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
