@@ -1219,10 +1219,30 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
         with col_image:
             st.subheader("📷 抽出領域")
             
-            # 抽出領域の可視化 - 枠を削除して画像のみ表示
+            # 抽出領域の可視化
             vis_img = img.copy()
             
-            # 枠の描画を削除 - 画像のみ表示
+            for name, info in st.session_state.regions.items():
+                x1, y1, x2, y2 = info['bbox']
+                color = (0, 255, 0)  # 緑
+                if info['type'] == 'red_number':
+                    color = (0, 0, 255)  # 赤
+                elif info['type'] == 'blue_number':
+                    color = (255, 0, 0)  # 青
+                
+                # 選択中の領域は黄色で強調
+                if name == selected_region:
+                    color = (0, 255, 255)
+                    thickness = 3
+                else:
+                    thickness = 2
+                
+                cv2.rectangle(vis_img, (x1, y1), (x2, y2), color, thickness)
+                # テキストを枠の中央上部に配置
+                text_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+                text_x = x1 + (x2 - x1 - text_size[0]) // 2
+                cv2.putText(vis_img, name, (text_x, y1-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+            
             st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB))
         
         # 右カラム：OCR結果
