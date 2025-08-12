@@ -1295,8 +1295,28 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
             # 抽出領域の可視化 - OCR検出領域と同じロジックを使用
             vis_img = img.copy()
             
-            # regions を使用（OCR実行時と同じ）
-            for name, info in st.session_state.regions.items():
+            # regions を使用（OCR実行時と同じ）- 論理的な順序で表示
+            # 表示順序を定義
+            display_order = [
+                # メイン数値（上部）
+                'big_hit_count', 'First_Hit_Count', 'Total_Start',
+                'Jackpot_Prob', 'First_Hit_Prob', 'Total_In', 'Total_Out',
+                # 中央部
+                'Ultra', 'Middle', 'Small', 'Start', 'Max_Payout',
+                # 下部テーブル
+                'Max_1', 'Chance_Payout_1', 'Chance_Middle_1', 'Low_Start_1', 'Low_Middle_1',
+                'Initial_Payout', 'Prev_Day_Payout', 'Chance_Count', 'Low_Count', 'Play_Time',
+                # 累計テーブル（8/7）
+                'Total_1_87', 'Normal_Prob_87', 'Chance_Prob_87', 'Min_Payout_87',
+                # 累計テーブル（8/5）  
+                'Total_1_85', 'Normal_Prob_85', 'Chance_Prob_85', 'Max_Payout_85'
+            ]
+            
+            # 順序通りに処理（存在するものだけ）
+            for name in display_order:
+                if name not in st.session_state.regions:
+                    continue
+                info = st.session_state.regions[name]
                 x1, y1, x2, y2 = info['bbox']
                 
                 # 絶対座標をそのまま使用
@@ -1348,8 +1368,21 @@ if (image_source == "テスト画像を使用" and selected_test_image and 'img'
                 with st.spinner("OCR処理中..."):
                     results = {}
                     
-                    # 各領域を処理
-                    for name, info in st.session_state.regions.items():
+                    # 各領域を処理（論理的な順序で）
+                    display_order = [
+                        'big_hit_count', 'First_Hit_Count', 'Total_Start',
+                        'Jackpot_Prob', 'First_Hit_Prob', 'Total_In', 'Total_Out',
+                        'Ultra', 'Middle', 'Small', 'Start', 'Max_Payout',
+                        'Max_1', 'Chance_Payout_1', 'Chance_Middle_1', 'Low_Start_1', 'Low_Middle_1',
+                        'Initial_Payout', 'Prev_Day_Payout', 'Chance_Count', 'Low_Count', 'Play_Time',
+                        'Total_1_87', 'Normal_Prob_87', 'Chance_Prob_87', 'Min_Payout_87',
+                        'Total_1_85', 'Normal_Prob_85', 'Chance_Prob_85', 'Max_Payout_85'
+                    ]
+                    
+                    for name in display_order:
+                        if name not in st.session_state.regions:
+                            continue
+                        info = st.session_state.regions[name]
                         x1, y1, x2, y2 = info['bbox']
                         roi = img[y1:y2, x1:x2]
                         
