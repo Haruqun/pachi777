@@ -6,12 +6,12 @@ from PIL import Image
 import json
 
 st.set_page_config(
-    page_title="Pachinko OCR",
+    page_title="パチンコOCR",
     page_icon="🎰",
     layout="wide"
 )
 
-st.title("🎰 Pachinko Detail OCR - Site777")
+st.title("🎰 パチンコ詳細OCR - Site777")
 
 # Expected data items from the image
 EXPECTED_DATA = {
@@ -34,38 +34,38 @@ EXPECTED_DATA = {
     'prev_final': '107'
 }
 
-# Sidebar
+# サイドバー
 with st.sidebar:
-    st.header("📸 Image Upload")
+    st.header("📸 画像アップロード")
     uploaded_file = st.file_uploader(
-        "Select pachinko image",
+        "パチンコ画像を選択",
         type=['png', 'jpg', 'jpeg'],
-        help="Upload site777.jp detail screen"
+        help="site777.jpの詳細画面をアップロード"
     )
     
     st.divider()
     
-    st.header("⚙️ OCR Settings")
+    st.header("⚙️ OCR設定")
     
-    # Detection mode
+    # 検出モード
     detection_mode = st.radio(
-        "Detection Mode",
-        ["Fast", "Standard", "Detailed"]
+        "検出モード",
+        ["高速", "標準", "詳細"]
     )
     
-    # Color detection options
-    st.subheader("Color Detection")
-    detect_red = st.checkbox("Red text", value=True)
-    detect_blue = st.checkbox("Blue text", value=True)
-    detect_white = st.checkbox("White text", value=True)
+    # 色検出オプション
+    st.subheader("色検出")
+    detect_red = st.checkbox("赤色テキスト", value=True)
+    detect_blue = st.checkbox("青色テキスト", value=True)
+    detect_white = st.checkbox("白色テキスト", value=True)
     
-    # Threshold settings
-    st.subheader("Detection Threshold")
-    conf_threshold = st.slider("Confidence threshold", 0, 100, 30)
+    # 閾値設定
+    st.subheader("検出閾値")
+    conf_threshold = st.slider("信頼度閾値", 0, 100, 30)
     
-    # Debug options
-    show_masks = st.checkbox("Show mask images", value=False)
-    show_grid = st.checkbox("Show grid", value=False)
+    # デバッグオプション
+    show_masks = st.checkbox("マスク画像を表示", value=False)
+    show_grid = st.checkbox("グリッドを表示", value=False)
 
 # Main area
 if uploaded_file is not None:
@@ -90,19 +90,19 @@ if uploaded_file is not None:
         img_bgr = cv2.resize(img_bgr, (new_width, new_height))
         height, width = new_height, new_width
     
-    # Create tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 OCR Results", "🎨 Color Detection", "📍 Coordinate Map", "📄 JSON Output"])
+    # タブを作成
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 OCR結果", "🎨 色検出", "📍 座標マップ", "📄 JSON出力"])
     
     with tab1:
-        st.subheader("📊 OCR Detection Results")
+        st.subheader("📊 OCR検出結果")
         
-        if st.button("🔍 Run OCR", type="primary", use_container_width=True):
+        if st.button("🔍 OCR実行", type="primary", use_container_width=True):
             
             # Save detection results
             detected_data = {}
             all_detections = []
             
-            with st.spinner("Processing OCR..."):
+            with st.spinner("OCR処理中..."):
                 # Progress bar
                 progress = st.progress(0)
                 
@@ -258,65 +258,65 @@ if uploaded_file is not None:
                 if not is_duplicate:
                     unique_detections.append(detection)
             
-            # Display results
-            st.success(f"Detection complete! Found {len(unique_detections)} texts")
+            # 結果を表示
+            st.success(f"検出完了！ {len(unique_detections)}個のテキストを検出")
             
-            # Metrics display
+            # メトリクス表示
             col1, col2, col3 = st.columns(3)
             
-            # Color count
+            # 色別カウント
             white_count = len([d for d in unique_detections if d['color'] == 'white'])
             red_count = len([d for d in unique_detections if d['color'] == 'red'])
             blue_count = len([d for d in unique_detections if d['color'] == 'blue'])
             
             with col1:
-                st.metric("White text", white_count)
+                st.metric("白色テキスト", white_count)
             with col2:
-                st.metric("Red text", red_count)
+                st.metric("赤色テキスト", red_count)
             with col3:
-                st.metric("Blue text", blue_count)
+                st.metric("青色テキスト", blue_count)
             
-            # Detected text list
+            # 検出テキストリスト
             st.divider()
-            st.markdown("### Detected Texts")
+            st.markdown("### 検出されたテキスト")
             
             # Compare with expected values
             detected_texts = [d['text'] for d in unique_detections]
             
-            # Check important items
+            # 重要項目をチェック
             important_items = {
-                'Big hit count (red)': '25',
-                'First hit count (blue)': '4',
-                'Total start': '3721',
-                'Start': '369',
-                'Max payout': '26830'
+                '大当り回数 (赤)': '25',
+                '初当り回数 (青)': '4',
+                '累計スタート': '3721',
+                'スタート': '369',
+                '最高出玉': '26830'
             }
             
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("#### ✅ Detected")
+                st.markdown("#### ✅ 検出成功")
                 for name, expected in important_items.items():
                     if expected in detected_texts:
                         st.success(f"{name}: {expected}")
             
             with col2:
-                st.markdown("#### ❌ Not detected")
+                st.markdown("#### ❌ 未検出")
                 for name, expected in important_items.items():
                     if expected not in detected_texts:
                         st.error(f"{name}: {expected}")
             
-            # All detection results
-            with st.expander("All detection results"):
+            # 全検出結果
+            with st.expander("全検出結果"):
                 for idx, detection in enumerate(unique_detections):
                     color_emoji = {"white": "⚪", "red": "🔴", "blue": "🔵"}.get(detection['color'], "⚫")
-                    st.write(f"{idx+1}. {color_emoji} **{detection['text']}** (confidence: {detection['confidence']}%)")
+                    st.write(f"{idx+1}. {color_emoji} **{detection['text']}** (信頼度: {detection['confidence']}%)")
             
             # Save to session state for JSON export
             st.session_state['detections'] = unique_detections
     
     with tab2:
-        st.subheader("🎨 Color Mask Display")
+        st.subheader("🎨 色マスク表示")
         
         if show_masks:
             hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
@@ -325,30 +325,58 @@ if uploaded_file is not None:
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                st.markdown("### ⚪ White mask")
+                st.markdown("### ⚪ 白色マスク")
                 _, white_mask = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
                 st.image(white_mask, use_column_width=True)
             
             with col2:
-                st.markdown("### 🔴 Red mask")
+                st.markdown("### 🔴 赤色マスク")
                 red_mask1 = cv2.inRange(hsv, np.array([0, 30, 30]), np.array([15, 255, 255]))
                 red_mask2 = cv2.inRange(hsv, np.array([160, 30, 30]), np.array([180, 255, 255]))
                 red_mask = cv2.bitwise_or(red_mask1, red_mask2)
                 st.image(red_mask, use_column_width=True)
             
             with col3:
-                st.markdown("### 🔵 Blue mask")
+                st.markdown("### 🔵 青色マスク")
                 blue_mask = cv2.inRange(hsv, np.array([90, 30, 30]), np.array([120, 255, 255]))
                 st.image(blue_mask, use_column_width=True)
     
     with tab3:
-        st.subheader("📍 Coordinate Map")
+        st.subheader("📍 座標マップ")
         
-        # Image with grid
+        # 検出結果のオーバーレイ画像を作成
         vis_img = img_bgr.copy()
         
+        # 検出結果がある場合は描画
+        if 'detections' in st.session_state and st.session_state['detections']:
+            color_map = {
+                'white': (200, 200, 200),
+                'red': (0, 0, 255),
+                'blue': (255, 100, 0)
+            }
+            
+            for detection in st.session_state['detections']:
+                x1, y1, x2, y2 = detection['bbox']
+                color = color_map.get(detection['color'], (255, 255, 255))
+                
+                # 矩形を描画
+                cv2.rectangle(vis_img, (x1, y1), (x2, y2), color, 2)
+                
+                # テキストを表示（小さいフォントで）
+                text = detection['text']
+                conf = detection['confidence']
+                label = f"{text} ({conf}%)"
+                
+                # テキストの背景を描画
+                (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
+                cv2.rectangle(vis_img, (x1, y1 - text_height - 4), (x1 + text_width, y1), color, -1)
+                
+                # テキストを描画
+                cv2.putText(vis_img, label, (x1, y1 - 2), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
+        
         if show_grid:
-            # 10px grid
+            # 10px グリッド
             for x in range(0, width, 10):
                 if x % 100 == 0:
                     cv2.line(vis_img, (x, 0), (x, height), (100, 100, 100), 1)
@@ -361,9 +389,25 @@ if uploaded_file is not None:
                         cv2.putText(vis_img, str(y), (5, y+5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
         
         st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB), use_column_width=True)
+        
+        # 統計情報を表示
+        if 'detections' in st.session_state and st.session_state['detections']:
+            st.info(f"検出数: {len(st.session_state['detections'])}個")
+            
+            # 色別の統計
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                white_count = len([d for d in st.session_state['detections'] if d['color'] == 'white'])
+                st.metric("白色", white_count)
+            with col2:
+                red_count = len([d for d in st.session_state['detections'] if d['color'] == 'red'])
+                st.metric("赤色", red_count)
+            with col3:
+                blue_count = len([d for d in st.session_state['detections'] if d['color'] == 'blue'])
+                st.metric("青色", blue_count)
     
     with tab4:
-        st.subheader("📄 JSON Output")
+        st.subheader("📄 JSON出力")
         
         if 'detections' in st.session_state:
             json_data = {
@@ -373,43 +417,43 @@ if uploaded_file is not None:
             
             st.json(json_data)
             
-            # Download button
+            # ダウンロードボタン
             json_str = json.dumps(json_data, ensure_ascii=False, indent=2)
             st.download_button(
-                label="📥 Download JSON",
+                label="📥 JSONをダウンロード",
                 data=json_str,
                 file_name="ocr_result.json",
                 mime="application/json"
             )
         else:
-            st.info("Run OCR first to see JSON output")
+            st.info("OCRを実行するとJSON出力が表示されます")
 
 else:
-    # Default message
-    st.info("👈 Please upload an image from the sidebar")
+    # デフォルトメッセージ
+    st.info("👈 サイドバーから画像をアップロードしてください")
     
-    # Display expected data
-    st.markdown("### 📋 Target Detection Items")
+    # 期待されるデータを表示
+    st.markdown("### 📋 検出対象項目")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.markdown("#### 🔴 Red")
-        st.write("- Big hit count: 25")
-        st.write("- Big hit rate: 1/148")
-        st.write("- Ultra: 21")
-        st.write("- Middle: 0")
-        st.write("- Small: 4")
+        st.markdown("#### 🔴 赤色")
+        st.write("- 大当り回数: 25")
+        st.write("- 大当り確率: 1/148")
+        st.write("- 超: 21")
+        st.write("- 中: 0")
+        st.write("- 小: 4")
     
     with col2:
-        st.markdown("#### 🔵 Blue")
-        st.write("- First hit count: 4")
-        st.write("- First hit rate: 1/469")
+        st.markdown("#### 🔵 青色")
+        st.write("- 初当り回数: 4")
+        st.write("- 初当り確率: 1/469")
     
     with col3:
-        st.markdown("#### ⚪ White")
-        st.write("- Total start: 3721")
-        st.write("- Normal: 1877")
-        st.write("- Chance: 1844")
-        st.write("- Start: 369")
-        st.write("- Max payout: 26830")
+        st.markdown("#### ⚪ 白色")
+        st.write("- 累計スタート: 3721")
+        st.write("- 通常: 1877")
+        st.write("- チャンス: 1844")
+        st.write("- スタート: 369")
+        st.write("- 最高出玉: 26830")
