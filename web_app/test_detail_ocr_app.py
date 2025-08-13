@@ -486,15 +486,15 @@ if uploaded_file is not None:
                     st.info(f"ℹ️ {len(low_conf)}個の領域で信頼度が低い:")
                     for l in low_conf:
                         st.write(f"- **{l['region']}**: {l['detected']} (信頼度: {l['confidence']}%)")
-                
-                # 詳細デバッグ情報（マスク表示がONの場合）
-                if show_masks:
-                    with st.expander("🔍 詳細な検出結果"):
-                        for debug in debug_results:
-                            if debug['all_detections']:
-                                st.write(f"**{debug['region']}**:")
-                                for detection in debug['all_detections']:
-                                    st.write(f"  - {detection}")
+            
+            # 詳細デバッグ情報（マスク表示がONの場合） - expanderの外に移動
+            if show_masks and 'debug_results' in locals():
+                with st.expander("🔍 詳細な検出結果"):
+                    for debug in debug_results:
+                        if debug.get('all_detections'):
+                            st.write(f"**{debug['region']}**:")
+                            for detection in debug['all_detections']:
+                                st.write(f"  - {detection}")
             
             # Save to session state for JSON export
             st.session_state['detections'] = all_detections
