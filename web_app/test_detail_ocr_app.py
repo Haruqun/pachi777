@@ -90,9 +90,35 @@ if uploaded_file is not None:
         img_bgr = cv2.resize(img_bgr, (new_width, new_height))
         height, width = new_height, new_width
     
-    # オフセットを初期化（切り抜きなし）
-    offset_x = 0
-    offset_y = 0
+    # 必要な領域のみを切り抜き（site777のデータ表示部分）
+    # 黒背景のデータ部分: Y座標 約600px～1400px
+    if height > 1400:
+        # 上部の不要な部分（ヘッダーなど）をカット
+        crop_top = 600
+        # 下部のグラフ部分をカット
+        crop_bottom = min(1400, height)
+        # 左右は全幅を使用
+        crop_left = 0
+        crop_right = width
+        
+        # 切り抜き
+        img_bgr_cropped = img_bgr[crop_top:crop_bottom, crop_left:crop_right]
+        
+        st.info(f"データ領域を切り抜き: Y座標 {crop_top}～{crop_bottom}px")
+        
+        # OCR用の画像を切り抜いたものに変更
+        img_bgr_for_ocr = img_bgr_cropped
+        ocr_height, ocr_width = img_bgr_cropped.shape[:2]
+        
+        # オフセットを保存（元画像での座標に変換するため）
+        offset_x = crop_left
+        offset_y = crop_top
+    else:
+        # 画像が小さい場合は全体を使用
+        img_bgr_for_ocr = img_bgr
+        ocr_height, ocr_width = height, width
+        offset_x = 0
+        offset_y = 0
     
     # タブを作成
     tab1, tab2, tab3, tab4 = st.tabs(["📊 OCR結果", "🎨 色検出", "📍 座標マップ", "📄 JSON出力"])
@@ -110,14 +136,14 @@ if uploaded_file is not None:
                 # Progress bar
                 progress = st.progress(0)
                 
-                # Color space conversions
-                hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-                lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
+                # Color space conversions (切り抜いた画像を使用)
+                hsv = cv2.cvtColor(img_bgr_for_ocr, cv2.COLOR_BGR2HSV)
+                lab = cv2.cvtColor(img_bgr_for_ocr, cv2.COLOR_BGR2LAB)
                 
                 # 1. White text detection
                 if detect_white:
                     progress.progress(0.2)
-                    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+                    gray = cv2.cvtColor(img_bgr_for_ocr, cv2.COLOR_BGR2GRAY)
                     
                     # Try multiple thresholds for better coverage
                     for threshold in [180, 160, 200, 140, 220]:
@@ -164,7 +190,7 @@ if uploaded_file is not None:
                     hsv_red_mask = cv2.bitwise_or(hsv_red_mask, magenta_mask)
                     
                     # Method 2: Channel difference (R > G and R > B)
-                    b, g, r = cv2.split(img_bgr)
+                    b, g, r = cv2.split(img_bgr_for_ocr)
                     channel_red_mask = np.zeros_like(r)
                     channel_red_mask[(r > g + 20) & (r > b + 20) & (r > 100)] = 255
                     
@@ -210,7 +236,7 @@ if uploaded_file is not None:
                     hsv_blue_mask = cv2.bitwise_or(hsv_blue_mask, light_blue_mask)
                     
                     # Method 2: Channel difference (B > R and B > G)
-                    b, g, r = cv2.split(img_bgr)
+                    b, g, r = cv2.split(img_bgr_for_ocr)
                     channel_blue_mask = np.zeros_like(b)
                     channel_blue_mask[(b > r + 20) & (b > g + 20) & (b > 100)] = 255
                     
@@ -323,8 +349,8 @@ if uploaded_file is not None:
         st.subheader("🎨 色マスク表示")
         
         if show_masks:
-            hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-            gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+            hsv = cv2.cvtColor(img_bgr_for_ocr, cv2.COLOR_BGR2HSV)
+            gray = cv2.cvtColor(img_bgr_for_ocr, cv2.COLOR_BGR2GRAY)
             
             col1, col2, col3 = st.columns(3)
             
@@ -348,8 +374,8 @@ if uploaded_file is not None:
     with tab3:
         st.subheader("📍 座標マップ")
         
-        # 検出結果のオーバーレイ画像を作成
-        vis_img = img_bgr.copy()
+        # 検出結果のオーバーレイ画像を作成（切り抜いた画像を使用）
+        vis_img = img_bgr_for_ocr.copy()
         
         # 検出結果がある場合は描画
         if 'detections' in st.session_state and st.session_state['detections']:
@@ -363,8 +389,14 @@ if uploaded_file is not None:
                 x1, y1, x2, y2 = detection['bbox']
                 color = color_map.get(detection['color'], (255, 255, 255))
                 
+                # オフセットを考慮して切り抜き画像内の座標に変換
+                x1_vis = x1 - offset_x
+                y1_vis = y1 - offset_y
+                x2_vis = x2 - offset_x
+                y2_vis = y2 - offset_y
+                
                 # 矩形を描画
-                cv2.rectangle(vis_img, (x1, y1), (x2, y2), color, 2)
+                cv2.rectangle(vis_img, (x1_vis, y1_vis), (x2_vis, y2_vis), color, 2)
                 
                 # テキストを表示（小さいフォントで）
                 text = detection['text']
@@ -373,24 +405,24 @@ if uploaded_file is not None:
                 
                 # テキストの背景を描画
                 (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
-                cv2.rectangle(vis_img, (x1, y1 - text_height - 4), (x1 + text_width, y1), color, -1)
+                cv2.rectangle(vis_img, (x1_vis, y1_vis - text_height - 4), (x1_vis + text_width, y1_vis), color, -1)
                 
                 # テキストを描画
-                cv2.putText(vis_img, label, (x1, y1 - 2), 
+                cv2.putText(vis_img, label, (x1_vis, y1_vis - 2), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
         
         if show_grid:
             # 10px グリッド
-            for x in range(0, width, 10):
+            for x in range(0, ocr_width, 10):
                 if x % 100 == 0:
-                    cv2.line(vis_img, (x, 0), (x, height), (100, 100, 100), 1)
+                    cv2.line(vis_img, (x, 0), (x, ocr_height), (100, 100, 100), 1)
                     if x > 0:
-                        cv2.putText(vis_img, str(x), (x-20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
-            for y in range(0, height, 10):
+                        cv2.putText(vis_img, str(x + offset_x), (x-20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
+            for y in range(0, ocr_height, 10):
                 if y % 100 == 0:
-                    cv2.line(vis_img, (0, y), (width, y), (100, 100, 100), 1)
+                    cv2.line(vis_img, (0, y), (ocr_width, y), (100, 100, 100), 1)
                     if y > 0:
-                        cv2.putText(vis_img, str(y), (5, y+5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
+                        cv2.putText(vis_img, str(y + offset_y), (5, y+5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
         
         st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB), use_column_width=True)
         
