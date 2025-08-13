@@ -28,18 +28,46 @@ EXPECTED_DATA = {
 }
 
 # mask.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
-# オフセット: X=0, Y=-191でピッタリ合う
+# オフセット: X=0, Y=-191でピッタリ合う（黒枠外の領域も含む）
 OCR_REGIONS_FROM_MASK = {
+    # ヘッダー（黒枠外）
+    'header': {'x': 21, 'y': -191, 'w': 1129, 'h': 64, 'color': 'white'},  # トップバー
+    'store_info': {'x': 0, 'y': -109, 'w': 211, 'h': 99, 'color': 'white'},  # 店舗情報
+    'date_info': {'x': 4, 'y': 0, 'w': 80, 'h': 61, 'color': 'white'},  # 日付
+    
+    # メイン数値
     'big_hit_count': {'x': 79, 'y': 113, 'w': 237, 'h': 125, 'color': 'red'},  # 大当り回数 25
     'first_hit_count': {'x': 456, 'y': 113, 'w': 238, 'h': 125, 'color': 'blue'},  # 初当り回数 4
     'total_start': {'x': 849, 'y': 126, 'w': 202, 'h': 61, 'color': 'white'},  # 累計スタート 3721
+    
+    # 確率表示
+    'big_hit_rate': {'x': 79, 'y': 241, 'w': 237, 'h': 50, 'color': 'red'},  # (1/148)
+    'first_hit_rate': {'x': 456, 'y': 241, 'w': 238, 'h': 50, 'color': 'blue'},  # (1/469)
+    
+    # 通常/チャンス
     'normal': {'x': 786, 'y': 239, 'w': 164, 'h': 61, 'color': 'white'},  # 通常 1877
     'chance': {'x': 967, 'y': 239, 'w': 165, 'h': 61, 'color': 'white'},  # チャンス中 1844
+    
+    # 中段の数値
     'ultra': {'x': 89, 'y': 397, 'w': 72, 'h': 50, 'color': 'red'},  # 超 21
     'middle': {'x': 177, 'y': 397, 'w': 67, 'h': 50, 'color': 'red'},  # 中 0
     'small': {'x': 250, 'y': 397, 'w': 67, 'h': 50, 'color': 'red'},  # 小 4
     'start': {'x': 490, 'y': 382, 'w': 170, 'h': 81, 'color': 'white'},  # スタート 369
     'max_payout': {'x': 812, 'y': 382, 'w': 275, 'h': 81, 'color': 'white'},  # 最高出玉 26830
+    
+    # 下段テーブル（上の行）
+    'max_hit': {'x': 33, 'y': 546, 'w': 202, 'h': 61, 'color': 'white'},  # 最高一撃獲得 25760
+    'chance_hits': {'x': 264, 'y': 546, 'w': 201, 'h': 61, 'color': 'white'},  # チャンス中大当り 21
+    'chance_rate': {'x': 494, 'y': 546, 'w': 202, 'h': 61, 'color': 'white'},  # チャンス中確率 1/87
+    'low_hits': {'x': 725, 'y': 546, 'w': 201, 'h': 61, 'color': 'white'},  # 低確中大当り
+    'play_time': {'x': 955, 'y': 546, 'w': 202, 'h': 61, 'color': 'white'},  # 遊タイム
+    
+    # 下段テーブル（下の行）
+    'initial_start': {'x': 35, 'y': 662, 'w': 201, 'h': 61, 'color': 'white'},  # 初回特賞スタート 220
+    'prev_final': {'x': 262, 'y': 662, 'w': 201, 'h': 61, 'color': 'white'},  # 前日最終スタート 107
+    'rush_count': {'x': 492, 'y': 662, 'w': 202, 'h': 61, 'color': 'white'},  # 突時回数
+    'low_start': {'x': 723, 'y': 662, 'w': 201, 'h': 61, 'color': 'white'},  # 低確スタート
+    'lost_time': {'x': 953, 'y': 662, 'w': 202, 'h': 61, 'color': 'white'},  # 遊タイム
 }
 
 # デフォルトで相対座標を使用
@@ -155,35 +183,31 @@ if uploaded_file is not None:
                 black_w = w
                 black_h = h
                 break
-            
-            # 黒背景の左上から480pxと730px（480+250）の位置に線を引く
-            line1_y = black_y + 480
-            line2_y = black_y + 730
-            
-            # 画像に線を描画（デバッグ用）
-            img_with_lines = img_bgr.copy()
-            # 1本目の線（赤色）
-            cv2.line(img_with_lines, (black_x, line1_y), (black_x + black_w, line1_y), (0, 0, 255), 3)
-            # 2本目の線（青色）
-            cv2.line(img_with_lines, (black_x, line2_y), (black_x + black_w, line2_y), (255, 0, 0), 3)
-            
-            # 黒背景の枠も描画（緑色）
-            cv2.rectangle(img_with_lines, (black_x, black_y), (black_x + black_w, black_y + black_h), (0, 255, 0), 2)
-            
-            st.info(f"黒背景領域: 左上({black_x}, {black_y}), サイズ({black_w}x{black_h})")
-            st.info(f"赤線: Y={line1_y} (黒背景から480px), 青線: Y={line2_y} (黒背景から730px)")
-            
-            # OCR用には元画像を使用（線なし）
-            img_bgr_for_ocr = img_bgr
-            ocr_height, ocr_width = height, width
-            offset_x = 0
-            offset_y = 0
-        else:
-            img_bgr_for_ocr = img_bgr
-            img_with_lines = img_bgr.copy()
-            ocr_height, ocr_width = height, width
-            offset_x = 0
-            offset_y = 0
+    
+    # 黒背景が見つかった場合、線を引く
+    if black_region_found:
+        # 黒背景の左上から480pxと730px（480+250）の位置に線を引く
+        line1_y = black_y + 480
+        line2_y = black_y + 730
+        
+        # 画像に線を描画（デバッグ用）
+        img_with_lines = img_bgr.copy()
+        # 1本目の線（赤色）
+        cv2.line(img_with_lines, (black_x, line1_y), (black_x + black_w, line1_y), (0, 0, 255), 3)
+        # 2本目の線（青色）
+        cv2.line(img_with_lines, (black_x, line2_y), (black_x + black_w, line2_y), (255, 0, 0), 3)
+        
+        # 黒背景の枠も描画（緑色）
+        cv2.rectangle(img_with_lines, (black_x, black_y), (black_x + black_w, black_y + black_h), (0, 255, 0), 2)
+        
+        st.info(f"黒背景領域: 左上({black_x}, {black_y}), サイズ({black_w}x{black_h})")
+        st.info(f"赤線: Y={line1_y} (黒背景から480px), 青線: Y={line2_y} (黒背景から730px)")
+        
+        # OCR用には元画像を使用（線なし）
+        img_bgr_for_ocr = img_bgr
+        ocr_height, ocr_width = height, width
+        offset_x = 0
+        offset_y = 0
     else:
         img_bgr_for_ocr = img_bgr
         img_with_lines = img_bgr.copy()
@@ -231,16 +255,26 @@ if uploaded_file is not None:
                     w = region['w']
                     h = region['h']
                     
-                    # 画像の範囲チェック
-                    if x < 0 or y < 0 or x + w > width or y + h > height:
-                        st.warning(f"領域 {region_name} が画像範囲外です: ({x}, {y}, {w}, {h}) / 画像サイズ: ({width}, {height})")
-                        continue
+                    # 画像の範囲チェック（負のY座標も許可）
+                    if x < 0:
+                        x_start = 0
+                    else:
+                        x_start = x
                     
-                    # 範囲を画像内に収める
+                    if y < 0:
+                        # 黒枠外の領域の場合、y座標が負になる
+                        y_start = 0
+                    else:
+                        y_start = y
+                    
+                    # 終了座標の調整
                     x_end = min(x + w, width)
                     y_end = min(y + h, height)
-                    x_start = max(x, 0)
-                    y_start = max(y, 0)
+                    
+                    # 完全に画像範囲外の場合のみスキップ
+                    if x_end <= 0 or y_end <= 0 or x_start >= width or y_start >= height:
+                        st.warning(f"領域 {region_name} が完全に画像範囲外です: ({x}, {y}, {w}, {h})")
+                        continue
                     
                     # 領域を切り抜き
                     roi = img_bgr[y_start:y_end, x_start:x_end]
@@ -527,7 +561,7 @@ if uploaded_file is not None:
             
             # OCR領域の説明
             st.markdown("### 📋 OCR対象領域")
-            st.info(f"{len(OCR_REGIONS)}個の領域がFigmaの座標で正確に定義されています")
+            st.info(f"{len(OCR_REGIONS)}個の領域が定義されています（黒枠外の領域を含む）")
         
         # 統計情報を表示
         if 'detections' in st.session_state and st.session_state['detections']:
