@@ -582,7 +582,7 @@ if uploaded_file is not None:
                     # デバッグ情報を保存
                     debug_info = {
                         'attempts': [],
-                        'success_count': {'white': 0, 'red': 0, 'blue': 0},
+                        'success_count': {'white': 0, 'red': 0, 'blue': 0, 'inverted': 0, 'mono_blue': 0, 'mono_red': 0, 'mono_green': 0},
                         'psm_count': {6: 0, 8: 0, 11: 0, 13: 0}
                     }
                     
@@ -634,6 +634,31 @@ if uploaded_file is not None:
                     blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, kernel)
                     blue_mask = cv2.bitwise_not(blue_mask)
                     
+                    # 4. 色調反転とモノクロ化
+                    # 元画像の反転
+                    inverted = cv2.bitwise_not(target_img)
+                    inverted_gray = cv2.cvtColor(inverted, cv2.COLOR_BGR2GRAY)
+                    _, inverted_mask = cv2.threshold(inverted_gray, 127, 255, cv2.THRESH_BINARY)
+                    
+                    # モノクロ化（グレースケール）の複数パターン
+                    # 標準グレースケール
+                    mono_standard = gray.copy()
+                    
+                    # 青チャンネル強調（青文字に効果的）
+                    b, g, r = cv2.split(target_img)
+                    mono_blue_emphasis = b
+                    
+                    # 赤チャンネル強調（赤文字に効果的）
+                    mono_red_emphasis = r
+                    
+                    # 緑チャンネル（中間的）
+                    mono_green = g
+                    
+                    # 各チャンネルの二値化
+                    _, mono_blue_binary = cv2.threshold(mono_blue_emphasis, 127, 255, cv2.THRESH_BINARY_INV)
+                    _, mono_red_binary = cv2.threshold(mono_red_emphasis, 127, 255, cv2.THRESH_BINARY_INV)
+                    _, mono_green_binary = cv2.threshold(mono_green, 180, 255, cv2.THRESH_BINARY)
+                    
                     # 各マスクでOCR実行（白色は複数のマスクを試す）
                     masks = [
                         ('white', white_mask1),
@@ -642,7 +667,11 @@ if uploaded_file is not None:
                         ('white', white_mask_adaptive),
                         ('white', white_mask_enhanced),
                         ('red', red_mask),
-                        ('blue', blue_mask)
+                        ('blue', blue_mask),
+                        ('inverted', inverted_mask),
+                        ('mono_blue', mono_blue_binary),
+                        ('mono_red', mono_red_binary),
+                        ('mono_green', mono_green_binary)
                     ]
                     
                     for mask_idx, (color_name, mask) in enumerate(masks):
@@ -691,7 +720,8 @@ if uploaded_file is not None:
                                                 'psm': psm
                                             }
                                             detected_regions.append(region_info)
-                                            debug_info['success_count'][color_name] += 1
+                                            if color_name in debug_info['success_count']:
+                                                debug_info['success_count'][color_name] += 1
                                             debug_info['psm_count'][psm] += 1
                             except Exception as e:
                                 debug_info['attempts'].append(f"ERROR: {color_name}_mask{mask_idx}_psm{psm}: {str(e)[:50]}")
@@ -716,6 +746,8 @@ if uploaded_file is not None:
                 # デバッグ情報表示
                 with st.expander("🔍 OCRデバッグ情報"):
                     st.markdown("### 検出統計")
+                    
+                    # 基本色
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         st.metric("白色テキスト", debug_info['success_count']['white'])
@@ -723,6 +755,17 @@ if uploaded_file is not None:
                         st.metric("赤色テキスト", debug_info['success_count']['red'])
                     with col3:
                         st.metric("青色テキスト", debug_info['success_count']['blue'])
+                    
+                    # 追加手法
+                    col4, col5, col6, col7 = st.columns(4)
+                    with col4:
+                        st.metric("反転", debug_info['success_count']['inverted'])
+                    with col5:
+                        st.metric("青Ch", debug_info['success_count']['mono_blue'])
+                    with col6:
+                        st.metric("赤Ch", debug_info['success_count']['mono_red'])
+                    with col7:
+                        st.metric("緑Ch", debug_info['success_count']['mono_green'])
                     
                     st.markdown("### PSMモード別検出数")
                     psm_cols = st.columns(4)
