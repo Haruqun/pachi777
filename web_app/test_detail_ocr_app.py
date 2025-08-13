@@ -37,18 +37,18 @@ EXPECTED_DATA = {
 # mask.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
 # オフセット: X=0, Y=-191でピッタリ合う
 OCR_REGIONS_FROM_MASK = {
-    'big_hit_count': {'x': 80, 'y': 117, 'w': 239, 'h': 125, 'color': 'red'},  # 大当り回数 25
-    'first_hit_count': {'x': 462, 'y': 117, 'w': 239, 'h': 125, 'color': 'blue'},  # 初当り回数 4
-    'total_start': {'x': 859, 'y': 126, 'w': 203, 'h': 61, 'color': 'white'},  # 累計スタート 3721
-    'big_hit_rate': {'x': 80, 'y': 244, 'w': 239, 'h': 50, 'color': 'red'},  # (1/148)
-    'first_hit_rate': {'x': 462, 'y': 244, 'w': 239, 'h': 50, 'color': 'blue'},  # (1/469)
-    'normal': {'x': 758, 'y': 239, 'w': 110, 'h': 50, 'color': 'white'},  # 通常 1877
-    'chance': {'x': 868, 'y': 239, 'w': 110, 'h': 50, 'color': 'white'},  # チャンス中 1844
-    'ultra': {'x': 80, 'y': 397, 'w': 86, 'h': 50, 'color': 'red'},  # 超 21
-    'middle': {'x': 185, 'y': 397, 'w': 56, 'h': 50, 'color': 'red'},  # 中 0
-    'small': {'x': 250, 'y': 397, 'w': 86, 'h': 50, 'color': 'red'},  # 小 4
-    'start': {'x': 496, 'y': 382, 'w': 171, 'h': 81, 'color': 'white'},  # スタート 369
-    'max_payout': {'x': 822, 'y': 382, 'w': 277, 'h': 81, 'color': 'white'},  # 最高出玉 26830
+    'big_hit_count': {'x': 79, 'y': 113, 'w': 237, 'h': 125, 'color': 'red'},  # 大当り回数 25
+    'first_hit_count': {'x': 456, 'y': 113, 'w': 238, 'h': 125, 'color': 'blue'},  # 初当り回数 4
+    'total_start': {'x': 849, 'y': 126, 'w': 202, 'h': 61, 'color': 'white'},  # 累計スタート 3721
+    'big_hit_rate': {'x': 79, 'y': 241, 'w': 237, 'h': 50, 'color': 'red'},  # (1/148)
+    'first_hit_rate': {'x': 456, 'y': 241, 'w': 238, 'h': 50, 'color': 'blue'},  # (1/469)
+    'normal': {'x': 786, 'y': 239, 'w': 164, 'h': 61, 'color': 'white'},  # 通常 1877
+    'chance': {'x': 967, 'y': 239, 'w': 165, 'h': 61, 'color': 'white'},  # チャンス中 1844
+    'ultra': {'x': 89, 'y': 397, 'w': 72, 'h': 50, 'color': 'red'},  # 超 21
+    'middle': {'x': 177, 'y': 397, 'w': 67, 'h': 50, 'color': 'red'},  # 中 0
+    'small': {'x': 250, 'y': 397, 'w': 67, 'h': 50, 'color': 'red'},  # 小 4
+    'start': {'x': 490, 'y': 382, 'w': 170, 'h': 81, 'color': 'white'},  # スタート 369
+    'max_payout': {'x': 812, 'y': 382, 'w': 275, 'h': 81, 'color': 'white'},  # 最高出玉 26830
 }
 
 # デフォルトで相対座標を使用
