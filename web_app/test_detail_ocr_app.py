@@ -18,13 +18,16 @@ EXPECTED_DATA = {
     'big_hit_count': '25',
     'first_hit_count': '4',
     'total_start': '3721',
+    'big_hit_rate': '(1/148)',
+    'first_hit_rate': '(1/469)',
     'normal': '1877',
     'chance': '1844',
     'ultra': '21',
     'middle': '0',
     'small': '4',
     'start': '369',
-    'max_payout': '26830'
+    'max_payout': '26830',
+    'chance_rate': '1/87'
 }
 
 # mask.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
@@ -335,10 +338,15 @@ if uploaded_file is not None:
                     
                     for psm in psm_modes:
                         try:
-                            # 数値のみを対象（括弧や/は除外）
-                            custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789'
+                            # 領域によって異なる文字セットを使用
+                            if 'rate' in region_name:
+                                # 確率表示用：括弧、スラッシュ、数字を許可
+                                custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789()/'
+                            else:
+                                # 通常の数値用：数字のみ
+                                custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789'
                             
-                            # OCR実行して信頼度も取得（言語指定を削除して数字のみ）
+                            # OCR実行して信頼度も取得
                             data = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, 
                                                             config=custom_config)
                             
