@@ -285,44 +285,44 @@ if uploaded_file is not None:
                         st.warning(f"領域 {region_name} が小さすぎます: {roi.shape}")
                         continue
                     
+                    # まず画像を拡大（OCR精度向上のため）
+                    scale_factor = 2
+                    roi_large = cv2.resize(roi, (roi.shape[1] * scale_factor, roi.shape[0] * scale_factor), 
+                                          interpolation=cv2.INTER_CUBIC)
+                    
                     # 色に応じた前処理
                     if region['color'] == 'red':
-                        # 赤色テキストの処理 - HSV色空間で処理
-                        hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                        # 赤色の範囲（2つの範囲を結合）
-                        lower_red1 = np.array([0, 50, 50])
-                        upper_red1 = np.array([10, 255, 255])
-                        lower_red2 = np.array([170, 50, 50])
-                        upper_red2 = np.array([180, 255, 255])
-                        
-                        mask1 = cv2.inRange(hsv_roi, lower_red1, upper_red1)
-                        mask2 = cv2.inRange(hsv_roi, lower_red2, upper_red2)
-                        red_mask = cv2.bitwise_or(mask1, mask2)
-                        
-                        # マスクを反転（赤い部分が黒、背景が白）
-                        processed = cv2.bitwise_not(red_mask)
+                        # 赤色テキストの処理
+                        # 赤チャンネルを強調
+                        b, g, r = cv2.split(roi_large)
+                        # 赤が強く、青と緑が弱い部分を抽出
+                        red_emphasis = cv2.subtract(r, cv2.addWeighted(b, 0.5, g, 0.5, 0))
+                        # 適応的二値化
+                        processed = cv2.adaptiveThreshold(red_emphasis, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                        cv2.THRESH_BINARY, 11, 2)
                         
                     elif region['color'] == 'blue':
-                        # 青色テキストの処理 - HSV色空間で処理
-                        hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                        # 青色の範囲
-                        lower_blue = np.array([100, 50, 50])
-                        upper_blue = np.array([130, 255, 255])
-                        blue_mask = cv2.inRange(hsv_roi, lower_blue, upper_blue)
-                        
-                        # マスクを反転（青い部分が黒、背景が白）
-                        processed = cv2.bitwise_not(blue_mask)
+                        # 青色テキストの処理
+                        b, g, r = cv2.split(roi_large)
+                        # 青が強く、赤と緑が弱い部分を抽出
+                        blue_emphasis = cv2.subtract(b, cv2.addWeighted(r, 0.5, g, 0.5, 0))
+                        # 適応的二値化
+                        processed = cv2.adaptiveThreshold(blue_emphasis, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                        cv2.THRESH_BINARY, 11, 2)
                         
                     else:  # white
                         # 白色テキストの処理
-                        gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                        # より低い閾値で二値化（白いテキストを拾いやすく）
-                        _, processed = cv2.threshold(gray_roi, 180, 255, cv2.THRESH_BINARY)
+                        gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
+                        # 適応的二値化（白いテキストに最適化）
+                        processed = cv2.adaptiveThreshold(gray_roi, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                        cv2.THRESH_BINARY, 11, 2)
                     
-                    # ノイズ除去
-                    kernel = np.ones((2,2), np.uint8)
+                    # ノイズ除去（拡大画像用に調整）
+                    kernel = np.ones((3,3), np.uint8)
                     processed = cv2.morphologyEx(processed, cv2.MORPH_CLOSE, kernel)
-                    processed = cv2.morphologyEx(processed, cv2.MORPH_OPEN, kernel)
+                    
+                    # エッジを強調
+                    processed = cv2.bitwise_not(processed)  # 白黒反転（黒文字を白文字に）
                     
                     # OCR実行（複数の設定を試す）
                     detected_text = None
@@ -331,16 +331,16 @@ if uploaded_file is not None:
                     all_texts = []  # デバッグ用：全ての検出結果を保存
                     
                     # PSMモードのリスト（単一テキスト行、単一単語、など）
-                    psm_modes = [8, 7, 13, 6]  # 8:単一単語, 7:単一テキスト行, 13:生のライン, 6:均一ブロック
+                    psm_modes = [7, 8, 13, 11]  # 7:単一テキスト行, 8:単一単語, 13:生のライン, 11:疎テキスト
                     
                     for psm in psm_modes:
                         try:
                             # 数値のみを対象（括弧や/は除外）
                             custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789'
                             
-                            # OCR実行して信頼度も取得
+                            # OCR実行して信頼度も取得（言語指定を削除して数字のみ）
                             data = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, 
-                                                            config=custom_config, lang='jpn')
+                                                            config=custom_config)
                             
                             # 全てのテキストを収集
                             for i in range(len(data['text'])):
@@ -358,8 +358,8 @@ if uploaded_file is not None:
                         except Exception as e:
                             continue
                     
-                    # 信頼度が低い場合、全てのテキストを結合してみる
-                    if best_confidence < 30 and len(all_texts) > 0:
+                    # 信頼度が低い場合、あるいは何も検出されなかった場合、別の方法を試す
+                    if (best_confidence < 50 or not detected_text) and len(all_texts) > 0:
                         # 複数のPSMモードで同じテキストが検出されたか確認
                         text_counts = {}
                         for txt in all_texts:
