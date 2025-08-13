@@ -90,42 +90,9 @@ if uploaded_file is not None:
         img_bgr = cv2.resize(img_bgr, (new_width, new_height))
         height, width = new_height, new_width
     
-    # 黒背景領域を検出して、その左上から750px分だけを切り抜き
-    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    _, black_mask = cv2.threshold(gray, 40, 255, cv2.THRESH_BINARY_INV)
-    
-    # 輪郭を検出
-    contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    # 最大の輪郭を見つける（黒背景領域）
-    roi_defined = False
-    if contours:
-        largest_contour = max(contours, key=cv2.contourArea)
-        x, y, w, h = cv2.boundingRect(largest_contour)
-        
-        # 黒背景領域が十分大きい場合
-        if w * h > width * height * 0.2:
-            # 黒背景の左上から750px分だけを切り出し
-            crop_top = y
-            crop_bottom = min(y + 750, y + h)  # 750pxまたは黒背景の高さの小さい方
-            crop_left = x
-            crop_right = x + w
-            
-            # 切り抜き
-            img_bgr = img_bgr[crop_top:crop_bottom, crop_left:crop_right]
-            height, width = img_bgr.shape[:2]
-            
-            st.info(f"黒背景左上から750px分を切り出し: 幅{width}px × 高さ{height}px")
-            
-            # オフセットを保存
-            offset_x = crop_left
-            offset_y = crop_top
-            roi_defined = True
-    
-    if not roi_defined:
-        offset_x = 0
-        offset_y = 0
-        st.warning("黒背景領域を検出できませんでした。画像全体を処理します。")
+    # オフセットを初期化（切り抜きなし）
+    offset_x = 0
+    offset_y = 0
     
     # タブを作成
     tab1, tab2, tab3, tab4 = st.tabs(["📊 OCR結果", "🎨 色検出", "📍 座標マップ", "📄 JSON出力"])
