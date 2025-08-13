@@ -227,45 +227,70 @@ if uploaded_file is not None:
                     
                     # 色に応じた前処理
                     if region['color'] == 'red':
-                        # 赤色テキストの処理
-                        hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                        # 赤色の範囲
-                        mask1 = cv2.inRange(hsv_roi, np.array([0, 50, 50]), np.array([10, 255, 255]))
-                        mask2 = cv2.inRange(hsv_roi, np.array([170, 50, 50]), np.array([180, 255, 255]))
-                        red_mask = cv2.bitwise_or(mask1, mask2)
-                        # 白黒反転
-                        processed = cv2.bitwise_not(red_mask)
+                        # 赤色テキストの処理 - 赤チャンネルを抽出
+                        b, g, r = cv2.split(roi)
+                        # 赤チャンネルで二値化
+                        _, processed = cv2.threshold(r, 150, 255, cv2.THRESH_BINARY)
                         
                     elif region['color'] == 'blue':
-                        # 青色テキストの処理
-                        hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                        # 青色の範囲
-                        blue_mask = cv2.inRange(hsv_roi, np.array([100, 50, 50]), np.array([130, 255, 255]))
-                        # 白黒反転
-                        processed = cv2.bitwise_not(blue_mask)
+                        # 青色テキストの処理 - 青チャンネルを抽出
+                        b, g, r = cv2.split(roi)
+                        # 青チャンネルで二値化
+                        _, processed = cv2.threshold(b, 150, 255, cv2.THRESH_BINARY)
                         
                     else:  # white
                         # 白色テキストの処理
                         gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                        _, processed = cv2.threshold(gray_roi, 180, 255, cv2.THRESH_BINARY)
+                        # より低い閾値で二値化（白いテキストを拾いやすく）
+                        _, processed = cv2.threshold(gray_roi, 200, 255, cv2.THRESH_BINARY)
                     
-                    # OCR実行
-                    try:
-                        # 数値と記号のみを対象
-                        custom_config = '--psm 8 --oem 3 -c tessedit_char_whitelist=0123456789/()'
-                        text = pytesseract.image_to_string(processed, config=custom_config, lang='jpn').strip()
-                        
-                        # 結果を保存
-                        if text:
-                            detected_data[region_name] = text
-                            all_detections.append({
-                                'region': region_name,
-                                'text': text,
-                                'bbox': [x, y, x+w, y+h],
-                                'color': region['color']
-                            })
-                    except Exception as e:
-                        st.warning(f"領域 {region_name} のOCRエラー: {str(e)}")
+                    # ノイズ除去
+                    kernel = np.ones((2,2), np.uint8)
+                    processed = cv2.morphologyEx(processed, cv2.MORPH_CLOSE, kernel)
+                    processed = cv2.morphologyEx(processed, cv2.MORPH_OPEN, kernel)
+                    
+                    # OCR実行（複数の設定を試す）
+                    detected_text = None
+                    best_confidence = 0
+                    
+                    # PSMモードのリスト（単一テキスト行、単一単語、など）
+                    psm_modes = [8, 7, 13, 6]  # 8:単一単語, 7:単一テキスト行, 13:生のライン, 6:均一ブロック
+                    
+                    for psm in psm_modes:
+                        try:
+                            # 数値のみを対象（括弧や/は除外）
+                            custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789'
+                            
+                            # OCR実行して信頼度も取得
+                            data = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, 
+                                                            config=custom_config, lang='jpn')
+                            
+                            # 最も信頼度の高いテキストを選択
+                            for i in range(len(data['text'])):
+                                text = str(data['text'][i]).strip()
+                                conf = int(data['conf'][i]) if data['conf'][i] != -1 else 0
+                                
+                                if text and conf > best_confidence:
+                                    detected_text = text
+                                    best_confidence = conf
+                                    
+                        except Exception:
+                            continue
+                    
+                    # デバッグ情報を表示
+                    if show_masks:
+                        st.write(f"{region_name}: '{detected_text}' (信頼度: {best_confidence}%)")
+                    
+                    # 結果を保存
+                    if detected_text:
+                        detected_data[region_name] = detected_text
+                        all_detections.append({
+                            'region': region_name,
+                            'text': detected_text,
+                            'bbox': [x, y, x+w, y+h],
+                            'color': region['color'],
+                            'confidence': best_confidence
+                        })
                         continue
             
             # 結果を表示
