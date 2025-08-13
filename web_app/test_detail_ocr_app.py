@@ -90,32 +90,58 @@ if uploaded_file is not None:
         img_bgr = cv2.resize(img_bgr, (new_width, new_height))
         height, width = new_height, new_width
     
-    # 必要な領域のみを切り抜き（site777のデータ表示部分）
-    # 黒背景のデータ部分: Y座標 約600px～1400px
-    if height > 1400:
-        # 上部の不要な部分（ヘッダーなど）をカット
-        crop_top = 600
-        # 下部のグラフ部分をカット
-        crop_bottom = min(1400, height)
-        # 左右は全幅を使用
-        crop_left = 0
-        crop_right = width
+    # 黒背景領域を検出
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    _, black_mask = cv2.threshold(gray, 40, 255, cv2.THRESH_BINARY_INV)
+    
+    # 輪郭を検出
+    contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # 最大の輪郭を見つける（黒背景領域）
+    black_region_found = False
+    if contours:
+        largest_contour = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(largest_contour)
         
-        # 切り抜き
-        img_bgr_cropped = img_bgr[crop_top:crop_bottom, crop_left:crop_right]
-        
-        st.info(f"データ領域を切り抜き: Y座標 {crop_top}～{crop_bottom}px")
-        
-        # OCR用の画像を切り抜いたものに変更
-        img_bgr_for_ocr = img_bgr_cropped
-        ocr_height, ocr_width = img_bgr_cropped.shape[:2]
-        
-        # オフセットを保存（元画像での座標に変換するため）
-        offset_x = crop_left
-        offset_y = crop_top
+        # 黒背景領域が十分大きい場合
+        if w * h > width * height * 0.2:
+            black_region_found = True
+            black_x = x
+            black_y = y
+            black_w = w
+            black_h = h
+            
+            # 黒背景の左上から480pxと730px（480+250）の位置に線を引く
+            line1_y = black_y + 480
+            line2_y = black_y + 730
+            
+            # 画像に線を描画（デバッグ用）
+            img_with_lines = img_bgr.copy()
+            # 1本目の線（赤色）
+            cv2.line(img_with_lines, (black_x, line1_y), (black_x + black_w, line1_y), (0, 0, 255), 3)
+            # 2本目の線（青色）
+            cv2.line(img_with_lines, (black_x, line2_y), (black_x + black_w, line2_y), (255, 0, 0), 3)
+            
+            # 黒背景の枠も描画（緑色）
+            cv2.rectangle(img_with_lines, (black_x, black_y), (black_x + black_w, black_y + black_h), (0, 255, 0), 2)
+            
+            st.info(f"黒背景領域: 左上({black_x}, {black_y}), サイズ({black_w}x{black_h})")
+            st.info(f"赤線: Y={line1_y} (黒背景から480px), 青線: Y={line2_y} (黒背景から730px)")
+            
+            # OCR用には元画像を使用（線なし）
+            img_bgr_for_ocr = img_bgr
+            ocr_height, ocr_width = height, width
+            offset_x = 0
+            offset_y = 0
+        else:
+            img_bgr_for_ocr = img_bgr
+            img_with_lines = img_bgr.copy()
+            ocr_height, ocr_width = height, width
+            offset_x = 0
+            offset_y = 0
     else:
-        # 画像が小さい場合は全体を使用
         img_bgr_for_ocr = img_bgr
+        img_with_lines = img_bgr.copy()
         ocr_height, ocr_width = height, width
         offset_x = 0
         offset_y = 0
@@ -374,8 +400,8 @@ if uploaded_file is not None:
     with tab3:
         st.subheader("📍 座標マップ")
         
-        # 検出結果のオーバーレイ画像を作成（切り抜いた画像を使用）
-        vis_img = img_bgr_for_ocr.copy()
+        # 検出結果のオーバーレイ画像を作成（線付き画像を使用）
+        vis_img = img_with_lines.copy()
         
         # 検出結果がある場合は描画
         if 'detections' in st.session_state and st.session_state['detections']:
@@ -425,6 +451,22 @@ if uploaded_file is not None:
                         cv2.putText(vis_img, str(y + offset_y), (5, y+5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
         
         st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB), use_column_width=True)
+        
+        # 線の説明
+        if 'black_region_found' in locals() and black_region_found:
+            st.markdown("### 📏 検出された領域")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.success(f"🟢 緑枠: 黒背景領域")
+                st.write(f"左上: ({black_x}, {black_y})")
+                st.write(f"サイズ: {black_w} × {black_h}px")
+            with col2:
+                st.error(f"🔴 赤線: Y={line1_y}")
+                st.write(f"黒背景上端から480px")
+            with col3:
+                st.info(f"🔵 青線: Y={line2_y}")
+                st.write(f"黒背景上端から730px")
+                st.write(f"(480px + 250px)")
         
         # 統計情報を表示
         if 'detections' in st.session_state and st.session_state['detections']:
