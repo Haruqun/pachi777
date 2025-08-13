@@ -332,8 +332,37 @@ if uploaded_file is not None:
     with col1:
         st.subheader("📷 検出領域")
         
+        # グリッド表示オプション
+        show_grid = st.checkbox("10pxグリッドを表示", value=True)
+        
         # 画像のコピーを作成
         vis_img = img_bgr.copy()
+        
+        # 10pxごとのグリッドを描画
+        if show_grid:
+            # 垂直線（10pxごと）
+            for x in range(0, width, 10):
+                # 50pxごとに太線
+                if x % 50 == 0:
+                    cv2.line(vis_img, (x, 0), (x, height), (100, 100, 100), 1)
+                    # 100pxごとに番号表示
+                    if x % 100 == 0 and x > 0:
+                        cv2.putText(vis_img, str(x), (x-15, 20), 
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
+                else:
+                    cv2.line(vis_img, (x, 0), (x, height), (50, 50, 50), 1)
+            
+            # 水平線（10pxごと）
+            for y in range(0, height, 10):
+                # 50pxごとに太線
+                if y % 50 == 0:
+                    cv2.line(vis_img, (0, y), (width, y), (100, 100, 100), 1)
+                    # 100pxごとに番号表示
+                    if y % 100 == 0 and y > 0:
+                        cv2.putText(vis_img, str(y), (5, y+5), 
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
+                else:
+                    cv2.line(vis_img, (0, y), (width, y), (50, 50, 50), 1)
         
         # 黒背景領域を赤色の太い枠で表示
         if black_region:
@@ -369,6 +398,12 @@ if uploaded_file is not None:
             cv2.rectangle(vis_img, (x1, y1), (x2, y2), color, 2)
             cv2.putText(vis_img, region['name'], (x1, y1-5), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+            
+            # 座標値を枠の内側に表示（デバッグ用）
+            if show_grid:
+                coord_text = f"({x1},{y1})"
+                cv2.putText(vis_img, coord_text, (x1+2, y1+15), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, color, 1)
         
         # 表示
         st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB), 
