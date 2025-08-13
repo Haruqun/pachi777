@@ -365,19 +365,20 @@ if uploaded_file is not None:
         
         # mask.pngを使用する場合
         if 'use_mask' in locals() and use_mask:
-            # mask.pngを読み込み
+            # mask.pngを読み込み（リサイズ禁止）
             import os
             mask_path = os.path.join(os.path.dirname(__file__), 'mask', 'mask.png')
             if os.path.exists(mask_path):
                 mask_img = cv2.imread(mask_path)
                 
-                # マスクを画像サイズにリサイズ
-                mask_resized = cv2.resize(mask_img, (width, height))
+                # マスクはリサイズせずにそのまま使用
+                mask_h, mask_w = mask_img.shape[:2]
+                st.info(f"マスクサイズ: {mask_w} x {mask_h} (リサイズなし)")
                 
                 # 赤色領域を検出
                 lower_red = np.array([0, 0, 254])
                 upper_red = np.array([1, 1, 255])
-                red_mask = cv2.inRange(mask_resized, lower_red, upper_red)
+                red_mask = cv2.inRange(mask_img, lower_red, upper_red)
                 
                 # 黒背景領域がある場合、そこからのオフセットを適用
                 if 'black_region_found' in locals() and black_region_found:
@@ -387,23 +388,28 @@ if uploaded_file is not None:
                     base_x = mask_offset_x
                     base_y = mask_offset_y
                 
-                # オフセットを適用してマスクを移動
-                M = np.float32([[1, 0, base_x], [0, 1, base_y]])
-                shifted_mask = cv2.warpAffine(red_mask, M, (width, height))
+                # マスクをそのまま使用（オフセットは矩形描画時に適用）
+                shifted_mask = red_mask
                 
                 # マスクの輪郭を検出
                 contours, _ = cv2.findContours(shifted_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 
-                # 各輪郭に対して半透明の赤い矩形を描画
+                # 各輪郭に対して半透明の赤い矩形を描画（オフセット適用）
                 for contour in contours:
                     x, y, w, h = cv2.boundingRect(contour)
                     if w > 10 and h > 10:  # 小さすぎる領域は無視
-                        # 半透明の赤い矩形
-                        overlay = vis_img.copy()
-                        cv2.rectangle(overlay, (x, y), (x+w, y+h), (0, 0, 255), -1)
-                        cv2.addWeighted(overlay, 0.3, vis_img, 0.7, 0, vis_img)
-                        # 枠線
-                        cv2.rectangle(vis_img, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                        # オフセットを適用
+                        x_shifted = x + base_x
+                        y_shifted = y + base_y
+                        
+                        # 画像範囲内かチェック
+                        if 0 <= x_shifted < width and 0 <= y_shifted < height:
+                            # 半透明の赤い矩形
+                            overlay = vis_img.copy()
+                            cv2.rectangle(overlay, (x_shifted, y_shifted), (x_shifted+w, y_shifted+h), (0, 0, 255), -1)
+                            cv2.addWeighted(overlay, 0.3, vis_img, 0.7, 0, vis_img)
+                            # 枠線
+                            cv2.rectangle(vis_img, (x_shifted, y_shifted), (x_shifted+w, y_shifted+h), (0, 0, 255), 2)
                 
                 st.info(f"マスクオフセット: X={mask_offset_x}, Y={mask_offset_y}")
                 if 'black_region_found' in locals() and black_region_found:
