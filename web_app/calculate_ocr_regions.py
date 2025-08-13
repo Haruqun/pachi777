@@ -18,7 +18,7 @@ contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIM
 
 # オフセット（mask.pngの原点を黒背景左上に合わせるための値）
 offset_x = 0
-offset_y = -190
+offset_y = -191
 
 # マスクの座標は、黒背景に対してoffset_x, offset_yだけずらした位置にある
 # つまり、mask.png内の座標(x, y)は、黒背景左上を基準にすると
