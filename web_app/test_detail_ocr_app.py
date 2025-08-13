@@ -582,7 +582,8 @@ if uploaded_file is not None:
                     # デバッグ情報を保存
                     debug_info = {
                         'attempts': [],
-                        'success_count': {'white': 0, 'red': 0, 'blue': 0, 'inverted': 0, 'mono_blue': 0, 'mono_red': 0, 'mono_green': 0},
+                        'success_count': {'white': 0, 'red': 0, 'blue': 0, 'inverted': 0, 'mono_blue': 0, 'mono_red': 0, 'mono_green': 0,
+                                        'blue_dominant': 0, 'blue_hsv': 0, 'blue_channel': 0, 'blue_lab': 0},
                         'psm_count': {6: 0, 8: 0, 11: 0, 13: 0}
                     }
                     
@@ -623,15 +624,35 @@ if uploaded_file is not None:
                     red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel)
                     red_mask = cv2.bitwise_not(red_mask)
                     
-                    # 3. 青色テキスト検出（シアン〜青の広い範囲）
-                    # シアン系
-                    cyan_mask = cv2.inRange(hsv, np.array([80, 30, 50]), np.array([100, 255, 255]))
-                    # 青系
-                    blue_mask = cv2.inRange(hsv, np.array([100, 30, 50]), np.array([120, 255, 255]))
-                    # 組み合わせ
-                    blue_mask = cv2.bitwise_or(cyan_mask, blue_mask)
-                    # モルフォロジー処理
+                    # 3. 青色テキスト検出（複数の手法）
+                    # BGR色空間で青を直接検出
+                    b_channel, g_channel, r_channel = cv2.split(target_img)
+                    
+                    # 方法1: 青チャンネルが優勢な領域を検出
+                    blue_dominant = cv2.subtract(b_channel, cv2.max(r_channel, g_channel))
+                    _, blue_mask1 = cv2.threshold(blue_dominant, 30, 255, cv2.THRESH_BINARY)
+                    
+                    # 方法2: HSV色空間で青色範囲（広め）
+                    blue_mask2 = cv2.inRange(hsv, np.array([90, 50, 50]), np.array([130, 255, 255]))
+                    
+                    # 方法3: 青チャンネルのみの強調
+                    _, blue_mask3 = cv2.threshold(b_channel, 150, 255, cv2.THRESH_BINARY)
+                    blue_mask3 = cv2.bitwise_and(blue_mask3, cv2.bitwise_not(r_channel))  # 赤を除外
+                    
+                    # 方法4: LAB色空間でB成分（青〜黄）
+                    lab = cv2.cvtColor(target_img, cv2.COLOR_BGR2LAB)
+                    l, a, b_lab = cv2.split(lab)
+                    _, blue_mask4 = cv2.threshold(b_lab, 0, 255, cv2.THRESH_BINARY_INV)  # B成分が負（青）
+                    
+                    # すべての青マスクを組み合わせ
+                    blue_mask = cv2.bitwise_or(blue_mask1, blue_mask2)
+                    blue_mask = cv2.bitwise_or(blue_mask, blue_mask3)
+                    blue_mask = cv2.bitwise_or(blue_mask, blue_mask4)
+                    
+                    # ノイズ除去
+                    kernel = np.ones((2,2), np.uint8)
                     blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, kernel)
+                    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_OPEN, kernel)
                     blue_mask = cv2.bitwise_not(blue_mask)
                     
                     # 4. 色調反転とモノクロ化
@@ -659,6 +680,15 @@ if uploaded_file is not None:
                     _, mono_red_binary = cv2.threshold(mono_red_emphasis, 127, 255, cv2.THRESH_BINARY_INV)
                     _, mono_green_binary = cv2.threshold(mono_green, 180, 255, cv2.THRESH_BINARY)
                     
+                    # 青色専用の追加マスク
+                    # 青色の個別マスクも試す
+                    blue_masks_individual = [
+                        ('blue_dominant', blue_mask1),
+                        ('blue_hsv', blue_mask2),
+                        ('blue_channel', blue_mask3),
+                        ('blue_lab', blue_mask4)
+                    ]
+                    
                     # 各マスクでOCR実行（白色は複数のマスクを試す）
                     masks = [
                         ('white', white_mask1),
@@ -672,7 +702,7 @@ if uploaded_file is not None:
                         ('mono_blue', mono_blue_binary),
                         ('mono_red', mono_red_binary),
                         ('mono_green', mono_green_binary)
-                    ]
+                    ] + blue_masks_individual
                     
                     for mask_idx, (color_name, mask) in enumerate(masks):
                         # 複数のPSMモードで試行
