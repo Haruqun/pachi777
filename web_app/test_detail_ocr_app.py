@@ -34,6 +34,37 @@ EXPECTED_DATA = {
     'prev_final': '107'
 }
 
+# Figmaで確認したOCR領域の定義（黒背景領域からの相対座標）
+# 各領域は黒背景の左上を基準とした座標で定義
+OCR_REGIONS = {
+    # 上段の大きな数値
+    'big_hit_count': {'x': 55, 'y': 180, 'w': 230, 'h': 112, 'color': 'red'},  # 大当り回数 25
+    'big_hit_rate': {'x': 55, 'y': 295, 'w': 230, 'h': 40, 'color': 'red'},  # (1/148)
+    'first_hit_count': {'x': 290, 'y': 180, 'w': 230, 'h': 112, 'color': 'blue'},  # 初当り回数 4
+    'first_hit_rate': {'x': 290, 'y': 295, 'w': 230, 'h': 40, 'color': 'blue'},  # (1/469)
+    
+    # 累計スタート
+    'total_start': {'x': 530, 'y': 185, 'w': 170, 'h': 60, 'color': 'white'},  # 3721
+    'normal': {'x': 475, 'y': 255, 'w': 100, 'h': 40, 'color': 'white'},  # 通常 1877
+    'chance': {'x': 585, 'y': 255, 'w': 100, 'h': 40, 'color': 'white'},  # チャンス中 1844
+    
+    # 中段の数値
+    'ultra': {'x': 55, 'y': 340, 'w': 60, 'h': 50, 'color': 'red'},  # 超 21
+    'middle': {'x': 125, 'y': 340, 'w': 60, 'h': 50, 'color': 'red'},  # 中 0
+    'small': {'x': 195, 'y': 340, 'w': 60, 'h': 50, 'color': 'red'},  # 小 4
+    
+    'start': {'x': 290, 'y': 340, 'w': 140, 'h': 55, 'color': 'white'},  # スタート 369
+    'max_payout': {'x': 495, 'y': 340, 'w': 200, 'h': 55, 'color': 'white'},  # 最高出玉 26830
+    
+    # 下段のテーブルデータ
+    'max_hit': {'x': 20, 'y': 430, 'w': 150, 'h': 40, 'color': 'white'},  # 最高一撃獲得 25760
+    'chance_hits': {'x': 190, 'y': 430, 'w': 80, 'h': 40, 'color': 'white'},  # チャンス中大当り 21
+    'chance_rate': {'x': 320, 'y': 430, 'w': 100, 'h': 40, 'color': 'white'},  # チャンス中確率 1/87
+    
+    'initial_start': {'x': 40, 'y': 500, 'w': 100, 'h': 40, 'color': 'white'},  # 初回特賞スタート 220
+    'prev_final': {'x': 195, 'y': 500, 'w': 100, 'h': 40, 'color': 'white'},  # 前日最終スタート 107
+}
+
 # サイドバー
 with st.sidebar:
     st.header("📸 画像アップロード")
@@ -452,6 +483,30 @@ if uploaded_file is not None:
         
         st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB), use_column_width=True)
         
+        # OCR領域を描画（Figmaで定義した領域）
+        if 'black_region_found' in locals() and black_region_found:
+            # 定義されたOCR領域を描画
+            for name, region in OCR_REGIONS.items():
+                x = black_x + region['x']
+                y = black_y + region['y']
+                w = region['w']
+                h = region['h']
+                
+                # 色設定
+                if region['color'] == 'red':
+                    color = (0, 0, 255)
+                elif region['color'] == 'blue':
+                    color = (255, 0, 0)
+                else:
+                    color = (200, 200, 200)
+                
+                # 矩形を描画
+                cv2.rectangle(vis_img, (x, y), (x + w, y + h), color, 2)
+                
+                # ラベルを表示
+                cv2.putText(vis_img, name[:10], (x, y - 5), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, color, 1)
+        
         # 線の説明
         if 'black_region_found' in locals() and black_region_found:
             st.markdown("### 📏 検出された領域")
@@ -467,6 +522,10 @@ if uploaded_file is not None:
                 st.info(f"🔵 青線: Y={line2_y}")
                 st.write(f"黒背景上端から730px")
                 st.write(f"(480px + 250px)")
+            
+            # OCR領域の説明
+            st.markdown("### 📋 OCR対象領域")
+            st.info(f"{len(OCR_REGIONS)}個の領域が定義されています（Figmaで確認済み）")
         
         # 統計情報を表示
         if 'detections' in st.session_state and st.session_state['detections']:
