@@ -114,6 +114,13 @@ with st.sidebar:
     # デバッグオプション
     show_masks = st.checkbox("マスク画像を表示", value=False)
     show_grid = st.checkbox("グリッドを表示", value=False)
+    
+    # マスクオーバーレイ設定
+    st.subheader("マスクオーバーレイ")
+    use_mask = st.checkbox("mask.pngを使用", value=False)
+    if use_mask:
+        mask_offset_x = st.slider("X軸オフセット", -500, 500, 0)
+        mask_offset_y = st.slider("Y軸オフセット", -500, 500, 0)
 
 # Main area
 if uploaded_file is not None:
@@ -356,27 +363,75 @@ if uploaded_file is not None:
         # 検出結果のオーバーレイ画像を作成（線付き画像を使用）
         vis_img = img_with_lines.copy()
         
-        # OCR領域を描画（Figmaで定義した絶対座標）  
-        for name, region in OCR_REGIONS.items():
-            x = region['x']
-            y = region['y']
-            w = region['w']
-            h = region['h']
-            
-            # 色設定
-            if region['color'] == 'red':
-                color = (0, 0, 255)
-            elif region['color'] == 'blue':
-                color = (255, 0, 0)
+        # mask.pngを使用する場合
+        if 'use_mask' in locals() and use_mask:
+            # mask.pngを読み込み
+            import os
+            mask_path = os.path.join(os.path.dirname(__file__), 'mask', 'mask.png')
+            if os.path.exists(mask_path):
+                mask_img = cv2.imread(mask_path)
+                
+                # マスクを画像サイズにリサイズ
+                mask_resized = cv2.resize(mask_img, (width, height))
+                
+                # 赤色領域を検出
+                lower_red = np.array([0, 0, 254])
+                upper_red = np.array([1, 1, 255])
+                red_mask = cv2.inRange(mask_resized, lower_red, upper_red)
+                
+                # 黒背景領域がある場合、そこからのオフセットを適用
+                if 'black_region_found' in locals() and black_region_found:
+                    base_x = black_x + mask_offset_x
+                    base_y = black_y + mask_offset_y
+                else:
+                    base_x = mask_offset_x
+                    base_y = mask_offset_y
+                
+                # オフセットを適用してマスクを移動
+                M = np.float32([[1, 0, base_x], [0, 1, base_y]])
+                shifted_mask = cv2.warpAffine(red_mask, M, (width, height))
+                
+                # マスクの輪郭を検出
+                contours, _ = cv2.findContours(shifted_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                
+                # 各輪郭に対して半透明の赤い矩形を描画
+                for contour in contours:
+                    x, y, w, h = cv2.boundingRect(contour)
+                    if w > 10 and h > 10:  # 小さすぎる領域は無視
+                        # 半透明の赤い矩形
+                        overlay = vis_img.copy()
+                        cv2.rectangle(overlay, (x, y), (x+w, y+h), (0, 0, 255), -1)
+                        cv2.addWeighted(overlay, 0.3, vis_img, 0.7, 0, vis_img)
+                        # 枠線
+                        cv2.rectangle(vis_img, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                
+                st.info(f"マスクオフセット: X={mask_offset_x}, Y={mask_offset_y}")
+                if 'black_region_found' in locals() and black_region_found:
+                    st.info(f"黒背景左上: ({black_x}, {black_y}) → 実際の基準点: ({base_x}, {base_y})")
             else:
-                color = (200, 200, 200)
-            
-            # 矩形を描画
-            cv2.rectangle(vis_img, (x, y), (x + w, y + h), color, 2)
-            
-            # ラベルを表示（小さめのフォント）
-            cv2.putText(vis_img, name[:8], (x, y - 5), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.3, color, 1)
+                st.warning("mask/mask.pngが見つかりません")
+        else:
+            # OCR領域を描画（Figmaで定義した絶対座標）  
+            for name, region in OCR_REGIONS.items():
+                x = region['x']
+                y = region['y']
+                w = region['w']
+                h = region['h']
+                
+                # 色設定
+                if region['color'] == 'red':
+                    color = (0, 0, 255)
+                elif region['color'] == 'blue':
+                    color = (255, 0, 0)
+                else:
+                    color = (200, 200, 200)
+                
+                # 矩形を描画
+                cv2.rectangle(vis_img, (x, y), (x + w, y + h), color, 2)
+                
+                # ラベルを表示（小さめのフォント）
+                cv2.putText(vis_img, name[:8], (x, y - 5), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, color, 1)
         
         # 検出結果がある場合は描画
         if 'detections' in st.session_state and st.session_state['detections']:
