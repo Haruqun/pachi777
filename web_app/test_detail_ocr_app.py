@@ -151,11 +151,58 @@ if uploaded_file is not None:
     else:
         # 実際に検出成功した座標のみを使用（確実に取得できる領域）
         regions = {
-            # 上部データ（検出成功）
+            # 上部メイン数値（すべて必要）
+            'big_hit': {
+                'name': '大当り回数',
+                'bbox': (75, 390, 205, 490),  # 赤色の大きな25
+                'color': 'red'
+            },
+            'big_hit_rate': {
+                'name': '大当り確率',
+                'bbox': (78, 490, 202, 520),  # (1/148)
+                'color': 'red'
+            },
+            'first_hit': {
+                'name': '初当り回数',
+                'bbox': (345, 390, 415, 490),  # 青色の大きな4
+                'color': 'blue'
+            },
+            'first_hit_rate': {
+                'name': '初当り確率',
+                'bbox': (312, 490, 448, 520),  # (1/469)
+                'color': 'blue'
+            },
             'total_start': {
                 'name': '累計スタート',
                 'bbox': (886, 638, 1040, 691),  # 実際の検出座標
                 'color': 'white'
+            },
+            'normal_count': {
+                'name': '通常',
+                'bbox': (750, 690, 850, 730),  # 1877
+                'color': 'white'
+            },
+            'chance_count': {
+                'name': 'チャンス中',
+                'bbox': (900, 690, 1000, 730),  # 1844
+                'color': 'white'
+            },
+            
+            # 超中小（赤色）
+            'ultra': {
+                'name': '超',
+                'bbox': (73, 540, 117, 590),  # 21
+                'color': 'red'
+            },
+            'middle': {
+                'name': '中',
+                'bbox': (125, 540, 155, 590),  # 0
+                'color': 'red'
+            },
+            'small': {
+                'name': '小',
+                'bbox': (165, 540, 195, 590),  # 4
+                'color': 'red'
             },
             
             # 中段データ（検出成功）
@@ -173,49 +220,49 @@ if uploaded_file is not None:
             },
             'chance_hits': {
                 'name': 'チャンス中大当り',
-                'bbox': (210, 1066, 260, 1102),  # 等間隔配置
+                'bbox': (180, 1066, 230, 1102),  # 修正
                 'color': 'white'
             },
             'chance_rate': {
                 'name': 'チャンス中確率',
-                'bbox': (555, 1066, 663, 1104),  # 実際の検出座標
+                'bbox': (327, 1066, 420, 1104),  # 修正
                 'color': 'white'
             },
             'low_chance_hits': {
                 'name': '低確中大当り',
-                'bbox': (457, 1066, 507, 1102),  # 等間隔配置
+                'bbox': (457, 1066, 507, 1102),  # 修正
                 'color': 'white'
             },
             'low_chance_rate': {
                 'name': '低確中確率',
-                'bbox': (602, 1066, 692, 1102),  # 等間隔配置
+                'bbox': (602, 1066, 692, 1102),  # 修正
                 'color': 'white'
             },
             
             # 2段目データ
             'initial_start': {
                 'name': '初回特賞スタート',
-                'bbox': (96, 1184, 182, 1220),  # 実際の検出座標
+                'bbox': (55, 1184, 120, 1220),  # 修正
                 'color': 'white'
             },
             'prev_final': {
                 'name': '前日最終スタート',
-                'bbox': (210, 1184, 295, 1220),  # 等間隔配置
+                'bbox': (180, 1184, 260, 1220),  # 修正
                 'color': 'white'
             },
             'break_count': {
                 'name': '突時回数',
-                'bbox': (338, 1184, 388, 1220),  # 等間隔配置
+                'bbox': (338, 1184, 388, 1220),  # 修正
                 'color': 'white'
             },
             'low_start': {
                 'name': '低確スタート',
-                'bbox': (457, 1184, 525, 1220),  # 等間隔配置
+                'bbox': (457, 1184, 525, 1220),  # 修正
                 'color': 'white'
             },
             'play_time': {
                 'name': '遊タイム',
-                'bbox': (602, 1184, 670, 1220),  # 等間隔配置
+                'bbox': (602, 1184, 670, 1220),  # 修正
                 'color': 'white'
             },
             
