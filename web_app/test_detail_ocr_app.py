@@ -446,24 +446,71 @@ if uploaded_file is not None:
                         
                         try:
                             if region['color'] == 'red':
-                                # 赤色抽出
+                                # 赤色抽出（改善版）
                                 hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                                mask1 = cv2.inRange(hsv, np.array([0, 50, 50]), np.array([10, 255, 255]))
-                                mask2 = cv2.inRange(hsv, np.array([170, 50, 50]), np.array([180, 255, 255]))
+                                # ピンク〜赤の範囲を拡大
+                                mask1 = cv2.inRange(hsv, np.array([0, 20, 20]), np.array([20, 255, 255]))
+                                mask2 = cv2.inRange(hsv, np.array([160, 20, 20]), np.array([180, 255, 255]))
                                 mask = cv2.bitwise_or(mask1, mask2)
-                                text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                # モルフォロジー処理でノイズ除去
+                                kernel = np.ones((2,2), np.uint8)
+                                mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+                                mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+                                # 白黒反転（テキストを黒に）
+                                mask = cv2.bitwise_not(mask)
+                                # 複数のPSMモードを試す
+                                text = ''
+                                for psm in [8, 7, 13, 6]:
+                                    try:
+                                        temp_text = pytesseract.image_to_string(mask, config=f'--psm {psm} -c tessedit_char_whitelist=0123456789/')
+                                        temp_text = temp_text.strip()
+                                        if temp_text and (not text or len(temp_text) > len(text)):
+                                            text = temp_text
+                                    except:
+                                        continue
                                 
                             elif region['color'] == 'blue':
-                                # 青色抽出
+                                # 青色抽出（改善版）
                                 hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                                mask = cv2.inRange(hsv, np.array([100, 50, 50]), np.array([130, 255, 255]))
-                                text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                                # シアン〜青の範囲を拡大
+                                mask = cv2.inRange(hsv, np.array([85, 20, 20]), np.array([125, 255, 255]))
+                                # モルフォロジー処理
+                                kernel = np.ones((2,2), np.uint8)
+                                mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+                                mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+                                # 白黒反転
+                                mask = cv2.bitwise_not(mask)
+                                # 複数のPSMモードを試す
+                                text = ''
+                                for psm in [8, 7, 13, 6]:
+                                    try:
+                                        temp_text = pytesseract.image_to_string(mask, config=f'--psm {psm} -c tessedit_char_whitelist=0123456789/')
+                                        temp_text = temp_text.strip()
+                                        if temp_text and (not text or len(temp_text) > len(text)):
+                                            text = temp_text
+                                    except:
+                                        continue
                                 
                             else:  # white
-                                # 白色抽出（グレースケール + 二値化）
+                                # 白色抽出（改善版）
                                 gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                                _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
-                                text = pytesseract.image_to_string(binary, config='--psm 7 -c tessedit_char_whitelist=0123456789')
+                                # 適応的闾値処理
+                                binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                              cv2.THRESH_BINARY, 11, 2)
+                                # 通常の闾値処理も試す
+                                _, binary2 = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
+                                
+                                # 複数のバイナリ画像でOCRを試す
+                                text = ''
+                                for img in [binary, binary2]:
+                                    for psm in [7, 8, 13, 6]:
+                                        try:
+                                            temp_text = pytesseract.image_to_string(img, config=f'--psm {psm} -c tessedit_char_whitelist=0123456789/')
+                                            temp_text = temp_text.strip()
+                                            if temp_text and (not text or len(temp_text) > len(text)):
+                                                text = temp_text
+                                        except:
+                                            continue
                             
                             results[region['name']] = text.strip()
                             
