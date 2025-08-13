@@ -305,8 +305,7 @@ if uploaded_file is not None:
                         # 固定閾値で二値化（赤い文字は明るいので高い閾値）
                         _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
                         
-                        # 白黒反転
-                        processed = cv2.bitwise_not(processed)
+                        # 処理済み（白背景に黒文字）
                     
                     # 大当り回数の特別処理
                     elif region_name == 'big_hit_count':
@@ -320,44 +319,34 @@ if uploaded_file is not None:
                         # 固定閾値で二値化
                         _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
                         
-                        # 白黒反転
-                        processed = cv2.bitwise_not(processed)
+                        # 処理済み（白背景に黒文字）
                         
                     # 色に応じた前処理
                     elif region['color'] == 'red':
                         # 赤色テキストの処理
-                        # 赤チャンネルを強調
                         b, g, r = cv2.split(roi_large)
-                        # 赤が強く、青と緑が弱い部分を抽出
-                        red_emphasis = cv2.subtract(r, cv2.addWeighted(b, 0.5, g, 0.5, 0))
-                        # 適応的二値化
-                        processed = cv2.adaptiveThreshold(red_emphasis, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                                        cv2.THRESH_BINARY, 11, 2)
+                        # 赤チャンネルから青と緑の最大値を減算
+                        bg_max = cv2.max(b, g)
+                        red_emphasis = cv2.subtract(r, bg_max)
+                        # 固定閾値で二値化
+                        _, processed = cv2.threshold(red_emphasis, 80, 255, cv2.THRESH_BINARY)
                         
                     elif region['color'] == 'blue':
                         # 青色テキストの処理
                         b, g, r = cv2.split(roi_large)
-                        # 青が強く、赤と緑が弱い部分を抽出
-                        blue_emphasis = cv2.subtract(b, cv2.addWeighted(r, 0.5, g, 0.5, 0))
-                        # 適応的二値化
-                        processed = cv2.adaptiveThreshold(blue_emphasis, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                                        cv2.THRESH_BINARY, 11, 2)
+                        # 青チャンネルから赤と緑の最大値を減算
+                        rg_max = cv2.max(r, g)
+                        blue_emphasis = cv2.subtract(b, rg_max)
+                        # 固定閾値で二値化
+                        _, processed = cv2.threshold(blue_emphasis, 50, 255, cv2.THRESH_BINARY)
                         
                     else:  # white
                         # 白色テキストの処理
                         gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
-                        # 適応的二値化（白いテキストに最適化）
-                        processed = cv2.adaptiveThreshold(gray_roi, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                                        cv2.THRESH_BINARY, 11, 2)
+                        # 固定閾値で二値化（白い文字は明るい）
+                        _, processed = cv2.threshold(gray_roi, 180, 255, cv2.THRESH_BINARY)
                     
-                    # 超、中、小、大当り回数以外の領域のみノイズ除去と反転を適用
-                    if region_name not in ['ultra', 'middle', 'small', 'big_hit_count']:
-                        # ノイズ除去（拡大画像用に調整）
-                        kernel = np.ones((3,3), np.uint8)
-                        processed = cv2.morphologyEx(processed, cv2.MORPH_CLOSE, kernel)
-                        
-                        # エッジを強調
-                        processed = cv2.bitwise_not(processed)  # 白黒反転（黒文字を白文字に）
+                    # 既に反転済みなので追加の反転は不要
                     
                     # OCR実行（複数の設定を試す）
                     detected_text = None
@@ -392,6 +381,14 @@ if uploaded_file is not None:
                                 conf = int(data['conf'][i]) if data['conf'][i] != -1 else 0
                                 
                                 if text:
+                                    # 括弧の重複を除去
+                                    if 'rate' in region_name:
+                                        # 余分な括弧を除去
+                                        if text.endswith('))'):
+                                            text = text[:-1]
+                                        if text.startswith('(('):
+                                            text = text[1:]
+                                    
                                     all_texts.append(f"PSM{psm}: {text} ({conf}%)")
                                     
                                     if conf > best_confidence:
