@@ -290,32 +290,63 @@ if image:
                     
                     # 色別処理
                     if region['color'] == 'red':
-                        # 赤色抽出
+                        # 赤色抽出（改善版）
                         hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                        mask1 = cv2.inRange(hsv, np.array([0, 50, 50]), np.array([10, 255, 255]))
-                        mask2 = cv2.inRange(hsv, np.array([170, 50, 50]), np.array([180, 255, 255]))
+                        # ピンク〜赤の範囲を拡大
+                        mask1 = cv2.inRange(hsv, np.array([0, 30, 30]), np.array([15, 255, 255]))
+                        mask2 = cv2.inRange(hsv, np.array([160, 30, 30]), np.array([180, 255, 255]))
                         mask = cv2.bitwise_or(mask1, mask2)
+                        # モルフォロジー処理
+                        kernel = np.ones((2,2), np.uint8)
+                        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
                         mask = cv2.bitwise_not(mask)
-                        text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                        # 複数のPSMモードを試す
+                        for psm in [8, 7, 13]:
+                            text = pytesseract.image_to_string(mask, config=f'--psm {psm} -c tessedit_char_whitelist=0123456789/')
+                            text = text.strip()
+                            if text:
+                                break
                         
                     elif region['color'] == 'blue':
-                        # 青色抽出
+                        # 青色抽出（改善版）
                         hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-                        mask = cv2.inRange(hsv, np.array([100, 50, 50]), np.array([130, 255, 255]))
+                        # シアン〜青の範囲を拡大
+                        mask = cv2.inRange(hsv, np.array([90, 30, 30]), np.array([120, 255, 255]))
+                        # モルフォロジー処理
+                        kernel = np.ones((2,2), np.uint8)
+                        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
                         mask = cv2.bitwise_not(mask)
-                        text = pytesseract.image_to_string(mask, config='--psm 8 -c tessedit_char_whitelist=0123456789')
+                        # 複数のPSMモードを試す
+                        for psm in [8, 7, 13]:
+                            text = pytesseract.image_to_string(mask, config=f'--psm {psm} -c tessedit_char_whitelist=0123456789/')
+                            text = text.strip()
+                            if text:
+                                break
                         
                     else:  # white
-                        # 白色抽出
+                        # 白色抽出（改善版）
                         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                        _, binary = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
+                        # 適応的闾値処理
+                        binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                      cv2.THRESH_BINARY, 11, 2)
+                        # エッジ強調
+                        edges = cv2.Canny(gray, 50, 150)
+                        combined = cv2.bitwise_or(binary, edges)
+                        
                         if '/' in region['expected']:
-                            config = '--psm 7 -c tessedit_char_whitelist=0123456789/'
+                            whitelist = '0123456789/'
                         else:
-                            config = '--psm 7 -c tessedit_char_whitelist=0123456789'
-                        text = pytesseract.image_to_string(binary, config=config)
+                            whitelist = '0123456789'
+                        
+                        # 複数のPSMモードを試す
+                        for psm in [7, 8, 13]:
+                            text = pytesseract.image_to_string(combined, config=f'--psm {psm} -c tessedit_char_whitelist={whitelist}')
+                            text = text.strip()
+                            if text:
+                                break
                     
-                    text = text.strip()
+                    if not text:
+                        text = ""
                     results[region['name']] = {
                         'detected': text,
                         'expected': region['expected'],
