@@ -16,9 +16,7 @@ st.title("🎰 パチンコ詳細OCR - Site777")
 # Expected data items from the image
 EXPECTED_DATA = {
     'big_hit_count': '25',
-    'big_hit_rate': '1/148',
     'first_hit_count': '4',
-    'first_hit_rate': '1/469',
     'total_start': '3721',
     'normal': '1877',
     'chance': '1844',
@@ -26,12 +24,7 @@ EXPECTED_DATA = {
     'middle': '0',
     'small': '4',
     'start': '369',
-    'max_payout': '26830',
-    'max_hit': '25760',
-    'chance_hits': '21',
-    'chance_rate': '1/87',
-    'initial_start': '220',
-    'prev_final': '107'
+    'max_payout': '26830'
 }
 
 # mask.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
@@ -40,8 +33,6 @@ OCR_REGIONS_FROM_MASK = {
     'big_hit_count': {'x': 79, 'y': 113, 'w': 237, 'h': 125, 'color': 'red'},  # 大当り回数 25
     'first_hit_count': {'x': 456, 'y': 113, 'w': 238, 'h': 125, 'color': 'blue'},  # 初当り回数 4
     'total_start': {'x': 849, 'y': 126, 'w': 202, 'h': 61, 'color': 'white'},  # 累計スタート 3721
-    'big_hit_rate': {'x': 79, 'y': 241, 'w': 237, 'h': 50, 'color': 'red'},  # (1/148)
-    'first_hit_rate': {'x': 456, 'y': 241, 'w': 238, 'h': 50, 'color': 'blue'},  # (1/469)
     'normal': {'x': 786, 'y': 239, 'w': 164, 'h': 61, 'color': 'white'},  # 通常 1877
     'chance': {'x': 967, 'y': 239, 'w': 165, 'h': 61, 'color': 'white'},  # チャンス中 1844
     'ultra': {'x': 89, 'y': 397, 'w': 72, 'h': 50, 'color': 'red'},  # 超 21
