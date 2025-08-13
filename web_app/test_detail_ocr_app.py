@@ -41,34 +41,86 @@ if uploaded_file is not None:
         img_bgr = cv2.resize(img_bgr, (target_width, new_height), interpolation=cv2.INTER_AREA)
         height, width = img_bgr.shape[:2]
     
-    # 黒背景領域を検出
+    # 黒背景領域を検出（複数の方法を試す）
     def detect_black_region(img):
-        """黒背景領域を検出して座標を返す"""
+        """黒背景領域を検出して座標を返す（改善版）"""
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        height, width = gray.shape
         
-        # 黒い領域を検出（閾値20以下を黒とする）
-        _, black_mask = cv2.threshold(gray, 20, 255, cv2.THRESH_BINARY_INV)
+        # 複数の検出方法を試す
+        methods = []
         
-        # ノイズ除去
-        kernel = np.ones((5,5), np.uint8)
-        black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
-        black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
+        # 方法1: 緩い閾値での検出（閾値40）
+        _, mask1 = cv2.threshold(gray, 40, 255, cv2.THRESH_BINARY_INV)
+        kernel = np.ones((10,10), np.uint8)
+        mask1 = cv2.morphologyEx(mask1, cv2.MORPH_CLOSE, kernel)
+        mask1 = cv2.morphologyEx(mask1, cv2.MORPH_OPEN, kernel)
+        contours1, _ = cv2.findContours(mask1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        # 輪郭検出
-        contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # 方法2: 適応的閾値処理
+        mask2 = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, 
+                                      cv2.THRESH_BINARY_INV, 51, 10)
+        mask2 = cv2.morphologyEx(mask2, cv2.MORPH_CLOSE, kernel)
+        mask2 = cv2.morphologyEx(mask2, cv2.MORPH_OPEN, kernel)
+        contours2, _ = cv2.findContours(mask2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        if contours:
-            # 最大の輪郭を黒背景とする
-            largest_contour = max(contours, key=cv2.contourArea)
-            x, y, w, h = cv2.boundingRect(largest_contour)
+        # 方法3: エッジ検出ベース
+        edges = cv2.Canny(gray, 30, 100)
+        kernel_small = np.ones((3,3), np.uint8)
+        edges = cv2.dilate(edges, kernel_small, iterations=2)
+        edges = cv2.erode(edges, kernel_small, iterations=1)
+        # エッジを反転して黒い領域を白に
+        mask3 = 255 - edges
+        contours3, _ = cv2.findContours(mask3, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # 方法4: HSV色空間での黒検出
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        # 黒い領域：低い明度（V値）
+        lower_black = np.array([0, 0, 0])
+        upper_black = np.array([180, 255, 50])  # V値50以下
+        mask4 = cv2.inRange(hsv, lower_black, upper_black)
+        mask4 = cv2.morphologyEx(mask4, cv2.MORPH_CLOSE, kernel)
+        mask4 = cv2.morphologyEx(mask4, cv2.MORPH_OPEN, kernel)
+        contours4, _ = cv2.findContours(mask4, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # 各方法から最適な輪郭を選択
+        all_contours = []
+        if contours1:
+            all_contours.extend([(c, "threshold_40") for c in contours1])
+        if contours2:
+            all_contours.extend([(c, "adaptive") for c in contours2])
+        if contours3:
+            all_contours.extend([(c, "edge") for c in contours3])
+        if contours4:
+            all_contours.extend([(c, "hsv") for c in contours4])
+        
+        if all_contours:
+            # 面積が画像の20%以上、80%以下の輪郭を候補とする
+            min_area = width * height * 0.2
+            max_area = width * height * 0.8
             
-            # 面積が画像の30%以上なら有効な黒背景とする
-            if w * h > img.shape[0] * img.shape[1] * 0.3:
-                return (x, y, x + w, y + h)
+            valid_contours = []
+            for contour, method in all_contours:
+                area = cv2.contourArea(contour)
+                if min_area < area < max_area:
+                    x, y, w, h = cv2.boundingRect(contour)
+                    # アスペクト比も考慮（横長の矩形を優先）
+                    aspect_ratio = w / h if h > 0 else 0
+                    if 0.3 < aspect_ratio < 1.5:  # 適切なアスペクト比
+                        valid_contours.append((contour, area, method, (x, y, w, h)))
+            
+            if valid_contours:
+                # 最大面積の輪郭を選択
+                best_contour = max(valid_contours, key=lambda x: x[1])
+                x, y, w, h = best_contour[3]
+                method_used = best_contour[2]
+                
+                # デバッグ情報を含めて返す
+                return (x, y, x + w, y + h), method_used
         
-        return None
+        return None, None
     
-    black_region = detect_black_region(img_bgr)
+    black_region, detection_method = detect_black_region(img_bgr)
     
     # カスタム領域定義の読み込み
     custom_regions_loaded = None
@@ -262,11 +314,15 @@ if uploaded_file is not None:
         # 画像のコピーを作成
         vis_img = img_bgr.copy()
         
-        # 黒背景領域を表示
+        # 黒背景領域を赤色の太い枠で表示
         if black_region:
-            cv2.rectangle(vis_img, (bx1, by1), (bx2, by2), (0, 255, 0), 3)
-            cv2.putText(vis_img, "Black Region", (bx1, by1-10), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            bx1, by1, bx2, by2 = black_region
+            # 赤色の太い枠で黒背景領域を強調
+            cv2.rectangle(vis_img, (bx1, by1), (bx2, by2), (0, 0, 255), 5)  # 赤色、線の太さ5
+            # 検出方法も表示
+            text = f"Black Region ({detection_method})"
+            cv2.putText(vis_img, text, (bx1, by1-10), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
         
         # 領域を描画
         for key, region in regions.items():
@@ -288,7 +344,10 @@ if uploaded_file is not None:
         # 画像情報
         st.info(f"画像サイズ: {width} x {height} px")
         if black_region:
+            bx1, by1, bx2, by2 = black_region
             st.success(f"黒背景領域: ({bx1}, {by1}) - ({bx2}, {by2})")
+            st.info(f"検出方法: {detection_method}")
+            st.info(f"黒背景サイズ: {bx2-bx1} x {by2-by1} px")
         else:
             st.warning("黒背景領域が検出できませんでした")
     
@@ -309,7 +368,13 @@ if uploaded_file is not None:
                 with st.spinner("OCR処理中..."):
                     for key, region in regions.items():
                         x1, y1, x2, y2 = region['bbox']
-                        roi = img_bgr[y1:y2, x1:x2]
+                        # 余白を追加してOCR精度向上
+                        padding = 5
+                        y1_pad = max(0, y1 - padding)
+                        y2_pad = min(height, y2 + padding)
+                        x1_pad = max(0, x1 - padding)
+                        x2_pad = min(width, x2 + padding)
+                        roi = img_bgr[y1_pad:y2_pad, x1_pad:x2_pad]
                         
                         try:
                             if region['color'] == 'red':
