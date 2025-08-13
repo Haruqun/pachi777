@@ -207,168 +207,68 @@ if uploaded_file is not None:
                 # Progress bar
                 progress = st.progress(0)
                 
-                # Color space conversions (切り抜いた画像を使用)
-                hsv = cv2.cvtColor(img_bgr_for_ocr, cv2.COLOR_BGR2HSV)
-                lab = cv2.cvtColor(img_bgr_for_ocr, cv2.COLOR_BGR2LAB)
-                
-                # 1. White text detection
-                if detect_white:
-                    progress.progress(0.2)
-                    gray = cv2.cvtColor(img_bgr_for_ocr, cv2.COLOR_BGR2GRAY)
+                # Figmaで定義した領域からOCR実行
+                total_regions = len(OCR_REGIONS_ABSOLUTE)
+                for idx, (region_name, region) in enumerate(OCR_REGIONS_ABSOLUTE.items()):
+                    progress.progress((idx + 1) / total_regions)
                     
-                    # Try multiple thresholds for better coverage
-                    for threshold in [180, 160, 200, 140, 220]:
-                        _, white_mask = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+                    # 領域を切り抜き
+                    x, y, w, h = region['x'], region['y'], region['w'], region['h']
+                    roi = img_bgr[y:y+h, x:x+w]
+                    
+                    # 色に応じた前処理
+                    if region['color'] == 'red':
+                        # 赤色テキストの処理
+                        hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                        # 赤色の範囲
+                        mask1 = cv2.inRange(hsv_roi, np.array([0, 50, 50]), np.array([10, 255, 255]))
+                        mask2 = cv2.inRange(hsv_roi, np.array([170, 50, 50]), np.array([180, 255, 255]))
+                        red_mask = cv2.bitwise_or(mask1, mask2)
+                        # 白黒反転
+                        processed = cv2.bitwise_not(red_mask)
                         
-                        # Also try adaptive threshold
-                        adaptive_mask = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                                             cv2.THRESH_BINARY, 11, 2)
-                        combined_white = cv2.bitwise_or(white_mask, adaptive_mask)
+                    elif region['color'] == 'blue':
+                        # 青色テキストの処理
+                        hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                        # 青色の範囲
+                        blue_mask = cv2.inRange(hsv_roi, np.array([100, 50, 50]), np.array([130, 255, 255]))
+                        # 白黒反転
+                        processed = cv2.bitwise_not(blue_mask)
                         
-                        # Try multiple PSM modes
-                        for psm in [11, 6, 8, 7, 13]:
-                            try:
-                                config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789/'
-                                data = pytesseract.image_to_data(combined_white, output_type=pytesseract.Output.DICT, config=config)
-                                
-                                for i in range(len(data['text'])):
-                                    text = str(data['text'][i]).strip()
-                                    conf = int(data['conf'][i])
-                                    
-                                    if conf > conf_threshold and text:
-                                        x, y, w, h = data['left'][i], data['top'][i], data['width'][i], data['height'][i]
-                                        all_detections.append({
-                                            'text': text,
-                                            'confidence': conf,
-                                            'bbox': [x + offset_x, y + offset_y, x + w + offset_x, y + h + offset_y],
-                                            'color': 'white'
-                                        })
-                            except:
-                                continue
-                
-                # 2. Red text detection
-                if detect_red:
-                    progress.progress(0.5)
+                    else:  # white
+                        # 白色テキストの処理
+                        gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                        _, processed = cv2.threshold(gray_roi, 180, 255, cv2.THRESH_BINARY)
                     
-                    # Method 1: HSV-based detection
-                    red_mask1 = cv2.inRange(hsv, np.array([0, 20, 50]), np.array([10, 255, 255]))
-                    red_mask2 = cv2.inRange(hsv, np.array([170, 20, 50]), np.array([180, 255, 255]))
-                    pink_mask = cv2.inRange(hsv, np.array([150, 10, 100]), np.array([170, 100, 255]))
-                    magenta_mask = cv2.inRange(hsv, np.array([140, 20, 100]), np.array([160, 100, 255]))
-                    
-                    hsv_red_mask = cv2.bitwise_or(red_mask1, red_mask2)
-                    hsv_red_mask = cv2.bitwise_or(hsv_red_mask, pink_mask)
-                    hsv_red_mask = cv2.bitwise_or(hsv_red_mask, magenta_mask)
-                    
-                    # Method 2: Channel difference (R > G and R > B)
-                    b, g, r = cv2.split(img_bgr_for_ocr)
-                    channel_red_mask = np.zeros_like(r)
-                    channel_red_mask[(r > g + 20) & (r > b + 20) & (r > 100)] = 255
-                    
-                    # Combine both methods
-                    red_mask = cv2.bitwise_or(hsv_red_mask, channel_red_mask)
-                    
-                    # Noise removal with smaller kernel
-                    kernel = np.ones((1,1), np.uint8)
-                    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel)
-                    red_mask = cv2.bitwise_not(red_mask)
-                    
-                    # Try different PSM modes for better detection
-                    for psm in [11, 8, 7, 13, 6]:
-                        try:
-                            config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789/'
-                            data = pytesseract.image_to_data(red_mask, output_type=pytesseract.Output.DICT, config=config)
-                            
-                            for i in range(len(data['text'])):
-                                text = str(data['text'][i]).strip()
-                                conf = int(data['conf'][i])
-                                
-                                if conf > conf_threshold and text:
-                                    x, y, w, h = data['left'][i], data['top'][i], data['width'][i], data['height'][i]
-                                    all_detections.append({
-                                        'text': text,
-                                        'confidence': conf,
-                                        'bbox': [x + offset_x, y + offset_y, x + w + offset_x, y + h + offset_y],
-                                        'color': 'red'
-                                    })
-                        except:
-                            continue
-                
-                # 3. Blue text detection
-                if detect_blue:
-                    progress.progress(0.8)
-                    
-                    # Method 1: HSV-based detection
-                    blue_mask_hsv = cv2.inRange(hsv, np.array([100, 20, 50]), np.array([120, 255, 255]))
-                    cyan_mask = cv2.inRange(hsv, np.array([80, 20, 50]), np.array([100, 255, 255]))
-                    light_blue_mask = cv2.inRange(hsv, np.array([90, 10, 100]), np.array([110, 100, 255]))
-                    
-                    hsv_blue_mask = cv2.bitwise_or(blue_mask_hsv, cyan_mask)
-                    hsv_blue_mask = cv2.bitwise_or(hsv_blue_mask, light_blue_mask)
-                    
-                    # Method 2: Channel difference (B > R and B > G)
-                    b, g, r = cv2.split(img_bgr_for_ocr)
-                    channel_blue_mask = np.zeros_like(b)
-                    channel_blue_mask[(b > r + 20) & (b > g + 20) & (b > 100)] = 255
-                    
-                    # Combine both methods
-                    blue_mask = cv2.bitwise_or(hsv_blue_mask, channel_blue_mask)
-                    
-                    # Noise removal with smaller kernel
-                    kernel = np.ones((1,1), np.uint8)
-                    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, kernel)
-                    blue_mask = cv2.bitwise_not(blue_mask)
-                    
-                    # Try different PSM modes for better detection
-                    for psm in [11, 8, 7, 13, 6]:
-                        try:
-                            config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789/'
-                            data = pytesseract.image_to_data(blue_mask, output_type=pytesseract.Output.DICT, config=config)
-                            
-                            for i in range(len(data['text'])):
-                                text = str(data['text'][i]).strip()
-                                conf = int(data['conf'][i])
-                                
-                                if conf > conf_threshold and text:
-                                    x, y, w, h = data['left'][i], data['top'][i], data['width'][i], data['height'][i]
-                                    all_detections.append({
-                                        'text': text,
-                                        'confidence': conf,
-                                        'bbox': [x + offset_x, y + offset_y, x + w + offset_x, y + h + offset_y],
-                                        'color': 'blue'
-                                    })
-                        except:
-                            continue
-                
-                progress.progress(1.0)
-            
-            # Remove duplicates
-            unique_detections = []
-            for detection in all_detections:
-                is_duplicate = False
-                for existing in unique_detections:
-                    if (abs(existing['bbox'][0] - detection['bbox'][0]) < 20 and 
-                        abs(existing['bbox'][1] - detection['bbox'][1]) < 20 and
-                        existing['text'] == detection['text']):
-                        # Keep higher confidence
-                        if detection['confidence'] > existing['confidence']:
-                            unique_detections.remove(existing)
-                        else:
-                            is_duplicate = True
-                        break
-                if not is_duplicate:
-                    unique_detections.append(detection)
+                    # OCR実行
+                    try:
+                        # 数値と記号のみを対象
+                        custom_config = '--psm 8 --oem 3 -c tessedit_char_whitelist=0123456789/()'
+                        text = pytesseract.image_to_string(processed, config=custom_config, lang='jpn').strip()
+                        
+                        # 結果を保存
+                        if text:
+                            detected_data[region_name] = text
+                            all_detections.append({
+                                'region': region_name,
+                                'text': text,
+                                'bbox': [x, y, x+w, y+h],
+                                'color': region['color']
+                            })
+                    except Exception as e:
+                        st.warning(f"領域 {region_name} のOCRエラー: {str(e)}")
+                        continue
             
             # 結果を表示
-            st.success(f"検出完了！ {len(unique_detections)}個のテキストを検出")
+            st.success(f"検出完了！ {len(all_detections)}個のテキストを検出")
             
             # メトリクス表示
             col1, col2, col3 = st.columns(3)
             
             # 色別カウント
-            white_count = len([d for d in unique_detections if d['color'] == 'white'])
-            red_count = len([d for d in unique_detections if d['color'] == 'red'])
-            blue_count = len([d for d in unique_detections if d['color'] == 'blue'])
+            white_count = len([d for d in all_detections if d['color'] == 'white'])
+            red_count = len([d for d in all_detections if d['color'] == 'red'])
+            blue_count = len([d for d in all_detections if d['color'] == 'blue'])
             
             with col1:
                 st.metric("白色テキスト", white_count)
@@ -381,40 +281,35 @@ if uploaded_file is not None:
             st.divider()
             st.markdown("### 検出されたテキスト")
             
-            # Compare with expected values
-            detected_texts = [d['text'] for d in unique_detections]
+            # 検出されたデータと期待値を比較
+            st.divider()
+            st.markdown("### 📊 検出結果と期待値の比較")
             
-            # 重要項目をチェック
-            important_items = {
-                '大当り回数 (赤)': '25',
-                '初当り回数 (青)': '4',
-                '累計スタート': '3721',
-                'スタート': '369',
-                '最高出玉': '26830'
-            }
+            comparison_data = []
+            for key, expected in EXPECTED_DATA.items():
+                detected = detected_data.get(key, "未検出")
+                status = "✅" if detected == expected else "❌"
+                comparison_data.append({
+                    "領域": key,
+                    "期待値": expected,
+                    "検出値": detected,
+                    "状態": status
+                })
             
-            col1, col2 = st.columns(2)
+            # テーブル形式で表示
+            import pandas as pd
+            df = pd.DataFrame(comparison_data)
+            st.dataframe(df, use_container_width=True)
             
-            with col1:
-                st.markdown("#### ✅ 検出成功")
-                for name, expected in important_items.items():
-                    if expected in detected_texts:
-                        st.success(f"{name}: {expected}")
-            
-            with col2:
-                st.markdown("#### ❌ 未検出")
-                for name, expected in important_items.items():
-                    if expected not in detected_texts:
-                        st.error(f"{name}: {expected}")
-            
-            # 全検出結果
-            with st.expander("全検出結果"):
-                for idx, detection in enumerate(unique_detections):
+            # 領域ごとの検出結果
+            with st.expander("領域別検出結果"):
+                for detection in all_detections:
                     color_emoji = {"white": "⚪", "red": "🔴", "blue": "🔵"}.get(detection['color'], "⚫")
-                    st.write(f"{idx+1}. {color_emoji} **{detection['text']}** (信頼度: {detection['confidence']}%)")
+                    st.write(f"{color_emoji} **{detection['region']}**: {detection['text']}")
             
             # Save to session state for JSON export
-            st.session_state['detections'] = unique_detections
+            st.session_state['detections'] = all_detections
+            st.session_state['detected_data'] = detected_data
     
     with tab2:
         st.subheader("🎨 色マスク表示")
@@ -448,55 +343,6 @@ if uploaded_file is not None:
         # 検出結果のオーバーレイ画像を作成（線付き画像を使用）
         vis_img = img_with_lines.copy()
         
-        # 検出結果がある場合は描画
-        if 'detections' in st.session_state and st.session_state['detections']:
-            color_map = {
-                'white': (200, 200, 200),
-                'red': (0, 0, 255),
-                'blue': (255, 100, 0)
-            }
-            
-            for detection in st.session_state['detections']:
-                x1, y1, x2, y2 = detection['bbox']
-                color = color_map.get(detection['color'], (255, 255, 255))
-                
-                # オフセットを考慮して切り抜き画像内の座標に変換
-                x1_vis = x1 - offset_x
-                y1_vis = y1 - offset_y
-                x2_vis = x2 - offset_x
-                y2_vis = y2 - offset_y
-                
-                # 矩形を描画
-                cv2.rectangle(vis_img, (x1_vis, y1_vis), (x2_vis, y2_vis), color, 2)
-                
-                # テキストを表示（小さいフォントで）
-                text = detection['text']
-                conf = detection['confidence']
-                label = f"{text} ({conf}%)"
-                
-                # テキストの背景を描画
-                (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
-                cv2.rectangle(vis_img, (x1_vis, y1_vis - text_height - 4), (x1_vis + text_width, y1_vis), color, -1)
-                
-                # テキストを描画
-                cv2.putText(vis_img, label, (x1_vis, y1_vis - 2), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
-        
-        if show_grid:
-            # 10px グリッド
-            for x in range(0, ocr_width, 10):
-                if x % 100 == 0:
-                    cv2.line(vis_img, (x, 0), (x, ocr_height), (100, 100, 100), 1)
-                    if x > 0:
-                        cv2.putText(vis_img, str(x + offset_x), (x-20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
-            for y in range(0, ocr_height, 10):
-                if y % 100 == 0:
-                    cv2.line(vis_img, (0, y), (ocr_width, y), (100, 100, 100), 1)
-                    if y > 0:
-                        cv2.putText(vis_img, str(y + offset_y), (5, y+5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
-        
-        st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB), use_column_width=True)
-        
         # OCR領域を描画（Figmaで定義した絶対座標）
         for name, region in OCR_REGIONS_ABSOLUTE.items():
             x = region['x']
@@ -518,6 +364,37 @@ if uploaded_file is not None:
             # ラベルを表示（小さめのフォント）
             cv2.putText(vis_img, name[:8], (x, y - 5), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.3, color, 1)
+        
+        # 検出結果がある場合は描画
+        if 'detections' in st.session_state and st.session_state['detections']:
+            for detection in st.session_state['detections']:
+                x1, y1, x2, y2 = detection['bbox']
+                
+                # 検出結果のテキストを領域内に表示
+                text = detection.get('text', '')
+                if text:
+                    # テキストを矩形の中央に配置
+                    text_x = x1 + 5
+                    text_y = y1 + (y2 - y1) // 2
+                    
+                    # テキストの背景（半透明風）
+                    cv2.putText(vis_img, text, (text_x, text_y), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        
+        if show_grid:
+            # 10px グリッド
+            for x in range(0, width, 10):
+                if x % 100 == 0:
+                    cv2.line(vis_img, (x, 0), (x, height), (100, 100, 100), 1)
+                    if x > 0:
+                        cv2.putText(vis_img, str(x), (x-20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
+            for y in range(0, height, 10):
+                if y % 100 == 0:
+                    cv2.line(vis_img, (0, y), (width, y), (100, 100, 100), 1)
+                    if y > 0:
+                        cv2.putText(vis_img, str(y), (5, y+5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
+        
+        st.image(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB), use_column_width=True)
         
         # 線の説明
         if 'black_region_found' in locals() and black_region_found:
