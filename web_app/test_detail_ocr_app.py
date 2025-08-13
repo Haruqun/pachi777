@@ -174,7 +174,7 @@ if uploaded_file is not None:
             },
             'total_start': {
                 'name': '累計スタート',
-                'bbox': (880, 630, 1040, 690),  # 3721
+                'bbox': (886, 638, 1040, 691),  # 3721 - 実際の検出座標
                 'color': 'white'
             },
             'normal_count': {
@@ -213,14 +213,14 @@ if uploaded_file is not None:
             },
             'max_payout': {
                 'name': '最高出玉',
-                'bbox': (840, 890, 1100, 960),  # 26830
+                'bbox': (851, 897, 1087, 957),  # 26830 - 実際の検出座標
                 'color': 'white'
             },
             
             # 下段第1行
             'max_hit': {
                 'name': '最高一撃獲得',
-                'bbox': (60, 1060, 220, 1100),  # 25760
+                'bbox': (65, 1066, 213, 1102),  # 25760 - 実際の検出座標
                 'color': 'white'
             },
             'chance_hits': {
@@ -230,7 +230,7 @@ if uploaded_file is not None:
             },
             'chance_rate': {
                 'name': 'チャンス中確率',
-                'bbox': (540, 1060, 670, 1100),  # 1/87
+                'bbox': (555, 1066, 663, 1104),  # 1/87 - 実際の検出座標
                 'color': 'white'
             },
             'low_chance_hits': {
@@ -247,7 +247,7 @@ if uploaded_file is not None:
             # 下段第2行
             'initial_start': {
                 'name': '初回特賞スタート',
-                'bbox': (90, 1180, 190, 1220),  # 220
+                'bbox': (96, 1184, 182, 1220),  # 220 - 実際の検出座標
                 'color': 'white'
             },
             'prev_final': {
@@ -274,12 +274,12 @@ if uploaded_file is not None:
             # 累計テーブル（8/6）
             'date_86': {
                 'name': '日付8/6',
-                'bbox': (40, 1320, 130, 1360),  # 8/6
+                'bbox': (50, 1326, 124, 1364),  # 8/6 - 実際の検出座標
                 'color': 'white'
             },
             'total_86': {
                 'name': '累計8/6',
-                'bbox': (200, 1320, 330, 1360),  # 3772
+                'bbox': (204, 1326, 322, 1362),  # 3772 - 実際の検出座標
                 'color': 'white'
             },
             'first_rate_86': {
@@ -289,24 +289,24 @@ if uploaded_file is not None:
             },
             'chance_rate_86': {
                 'name': 'チャンス中確率8/6',
-                'bbox': (680, 1320, 840, 1360),  # 1/166
+                'bbox': (693, 1326, 831, 1364),  # 1/166 - 実際の検出座標
                 'color': 'white'
             },
             'payout_86': {
                 'name': '最高出玉8/6',
-                'bbox': (940, 1320, 1110, 1360),  # 14670
+                'bbox': (953, 1326, 1099, 1362),  # 14670 - 実際の検出座標
                 'color': 'white'
             },
             
             # 累計テーブル（8/5）
             'date_85': {
                 'name': '日付8/5',
-                'bbox': (40, 1380, 130, 1420),  # 8/5
+                'bbox': (50, 1386, 124, 1424),  # 8/5 - 実際の検出座標
                 'color': 'white'
             },
             'total_85': {
                 'name': '累計8/5',
-                'bbox': (200, 1380, 330, 1420),  # 3213
+                'bbox': (204, 1386, 321, 1422),  # 3213 - 実際の検出座標
                 'color': 'white'
             },
             'first_rate_85': {
@@ -316,12 +316,12 @@ if uploaded_file is not None:
             },
             'chance_rate_85': {
                 'name': 'チャンス中確率8/5',
-                'bbox': (700, 1380, 830, 1420),  # 1/79
+                'bbox': (709, 1386, 815, 1424),  # 1/79 - 実際の検出座標
                 'color': 'white'
             },
             'payout_85': {
                 'name': '最高出玉8/5',
-                'bbox': (940, 1380, 1110, 1420),  # 22100
+                'bbox': (951, 1386, 1099, 1422),  # 22100 - 実際の検出座標
                 'color': 'white'
             }
         }
