@@ -319,9 +319,21 @@ if uploaded_file is not None:
             bx1, by1, bx2, by2 = black_region
             # 赤色の太い枠で黒背景領域を強調
             cv2.rectangle(vis_img, (bx1, by1), (bx2, by2), (0, 0, 255), 5)  # 赤色、線の太さ5
+            
+            # 左上隅に大きな黄色の点（マーカー）を追加
+            # 塗りつぶした円で目立つようにする
+            cv2.circle(vis_img, (bx1, by1), 15, (0, 255, 255), -1)  # 黄色、半径15px、塗りつぶし
+            # さらに赤い輪郭を追加して強調
+            cv2.circle(vis_img, (bx1, by1), 15, (0, 0, 255), 3)  # 赤色の輪郭、線の太さ3
+            
+            # 座標テキストも左上に表示
+            coord_text = f"({bx1}, {by1})"
+            cv2.putText(vis_img, coord_text, (bx1 + 25, by1 + 5), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+            
             # 検出方法も表示
             text = f"Black Region ({detection_method})"
-            cv2.putText(vis_img, text, (bx1, by1-10), 
+            cv2.putText(vis_img, text, (bx1, by1-25), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
         
         # 領域を描画
