@@ -226,6 +226,7 @@ if uploaded_file is not None:
             # Save detection results
             detected_data = {}
             all_detections = []
+            debug_results = []  # デバッグ情報を保存
             
             with st.spinner("OCR処理中..."):
                 # Progress bar
@@ -311,6 +312,7 @@ if uploaded_file is not None:
                     # OCR実行（複数の設定を試す）
                     detected_text = None
                     best_confidence = 0
+                    best_psm = None
                     
                     # PSMモードのリスト（単一テキスト行、単一単語、など）
                     psm_modes = [8, 7, 13, 6]  # 8:単一単語, 7:単一テキスト行, 13:生のライン, 6:均一ブロック
@@ -332,13 +334,24 @@ if uploaded_file is not None:
                                 if text and conf > best_confidence:
                                     detected_text = text
                                     best_confidence = conf
+                                    best_psm = psm
                                     
-                        except Exception:
+                        except Exception as e:
                             continue
                     
-                    # デバッグ情報を表示
-                    if show_masks:
-                        st.write(f"{region_name}: '{detected_text}' (信頼度: {best_confidence}%)")
+                    # デバッグ情報を保存
+                    debug_info = {
+                        'region': region_name,
+                        'position': f"({x}, {y})",
+                        'size': f"{w}x{h}",
+                        'color': region['color'],
+                        'detected': detected_text if detected_text else "未検出",
+                        'confidence': best_confidence,
+                        'best_psm': best_psm if best_psm else "N/A",
+                        'roi_shape': roi.shape,
+                        'processed_shape': processed.shape if 'processed' in locals() else None
+                    }
+                    debug_results.append(debug_info)
                     
                     # 結果を保存
                     if detected_text:
@@ -399,6 +412,44 @@ if uploaded_file is not None:
                 for detection in all_detections:
                     color_emoji = {"white": "⚪", "red": "🔴", "blue": "🔵"}.get(detection['color'], "⚫")
                     st.write(f"{color_emoji} **{detection['region']}**: {detection['text']}")
+            
+            # デバッグ情報を表示
+            with st.expander("🔧 OCRデバッグ情報", expanded=True):
+                st.markdown("### 各領域の処理詳細")
+                
+                # デバッグテーブルを作成
+                debug_data = []
+                for debug in debug_results:
+                    color_emoji = {"white": "⚪", "red": "🔴", "blue": "🔵"}.get(debug['color'], "⚫")
+                    debug_data.append({
+                        "領域名": debug['region'],
+                        "色": color_emoji,
+                        "座標": debug['position'],
+                        "サイズ": debug['size'],
+                        "検出値": debug['detected'],
+                        "信頼度": f"{debug['confidence']}%",
+                        "PSM": debug['best_psm'],
+                        "ROI形状": str(debug['roi_shape']),
+                        "処理後形状": str(debug['processed_shape'])
+                    })
+                
+                import pandas as pd
+                debug_df = pd.DataFrame(debug_data)
+                st.dataframe(debug_df, use_container_width=True, height=600)
+                
+                # 未検出の領域を強調表示
+                undetected = [d for d in debug_results if d['detected'] == "未検出"]
+                if undetected:
+                    st.warning(f"⚠️ {len(undetected)}個の領域で検出失敗:")
+                    for u in undetected:
+                        st.write(f"- **{u['region']}** (座標: {u['position']}, サイズ: {u['size']})")
+                
+                # 低信頼度の領域を表示
+                low_conf = [d for d in debug_results if d['confidence'] < 50 and d['detected'] != "未検出"]
+                if low_conf:
+                    st.info(f"ℹ️ {len(low_conf)}個の領域で信頼度が低い:")
+                    for l in low_conf:
+                        st.write(f"- **{l['region']}**: {l['detected']} (信頼度: {l['confidence']}%)")
             
             # Save to session state for JSON export
             st.session_state['detections'] = all_detections
