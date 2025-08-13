@@ -575,55 +575,93 @@ if uploaded_file is not None:
                     target_img = img_bgr
                 
                 # Tesseractで文字検出
-                with st.spinner("文字検出中..."):
-                    # グレースケール化
-                    gray = cv2.cvtColor(target_img, cv2.COLOR_BGR2GRAY)
-                    
-                    # コントラスト調整
-                    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-                    enhanced = clahe.apply(gray)
-                    
-                    # OCR実行（数字のみ検出するように設定）
-                    # 数字認識に特化した設定
-                    custom_config = '--psm 11 -c tessedit_char_whitelist=0123456789/-'
-                    data = pytesseract.image_to_data(enhanced, config=custom_config, output_type=pytesseract.Output.DICT)
-                    
-                    # 検出結果をフィルタリング
+                with st.spinner("文字検出中（複数手法で検出中）..."):
                     detected_regions = []
                     vis_full_img = img_bgr.copy()
                     
-                    for i in range(len(data['text'])):
-                        text = str(data['text'][i]).strip()
-                        conf = int(data['conf'][i])
-                        
-                        # 信頼度30以上かつ空でないテキストのみ
-                        if conf > 30 and text and text != '':
-                            # バウンディングボックス情報
-                            x = int(data['left'][i])
-                            y = int(data['top'][i])
-                            w = int(data['width'][i])
-                            h = int(data['height'][i])
-                            
-                            # 黒背景領域からのオフセットを考慮
-                            if black_region:
-                                abs_x = bx1 + x
-                                abs_y = by1 + y
-                            else:
-                                abs_x = x
-                                abs_y = y
-                            
-                            # 検出情報を保存
-                            region_info = {
-                                'text': text,
-                                'confidence': conf,
-                                'bbox': [abs_x, abs_y, abs_x + w, abs_y + h]
-                            }
-                            detected_regions.append(region_info)
-                            
-                            # 枠線を描画
-                            cv2.rectangle(vis_full_img, (abs_x, abs_y), (abs_x + w, abs_y + h), (0, 255, 0), 2)
-                            cv2.putText(vis_full_img, text[:10], (abs_x, abs_y - 5),
-                                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                    # HSV変換
+                    hsv = cv2.cvtColor(target_img, cv2.COLOR_BGR2HSV)
+                    
+                    # 1. 白色テキスト検出
+                    gray = cv2.cvtColor(target_img, cv2.COLOR_BGR2GRAY)
+                    _, white_mask = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
+                    
+                    # 2. 赤色テキスト検出
+                    red_mask1 = cv2.inRange(hsv, np.array([0, 20, 20]), np.array([20, 255, 255]))
+                    red_mask2 = cv2.inRange(hsv, np.array([160, 20, 20]), np.array([180, 255, 255]))
+                    red_mask = cv2.bitwise_or(red_mask1, red_mask2)
+                    red_mask = cv2.bitwise_not(red_mask)
+                    
+                    # 3. 青色テキスト検出
+                    blue_mask = cv2.inRange(hsv, np.array([85, 20, 20]), np.array([125, 255, 255]))
+                    blue_mask = cv2.bitwise_not(blue_mask)
+                    
+                    # 各マスクでOCR実行
+                    masks = [
+                        ('white', white_mask),
+                        ('red', red_mask),
+                        ('blue', blue_mask)
+                    ]
+                    
+                    for color_name, mask in masks:
+                        # 複数のPSMモードで試行
+                        for psm in [11, 6, 8, 13]:
+                            try:
+                                custom_config = f'--psm {psm} -c tessedit_char_whitelist=0123456789/'
+                                data = pytesseract.image_to_data(mask, config=custom_config, output_type=pytesseract.Output.DICT)
+                                
+                                for i in range(len(data['text'])):
+                                    text = str(data['text'][i]).strip()
+                                    conf = int(data['conf'][i])
+                                    
+                                    # 信頼度20以上かつ空でないテキストのみ
+                                    if conf > 20 and text and text != '':
+                                        x = int(data['left'][i])
+                                        y = int(data['top'][i])
+                                        w = int(data['width'][i])
+                                        h = int(data['height'][i])
+                                        
+                                        # 黒背景領域からのオフセットを考慮
+                                        if black_region:
+                                            abs_x = bx1 + x
+                                            abs_y = by1 + y
+                                        else:
+                                            abs_x = x
+                                            abs_y = y
+                                        
+                                        # 重複チェック
+                                        is_duplicate = False
+                                        for existing in detected_regions:
+                                            if (abs(existing['bbox'][0] - abs_x) < 20 and 
+                                                abs(existing['bbox'][1] - abs_y) < 20 and
+                                                existing['text'] == text):
+                                                is_duplicate = True
+                                                break
+                                        
+                                        if not is_duplicate:
+                                            region_info = {
+                                                'text': text,
+                                                'confidence': conf,
+                                                'bbox': [abs_x, abs_y, abs_x + w, abs_y + h],
+                                                'color': color_name,
+                                                'psm': psm
+                                            }
+                                            detected_regions.append(region_info)
+                            except:
+                                continue
+                    
+                    # 検出結果を描画
+                    for region in detected_regions:
+                        abs_x, abs_y, x2, y2 = region['bbox']
+                        color_map = {
+                            'white': (200, 200, 200),
+                            'red': (0, 0, 255),
+                            'blue': (255, 0, 0)
+                        }
+                        color = color_map.get(region['color'], (0, 255, 0))
+                        cv2.rectangle(vis_full_img, (abs_x, abs_y), (x2, y2), color, 2)
+                        cv2.putText(vis_full_img, region['text'][:10], (abs_x, abs_y - 5),
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
                 
                 # 結果表示
                 st.success(f"OCR完了！ {len(detected_regions)}個のテキストを検出")
