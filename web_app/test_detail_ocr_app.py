@@ -154,22 +154,22 @@ if uploaded_file is not None:
             # 上部メイン数値
             'big_hit': {
                 'name': '大当り回数',
-                'bbox': (70, 590, 260, 740),  # 赤色の大きな25
+                'bbox': (80, 600, 260, 740),  # 赤色の大きな25
                 'color': 'red'
             },
             'big_hit_rate': {
                 'name': '大当り確率',
-                'bbox': (70, 740, 260, 790),  # (1/148)
+                'bbox': (80, 740, 260, 790),  # (1/148)
                 'color': 'red'
             },
             'first_hit': {
                 'name': '初当り回数',
-                'bbox': (470, 590, 660, 740),  # 青色の大きな4
+                'bbox': (480, 600, 660, 740),  # 青色の大きな4
                 'color': 'blue'
             },
             'first_hit_rate': {
                 'name': '初当り確率',
-                'bbox': (470, 740, 660, 790),  # (1/469)
+                'bbox': (480, 740, 660, 790),  # (1/469)
                 'color': 'blue'
             },
             'total_start': {
@@ -179,36 +179,36 @@ if uploaded_file is not None:
             },
             'normal_count': {
                 'name': '通常',
-                'bbox': (780, 740, 920, 790),  # 1877
+                'bbox': (790, 740, 920, 790),  # 1877
                 'color': 'white'
             },
             'chance_count': {
                 'name': 'チャンス中',
-                'bbox': (990, 740, 1160, 790),  # 1844
+                'bbox': (1000, 740, 1160, 790),  # 1844
                 'color': 'white'
             },
             
             # 超中小（赤色）
             'ultra': {
                 'name': '超',
-                'bbox': (70, 850, 150, 930),  # 21
+                'bbox': (80, 860, 150, 930),  # 21
                 'color': 'red'
             },
             'middle': {
                 'name': '中',
-                'bbox': (190, 850, 240, 930),  # 0
+                'bbox': (200, 860, 240, 930),  # 0
                 'color': 'red'
             },
             'small': {
                 'name': '小',
-                'bbox': (280, 850, 330, 930),  # 4
+                'bbox': (290, 860, 330, 930),  # 4
                 'color': 'red'
             },
             
             # 中段データ
             'start': {
                 'name': 'スタート',
-                'bbox': (510, 850, 670, 930),  # 369
+                'bbox': (520, 860, 670, 930),  # 369
                 'color': 'white'
             },
             'max_payout': {
@@ -225,7 +225,7 @@ if uploaded_file is not None:
             },
             'chance_hits': {
                 'name': 'チャンス中大当り',
-                'bbox': (270, 1066, 390, 1110),  # 21
+                'bbox': (280, 1070, 390, 1110),  # 21
                 'color': 'white'
             },
             'chance_rate': {
@@ -235,12 +235,12 @@ if uploaded_file is not None:
             },
             'low_chance_hits': {
                 'name': '低確中大当り',
-                'bbox': (750, 1066, 870, 1110),  # --
+                'bbox': (760, 1070, 870, 1110),  # --
                 'color': 'white'
             },
             'low_chance_rate': {
                 'name': '低確中確率',
-                'bbox': (980, 1066, 1160, 1110),  # --
+                'bbox': (990, 1070, 1160, 1110),  # --
                 'color': 'white'
             },
             
@@ -252,22 +252,22 @@ if uploaded_file is not None:
             },
             'prev_final': {
                 'name': '前日最終スタート',
-                'bbox': (270, 1184, 390, 1230),  # 107
+                'bbox': (280, 1190, 390, 1230),  # 107
                 'color': 'white'
             },
             'break_count': {
                 'name': '突時回数',
-                'bbox': (540, 1184, 670, 1230),  # --
+                'bbox': (550, 1190, 670, 1230),  # --
                 'color': 'white'
             },
             'low_start': {
                 'name': '低確スタート',
-                'bbox': (750, 1184, 870, 1230),  # --
+                'bbox': (760, 1190, 870, 1230),  # --
                 'color': 'white'
             },
             'play_time': {
                 'name': '遊タイム',
-                'bbox': (980, 1184, 1160, 1230),  # --
+                'bbox': (990, 1190, 1160, 1230),  # --
                 'color': 'white'
             },
             
