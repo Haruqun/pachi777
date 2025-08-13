@@ -1,0 +1,93 @@
+{
+  "corrected_regions": {
+    "big_hit": {
+      "name": "大当り回数",
+      "bbox": [128, 636, 287, 741],
+      "color": "red",
+      "expected": "25",
+      "note": "赤色の大きな数字"
+    },
+    "first_hit": {
+      "name": "初当り回数",
+      "bbox": [493, 636, 640, 741],
+      "color": "blue",
+      "expected": "4",
+      "note": "青色の大きな数字 - 検出成功"
+    },
+    "total_start": {
+      "name": "累計スタート",
+      "bbox": [845, 638, 1040, 715],
+      "color": "white",
+      "expected": "3721",
+      "note": "座標を右にシフト（元: 886→845）"
+    },
+    "ultra": {
+      "name": "超",
+      "bbox": [106, 908, 163, 951],
+      "color": "red",
+      "expected": "21"
+    },
+    "middle": {
+      "name": "中",
+      "bbox": [208, 908, 237, 952],
+      "color": "red",
+      "expected": "0"
+    },
+    "small": {
+      "name": "小",
+      "bbox": [275, 908, 307, 951],
+      "color": "red",
+      "expected": "4"
+    },
+    "start": {
+      "name": "スタート",
+      "bbox": [520, 897, 660, 957],
+      "color": "white",
+      "expected": "369",
+      "note": "元の正しい位置に戻す（中段右側）"
+    },
+    "max_payout": {
+      "name": "最高出玉",
+      "bbox": [851, 897, 1087, 957],
+      "color": "white",
+      "expected": "26830",
+      "note": "検出成功"
+    },
+    "max_hit": {
+      "name": "最高一撃獲得",
+      "bbox": [65, 1066, 213, 1102],
+      "color": "white",
+      "expected": "25760"
+    },
+    "chance_hits": {
+      "name": "チャンス中大当り",
+      "bbox": [395, 1066, 440, 1104],
+      "color": "white",
+      "expected": "21"
+    },
+    "chance_rate": {
+      "name": "チャンス中確率",
+      "bbox": [555, 1066, 663, 1104],
+      "color": "white",
+      "expected": "1/87"
+    },
+    "initial_start": {
+      "name": "初回特賞スタート",
+      "bbox": [96, 1184, 182, 1220],
+      "color": "white",
+      "expected": "220"
+    },
+    "prev_final": {
+      "name": "前日最終スタート",
+      "bbox": [343, 1184, 427, 1220],
+      "color": "white",
+      "expected": "107"
+    }
+  },
+  "key_fixes": {
+    "累計スタート": "bbox左端を845に修正（3721全体を含むように）",
+    "スタート": "正しい位置(520, 897)に戻す（中段の369）",
+    "大当り回数": "赤色検出アルゴリズムの改善が必要",
+    "超中小": "赤色検出アルゴリズムの改善が必要"
+  }
+}
