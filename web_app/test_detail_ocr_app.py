@@ -124,7 +124,11 @@ if uploaded_file is not None:
     
     # 黒背景領域を検出
     gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    _, black_mask = cv2.threshold(gray, 40, 255, cv2.THRESH_BINARY_INV)
+    _, black_mask = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY_INV)  # 閾値を30に下げる
+    
+    # ノイズ除去
+    kernel = np.ones((5,5), np.uint8)
+    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
     
     # 輪郭を検出
     contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -132,16 +136,25 @@ if uploaded_file is not None:
     # 最大の輪郭を見つける（黒背景領域）
     black_region_found = False
     if contours:
-        largest_contour = max(contours, key=cv2.contourArea)
-        x, y, w, h = cv2.boundingRect(largest_contour)
+        # 面積でソートして、最大の輪郭を取得
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)
         
-        # 黒背景領域が十分大きい場合
-        if w * h > width * height * 0.2:
-            black_region_found = True
-            black_x = x
-            black_y = y
-            black_w = w
-            black_h = h
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            
+            # 黒背景領域の条件:
+            # 1. 十分な大きさ（画像の15%以上）
+            # 2. 縦横比が妥当（極端に細長くない）
+            # 3. 画像の中央付近にある
+            if (w * h > width * height * 0.15 and 
+                0.3 < w/h < 3.0 and
+                x < width * 0.6 and y < height * 0.8):
+                black_region_found = True
+                black_x = x
+                black_y = y
+                black_w = w
+                black_h = h
+                break
             
             # 黒背景の左上から480pxと730px（480+250）の位置に線を引く
             line1_y = black_y + 480
@@ -200,6 +213,7 @@ if uploaded_file is not None:
                     base_x = black_x
                     base_y = black_y
                     st.info(f"黒背景を基準にOCR実行: ({base_x}, {base_y})")
+                    st.info(f"黒背景サイズ: {black_w} x {black_h}")
                 else:
                     # 黒背景が見つからない場合は警告
                     st.warning("黒背景が検出されませんでした。画像全体を基準にします。")
@@ -219,11 +233,22 @@ if uploaded_file is not None:
                     
                     # 画像の範囲チェック
                     if x < 0 or y < 0 or x + w > width or y + h > height:
-                        st.warning(f"領域 {region_name} が画像範囲外です")
+                        st.warning(f"領域 {region_name} が画像範囲外です: ({x}, {y}, {w}, {h}) / 画像サイズ: ({width}, {height})")
                         continue
                     
+                    # 範囲を画像内に収める
+                    x_end = min(x + w, width)
+                    y_end = min(y + h, height)
+                    x_start = max(x, 0)
+                    y_start = max(y, 0)
+                    
                     # 領域を切り抜き
-                    roi = img_bgr[y:y+h, x:x+w]
+                    roi = img_bgr[y_start:y_end, x_start:x_end]
+                    
+                    # 切り抜いた領域が小さすぎる場合はスキップ
+                    if roi.shape[0] < 10 or roi.shape[1] < 10:
+                        st.warning(f"領域 {region_name} が小さすぎます: {roi.shape}")
+                        continue
                     
                     # 色に応じた前処理
                     if region['color'] == 'red':
