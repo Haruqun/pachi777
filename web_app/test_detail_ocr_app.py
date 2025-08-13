@@ -34,39 +34,39 @@ EXPECTED_DATA = {
     'prev_final': '107'
 }
 
-# OCR領域の定義（黒背景内の相対座標）
-# 黒背景の開始位置を基準とした座標
+# Figmaで確認した正確なOCR領域の定義（画像左上が原点）
+# 注意: これらは画像全体の左上(0,0)を基準とした絶対座標です
 OCR_REGIONS = {
-    # 上段の大きな数値（赤と青）
-    'big_hit_count': {'x': 20, 'y': 80, 'w': 100, 'h': 60, 'color': 'red'},  # 大当り回数 25
-    'big_hit_rate': {'x': 20, 'y': 145, 'w': 100, 'h': 25, 'color': 'red'},  # (1/148)
-    'first_hit_count': {'x': 125, 'y': 80, 'w': 100, 'h': 60, 'color': 'blue'},  # 初当り回数 4
-    'first_hit_rate': {'x': 125, 'y': 145, 'w': 100, 'h': 25, 'color': 'blue'},  # (1/469)
+    # 上段の大きな数値（赤と青） - Y:358ライン
+    'big_hit_count': {'x': 322, 'y': 358, 'w': 239, 'h': 125, 'color': 'red'},  # 大当り回数 25
+    'big_hit_rate': {'x': 322, 'y': 485, 'w': 239, 'h': 50, 'color': 'red'},  # (1/148)
+    'first_hit_count': {'x': 562, 'y': 358, 'w': 239, 'h': 125, 'color': 'blue'},  # 初当り回数 4  
+    'first_hit_rate': {'x': 562, 'y': 485, 'w': 239, 'h': 50, 'color': 'blue'},  # (1/469)
     
     # 累計スタート（白）
-    'total_start': {'x': 230, 'y': 85, 'w': 80, 'h': 30, 'color': 'white'},  # 3721
-    'normal': {'x': 205, 'y': 120, 'w': 50, 'h': 25, 'color': 'white'},  # 通常 1877
-    'chance': {'x': 260, 'y': 120, 'w': 50, 'h': 25, 'color': 'white'},  # チャンス中 1844
+    'total_start': {'x': 803, 'y': 368, 'w': 179, 'h': 60, 'color': 'white'},  # 3721
+    'normal': {'x': 748, 'y': 438, 'w': 110, 'h': 50, 'color': 'white'},  # 通常 1877
+    'chance': {'x': 858, 'y': 438, 'w': 110, 'h': 50, 'color': 'white'},  # チャンス中 1844
     
-    # 中段の数値
-    'ultra': {'x': 20, 'y': 175, 'w': 35, 'h': 30, 'color': 'red'},  # 超 21
-    'middle': {'x': 60, 'y': 175, 'w': 35, 'h': 30, 'color': 'red'},  # 中 0
-    'small': {'x': 100, 'y': 175, 'w': 35, 'h': 30, 'color': 'red'},  # 小 4
+    # 中段の数値 - Y:557ライン
+    'ultra': {'x': 322, 'y': 557, 'w': 74, 'h': 60, 'color': 'red'},  # 超 21
+    'middle': {'x': 396, 'y': 557, 'w': 74, 'h': 60, 'color': 'red'},  # 中 0
+    'small': {'x': 470, 'y': 557, 'w': 74, 'h': 60, 'color': 'red'},  # 小 4
     
-    'start': {'x': 140, 'y': 175, 'w': 70, 'h': 30, 'color': 'white'},  # スタート 369
-    'max_payout': {'x': 215, 'y': 175, 'w': 95, 'h': 30, 'color': 'white'},  # 最高出玉 26830
+    'start': {'x': 563, 'y': 557, 'w': 155, 'h': 60, 'color': 'white'},  # スタート 369
+    'max_payout': {'x': 765, 'y': 557, 'w': 217, 'h': 60, 'color': 'white'},  # 最高出玉 26830
     
-    # 下段のテーブルデータ（すべて白）
-    'max_hit': {'x': 10, 'y': 215, 'w': 75, 'h': 25, 'color': 'white'},  # 最高一撃獲得 25760
-    'chance_hits': {'x': 90, 'y': 215, 'w': 40, 'h': 25, 'color': 'white'},  # チャンス中大当り 21
-    'chance_rate': {'x': 135, 'y': 215, 'w': 55, 'h': 25, 'color': 'white'},  # チャンス中確率 1/87
+    # 下段のテーブルデータ（すべて白） - Y:662ライン
+    'max_hit': {'x': 290, 'y': 662, 'w': 165, 'h': 48, 'color': 'white'},  # 最高一撃獲得 25760
+    'chance_hits': {'x': 457, 'y': 662, 'w': 90, 'h': 48, 'color': 'white'},  # チャンス中大当り 21
+    'chance_rate': {'x': 587, 'y': 662, 'w': 115, 'h': 48, 'color': 'white'},  # チャンス中確率 1/87
     
-    'initial_start': {'x': 15, 'y': 250, 'w': 50, 'h': 25, 'color': 'white'},  # 初回特賞スタート 220
-    'prev_final': {'x': 90, 'y': 250, 'w': 50, 'h': 25, 'color': 'white'},  # 前日最終スタート 107
+    'initial_start': {'x': 307, 'y': 737, 'w': 110, 'h': 48, 'color': 'white'},  # 初回特賞スタート 220
+    'prev_final': {'x': 462, 'y': 737, 'w': 110, 'h': 48, 'color': 'white'},  # 前日最終スタート 107
 }
 
-# Figmaで確認した絶対座標（参考用）
-OCR_REGIONS_ABSOLUTE = OCR_REGIONS  # 一時的に相対座標を使用
+# 旧座標を保持（互換性のため）
+OCR_REGIONS_ABSOLUTE = OCR_REGIONS
 
 # 黒背景領域からの相対座標を計算する関数
 def absolute_to_relative_coords(absolute_coords, black_x, black_y):
@@ -210,23 +210,14 @@ if uploaded_file is not None:
                 # Progress bar
                 progress = st.progress(0)
                 
-                # 黒背景領域が見つかった場合、その位置を基準にOCR実行
-                if 'black_region_found' in locals() and black_region_found:
-                    base_x = black_x
-                    base_y = black_y
-                else:
-                    # 黒背景が見つからない場合は画像全体を対象
-                    base_x = 0
-                    base_y = 0
-                
-                # 定義した領域からOCR実行
+                # 定義した領域からOCR実行（絶対座標を使用）
                 total_regions = len(OCR_REGIONS)
                 for idx, (region_name, region) in enumerate(OCR_REGIONS.items()):
                     progress.progress((idx + 1) / total_regions)
                     
-                    # 相対座標を絶対座標に変換
-                    x = base_x + region['x']
-                    y = base_y + region['y']
+                    # 絶対座標を直接使用
+                    x = region['x']
+                    y = region['y']
                     w = region['w']
                     h = region['h']
                     
@@ -365,17 +356,10 @@ if uploaded_file is not None:
         # 検出結果のオーバーレイ画像を作成（線付き画像を使用）
         vis_img = img_with_lines.copy()
         
-        # OCR領域を描画（黒背景からの相対座標）
-        if 'black_region_found' in locals() and black_region_found:
-            base_x = black_x
-            base_y = black_y
-        else:
-            base_x = 0
-            base_y = 0
-            
+        # OCR領域を描画（Figmaで定義した絶対座標）  
         for name, region in OCR_REGIONS.items():
-            x = base_x + region['x']
-            y = base_y + region['y']
+            x = region['x']
+            y = region['y']
             w = region['w']
             h = region['h']
             
@@ -443,7 +427,7 @@ if uploaded_file is not None:
             
             # OCR領域の説明
             st.markdown("### 📋 OCR対象領域")
-            st.info(f"{len(OCR_REGIONS)}個の領域が黒背景を基準に定義されています")
+            st.info(f"{len(OCR_REGIONS)}個の領域がFigmaの座標で正確に定義されています")
         
         # 統計情報を表示
         if 'detections' in st.session_state and st.session_state['detections']:
