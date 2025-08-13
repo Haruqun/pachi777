@@ -579,34 +579,78 @@ if uploaded_file is not None:
                     detected_regions = []
                     vis_full_img = img_bgr.copy()
                     
+                    # デバッグ情報を保存
+                    debug_info = {
+                        'attempts': [],
+                        'success_count': {'white': 0, 'red': 0, 'blue': 0},
+                        'psm_count': {6: 0, 8: 0, 11: 0, 13: 0}
+                    }
+                    
                     # HSV変換
                     hsv = cv2.cvtColor(target_img, cv2.COLOR_BGR2HSV)
                     
-                    # 1. 白色テキスト検出
+                    # 1. 白色テキスト検出（複数の手法を組み合わせ）
                     gray = cv2.cvtColor(target_img, cv2.COLOR_BGR2GRAY)
-                    _, white_mask = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
                     
-                    # 2. 赤色テキスト検出
-                    red_mask1 = cv2.inRange(hsv, np.array([0, 20, 20]), np.array([20, 255, 255]))
-                    red_mask2 = cv2.inRange(hsv, np.array([160, 20, 20]), np.array([180, 255, 255]))
+                    # 複数の閾値で白色マスクを作成
+                    _, white_mask1 = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
+                    _, white_mask2 = cv2.threshold(gray, 160, 255, cv2.THRESH_BINARY)
+                    _, white_mask3 = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+                    
+                    # 適応的閾値処理
+                    white_mask_adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                                cv2.THRESH_BINARY, 11, 2)
+                    
+                    # CLAHE（コントラスト強調）後の閾値処理
+                    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+                    enhanced = clahe.apply(gray)
+                    _, white_mask_enhanced = cv2.threshold(enhanced, 180, 255, cv2.THRESH_BINARY)
+                    
+                    # 2. 赤色テキスト検出（ピンク〜赤の広い範囲）
+                    # ピンク系（明度高め）
+                    pink_mask = cv2.inRange(hsv, np.array([150, 10, 100]), np.array([180, 60, 255]))
+                    # 赤系（彩度高め）
+                    red_mask1 = cv2.inRange(hsv, np.array([0, 40, 40]), np.array([10, 255, 255]))
+                    red_mask2 = cv2.inRange(hsv, np.array([170, 40, 40]), np.array([180, 255, 255]))
+                    # マゼンタ系
+                    magenta_mask = cv2.inRange(hsv, np.array([140, 30, 50]), np.array([170, 255, 255]))
+                    # 組み合わせ
                     red_mask = cv2.bitwise_or(red_mask1, red_mask2)
+                    red_mask = cv2.bitwise_or(red_mask, pink_mask)
+                    red_mask = cv2.bitwise_or(red_mask, magenta_mask)
+                    # モルフォロジー処理
+                    kernel = np.ones((2,2), np.uint8)
+                    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel)
                     red_mask = cv2.bitwise_not(red_mask)
                     
-                    # 3. 青色テキスト検出
-                    blue_mask = cv2.inRange(hsv, np.array([85, 20, 20]), np.array([125, 255, 255]))
+                    # 3. 青色テキスト検出（シアン〜青の広い範囲）
+                    # シアン系
+                    cyan_mask = cv2.inRange(hsv, np.array([80, 30, 50]), np.array([100, 255, 255]))
+                    # 青系
+                    blue_mask = cv2.inRange(hsv, np.array([100, 30, 50]), np.array([120, 255, 255]))
+                    # 組み合わせ
+                    blue_mask = cv2.bitwise_or(cyan_mask, blue_mask)
+                    # モルフォロジー処理
+                    blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, kernel)
                     blue_mask = cv2.bitwise_not(blue_mask)
                     
-                    # 各マスクでOCR実行
+                    # 各マスクでOCR実行（白色は複数のマスクを試す）
                     masks = [
-                        ('white', white_mask),
+                        ('white', white_mask1),
+                        ('white', white_mask2),
+                        ('white', white_mask3),
+                        ('white', white_mask_adaptive),
+                        ('white', white_mask_enhanced),
                         ('red', red_mask),
                         ('blue', blue_mask)
                     ]
                     
-                    for color_name, mask in masks:
+                    for mask_idx, (color_name, mask) in enumerate(masks):
                         # 複数のPSMモードで試行
                         for psm in [11, 6, 8, 13]:
                             try:
+                                debug_info['attempts'].append(f"{color_name}_mask{mask_idx}_psm{psm}")
+                                
                                 custom_config = f'--psm {psm} -c tessedit_char_whitelist=0123456789/'
                                 data = pytesseract.image_to_data(mask, config=custom_config, output_type=pytesseract.Output.DICT)
                                 
@@ -647,7 +691,10 @@ if uploaded_file is not None:
                                                 'psm': psm
                                             }
                                             detected_regions.append(region_info)
-                            except:
+                                            debug_info['success_count'][color_name] += 1
+                                            debug_info['psm_count'][psm] += 1
+                            except Exception as e:
+                                debug_info['attempts'].append(f"ERROR: {color_name}_mask{mask_idx}_psm{psm}: {str(e)[:50]}")
                                 continue
                     
                     # 検出結果を描画
@@ -665,6 +712,27 @@ if uploaded_file is not None:
                 
                 # 結果表示
                 st.success(f"OCR完了！ {len(detected_regions)}個のテキストを検出")
+                
+                # デバッグ情報表示
+                with st.expander("🔍 OCRデバッグ情報"):
+                    st.markdown("### 検出統計")
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("白色テキスト", debug_info['success_count']['white'])
+                    with col2:
+                        st.metric("赤色テキスト", debug_info['success_count']['red'])
+                    with col3:
+                        st.metric("青色テキスト", debug_info['success_count']['blue'])
+                    
+                    st.markdown("### PSMモード別検出数")
+                    psm_cols = st.columns(4)
+                    for idx, (psm, count) in enumerate(debug_info['psm_count'].items()):
+                        with psm_cols[idx]:
+                            st.metric(f"PSM {psm}", count)
+                    
+                    st.markdown("### 試行ログ")
+                    st.text_area("OCR試行履歴", "\n".join(debug_info['attempts'][:100]), height=200)
+                
                 st.divider()
                 
                 # 検出結果画像
