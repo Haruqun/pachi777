@@ -171,14 +171,51 @@ if uploaded_file is not None:
                 'bbox': (65, 1066, 213, 1102),  # 実際の検出座標
                 'color': 'white'
             },
+            'chance_hits': {
+                'name': 'チャンス中大当り',
+                'bbox': (210, 1066, 260, 1102),  # 等間隔配置
+                'color': 'white'
+            },
             'chance_rate': {
                 'name': 'チャンス中確率',
                 'bbox': (555, 1066, 663, 1104),  # 実際の検出座標
                 'color': 'white'
             },
+            'low_chance_hits': {
+                'name': '低確中大当り',
+                'bbox': (457, 1066, 507, 1102),  # 等間隔配置
+                'color': 'white'
+            },
+            'low_chance_rate': {
+                'name': '低確中確率',
+                'bbox': (602, 1066, 692, 1102),  # 等間隔配置
+                'color': 'white'
+            },
+            
+            # 2段目データ
             'initial_start': {
                 'name': '初回特賞スタート',
                 'bbox': (96, 1184, 182, 1220),  # 実際の検出座標
+                'color': 'white'
+            },
+            'prev_final': {
+                'name': '前日最終スタート',
+                'bbox': (210, 1184, 295, 1220),  # 等間隔配置
+                'color': 'white'
+            },
+            'break_count': {
+                'name': '突時回数',
+                'bbox': (338, 1184, 388, 1220),  # 等間隔配置
+                'color': 'white'
+            },
+            'low_start': {
+                'name': '低確スタート',
+                'bbox': (457, 1184, 525, 1220),  # 等間隔配置
+                'color': 'white'
+            },
+            'play_time': {
+                'name': '遊タイム',
+                'bbox': (602, 1184, 670, 1220),  # 等間隔配置
                 'color': 'white'
             },
             
@@ -191,6 +228,11 @@ if uploaded_file is not None:
             'total_86': {
                 'name': '累計8/6',
                 'bbox': (204, 1326, 322, 1362),  # 実際の検出座標
+                'color': 'white'
+            },
+            'first_rate_86': {
+                'name': '初当り確率8/6',
+                'bbox': (432, 1326, 570, 1364),  # 等間隔配置
                 'color': 'white'
             },
             'chance_rate_86': {
@@ -213,6 +255,11 @@ if uploaded_file is not None:
             'total_85': {
                 'name': '累計8/5',
                 'bbox': (204, 1386, 321, 1422),  # 実際の検出座標
+                'color': 'white'
+            },
+            'first_rate_85': {
+                'name': '初当り確率8/5',
+                'bbox': (432, 1386, 570, 1424),  # 等間隔配置
                 'color': 'white'
             },
             'chance_rate_85': {
