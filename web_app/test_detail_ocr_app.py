@@ -30,6 +30,44 @@ EXPECTED_DATA = {
     'chance_rate': '1/87'
 }
 
+# mask2.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
+# オフセット: X=0, Y=-191でピッタリ合う
+# 統合領域を使用して精度向上
+OCR_REGIONS_FROM_MASK2 = {
+    # ヘッダー（黒枠外）
+    'header': {'x': 21, 'y': -191, 'w': 1129, 'h': 64, 'color': 'white'},
+    'store_info': {'x': 0, 'y': -109, 'w': 211, 'h': 99, 'color': 'white'},
+    'date_info': {'x': 4, 'y': 0, 'w': 80, 'h': 61, 'color': 'white'},
+    
+    # 統合領域（複数のデータを含む）
+    'big_first_hit_combined': {'x': 79, 'y': 113, 'w': 236, 'h': 192, 'color': 'mixed'},  # 大当り回数と確率
+    'first_hit_combined': {'x': 457, 'y': 113, 'w': 236, 'h': 192, 'color': 'mixed'},  # 初当り回数と確率
+    'total_start_combined': {'x': 786, 'y': 113, 'w': 346, 'h': 80, 'color': 'white'},  # 累計スタート
+    
+    # 通常/チャンス
+    'normal': {'x': 786, 'y': 231, 'w': 164, 'h': 77, 'color': 'white'},
+    'chance': {'x': 961, 'y': 231, 'w': 174, 'h': 77, 'color': 'white'},
+    
+    # 中段
+    'start': {'x': 471, 'y': 370, 'w': 208, 'h': 105, 'color': 'white'},
+    'max_payout': {'x': 813, 'y': 370, 'w': 274, 'h': 107, 'color': 'white'},
+    'ultra': {'x': 79, 'y': 386, 'w': 82, 'h': 72, 'color': 'red'},
+    'middle': {'x': 166, 'y': 386, 'w': 74, 'h': 72, 'color': 'red'},
+    'small': {'x': 244, 'y': 386, 'w': 73, 'h': 72, 'color': 'red'},
+    
+    # 下段テーブル
+    'max_hit': {'x': 33, 'y': 546, 'w': 202, 'h': 61, 'color': 'white'},
+    'chance_hits': {'x': 264, 'y': 546, 'w': 201, 'h': 61, 'color': 'white'},
+    'chance_rate': {'x': 494, 'y': 546, 'w': 202, 'h': 61, 'color': 'white'},
+    'low_hits': {'x': 725, 'y': 546, 'w': 201, 'h': 61, 'color': 'white'},
+    'play_time': {'x': 955, 'y': 546, 'w': 202, 'h': 61, 'color': 'white'},
+    'initial_start': {'x': 35, 'y': 662, 'w': 201, 'h': 61, 'color': 'white'},
+    'prev_final': {'x': 262, 'y': 662, 'w': 201, 'h': 61, 'color': 'white'},
+    'rush_count': {'x': 492, 'y': 662, 'w': 202, 'h': 61, 'color': 'white'},
+    'low_start': {'x': 723, 'y': 662, 'w': 201, 'h': 61, 'color': 'white'},
+    'lost_time': {'x': 953, 'y': 662, 'w': 202, 'h': 61, 'color': 'white'},
+}
+
 # mask.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
 # オフセット: X=0, Y=-191でピッタリ合う（黒枠外の領域も含む）
 OCR_REGIONS_FROM_MASK = {
@@ -73,8 +111,8 @@ OCR_REGIONS_FROM_MASK = {
     'lost_time': {'x': 953, 'y': 662, 'w': 202, 'h': 61, 'color': 'white'},  # 遊タイム
 }
 
-# デフォルトで相対座標を使用
-OCR_REGIONS = OCR_REGIONS_FROM_MASK
+# デフォルトでmask2を使用（統合領域で精度向上）
+OCR_REGIONS = OCR_REGIONS_FROM_MASK2
 
 # 黒背景領域からの相対座標を計算する関数
 def absolute_to_relative_coords(absolute_coords, black_x, black_y):
@@ -288,9 +326,17 @@ if uploaded_file is not None:
                         st.warning(f"領域 {region_name} が小さすぎます: {roi.shape}")
                         continue
                     
+                    # 領域に余白を追加（文字の切れ防止）
+                    padding = 5
+                    y_start_pad = max(0, y_start - padding)
+                    y_end_pad = min(height, y_end + padding)
+                    x_start_pad = max(0, x_start - padding)
+                    x_end_pad = min(width, x_end + padding)
+                    roi_padded = img_bgr[y_start_pad:y_end_pad, x_start_pad:x_end_pad]
+                    
                     # まず画像を拡大（OCR精度向上のため）
                     scale_factor = 2
-                    roi_large = cv2.resize(roi, (roi.shape[1] * scale_factor, roi.shape[0] * scale_factor), 
+                    roi_large = cv2.resize(roi_padded, (roi_padded.shape[1] * scale_factor, roi_padded.shape[0] * scale_factor), 
                                           interpolation=cv2.INTER_CUBIC)
                     
                     # 超、中、小の特別処理
@@ -320,6 +366,13 @@ if uploaded_file is not None:
                         _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
                         
                         # 処理済み（白背景に黒文字）
+                        
+                    # mixed（統合領域）の処理
+                    elif region['color'] == 'mixed':
+                        # 統合領域は複数の色を含むので、グレースケールで処理
+                        gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
+                        # 大津の方法で二値化
+                        _, processed = cv2.threshold(gray_roi, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
                         
                     # 色に応じた前処理
                     elif region['color'] == 'red':
@@ -376,8 +429,11 @@ if uploaded_file is not None:
                                 conf = int(data['conf'][i]) if data['conf'][i] != -1 else 0
                                 
                                 if text:
+                                    # 統合領域の処理は後で行うのでそのまま保存
+                                    if 'combined' in region_name:
+                                        pass  # 統合領域はそのまま
                                     # 数字に関係する領域では数字以外を除去
-                                    if region_name in ['big_hit_count', 'first_hit_count', 'total_start', 
+                                    elif region_name in ['big_hit_count', 'first_hit_count', 'total_start', 
                                                       'normal', 'chance', 'ultra', 'middle', 'small', 
                                                       'start', 'max_payout']:
                                         # 数字のみを抽出
@@ -440,6 +496,43 @@ if uploaded_file is not None:
                             'confidence': best_confidence
                         })
                         continue
+            
+            # 統合領域から個別データを抽出
+            import re
+            
+            # big_first_hit_combinedから大当り回数と確率を抽出
+            if 'big_first_hit_combined' in detected_data:
+                combined_text = detected_data['big_first_hit_combined']
+                # 大きな数字（大当り回数）を抽出
+                numbers = re.findall(r'\d+', combined_text)
+                if numbers:
+                    # 最初の大きな数字が大当り回数
+                    detected_data['big_hit_count'] = numbers[0]
+                # 確率を抽出 (1/xxx形式)
+                rate_match = re.search(r'\d+/\d+', combined_text)
+                if rate_match:
+                    detected_data['big_hit_rate'] = f"(1/{rate_match.group()})"
+            
+            # first_hit_combinedから初当り回数と確率を抽出
+            if 'first_hit_combined' in detected_data:
+                combined_text = detected_data['first_hit_combined']
+                # 数字を抽出
+                numbers = re.findall(r'\d+', combined_text)
+                if numbers:
+                    # 最初の数字が初当り回数
+                    detected_data['first_hit_count'] = numbers[0]
+                # 確率を抽出
+                rate_match = re.search(r'\d+/\d+', combined_text)
+                if rate_match:
+                    detected_data['first_hit_rate'] = f"(1/{rate_match.group()})"
+            
+            # total_start_combinedから累計スタートを抽出
+            if 'total_start_combined' in detected_data:
+                combined_text = detected_data['total_start_combined']
+                # 4桁の数字を探す
+                numbers = re.findall(r'\d{4}', combined_text)
+                if numbers:
+                    detected_data['total_start'] = numbers[0]
             
             # 結果を表示
             st.success(f"検出完了！ {len(all_detections)}個のテキストを検出")
