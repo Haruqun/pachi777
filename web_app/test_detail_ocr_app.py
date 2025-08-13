@@ -363,17 +363,12 @@ if uploaded_file is not None:
                     
                     for psm in psm_modes:
                         try:
-                            # 領域によって異なる文字セットを使用
-                            if 'rate' in region_name:
-                                # 確率表示用：括弧、スラッシュ、数字を許可
-                                custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789()/'
-                            else:
-                                # 通常の数値用：数字のみ
-                                custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789'
+                            # 文字制限を解除して全ての文字を読み取る
+                            custom_config = f'--psm {psm} --oem 3'
                             
-                            # OCR実行して信頼度も取得
+                            # OCR実行して信頼度も取得（日本語も含めて）
                             data = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, 
-                                                            config=custom_config)
+                                                            config=custom_config, lang='jpn')
                             
                             # 全てのテキストを収集
                             for i in range(len(data['text'])):
@@ -381,13 +376,17 @@ if uploaded_file is not None:
                                 conf = int(data['conf'][i]) if data['conf'][i] != -1 else 0
                                 
                                 if text:
-                                    # 括弧の重複を除去
-                                    if 'rate' in region_name:
-                                        # 余分な括弧を除去
-                                        if text.endswith('))'):
-                                            text = text[:-1]
-                                        if text.startswith('(('):
-                                            text = text[1:]
+                                    # 数字に関係する領域では数字以外を除去
+                                    if region_name in ['big_hit_count', 'first_hit_count', 'total_start', 
+                                                      'normal', 'chance', 'ultra', 'middle', 'small', 
+                                                      'start', 'max_payout']:
+                                        # 数字のみを抽出
+                                        import re
+                                        numbers = re.findall(r'\d+', text)
+                                        if numbers:
+                                            text = ''.join(numbers)
+                                        else:
+                                            continue
                                     
                                     all_texts.append(f"PSM{psm}: {text} ({conf}%)")
                                     
