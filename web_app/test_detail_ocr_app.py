@@ -293,8 +293,44 @@ if uploaded_file is not None:
                     roi_large = cv2.resize(roi, (roi.shape[1] * scale_factor, roi.shape[0] * scale_factor), 
                                           interpolation=cv2.INTER_CUBIC)
                     
+                    # 超、中、小の特別処理
+                    if region_name in ['ultra', 'middle', 'small']:
+                        # 領域の右側60%のみを抽出（数字部分）
+                        width_roi = roi_large.shape[1]
+                        start_x = int(width_roi * 0.4)  # 右側60%
+                        roi_large = roi_large[:, start_x:]
+                        
+                        # 赤色を強調して処理
+                        b, g, r = cv2.split(roi_large)
+                        # 赤チャンネルのみを使用
+                        red_only = r
+                        
+                        # コントラストを強化
+                        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+                        red_enhanced = clahe.apply(red_only)
+                        
+                        # 大津の方法で二値化
+                        _, processed = cv2.threshold(red_enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                    
+                    # 大当り回数の特別処理
+                    elif region_name == 'big_hit_count':
+                        # 領域の右側70%を抽出（数字部分）
+                        width_roi = roi_large.shape[1]
+                        start_x = int(width_roi * 0.3)  # 右側70%
+                        roi_large = roi_large[:, start_x:]
+                        
+                        # 赤色チャンネルを使用
+                        b, g, r = cv2.split(roi_large)
+                        
+                        # コントラストを強化
+                        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+                        red_enhanced = clahe.apply(r)
+                        
+                        # 大津の方法で二値化
+                        _, processed = cv2.threshold(red_enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                        
                     # 色に応じた前処理
-                    if region['color'] == 'red':
+                    elif region['color'] == 'red':
                         # 赤色テキストの処理
                         # 赤チャンネルを強調
                         b, g, r = cv2.split(roi_large)
@@ -333,8 +369,12 @@ if uploaded_file is not None:
                     best_psm = None
                     all_texts = []  # デバッグ用：全ての検出結果を保存
                     
-                    # PSMモードのリスト（単一テキスト行、単一単語、など）
-                    psm_modes = [7, 8, 13, 11]  # 7:単一テキスト行, 8:単一単語, 13:生のライン, 11:疎テキスト
+                    # PSMモードのリスト（領域によって調整）
+                    if region_name in ['ultra', 'middle', 'small']:
+                        # 超、中、小は単一数字なので特化したPSMモード
+                        psm_modes = [10, 8, 13, 7]  # 10:単一文字, 8:単一単語, 13:生のライン, 7:単一テキスト行
+                    else:
+                        psm_modes = [7, 8, 13, 11]  # 通常のPSMモード
                     
                     for psm in psm_modes:
                         try:
