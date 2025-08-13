@@ -90,6 +90,53 @@ if uploaded_file is not None:
         img_bgr = cv2.resize(img_bgr, (new_width, new_height))
         height, width = new_height, new_width
     
+    # OCR対象領域を定義（スクショの範囲に基づいて）
+    # 黒背景のデータ表示領域のみに絞る
+    # 上部: 「大当り回数」「初当り回数」「累計スタート」のエリア
+    # 中部: 「超中小」「スタート」「最高出玉」のエリア  
+    # 下部: 各種統計データのエリア
+    
+    # 黒背景領域を検出
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    _, black_mask = cv2.threshold(gray, 40, 255, cv2.THRESH_BINARY_INV)
+    
+    # 輪郭を検出
+    contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # 最大の輪郭を見つける
+    roi_defined = False
+    if contours:
+        largest_contour = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(largest_contour)
+        
+        # 黒背景領域が十分大きい場合
+        if w * h > width * height * 0.2:
+            # データ表示部分のみを切り出し（上下の余白を除去）
+            # 上部の余白（日付部分など）をスキップ
+            crop_top = y + int(h * 0.08)  # 上部8%をスキップ
+            # 下部の余白をスキップ
+            crop_bottom = y + int(h * 0.75)  # 下部25%をスキップ
+            
+            # 左右のマージンも調整
+            crop_left = x + 20
+            crop_right = x + w - 20
+            
+            # 切り抜き
+            img_bgr = img_bgr[crop_top:crop_bottom, crop_left:crop_right]
+            height, width = img_bgr.shape[:2]
+            
+            st.info(f"OCR対象領域: 幅{width}px × 高さ{height}px")
+            
+            # オフセットを保存
+            offset_x = crop_left
+            offset_y = crop_top
+            roi_defined = True
+    
+    if not roi_defined:
+        offset_x = 0
+        offset_y = 0
+        st.warning("黒背景領域を検出できませんでした。画像全体を処理します。")
+    
     # タブを作成
     tab1, tab2, tab3, tab4 = st.tabs(["📊 OCR結果", "🎨 色検出", "📍 座標マップ", "📄 JSON出力"])
     
@@ -139,7 +186,7 @@ if uploaded_file is not None:
                                         all_detections.append({
                                             'text': text,
                                             'confidence': conf,
-                                            'bbox': [x, y, x + w, y + h],
+                                            'bbox': [x + offset_x, y + offset_y, x + w + offset_x, y + h + offset_y],
                                             'color': 'white'
                                         })
                             except:
@@ -187,7 +234,7 @@ if uploaded_file is not None:
                                     all_detections.append({
                                         'text': text,
                                         'confidence': conf,
-                                        'bbox': [x, y, x + w, y + h],
+                                        'bbox': [x + offset_x, y + offset_y, x + w + offset_x, y + h + offset_y],
                                         'color': 'red'
                                     })
                         except:
@@ -233,7 +280,7 @@ if uploaded_file is not None:
                                     all_detections.append({
                                         'text': text,
                                         'confidence': conf,
-                                        'bbox': [x, y, x + w, y + h],
+                                        'bbox': [x + offset_x, y + offset_y, x + w + offset_x, y + h + offset_y],
                                         'color': 'blue'
                                     })
                         except:
