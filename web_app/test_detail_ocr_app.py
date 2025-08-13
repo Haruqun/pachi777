@@ -295,39 +295,33 @@ if uploaded_file is not None:
                     
                     # 超、中、小の特別処理
                     if region_name in ['ultra', 'middle', 'small']:
-                        # 領域の右側60%のみを抽出（数字部分）
-                        width_roi = roi_large.shape[1]
-                        start_x = int(width_roi * 0.4)  # 右側60%
-                        roi_large = roi_large[:, start_x:]
-                        
                         # 赤色を強調して処理
                         b, g, r = cv2.split(roi_large)
-                        # 赤チャンネルのみを使用
-                        red_only = r
                         
-                        # コントラストを強化
-                        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-                        red_enhanced = clahe.apply(red_only)
+                        # 赤チャンネルから青と緑の最大値を減算
+                        bg_max = cv2.max(b, g)
+                        red_emphasis = cv2.subtract(r, bg_max)
                         
-                        # 大津の方法で二値化
-                        _, processed = cv2.threshold(red_enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                        # 固定閾値で二値化（赤い文字は明るいので高い閾値）
+                        _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
+                        
+                        # 白黒反転
+                        processed = cv2.bitwise_not(processed)
                     
                     # 大当り回数の特別処理
                     elif region_name == 'big_hit_count':
-                        # 領域の右側70%を抽出（数字部分）
-                        width_roi = roi_large.shape[1]
-                        start_x = int(width_roi * 0.3)  # 右側70%
-                        roi_large = roi_large[:, start_x:]
-                        
                         # 赤色チャンネルを使用
                         b, g, r = cv2.split(roi_large)
                         
-                        # コントラストを強化
-                        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-                        red_enhanced = clahe.apply(r)
+                        # 赤チャンネルから青と緑の最大値を減算
+                        bg_max = cv2.max(b, g)
+                        red_emphasis = cv2.subtract(r, bg_max)
                         
-                        # 大津の方法で二値化
-                        _, processed = cv2.threshold(red_enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                        # 固定閾値で二値化
+                        _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
+                        
+                        # 白黒反転
+                        processed = cv2.bitwise_not(processed)
                         
                     # 色に応じた前処理
                     elif region['color'] == 'red':
@@ -356,12 +350,14 @@ if uploaded_file is not None:
                         processed = cv2.adaptiveThreshold(gray_roi, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                                         cv2.THRESH_BINARY, 11, 2)
                     
-                    # ノイズ除去（拡大画像用に調整）
-                    kernel = np.ones((3,3), np.uint8)
-                    processed = cv2.morphologyEx(processed, cv2.MORPH_CLOSE, kernel)
-                    
-                    # エッジを強調
-                    processed = cv2.bitwise_not(processed)  # 白黒反転（黒文字を白文字に）
+                    # 超、中、小、大当り回数以外の領域のみノイズ除去と反転を適用
+                    if region_name not in ['ultra', 'middle', 'small', 'big_hit_count']:
+                        # ノイズ除去（拡大画像用に調整）
+                        kernel = np.ones((3,3), np.uint8)
+                        processed = cv2.morphologyEx(processed, cv2.MORPH_CLOSE, kernel)
+                        
+                        # エッジを強調
+                        processed = cv2.bitwise_not(processed)  # 白黒反転（黒文字を白文字に）
                     
                     # OCR実行（複数の設定を試す）
                     detected_text = None
