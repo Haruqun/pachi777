@@ -15,19 +15,19 @@ st.title("🎰 パチンコ詳細OCR - Site777")
 
 # Expected data items from the image（簡略版）
 EXPECTED_DATA = {
-    'header': 'エヴァンゲリオン',  # ヘッダー（実際のタイトル）
-    'store_info': '0026',  # 店舗情報
-    'date_info': '12/1',  # 日付（実際の日付）
-    'total_start': '3721',  # 累計スタート
-    'normal': '1877',  # 通常
-    'chance': '1844',  # チャンス中
-    'ultra': '21',  # 超
+    'header': 'P新世紀エヴァンゲリオン１５　未来への咆哮',  # ヘッダー（実際のタイトル）
+    'store_info': '0027',  # 店舗情報
+    'date_info': '8/14',  # 日付（実際の日付）
+    'total_start': '3684',  # 累計スタート
+    'normal': '638',  # 通常
+    'chance': '3046',  # チャンス中
+    'ultra': '35',  # 超
     'middle': '0',  # 中
     'small': '4',  # 小
-    'start': '369',  # スタート
-    'max_payout': '26830',  # 最高出玉
-    'max_hit': '25760',  # 最高一撃獲得
-    'initial_start': '40'  # 初回特賞スタート
+    'start': '167',  # スタート
+    'max_payout': '43430',  # 最高出玉
+    'max_hit': '18410',  # 最高一撃獲得
+    'initial_start': '163'  # 初回特賞スタート
 }
 
 # mask2.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
@@ -363,13 +363,26 @@ if uploaded_file is not None:
                     
                     # まず画像を拡大（OCR精度向上のため）
                     scale_factor = 2
-                    roi_large = cv2.resize(roi_padded, (roi_padded.shape[1] * scale_factor, roi_padded.shape[0] * scale_factor), 
-                                          interpolation=cv2.INTER_CUBIC)
+                    try:
+                        roi_large = cv2.resize(roi_padded, (roi_padded.shape[1] * scale_factor, roi_padded.shape[0] * scale_factor), 
+                                              interpolation=cv2.INTER_CUBIC)
+                    except Exception as e:
+                        st.warning(f"領域 {region_name} のリサイズに失敗: {e}")
+                        continue
+                    
+                    # roi_largeの形状チェック
+                    if len(roi_large.shape) < 2:
+                        st.warning(f"領域 {region_name} の形状が不正: {roi_large.shape}")
+                        continue
                     
                     # 超、中、小の特別処理
                     if region_name in ['ultra', 'middle', 'small']:
-                        # 赤色を強調して処理
-                        b, g, r = cv2.split(roi_large)
+                        # 赤色を強調して処理（カラー画像の場合のみ）
+                        if len(roi_large.shape) == 3:
+                            b, g, r = cv2.split(roi_large)
+                        else:
+                            # グレースケールの場合はそのまま使用
+                            processed = roi_large
                         
                         # 赤チャンネルから青と緑の最大値を減算
                         bg_max = cv2.max(b, g)
@@ -385,44 +398,67 @@ if uploaded_file is not None:
                         # 赤色チャンネルを使用
                         b, g, r = cv2.split(roi_large)
                         
-                        # 赤チャンネルから青と緑の最大値を減算
-                        bg_max = cv2.max(b, g)
-                        red_emphasis = cv2.subtract(r, bg_max)
-                        
-                        # 固定閾値で二値化
-                        _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
+                        # 画像が3チャンネルか確認
+                        if len(roi_large.shape) == 3:
+                            # 赤チャンネルから青と緑の最大値を減算
+                            bg_max = cv2.max(b, g)
+                            red_emphasis = cv2.subtract(r, bg_max)
+                            
+                            # 固定閾値で二値化
+                            _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
+                        else:
+                            # グレースケールの場合はそのまま処理
+                            _, processed = cv2.threshold(roi_large, 100, 255, cv2.THRESH_BINARY)
                         
                         # 処理済み（白背景に黒文字）
                         
                     # mixed（統合領域）の処理
                     elif region['color'] == 'mixed':
                         # 統合領域は複数の色を含むので、グレースケールで処理
-                        gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
+                        # カラー画像の場合はグレースケールに変換
+                        if len(roi_large.shape) == 3:
+                            gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
+                        else:
+                            gray_roi = roi_large
                         # 大津の方法で二値化
                         _, processed = cv2.threshold(gray_roi, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
                         
                     # 色に応じた前処理
                     elif region['color'] == 'red':
                         # 赤色テキストの処理
-                        b, g, r = cv2.split(roi_large)
-                        # 赤チャンネルから青と緑の最大値を減算
-                        bg_max = cv2.max(b, g)
-                        red_emphasis = cv2.subtract(r, bg_max)
-                        # 固定閾値で二値化
-                        _, processed = cv2.threshold(red_emphasis, 80, 255, cv2.THRESH_BINARY)
+                        # 画像が3チャンネルか確認
+                        if len(roi_large.shape) == 3:
+                            b, g, r = cv2.split(roi_large)
+                            # 赤チャンネルから青と緑の最大値を減算
+                            bg_max = cv2.max(b, g)
+                            red_emphasis = cv2.subtract(r, bg_max)
+                            # 固定閾値で二値化
+                            _, processed = cv2.threshold(red_emphasis, 80, 255, cv2.THRESH_BINARY)
+                        else:
+                            # グレースケールの場合はそのまま処理
+                            _, processed = cv2.threshold(roi_large, 80, 255, cv2.THRESH_BINARY)
                         
                     elif region['color'] == 'blue':
                         # 青色テキストの処理
-                        b, g, r = cv2.split(roi_large)
-                        # 青チャンネルから赤と緑の最大値を減算
-                        rg_max = cv2.max(r, g)
-                        blue_emphasis = cv2.subtract(b, rg_max)
-                        # 固定閾値で二値化
-                        _, processed = cv2.threshold(blue_emphasis, 50, 255, cv2.THRESH_BINARY)
+                        # 画像が3チャンネルか確認
+                        if len(roi_large.shape) == 3:
+                            b, g, r = cv2.split(roi_large)
+                            # 青チャンネルから赤と緑の最大値を減算
+                            rg_max = cv2.max(r, g)
+                            blue_emphasis = cv2.subtract(b, rg_max)
+                            # 固定閾値で二値化
+                            _, processed = cv2.threshold(blue_emphasis, 50, 255, cv2.THRESH_BINARY)
+                        else:
+                            # グレースケールの場合はそのまま処理
+                            _, processed = cv2.threshold(roi_large, 50, 255, cv2.THRESH_BINARY)
                         
                     else:  # white
                         # 白色テキストの処理
-                        gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
+                        # カラー画像の場合はグレースケールに変換
+                        if len(roi_large.shape) == 3:
+                            gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
+                        else:
+                            gray_roi = roi_large
                         
                         # initial_startは特別処理（より強力な前処理）
                         if region_name == 'initial_start':
