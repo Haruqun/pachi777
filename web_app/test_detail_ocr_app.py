@@ -377,10 +377,11 @@ if uploaded_file is not None:
                     
                     # 超、中、小の特別処理（赤色テキスト）
                     if region_name in ['ultra', 'middle', 'small']:
-                        # デバッグ: 形状を確認
-                        st.write(f"DEBUG: {region_name} shape = {roi_large.shape}")
                         # 赤色を強調して処理（カラー画像の場合のみ）
                         if len(roi_large.shape) == 3:
+                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                            if roi_large.shape[2] == 4:
+                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
                             b, g, r = cv2.split(roi_large)
                             # 赤チャンネルから青と緑の最大値を減算
                             bg_max = cv2.max(b, g)
@@ -395,6 +396,9 @@ if uploaded_file is not None:
                     elif region_name == 'big_hit_count':
                         # 画像が3チャンネルか確認
                         if len(roi_large.shape) == 3:
+                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                            if roi_large.shape[2] == 4:
+                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
                             # 赤色チャンネルを使用
                             b, g, r = cv2.split(roi_large)
                             # 赤チャンネルから青と緑の最大値を減算
@@ -414,6 +418,9 @@ if uploaded_file is not None:
                         # 統合領域は複数の色を含むので、グレースケールで処理
                         # カラー画像の場合はグレースケールに変換
                         if len(roi_large.shape) == 3:
+                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                            if roi_large.shape[2] == 4:
+                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
                             gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
                         else:
                             gray_roi = roi_large
@@ -425,6 +432,9 @@ if uploaded_file is not None:
                         # 赤色テキストの処理
                         # 画像が3チャンネルか確認
                         if len(roi_large.shape) == 3:
+                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                            if roi_large.shape[2] == 4:
+                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
                             b, g, r = cv2.split(roi_large)
                             # 赤チャンネルから青と緑の最大値を減算
                             bg_max = cv2.max(b, g)
@@ -439,6 +449,9 @@ if uploaded_file is not None:
                         # 青色テキストの処理
                         # 画像が3チャンネルか確認
                         if len(roi_large.shape) == 3:
+                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                            if roi_large.shape[2] == 4:
+                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
                             b, g, r = cv2.split(roi_large)
                             # 青チャンネルから赤と緑の最大値を減算
                             rg_max = cv2.max(r, g)
@@ -453,6 +466,9 @@ if uploaded_file is not None:
                         # 白色テキストの処理
                         # カラー画像の場合はグレースケールに変換
                         if len(roi_large.shape) == 3:
+                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                            if roi_large.shape[2] == 4:
+                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
                             gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
                         else:
                             gray_roi = roi_large
