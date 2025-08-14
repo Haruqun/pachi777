@@ -111,8 +111,48 @@ OCR_REGIONS_FROM_MASK = {
     'lost_time': {'x': 953, 'y': 662, 'w': 202, 'h': 61, 'color': 'white'},  # 遊タイム
 }
 
-# デフォルトでmask2を使用（統合領域で精度向上）
-OCR_REGIONS = OCR_REGIONS_FROM_MASK2
+# mask3.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
+# オフセット: X=0, Y=-188（最適値）
+# 大当り/初当りを上下分離（数値と確率を別々に）
+OCR_REGIONS_FROM_MASK3 = {
+    # ヘッダー（黒枠外）
+    'header': {'x': 21, 'y': -188, 'w': 1129, 'h': 64, 'color': 'white'},
+    'store_info': {'x': 0, 'y': -106, 'w': 211, 'h': 99, 'color': 'white'},
+    'date_info': {'x': 4, 'y': 3, 'w': 80, 'h': 61, 'color': 'white'},
+    
+    # メイン数値（上段）
+    'big_hit_count': {'x': 80, 'y': 125, 'w': 236, 'h': 118, 'color': 'red'},  # 大当り回数
+    'first_hit_count': {'x': 458, 'y': 125, 'w': 236, 'h': 118, 'color': 'blue'},  # 初当り回数
+    'total_start': {'x': 786, 'y': 116, 'w': 346, 'h': 80, 'color': 'white'},  # 累計スタート
+    
+    # 確率（下段）
+    'big_hit_rate': {'x': 80, 'y': 246, 'w': 236, 'h': 42, 'color': 'red'},  # 大当り確率
+    'first_hit_rate': {'x': 458, 'y': 246, 'w': 236, 'h': 42, 'color': 'blue'},  # 初当り確率
+    'normal': {'x': 786, 'y': 234, 'w': 164, 'h': 77, 'color': 'white'},  # 通常
+    'chance': {'x': 961, 'y': 234, 'w': 174, 'h': 77, 'color': 'white'},  # チャンス中
+    
+    # 中段
+    'ultra': {'x': 79, 'y': 389, 'w': 82, 'h': 72, 'color': 'red'},  # 超
+    'middle': {'x': 166, 'y': 389, 'w': 74, 'h': 72, 'color': 'red'},  # 中
+    'small': {'x': 244, 'y': 389, 'w': 73, 'h': 72, 'color': 'red'},  # 小
+    'start': {'x': 471, 'y': 373, 'w': 208, 'h': 105, 'color': 'white'},  # スタート
+    'max_payout': {'x': 813, 'y': 373, 'w': 274, 'h': 107, 'color': 'white'},  # 最高出玉
+    
+    # 下段テーブル
+    'max_hit': {'x': 33, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},
+    'chance_hits': {'x': 264, 'y': 549, 'w': 201, 'h': 61, 'color': 'white'},
+    'chance_rate': {'x': 494, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},
+    'low_hits': {'x': 725, 'y': 549, 'w': 201, 'h': 61, 'color': 'white'},
+    'play_time': {'x': 955, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},
+    'initial_start': {'x': 35, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},
+    'prev_final': {'x': 262, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},
+    'rush_count': {'x': 492, 'y': 665, 'w': 202, 'h': 61, 'color': 'white'},
+    'low_start': {'x': 723, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},
+    'lost_time': {'x': 953, 'y': 665, 'w': 202, 'h': 61, 'color': 'white'},
+}
+
+# デフォルトでmask3を使用（上下分離で精度向上）
+OCR_REGIONS = OCR_REGIONS_FROM_MASK3
 
 # 黒背景領域からの相対座標を計算する関数
 def absolute_to_relative_coords(absolute_coords, black_x, black_y):
@@ -163,7 +203,7 @@ with st.sidebar:
     
     # マスクオーバーレイ設定
     st.subheader("マスクオーバーレイ")
-    use_mask = st.checkbox("mask2.pngを使用", value=False)
+    use_mask = st.checkbox("mask3.pngを使用", value=False)
     if use_mask:
         mask_offset_x = st.number_input("X軸オフセット", min_value=-500, max_value=500, value=0, step=1)
         mask_offset_y = st.number_input("Y軸オフセット", min_value=-500, max_value=500, value=-188, step=1)  # デフォルト値: -188（最適値）
@@ -697,11 +737,11 @@ if uploaded_file is not None:
         # 検出結果のオーバーレイ画像を作成（線付き画像を使用）
         vis_img = img_with_lines.copy()
         
-        # mask2.pngを使用する場合
+        # mask3.pngを使用する場合
         if 'use_mask' in locals() and use_mask:
-            # mask2.pngを読み込み（リサイズ禁止）
+            # mask3.pngを読み込み（リサイズ禁止）
             import os
-            mask_path = os.path.join(os.path.dirname(__file__), 'mask', 'mask2.png')
+            mask_path = os.path.join(os.path.dirname(__file__), 'mask', 'mask3.png')
             if os.path.exists(mask_path):
                 mask_img = cv2.imread(mask_path)
                 
@@ -749,7 +789,7 @@ if uploaded_file is not None:
                 if 'black_region_found' in locals() and black_region_found:
                     st.info(f"黒背景左上: ({black_x}, {black_y}) → 実際の基準点: ({base_x}, {base_y})")
             else:
-                st.warning("mask/mask2.pngが見つかりません")
+                st.warning("mask/mask3.pngが見つかりません")
         else:
             # OCR領域を描画（Figmaで定義した絶対座標）  
             for name, region in OCR_REGIONS.items():
