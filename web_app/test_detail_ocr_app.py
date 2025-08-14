@@ -536,6 +536,7 @@ if uploaded_file is not None:
                         'size': f"{w}x{h}",
                         'color': region['color'],
                         'detected': detected_text if detected_text else "未検出",
+                        'raw_text': detected_text if detected_text else "",  # 生のOCR結果
                         'confidence': best_confidence,
                         'best_psm': best_psm if best_psm else "N/A",
                         'roi_shape': roi.shape,
@@ -543,6 +544,10 @@ if uploaded_file is not None:
                         'all_detections': all_texts if show_masks else []
                     }
                     debug_results.append(debug_info)
+                    
+                    # ヘッダーの場合は生のテキストを表示
+                    if region_name == 'header' and detected_text:
+                        st.info(f"🔍 ヘッダーOCR生データ: '{detected_text}'")
                     
                     # 結果を保存
                     if detected_text:
