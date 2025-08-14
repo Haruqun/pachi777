@@ -51,9 +51,6 @@ OCR_REGIONS_FROM_MASK2 = {
     # 中段
     'start': {'x': 471, 'y': 373, 'w': 208, 'h': 105, 'color': 'white'},
     'max_payout': {'x': 813, 'y': 373, 'w': 274, 'h': 107, 'color': 'white'},
-    'ultra': {'x': 79, 'y': 389, 'w': 82, 'h': 72, 'color': 'red'},
-    'middle': {'x': 166, 'y': 389, 'w': 74, 'h': 72, 'color': 'red'},
-    'small': {'x': 244, 'y': 389, 'w': 73, 'h': 72, 'color': 'red'},
     
     # 下段テーブル
     'max_hit': {'x': 33, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},
@@ -375,24 +372,8 @@ if uploaded_file is not None:
                         st.warning(f"領域 {region_name} の形状が不正: {roi_large.shape}")
                         continue
                     
-                    # 超、中、小の特別処理
-                    if region_name in ['ultra', 'middle', 'small']:
-                        # 赤色を強調して処理（カラー画像の場合のみ）
-                        if len(roi_large.shape) == 3:
-                            b, g, r = cv2.split(roi_large)
-                            # 赤チャンネルから青と緑の最大値を減算
-                            bg_max = cv2.max(b, g)
-                            red_emphasis = cv2.subtract(r, bg_max)
-                            # 固定閾値で二値化（赤い文字は明るいので高い閾値）
-                            _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
-                        else:
-                            # グレースケールの場合はそのまま処理
-                            _, processed = cv2.threshold(roi_large, 100, 255, cv2.THRESH_BINARY)
-                        
-                        # 処理済み（白背景に黒文字）
-                    
                     # 大当り回数の特別処理
-                    elif region_name == 'big_hit_count':
+                    if region_name == 'big_hit_count':
                         # 画像が3チャンネルか確認
                         if len(roi_large.shape) == 3:
                             # 赤色チャンネルを使用
@@ -485,9 +466,6 @@ if uploaded_file is not None:
                     elif region_name == 'date_info':
                         # 日付は短いテキスト
                         psm_modes = [8, 7, 13]  # 8:単一単語, 7:単一テキスト行, 13:生のライン
-                    elif region_name in ['ultra', 'middle', 'small']:
-                        # 超、中、小は単一数字なので特化したPSMモード
-                        psm_modes = [10, 8, 13, 7]  # 10:単一文字, 8:単一単語, 13:生のライン, 7:単一テキスト行
                     elif region_name == 'initial_start':
                         # 初回特賞は2-3桁の数値
                         psm_modes = [8, 7, 13, 6]  # 8:単一単語, 7:単一テキスト行, 13:生のライン, 6:均一ブロック
@@ -510,7 +488,7 @@ if uploaded_file is not None:
                             elif 'rate' in region_name or 'chance_rate' in region_name:
                                 custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789/'
                             # 純粋な数値の領域
-                            elif region_name in ['total_start', 'normal', 'chance', 'ultra', 'middle', 'small', 
+                            elif region_name in ['total_start', 'normal', 'chance', 
                                                'start', 'max_payout', 'max_hit', 'initial_start', 'prev_final']:
                                 custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789'
                             # その他
