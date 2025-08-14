@@ -68,44 +68,48 @@ if uploaded_file is not None:
     else:
         img_bgr = img_array
     
-    # タブ作成
-    tab1, tab2, tab3 = st.tabs(["📊 OCR結果", "🖼️ 元画像", "🔧 前処理画像"])
+    # 2カラムレイアウト
+    col_left, col_right = st.columns([1, 2])
     
-    with tab2:
-        st.subheader("元画像")
+    with col_left:
+        st.subheader("🖼️ 元画像")
         st.image(image, use_column_width=True)
         st.info(f"画像サイズ: {img_bgr.shape[1]} x {img_bgr.shape[0]}px")
     
-    with tab1:
-        st.subheader("OCR実行結果")
+    with col_right:
+        # タブ作成
+        tab1, tab2 = st.tabs(["📊 OCR結果", "🔧 前処理画像"])
         
-        if st.button("🔍 OCR実行", type="primary", use_container_width=True):
-            with st.spinner("OCR処理中..."):
-                # 前処理
-                # 1. リサイズ
-                if scale_factor != 1.0:
-                    new_width = int(img_bgr.shape[1] * scale_factor)
-                    new_height = int(img_bgr.shape[0] * scale_factor)
-                    processed_img = cv2.resize(img_bgr, (new_width, new_height), 
-                                              interpolation=cv2.INTER_CUBIC)
-                else:
-                    processed_img = img_bgr.copy()
+        with tab1:
+            st.subheader("OCR実行結果")
+            
+            if st.button("🔍 OCR実行", type="primary", use_container_width=True):
+                with st.spinner("OCR処理中..."):
+                    # 前処理
+                    # 1. リサイズ
+                    if scale_factor != 1.0:
+                        new_width = int(img_bgr.shape[1] * scale_factor)
+                        new_height = int(img_bgr.shape[0] * scale_factor)
+                        processed_img = cv2.resize(img_bgr, (new_width, new_height), 
+                                                  interpolation=cv2.INTER_CUBIC)
+                    else:
+                        processed_img = img_bgr.copy()
                 
-                # 2. グレースケール変換
-                if len(processed_img.shape) == 3:
-                    gray = cv2.cvtColor(processed_img, cv2.COLOR_BGR2GRAY)
-                else:
-                    gray = processed_img
+                    # 2. グレースケール変換
+                    if len(processed_img.shape) == 3:
+                        gray = cv2.cvtColor(processed_img, cv2.COLOR_BGR2GRAY)
+                    else:
+                        gray = processed_img
                 
-                # 3. 二値化
-                if apply_threshold:
-                    _, binary = cv2.threshold(gray, threshold_value, 255, cv2.THRESH_BINARY)
-                    ocr_input = binary
-                else:
-                    ocr_input = gray
+                    # 3. 二値化
+                    if apply_threshold:
+                        _, binary = cv2.threshold(gray, threshold_value, 255, cv2.THRESH_BINARY)
+                        ocr_input = binary
+                    else:
+                        ocr_input = gray
                 
-                # OCR実行
-                try:
+                    # OCR実行
+                    try:
                     # OCR設定
                     custom_config = f'--psm {psm_mode} --oem 3'
                     
@@ -170,19 +174,19 @@ if uploaded_file is not None:
                         line_count = len(text.split('\n'))
                         st.metric("行数", line_count)
                     
-                except Exception as e:
-                    st.error(f"OCRエラー: {str(e)}")
-                
-                # 前処理画像を保存
-                st.session_state['processed_image'] = ocr_input
-    
-    with tab3:
-        st.subheader("前処理後の画像")
-        if 'processed_image' in st.session_state:
-            st.image(st.session_state['processed_image'], use_column_width=True)
-            st.info(f"処理後サイズ: {st.session_state['processed_image'].shape[1]} x {st.session_state['processed_image'].shape[0]}px")
-        else:
-            st.info("OCRを実行すると前処理画像が表示されます")
+                    except Exception as e:
+                        st.error(f"OCRエラー: {str(e)}")
+                    
+                    # 前処理画像を保存
+                    st.session_state['processed_image'] = ocr_input
+        
+        with tab2:
+            st.subheader("前処理後の画像")
+            if 'processed_image' in st.session_state:
+                st.image(st.session_state['processed_image'], use_column_width=True)
+                st.info(f"処理後サイズ: {st.session_state['processed_image'].shape[1]} x {st.session_state['processed_image'].shape[0]}px")
+            else:
+                st.info("OCRを実行すると前処理画像が表示されます")
 
 else:
     # 使い方説明
