@@ -500,39 +500,54 @@ if uploaded_file is not None:
             # 統合領域から個別データを抽出
             import re
             
+            # デバッグ: 統合領域の内容を表示
+            if show_masks:
+                st.write("### 統合領域のOCR結果（デバッグ）")
+                for key in ['big_first_hit_combined', 'first_hit_combined', 'total_start_combined']:
+                    if key in detected_data:
+                        st.write(f"**{key}**: {detected_data[key]}")
+            
             # big_first_hit_combinedから大当り回数と確率を抽出
             if 'big_first_hit_combined' in detected_data:
-                combined_text = detected_data['big_first_hit_combined']
-                # 大きな数字（大当り回数）を抽出
+                combined_text = str(detected_data['big_first_hit_combined'])
+                # 数字を全て抽出
                 numbers = re.findall(r'\d+', combined_text)
                 if numbers:
-                    # 最初の大きな数字が大当り回数
-                    detected_data['big_hit_count'] = numbers[0]
-                # 確率を抽出 (1/xxx形式)
-                rate_match = re.search(r'\d+/\d+', combined_text)
-                if rate_match:
-                    detected_data['big_hit_rate'] = f"(1/{rate_match.group()})"
+                    # 2桁の数字を探す（大当り回数は通常2桁）
+                    for num in numbers:
+                        if len(num) == 2 or (len(num) == 1 and int(num) > 0):
+                            detected_data['big_hit_count'] = num
+                            break
+                    # 3桁の数字を探す（確率の分母）
+                    for num in numbers:
+                        if len(num) == 3:
+                            detected_data['big_hit_rate'] = f"(1/{num})"
+                            break
             
             # first_hit_combinedから初当り回数と確率を抽出
             if 'first_hit_combined' in detected_data:
-                combined_text = detected_data['first_hit_combined']
-                # 数字を抽出
+                combined_text = str(detected_data['first_hit_combined'])
                 numbers = re.findall(r'\d+', combined_text)
                 if numbers:
-                    # 最初の数字が初当り回数
-                    detected_data['first_hit_count'] = numbers[0]
-                # 確率を抽出
-                rate_match = re.search(r'\d+/\d+', combined_text)
-                if rate_match:
-                    detected_data['first_hit_rate'] = f"(1/{rate_match.group()})"
+                    # 1桁の数字を探す（初当り回数は通常1桁）
+                    for num in numbers:
+                        if len(num) == 1 and int(num) > 0:
+                            detected_data['first_hit_count'] = num
+                            break
+                    # 3桁の数字を探す（確率の分母）
+                    for num in numbers:
+                        if len(num) == 3:
+                            detected_data['first_hit_rate'] = f"(1/{num})"
+                            break
             
             # total_start_combinedから累計スタートを抽出
             if 'total_start_combined' in detected_data:
-                combined_text = detected_data['total_start_combined']
+                combined_text = str(detected_data['total_start_combined'])
                 # 4桁の数字を探す
-                numbers = re.findall(r'\d{4}', combined_text)
+                numbers = re.findall(r'\d{3,4}', combined_text)
                 if numbers:
-                    detected_data['total_start'] = numbers[0]
+                    # 最大の数字が累計スタート
+                    detected_data['total_start'] = max(numbers, key=lambda x: int(x))
             
             # 結果を表示
             st.success(f"検出完了！ {len(all_detections)}個のテキストを検出")
@@ -746,14 +761,14 @@ if uploaded_file is not None:
             for detection in st.session_state['detections']:
                 x1, y1, x2, y2 = detection['bbox']
                 
-                # 検出結果のテキストを領域内に表示
+                # 検出結果のテキストを領域の左上に表示
                 text = detection.get('text', '')
                 if text:
-                    # テキストを矩形の中央に配置
+                    # テキストを矩形の左上に配置
                     text_x = x1 + 5
-                    text_y = y1 + (y2 - y1) // 2
+                    text_y = y1 + 20  # 左上に表示
                     
-                    # テキストの背景（半透明風）
+                    # 緑色で表示
                     cv2.putText(vis_img, text, (text_x, text_y), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         
