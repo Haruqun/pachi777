@@ -15,19 +15,20 @@ st.title("🎰 パチンコ詳細OCR - Site777")
 
 # Expected data items from the image（簡略版）
 EXPECTED_DATA = {
-    'header': 'P新世紀エヴァンゲリオン１５　未来への咆哮',  # ヘッダー（実際のタイトル）
-    'store_info': '0027',  # 店舗情報
-    'date_info': '8/14',  # 日付（実際の日付）
-    'total_start': '3684',  # 累計スタート
-    'normal': '638',  # 通常
-    'chance': '3046',  # チャンス中
-    'ultra': '35',  # 超
+    'header': 'CRF宇宙戦艦ヤマト',  # ヘッダー
+    'store_info': '0026',  # 店舗情報
+    'date_info': '12/1',  # 日付
+    'total_start': '3721',  # 累計スタート
+    'normal': '1877',  # 通常
+    'chance': '1844',  # チャンス中
+    'ultra': '21',  # 超
     'middle': '0',  # 中
     'small': '4',  # 小
-    'start': '167',  # スタート
-    'max_payout': '43430',  # 最高出玉
-    'max_hit': '18410',  # 最高一撃獲得
-    'initial_start': '163'  # 初回特賞スタート
+    'start': '369',  # スタート
+    'max_payout': '26830',  # 最高出玉
+    'max_hit': '25760',  # 最高一撃獲得
+    'initial_start': '40',  # 初回特賞スタート
+    'prev_final': '107'  # 前日最終スタート
 }
 
 # mask2.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
@@ -136,6 +137,7 @@ OCR_REGIONS_FROM_MASK3 = {
     # 下段テーブル（必要な項目のみ）
     'max_hit': {'x': 33, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},  # 最高一撃獲得
     'initial_start': {'x': 35, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},  # 初回特賞スタート
+    'prev_final': {'x': 262, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},  # 前日最終スタート
 }
 
 # デフォルトでmask3を使用（上下分離で精度向上）
@@ -363,125 +365,93 @@ if uploaded_file is not None:
                     
                     # まず画像を拡大（OCR精度向上のため）
                     scale_factor = 2
-                    try:
-                        roi_large = cv2.resize(roi_padded, (roi_padded.shape[1] * scale_factor, roi_padded.shape[0] * scale_factor), 
-                                              interpolation=cv2.INTER_CUBIC)
-                    except Exception as e:
-                        st.warning(f"領域 {region_name} のリサイズに失敗: {e}")
-                        continue
+                    roi_large = cv2.resize(roi_padded, (roi_padded.shape[1] * scale_factor, roi_padded.shape[0] * scale_factor), 
+                                          interpolation=cv2.INTER_CUBIC)
                     
-                    # roi_largeの形状チェック
-                    if len(roi_large.shape) < 2:
-                        st.warning(f"領域 {region_name} の形状が不正: {roi_large.shape}")
-                        continue
-                    
-                    # 超、中、小の特別処理（赤色テキスト）
+                    # 超、中、小の特別処理
                     if region_name in ['ultra', 'middle', 'small']:
-                        # 赤色を強調して処理（カラー画像の場合のみ）
-                        if len(roi_large.shape) == 3:
-                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
-                            if roi_large.shape[2] == 4:
-                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
-                            b, g, r = cv2.split(roi_large)
-                            # 赤チャンネルから青と緑の最大値を減算
-                            bg_max = cv2.max(b, g)
-                            red_emphasis = cv2.subtract(r, bg_max)
-                            # 固定閾値で二値化（赤い文字は明るいので高い閾値）
-                            _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
-                        else:
-                            # グレースケールの場合はそのまま処理
-                            _, processed = cv2.threshold(roi_large, 100, 255, cv2.THRESH_BINARY)
+                        # 赤色を強調して処理
+                        # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                        if roi_large.shape[2] == 4:
+                            roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
+                        b, g, r = cv2.split(roi_large)
+                        
+                        # 赤チャンネルから青と緑の最大値を減算
+                        bg_max = cv2.max(b, g)
+                        red_emphasis = cv2.subtract(r, bg_max)
+                        
+                        # 固定閾値で二値化（赤い文字は明るいので高い閾値）
+                        _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
+                        
+                        # 処理済み（白背景に黒文字）
                     
                     # 大当り回数の特別処理
                     elif region_name == 'big_hit_count':
-                        # 画像が3チャンネルか確認
-                        if len(roi_large.shape) == 3:
-                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
-                            if roi_large.shape[2] == 4:
-                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
-                            # 赤色チャンネルを使用
-                            b, g, r = cv2.split(roi_large)
-                            # 赤チャンネルから青と緑の最大値を減算
-                            bg_max = cv2.max(b, g)
-                            red_emphasis = cv2.subtract(r, bg_max)
-                            
-                            # 固定閾値で二値化
-                            _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
-                        else:
-                            # グレースケールの場合はそのまま処理
-                            _, processed = cv2.threshold(roi_large, 100, 255, cv2.THRESH_BINARY)
+                        # 赤色チャンネルを使用
+                        # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                        if roi_large.shape[2] == 4:
+                            roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
+                        b, g, r = cv2.split(roi_large)
+                        
+                        # 赤チャンネルから青と緑の最大値を減算
+                        bg_max = cv2.max(b, g)
+                        red_emphasis = cv2.subtract(r, bg_max)
+                        
+                        # 固定閾値で二値化
+                        _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
                         
                         # 処理済み（白背景に黒文字）
                         
                     # mixed（統合領域）の処理
                     elif region['color'] == 'mixed':
                         # 統合領域は複数の色を含むので、グレースケールで処理
-                        # カラー画像の場合はグレースケールに変換
-                        if len(roi_large.shape) == 3:
-                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
-                            if roi_large.shape[2] == 4:
-                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
-                            gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
-                        else:
-                            gray_roi = roi_large
+                        # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                        if roi_large.shape[2] == 4:
+                            roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
+                        gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
                         # 大津の方法で二値化
                         _, processed = cv2.threshold(gray_roi, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
                         
                     # 色に応じた前処理
                     elif region['color'] == 'red':
                         # 赤色テキストの処理
-                        # 画像が3チャンネルか確認
-                        if len(roi_large.shape) == 3:
-                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
-                            if roi_large.shape[2] == 4:
-                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
-                            b, g, r = cv2.split(roi_large)
-                            # 赤チャンネルから青と緑の最大値を減算
-                            bg_max = cv2.max(b, g)
-                            red_emphasis = cv2.subtract(r, bg_max)
-                            # 固定閾値で二値化
-                            _, processed = cv2.threshold(red_emphasis, 80, 255, cv2.THRESH_BINARY)
-                        else:
-                            # グレースケールの場合はそのまま処理
-                            _, processed = cv2.threshold(roi_large, 80, 255, cv2.THRESH_BINARY)
+                        # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                        if roi_large.shape[2] == 4:
+                            roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
+                        b, g, r = cv2.split(roi_large)
+                        # 赤チャンネルから青と緑の最大値を減算
+                        bg_max = cv2.max(b, g)
+                        red_emphasis = cv2.subtract(r, bg_max)
+                        # 固定閾値で二値化
+                        _, processed = cv2.threshold(red_emphasis, 80, 255, cv2.THRESH_BINARY)
                         
                     elif region['color'] == 'blue':
                         # 青色テキストの処理
-                        # 画像が3チャンネルか確認
-                        if len(roi_large.shape) == 3:
-                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
-                            if roi_large.shape[2] == 4:
-                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
-                            b, g, r = cv2.split(roi_large)
-                            # 青チャンネルから赤と緑の最大値を減算
-                            rg_max = cv2.max(r, g)
-                            blue_emphasis = cv2.subtract(b, rg_max)
-                            # 固定閾値で二値化
-                            _, processed = cv2.threshold(blue_emphasis, 50, 255, cv2.THRESH_BINARY)
-                        else:
-                            # グレースケールの場合はそのまま処理
-                            _, processed = cv2.threshold(roi_large, 50, 255, cv2.THRESH_BINARY)
+                        # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                        if roi_large.shape[2] == 4:
+                            roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
+                        b, g, r = cv2.split(roi_large)
+                        # 青チャンネルから赤と緑の最大値を減算
+                        rg_max = cv2.max(r, g)
+                        blue_emphasis = cv2.subtract(b, rg_max)
+                        # 固定閾値で二値化
+                        _, processed = cv2.threshold(blue_emphasis, 50, 255, cv2.THRESH_BINARY)
                         
                     else:  # white
                         # 白色テキストの処理
-                        # カラー画像の場合はグレースケールに変換
-                        if len(roi_large.shape) == 3:
-                            # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
-                            if roi_large.shape[2] == 4:
-                                roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
-                            gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
-                        else:
-                            gray_roi = roi_large
+                        # 4チャンネル（RGBA）の場合は3チャンネル（BGR）に変換
+                        if roi_large.shape[2] == 4:
+                            roi_large = cv2.cvtColor(roi_large, cv2.COLOR_BGRA2BGR)
+                        gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
                         
-                        # initial_startは特別処理（より強力な前処理）
-                        if region_name == 'initial_start':
-                            # ノイズ除去
-                            denoised = cv2.fastNlMeansDenoising(gray_roi, None, 10, 7, 21)
+                        # initial_startとprev_finalは特別処理（コントラスト強調）
+                        if region_name in ['initial_start', 'prev_final']:
                             # CLAHE（Contrast Limited Adaptive Histogram Equalization）を適用
-                            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(4,4))
-                            enhanced = clahe.apply(denoised)
-                            # 大津の二値化
-                            _, processed = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+                            gray_roi = clahe.apply(gray_roi)
+                            # 適応的二値化
+                            processed = cv2.adaptiveThreshold(gray_roi, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                            cv2.THRESH_BINARY, 11, 2)
                         else:
                             # 通常の白色テキスト処理
                             _, processed = cv2.threshold(gray_roi, 180, 255, cv2.THRESH_BINARY)
@@ -495,17 +465,11 @@ if uploaded_file is not None:
                     all_texts = []  # デバッグ用：全ての検出結果を保存
                     
                     # PSMモードのリスト（領域によって調整）
-                    if region_name == 'header':
-                        # ヘッダーは長いテキスト行
-                        psm_modes = [7, 13, 8]  # 7:単一テキスト行, 13:生のライン, 8:単一単語
-                    elif region_name == 'date_info':
-                        # 日付は短いテキスト
-                        psm_modes = [8, 7, 13]  # 8:単一単語, 7:単一テキスト行, 13:生のライン
-                    elif region_name in ['ultra', 'middle', 'small']:
+                    if region_name in ['ultra', 'middle', 'small']:
                         # 超、中、小は単一数字なので特化したPSMモード
                         psm_modes = [10, 8, 13, 7]  # 10:単一文字, 8:単一単語, 13:生のライン, 7:単一テキスト行
-                    elif region_name == 'initial_start':
-                        # 初回特賞は2-3桁の数値
+                    elif region_name in ['initial_start', 'prev_final']:
+                        # 初回特賞・前日最終は短い数値なので専用モード
                         psm_modes = [8, 7, 13, 6]  # 8:単一単語, 7:単一テキスト行, 13:生のライン, 6:均一ブロック
                     elif 'combined' in region_name:
                         # 統合領域は複数行を含むのでブロックモード
@@ -516,32 +480,22 @@ if uploaded_file is not None:
                     for psm in psm_modes:
                         try:
                             # 領域によって文字制限を設定
-                            # ヘッダーと店舗情報は日本語を含む
-                            if region_name in ['header', 'store_info']:
-                                custom_config = f'--psm {psm} --oem 3'
-                            # 日付は数字と/のみ
-                            elif region_name == 'date_info':
-                                custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789/'
                             # 確率を含む領域は/を許可
-                            elif 'rate' in region_name or 'chance_rate' in region_name:
+                            if 'rate' in region_name or 'chance_rate' in region_name:
                                 custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789/'
                             # 純粋な数値の領域
-                            elif region_name in ['total_start', 'normal', 'chance', 'ultra', 'middle', 'small',
-                                               'start', 'max_payout', 'max_hit', 'initial_start', 'prev_final']:
+                            elif region_name in ['big_hit_count', 'first_hit_count', 'total_start', 
+                                               'normal', 'chance', 'ultra', 'middle', 'small', 
+                                               'start', 'max_payout', 'max_hit', 'chance_hits',
+                                               'initial_start', 'prev_final', 'low_hits']:
                                 custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789'
-                            # その他
+                            # その他（混在する可能性がある領域）
                             else:
                                 custom_config = f'--psm {psm} --oem 3'
                             
-                            # OCR実行して信頼度も取得
-                            if region_name in ['header', 'store_info']:
-                                # 日本語を含む領域
-                                data = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, 
-                                                                config=custom_config, lang='jpn')
-                            else:
-                                # 数字のみの領域
-                                data = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, 
-                                                                config=custom_config)
+                            # OCR実行して信頼度も取得（日本語も含めて）
+                            data = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, 
+                                                            config=custom_config, lang='jpn')
                             
                             # 全てのテキストを収集
                             for i in range(len(data['text'])):
@@ -586,7 +540,6 @@ if uploaded_file is not None:
                         'size': f"{w}x{h}",
                         'color': region['color'],
                         'detected': detected_text if detected_text else "未検出",
-                        'raw_text': detected_text if detected_text else "",  # 生のOCR結果
                         'confidence': best_confidence,
                         'best_psm': best_psm if best_psm else "N/A",
                         'roi_shape': roi.shape,
@@ -594,10 +547,6 @@ if uploaded_file is not None:
                         'all_detections': all_texts if show_masks else []
                     }
                     debug_results.append(debug_info)
-                    
-                    # ヘッダーの場合は生のテキストを表示
-                    if region_name == 'header' and detected_text:
-                        st.info(f"🔍 ヘッダーOCR生データ: '{detected_text}'")
                     
                     # 結果を保存
                     if detected_text:
