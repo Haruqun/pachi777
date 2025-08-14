@@ -411,6 +411,9 @@ if uploaded_file is not None:
                     if region_name in ['ultra', 'middle', 'small']:
                         # 超、中、小は単一数字なので特化したPSMモード
                         psm_modes = [10, 8, 13, 7]  # 10:単一文字, 8:単一単語, 13:生のライン, 7:単一テキスト行
+                    elif 'combined' in region_name:
+                        # 統合領域は複数行を含むのでブロックモード
+                        psm_modes = [6, 11, 4, 3]  # 6:均一ブロック, 11:疎テキスト, 4:可変カラム, 3:自動
                     else:
                         psm_modes = [7, 8, 13, 11]  # 通常のPSMモード
                     
@@ -510,31 +513,49 @@ if uploaded_file is not None:
             # big_first_hit_combinedから大当り回数と確率を抽出
             if 'big_first_hit_combined' in detected_data:
                 combined_text = str(detected_data['big_first_hit_combined'])
-                # 全ての数字を抽出
-                numbers = re.findall(r'\d+', combined_text)
-                if numbers:
-                    # 最初の大きな数字が大当り回数（通常最も大きい）
-                    if numbers:
-                        detected_data['big_hit_count'] = numbers[0]
+                # 改行で分割してみる
+                lines = combined_text.split('\n') if '\n' in combined_text else [combined_text]
+                
+                # 各行から数字を抽出
+                all_numbers = []
+                for line in lines:
+                    numbers = re.findall(r'\d+', line)
+                    all_numbers.extend(numbers)
+                
+                # 最大の数字が大当り回数（通常25のような大きな数字）
+                if all_numbers:
+                    # 100以下の数字で最大のものを大当り回数とする
+                    hit_candidates = [n for n in all_numbers if int(n) <= 100]
+                    if hit_candidates:
+                        detected_data['big_hit_count'] = max(hit_candidates, key=int)
                     
-                # 確率パターン (1/xxx) を探す
-                rate_match = re.search(r'[1１]/(\d+)', combined_text)
-                if rate_match:
-                    detected_data['big_hit_rate'] = f"(1/{rate_match.group(1)})"
+                    # 100より大きい数字は確率の分母
+                    rate_candidates = [n for n in all_numbers if int(n) > 100]
+                    if rate_candidates:
+                        detected_data['big_hit_rate'] = f"(1/{rate_candidates[0]})"
             
             # first_hit_combinedから初当り回数と確率を抽出
             if 'first_hit_combined' in detected_data:
                 combined_text = str(detected_data['first_hit_combined'])
-                # 全ての数字を抽出
-                numbers = re.findall(r'\d+', combined_text)
-                if numbers:
-                    # 最初の数字が初当り回数
-                    detected_data['first_hit_count'] = numbers[0]
+                # 改行で分割
+                lines = combined_text.split('\n') if '\n' in combined_text else [combined_text]
                 
-                # 確率パターン (1/xxx) を探す
-                rate_match = re.search(r'[1１]/(\d+)', combined_text)
-                if rate_match:
-                    detected_data['first_hit_rate'] = f"(1/{rate_match.group(1)})"
+                # 各行から数字を抽出
+                all_numbers = []
+                for line in lines:
+                    numbers = re.findall(r'\d+', line)
+                    all_numbers.extend(numbers)
+                
+                if all_numbers:
+                    # 100以下の数字で最小のものを初当り回数とする（通常1桁）
+                    hit_candidates = [n for n in all_numbers if int(n) <= 100]
+                    if hit_candidates:
+                        detected_data['first_hit_count'] = min(hit_candidates, key=int)
+                    
+                    # 100より大きい数字は確率の分母
+                    rate_candidates = [n for n in all_numbers if int(n) > 100]
+                    if rate_candidates:
+                        detected_data['first_hit_rate'] = f"(1/{rate_candidates[0]})"
             
             # total_start_combinedから累計スタートを抽出
             if 'total_start_combined' in detected_data:
