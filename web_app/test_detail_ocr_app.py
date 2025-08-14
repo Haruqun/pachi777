@@ -377,6 +377,8 @@ if uploaded_file is not None:
                     
                     # 超、中、小の特別処理（赤色テキスト）
                     if region_name in ['ultra', 'middle', 'small']:
+                        # デバッグ: 形状を確認
+                        st.write(f"DEBUG: {region_name} shape = {roi_large.shape}")
                         # 赤色を強調して処理（カラー画像の場合のみ）
                         if len(roi_large.shape) == 3:
                             b, g, r = cv2.split(roi_large)
