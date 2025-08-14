@@ -31,41 +31,41 @@ EXPECTED_DATA = {
 }
 
 # mask2.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
-# オフセット: X=0, Y=-191でピッタリ合う
+# オフセット: X=0, Y=-188でピッタリ合う（最適値）
 # 統合領域を使用して精度向上
 OCR_REGIONS_FROM_MASK2 = {
     # ヘッダー（黒枠外）
-    'header': {'x': 21, 'y': -191, 'w': 1129, 'h': 64, 'color': 'white'},
-    'store_info': {'x': 0, 'y': -109, 'w': 211, 'h': 99, 'color': 'white'},
-    'date_info': {'x': 4, 'y': 0, 'w': 80, 'h': 61, 'color': 'white'},
+    'header': {'x': 21, 'y': -188, 'w': 1129, 'h': 64, 'color': 'white'},
+    'store_info': {'x': 0, 'y': -106, 'w': 211, 'h': 99, 'color': 'white'},
+    'date_info': {'x': 4, 'y': 3, 'w': 80, 'h': 61, 'color': 'white'},
     
     # 統合領域（複数のデータを含む）
-    'big_first_hit_combined': {'x': 79, 'y': 113, 'w': 236, 'h': 192, 'color': 'mixed'},  # 大当り回数と確率
-    'first_hit_combined': {'x': 457, 'y': 113, 'w': 236, 'h': 192, 'color': 'mixed'},  # 初当り回数と確率
-    'total_start_combined': {'x': 786, 'y': 113, 'w': 346, 'h': 80, 'color': 'white'},  # 累計スタート
+    'big_first_hit_combined': {'x': 79, 'y': 116, 'w': 236, 'h': 192, 'color': 'mixed'},  # 大当り回数と確率
+    'first_hit_combined': {'x': 457, 'y': 116, 'w': 236, 'h': 192, 'color': 'mixed'},  # 初当り回数と確率
+    'total_start_combined': {'x': 786, 'y': 116, 'w': 346, 'h': 80, 'color': 'white'},  # 累計スタート
     
     # 通常/チャンス
-    'normal': {'x': 786, 'y': 231, 'w': 164, 'h': 77, 'color': 'white'},
-    'chance': {'x': 961, 'y': 231, 'w': 174, 'h': 77, 'color': 'white'},
+    'normal': {'x': 786, 'y': 234, 'w': 164, 'h': 77, 'color': 'white'},
+    'chance': {'x': 961, 'y': 234, 'w': 174, 'h': 77, 'color': 'white'},
     
     # 中段
-    'start': {'x': 471, 'y': 370, 'w': 208, 'h': 105, 'color': 'white'},
-    'max_payout': {'x': 813, 'y': 370, 'w': 274, 'h': 107, 'color': 'white'},
-    'ultra': {'x': 79, 'y': 386, 'w': 82, 'h': 72, 'color': 'red'},
-    'middle': {'x': 166, 'y': 386, 'w': 74, 'h': 72, 'color': 'red'},
-    'small': {'x': 244, 'y': 386, 'w': 73, 'h': 72, 'color': 'red'},
+    'start': {'x': 471, 'y': 373, 'w': 208, 'h': 105, 'color': 'white'},
+    'max_payout': {'x': 813, 'y': 373, 'w': 274, 'h': 107, 'color': 'white'},
+    'ultra': {'x': 79, 'y': 389, 'w': 82, 'h': 72, 'color': 'red'},
+    'middle': {'x': 166, 'y': 389, 'w': 74, 'h': 72, 'color': 'red'},
+    'small': {'x': 244, 'y': 389, 'w': 73, 'h': 72, 'color': 'red'},
     
     # 下段テーブル
-    'max_hit': {'x': 33, 'y': 546, 'w': 202, 'h': 61, 'color': 'white'},
-    'chance_hits': {'x': 264, 'y': 546, 'w': 201, 'h': 61, 'color': 'white'},
-    'chance_rate': {'x': 494, 'y': 546, 'w': 202, 'h': 61, 'color': 'white'},
-    'low_hits': {'x': 725, 'y': 546, 'w': 201, 'h': 61, 'color': 'white'},
-    'play_time': {'x': 955, 'y': 546, 'w': 202, 'h': 61, 'color': 'white'},
-    'initial_start': {'x': 35, 'y': 662, 'w': 201, 'h': 61, 'color': 'white'},
-    'prev_final': {'x': 262, 'y': 662, 'w': 201, 'h': 61, 'color': 'white'},
-    'rush_count': {'x': 492, 'y': 662, 'w': 202, 'h': 61, 'color': 'white'},
-    'low_start': {'x': 723, 'y': 662, 'w': 201, 'h': 61, 'color': 'white'},
-    'lost_time': {'x': 953, 'y': 662, 'w': 202, 'h': 61, 'color': 'white'},
+    'max_hit': {'x': 33, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},
+    'chance_hits': {'x': 264, 'y': 549, 'w': 201, 'h': 61, 'color': 'white'},
+    'chance_rate': {'x': 494, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},
+    'low_hits': {'x': 725, 'y': 549, 'w': 201, 'h': 61, 'color': 'white'},
+    'play_time': {'x': 955, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},
+    'initial_start': {'x': 35, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},
+    'prev_final': {'x': 262, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},
+    'rush_count': {'x': 492, 'y': 665, 'w': 202, 'h': 61, 'color': 'white'},
+    'low_start': {'x': 723, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},
+    'lost_time': {'x': 953, 'y': 665, 'w': 202, 'h': 61, 'color': 'white'},
 }
 
 # mask.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
@@ -166,7 +166,7 @@ with st.sidebar:
     use_mask = st.checkbox("mask.pngを使用", value=False)
     if use_mask:
         mask_offset_x = st.number_input("X軸オフセット", min_value=-500, max_value=500, value=0, step=1)
-        mask_offset_y = st.number_input("Y軸オフセット", min_value=-500, max_value=500, value=-191, step=1)  # デフォルト値: -191
+        mask_offset_y = st.number_input("Y軸オフセット", min_value=-500, max_value=500, value=-188, step=1)  # デフォルト値: -188（最適値）
 
 # Main area
 if uploaded_file is not None:
