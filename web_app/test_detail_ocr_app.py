@@ -380,26 +380,23 @@ if uploaded_file is not None:
                         # 赤色を強調して処理（カラー画像の場合のみ）
                         if len(roi_large.shape) == 3:
                             b, g, r = cv2.split(roi_large)
+                            # 赤チャンネルから青と緑の最大値を減算
+                            bg_max = cv2.max(b, g)
+                            red_emphasis = cv2.subtract(r, bg_max)
+                            # 固定閾値で二値化（赤い文字は明るいので高い閾値）
+                            _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
                         else:
-                            # グレースケールの場合はそのまま使用
-                            processed = roi_large
-                        
-                        # 赤チャンネルから青と緑の最大値を減算
-                        bg_max = cv2.max(b, g)
-                        red_emphasis = cv2.subtract(r, bg_max)
-                        
-                        # 固定閾値で二値化（赤い文字は明るいので高い閾値）
-                        _, processed = cv2.threshold(red_emphasis, 100, 255, cv2.THRESH_BINARY)
+                            # グレースケールの場合はそのまま処理
+                            _, processed = cv2.threshold(roi_large, 100, 255, cv2.THRESH_BINARY)
                         
                         # 処理済み（白背景に黒文字）
                     
                     # 大当り回数の特別処理
                     elif region_name == 'big_hit_count':
-                        # 赤色チャンネルを使用
-                        b, g, r = cv2.split(roi_large)
-                        
                         # 画像が3チャンネルか確認
                         if len(roi_large.shape) == 3:
+                            # 赤色チャンネルを使用
+                            b, g, r = cv2.split(roi_large)
                             # 赤チャンネルから青と緑の最大値を減算
                             bg_max = cv2.max(b, g)
                             red_emphasis = cv2.subtract(r, bg_max)
