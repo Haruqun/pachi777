@@ -17,7 +17,7 @@ st.title("🎰 パチンコ詳細OCR - Site777")
 EXPECTED_DATA = {
     'header': 'エヴァンゲリオン',  # ヘッダー（実際のタイトル）
     'store_info': '0026',  # 店舗情報
-    'date_info': '8/6',  # 日付（実際の日付）
+    'date_info': '12/1',  # 日付（実際の日付）
     'total_start': '3721',  # 累計スタート
     'normal': '1877',  # 通常
     'chance': '1844',  # チャンス中
@@ -424,14 +424,15 @@ if uploaded_file is not None:
                         # 白色テキストの処理
                         gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
                         
-                        # initial_startとprev_finalは特別処理（コントラスト強調）
-                        if region_name in ['initial_start', 'prev_final']:
+                        # initial_startは特別処理（より強力な前処理）
+                        if region_name == 'initial_start':
+                            # ノイズ除去
+                            denoised = cv2.fastNlMeansDenoising(gray_roi, None, 10, 7, 21)
                             # CLAHE（Contrast Limited Adaptive Histogram Equalization）を適用
-                            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-                            gray_roi = clahe.apply(gray_roi)
-                            # 適応的二値化
-                            processed = cv2.adaptiveThreshold(gray_roi, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                                            cv2.THRESH_BINARY, 11, 2)
+                            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(4,4))
+                            enhanced = clahe.apply(denoised)
+                            # 大津の二値化
+                            _, processed = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
                         else:
                             # 通常の白色テキスト処理
                             _, processed = cv2.threshold(gray_roi, 180, 255, cv2.THRESH_BINARY)
@@ -454,8 +455,8 @@ if uploaded_file is not None:
                     elif region_name in ['ultra', 'middle', 'small']:
                         # 超、中、小は単一数字なので特化したPSMモード
                         psm_modes = [10, 8, 13, 7]  # 10:単一文字, 8:単一単語, 13:生のライン, 7:単一テキスト行
-                    elif region_name in ['initial_start', 'prev_final']:
-                        # 初回特賞・前日最終は短い数値なので専用モード
+                    elif region_name == 'initial_start':
+                        # 初回特賞は2-3桁の数値
                         psm_modes = [8, 7, 13, 6]  # 8:単一単語, 7:単一テキスト行, 13:生のライン, 6:均一ブロック
                     elif 'combined' in region_name:
                         # 統合領域は複数行を含むのでブロックモード
