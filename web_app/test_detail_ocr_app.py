@@ -510,43 +510,39 @@ if uploaded_file is not None:
             # big_first_hit_combinedから大当り回数と確率を抽出
             if 'big_first_hit_combined' in detected_data:
                 combined_text = str(detected_data['big_first_hit_combined'])
-                # 数字を全て抽出
+                # 全ての数字を抽出
                 numbers = re.findall(r'\d+', combined_text)
                 if numbers:
-                    # 2桁の数字を探す（大当り回数は通常2桁）
-                    for num in numbers:
-                        if len(num) == 2 or (len(num) == 1 and int(num) > 0):
-                            detected_data['big_hit_count'] = num
-                            break
-                    # 3桁の数字を探す（確率の分母）
-                    for num in numbers:
-                        if len(num) == 3:
-                            detected_data['big_hit_rate'] = f"(1/{num})"
-                            break
+                    # 最初の大きな数字が大当り回数（通常最も大きい）
+                    if numbers:
+                        detected_data['big_hit_count'] = numbers[0]
+                    
+                # 確率パターン (1/xxx) を探す
+                rate_match = re.search(r'[1１]/(\d+)', combined_text)
+                if rate_match:
+                    detected_data['big_hit_rate'] = f"(1/{rate_match.group(1)})"
             
             # first_hit_combinedから初当り回数と確率を抽出
             if 'first_hit_combined' in detected_data:
                 combined_text = str(detected_data['first_hit_combined'])
+                # 全ての数字を抽出
                 numbers = re.findall(r'\d+', combined_text)
                 if numbers:
-                    # 1桁の数字を探す（初当り回数は通常1桁）
-                    for num in numbers:
-                        if len(num) == 1 and int(num) > 0:
-                            detected_data['first_hit_count'] = num
-                            break
-                    # 3桁の数字を探す（確率の分母）
-                    for num in numbers:
-                        if len(num) == 3:
-                            detected_data['first_hit_rate'] = f"(1/{num})"
-                            break
+                    # 最初の数字が初当り回数
+                    detected_data['first_hit_count'] = numbers[0]
+                
+                # 確率パターン (1/xxx) を探す
+                rate_match = re.search(r'[1１]/(\d+)', combined_text)
+                if rate_match:
+                    detected_data['first_hit_rate'] = f"(1/{rate_match.group(1)})"
             
             # total_start_combinedから累計スタートを抽出
             if 'total_start_combined' in detected_data:
                 combined_text = str(detected_data['total_start_combined'])
-                # 4桁の数字を探す
-                numbers = re.findall(r'\d{3,4}', combined_text)
+                # 全ての数字を抽出
+                numbers = re.findall(r'\d+', combined_text)
                 if numbers:
-                    # 最大の数字が累計スタート
+                    # 最大の数字が累計スタート（通常最も大きい）
                     detected_data['total_start'] = max(numbers, key=lambda x: int(x))
             
             # 結果を表示
