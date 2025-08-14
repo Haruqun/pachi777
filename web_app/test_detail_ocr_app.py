@@ -416,8 +416,19 @@ if uploaded_file is not None:
                     
                     for psm in psm_modes:
                         try:
-                            # 文字制限を解除して全ての文字を読み取る
-                            custom_config = f'--psm {psm} --oem 3'
+                            # 領域によって文字制限を設定
+                            # 確率を含む領域は/を許可
+                            if 'rate' in region_name or 'chance_rate' in region_name:
+                                custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789/'
+                            # 純粋な数値の領域
+                            elif region_name in ['big_hit_count', 'first_hit_count', 'total_start', 
+                                               'normal', 'chance', 'ultra', 'middle', 'small', 
+                                               'start', 'max_payout', 'max_hit', 'chance_hits',
+                                               'initial_start', 'prev_final', 'low_hits']:
+                                custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789'
+                            # その他（混在する可能性がある領域）
+                            else:
+                                custom_config = f'--psm {psm} --oem 3'
                             
                             # OCR実行して信頼度も取得（日本語も含めて）
                             data = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, 
@@ -429,20 +440,9 @@ if uploaded_file is not None:
                                 conf = int(data['conf'][i]) if data['conf'][i] != -1 else 0
                                 
                                 if text:
-                                    # 統合領域の処理は後で行うのでそのまま保存
-                                    if 'combined' in region_name:
-                                        pass  # 統合領域はそのまま
-                                    # 数字に関係する領域では数字以外を除去
-                                    elif region_name in ['big_hit_count', 'first_hit_count', 'total_start', 
-                                                      'normal', 'chance', 'ultra', 'middle', 'small', 
-                                                      'start', 'max_payout']:
-                                        # 数字のみを抽出
-                                        import re
-                                        numbers = re.findall(r'\d+', text)
-                                        if numbers:
-                                            text = ''.join(numbers)
-                                        else:
-                                            continue
+                                    # 統合領域と確率領域はそのまま保存
+                                    if 'combined' in region_name or 'rate' in region_name:
+                                        pass  # そのまま保存
                                     
                                     all_texts.append(f"PSM{psm}: {text} ({conf}%)")
                                     
