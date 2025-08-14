@@ -73,7 +73,40 @@ if uploaded_file is not None:
     
     with col_left:
         st.subheader("🖼️ 元画像")
-        st.image(image, use_column_width=True)
+        
+        # オーバーレイ表示オプション
+        show_overlay = st.checkbox("OCR領域を表示", value=False)
+        
+        if show_overlay and 'ocr_regions' in st.session_state:
+            # オーバーレイ画像を作成
+            overlay_img = img_bgr.copy()
+            
+            for region in st.session_state['ocr_regions']:
+                x, y, w, h = region['x'], region['y'], region['w'], region['h']
+                conf = region.get('confidence', 0)
+                
+                # 信頼度に応じて色を変更
+                if conf > 80:
+                    color = (0, 255, 0)  # 緑（高信頼度）
+                elif conf > 50:
+                    color = (0, 165, 255)  # オレンジ（中信頼度）
+                else:
+                    color = (0, 0, 255)  # 赤（低信頼度）
+                
+                # 矩形を描画
+                cv2.rectangle(overlay_img, (x, y), (x+w, y+h), color, 2)
+                
+                # テキストラベル（信頼度）
+                label = f"{conf}%"
+                cv2.putText(overlay_img, label, (x, y-5), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+            
+            # RGB変換して表示
+            display_img = cv2.cvtColor(overlay_img, cv2.COLOR_BGR2RGB)
+            st.image(display_img, use_column_width=True)
+        else:
+            st.image(image, use_column_width=True)
+        
         st.info(f"画像サイズ: {img_bgr.shape[1]} x {img_bgr.shape[0]}px")
     
     with col_right:
@@ -134,6 +167,22 @@ if uploaded_file is not None:
                         # 全体テキスト表示
                         st.markdown("### 📝 抽出されたテキスト")
                         st.text_area("全文", text, height=300)
+                        
+                        # OCR領域を保存（オーバーレイ表示用）
+                        ocr_regions = []
+                        for i in range(len(data['text'])):
+                            if int(data['conf'][i]) > 0:
+                                # スケールを元に戻す
+                                scale_back = 1.0 / scale_factor if scale_factor != 1.0 else 1.0
+                                ocr_regions.append({
+                                    'x': int(data['left'][i] * scale_back),
+                                    'y': int(data['top'][i] * scale_back),
+                                    'w': int(data['width'][i] * scale_back),
+                                    'h': int(data['height'][i] * scale_back),
+                                    'confidence': int(data['conf'][i]),
+                                    'text': data['text'][i]
+                                })
+                        st.session_state['ocr_regions'] = ocr_regions
                         
                         # 詳細データ表示
                         with st.expander("📊 詳細データ（単語ごと）"):
