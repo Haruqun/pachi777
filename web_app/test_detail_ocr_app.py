@@ -13,21 +13,22 @@ st.set_page_config(
 
 st.title("🎰 パチンコ詳細OCR - Site777")
 
-# Expected data items from the image
+# Expected data items from the image（簡略版）
 EXPECTED_DATA = {
-    'big_hit_count': '25',
-    'first_hit_count': '4',
-    'total_start': '3721',
-    'big_hit_rate': '(1/148)',
-    'first_hit_rate': '(1/469)',
-    'normal': '1877',
-    'chance': '1844',
-    'ultra': '21',
-    'middle': '0',
-    'small': '4',
-    'start': '369',
-    'max_payout': '26830',
-    'chance_rate': '1/87'
+    'header': 'CRF宇宙戦艦ヤマト',  # ヘッダー
+    'store_info': '0026',  # 店舗情報
+    'date_info': '12/1',  # 日付
+    'total_start': '3721',  # 累計スタート
+    'normal': '1877',  # 通常
+    'chance': '1844',  # チャンス中
+    'ultra': '21',  # 超
+    'middle': '0',  # 中
+    'small': '4',  # 小
+    'start': '369',  # スタート
+    'max_payout': '26830',  # 最高出玉
+    'max_hit': '25760',  # 最高一撃獲得
+    'initial_start': '40',  # 初回特賞スタート
+    'prev_final': '107'  # 前日最終スタート
 }
 
 # mask2.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
@@ -113,21 +114,16 @@ OCR_REGIONS_FROM_MASK = {
 
 # mask3.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
 # オフセット: X=0, Y=-188（最適値）
-# 大当り/初当りを上下分離（数値と確率を別々に）
+# 不要な領域を削除した簡略版
 OCR_REGIONS_FROM_MASK3 = {
     # ヘッダー（黒枠外）
     'header': {'x': 21, 'y': -188, 'w': 1129, 'h': 64, 'color': 'white'},
     'store_info': {'x': 0, 'y': -106, 'w': 211, 'h': 99, 'color': 'white'},
     'date_info': {'x': 4, 'y': 3, 'w': 80, 'h': 61, 'color': 'white'},
     
-    # メイン数値（上段）
-    'big_hit_count': {'x': 80, 'y': 125, 'w': 236, 'h': 118, 'color': 'red'},  # 大当り回数
-    'first_hit_count': {'x': 458, 'y': 125, 'w': 236, 'h': 118, 'color': 'blue'},  # 初当り回数
+    # メイン数値
+    # 大当り・初当りの回数と確率は削除
     'total_start': {'x': 786, 'y': 116, 'w': 346, 'h': 80, 'color': 'white'},  # 累計スタート
-    
-    # 確率（下段）
-    'big_hit_rate': {'x': 80, 'y': 246, 'w': 236, 'h': 42, 'color': 'red'},  # 大当り確率
-    'first_hit_rate': {'x': 458, 'y': 246, 'w': 236, 'h': 42, 'color': 'blue'},  # 初当り確率
     'normal': {'x': 786, 'y': 234, 'w': 164, 'h': 77, 'color': 'white'},  # 通常
     'chance': {'x': 961, 'y': 234, 'w': 174, 'h': 77, 'color': 'white'},  # チャンス中
     
@@ -138,17 +134,10 @@ OCR_REGIONS_FROM_MASK3 = {
     'start': {'x': 471, 'y': 373, 'w': 208, 'h': 105, 'color': 'white'},  # スタート
     'max_payout': {'x': 813, 'y': 373, 'w': 274, 'h': 107, 'color': 'white'},  # 最高出玉
     
-    # 下段テーブル
-    'max_hit': {'x': 33, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},
-    'chance_hits': {'x': 264, 'y': 549, 'w': 201, 'h': 61, 'color': 'white'},
-    'chance_rate': {'x': 494, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},
-    'low_hits': {'x': 725, 'y': 549, 'w': 201, 'h': 61, 'color': 'white'},
-    'play_time': {'x': 955, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},
-    'initial_start': {'x': 35, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},
-    'prev_final': {'x': 262, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},
-    'rush_count': {'x': 492, 'y': 665, 'w': 202, 'h': 61, 'color': 'white'},
-    'low_start': {'x': 723, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},
-    'lost_time': {'x': 953, 'y': 665, 'w': 202, 'h': 61, 'color': 'white'},
+    # 下段テーブル（必要な項目のみ）
+    'max_hit': {'x': 33, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},  # 最高一撃獲得
+    'initial_start': {'x': 35, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},  # 初回特賞スタート
+    'prev_final': {'x': 262, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},  # 前日最終スタート
 }
 
 # デフォルトでmask3を使用（上下分離で精度向上）
@@ -436,8 +425,18 @@ if uploaded_file is not None:
                     else:  # white
                         # 白色テキストの処理
                         gray_roi = cv2.cvtColor(roi_large, cv2.COLOR_BGR2GRAY)
-                        # 固定閾値で二値化（白い文字は明るい）
-                        _, processed = cv2.threshold(gray_roi, 180, 255, cv2.THRESH_BINARY)
+                        
+                        # initial_startとprev_finalは特別処理（コントラスト強調）
+                        if region_name in ['initial_start', 'prev_final']:
+                            # CLAHE（Contrast Limited Adaptive Histogram Equalization）を適用
+                            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+                            gray_roi = clahe.apply(gray_roi)
+                            # 適応的二値化
+                            processed = cv2.adaptiveThreshold(gray_roi, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                            cv2.THRESH_BINARY, 11, 2)
+                        else:
+                            # 通常の白色テキスト処理
+                            _, processed = cv2.threshold(gray_roi, 180, 255, cv2.THRESH_BINARY)
                     
                     # 既に反転済みなので追加の反転は不要
                     
@@ -451,6 +450,9 @@ if uploaded_file is not None:
                     if region_name in ['ultra', 'middle', 'small']:
                         # 超、中、小は単一数字なので特化したPSMモード
                         psm_modes = [10, 8, 13, 7]  # 10:単一文字, 8:単一単語, 13:生のライン, 7:単一テキスト行
+                    elif region_name in ['initial_start', 'prev_final']:
+                        # 初回特賞・前日最終は短い数値なので専用モード
+                        psm_modes = [8, 7, 13, 6]  # 8:単一単語, 7:単一テキスト行, 13:生のライン, 6:均一ブロック
                     elif 'combined' in region_name:
                         # 統合領域は複数行を含むのでブロックモード
                         psm_modes = [6, 11, 4, 3]  # 6:均一ブロック, 11:疎テキスト, 4:可変カラム, 3:自動
