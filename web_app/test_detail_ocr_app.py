@@ -122,7 +122,76 @@ if uploaded_file is not None:
                     
                     # 抽出されたテキスト
                     st.markdown("### 📝 抽出されたテキスト")
-                    st.text_area("", text, height=400)
+                    st.text_area("", text, height=300)
+                    
+                    # デバッグ情報
+                    with st.expander("🔧 OCRデバッグ情報", expanded=True):
+                        # 検出された全単語の詳細
+                        debug_data = []
+                        for i in range(len(data['text'])):
+                            if data['text'][i].strip():  # 空でないテキストのみ
+                                debug_data.append({
+                                    'テキスト': data['text'][i],
+                                    '信頼度': f"{data['conf'][i]}%",
+                                    '位置(x,y)': f"({data['left'][i]}, {data['top'][i]})",
+                                    'サイズ(w×h)': f"{data['width'][i]}×{data['height'][i]}",
+                                    'レベル': data['level'][i],
+                                    'ページ': data['page_num'][i],
+                                    'ブロック': data['block_num'][i],
+                                    '段落': data['par_num'][i],
+                                    '行': data['line_num'][i],
+                                    '単語': data['word_num'][i]
+                                })
+                        
+                        if debug_data:
+                            import pandas as pd
+                            df = pd.DataFrame(debug_data)
+                            st.dataframe(df, use_container_width=True, height=400)
+                            
+                            # CSV ダウンロード
+                            csv = df.to_csv(index=False, encoding='utf-8-sig')
+                            st.download_button(
+                                label="📥 デバッグ情報をCSVでダウンロード",
+                                data=csv,
+                                file_name="ocr_debug.csv",
+                                mime="text/csv"
+                            )
+                        else:
+                            st.warning("検出されたテキストがありません")
+                        
+                        # 統計情報
+                        st.markdown("#### 📊 統計情報")
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            total_items = len(data['text'])
+                            st.metric("総要素数", total_items)
+                        
+                        with col2:
+                            high_conf = len([c for c in data['conf'] if c > 80])
+                            st.metric("高信頼度(>80%)", high_conf)
+                        
+                        with col3:
+                            mid_conf = len([c for c in data['conf'] if 50 < c <= 80])
+                            st.metric("中信頼度(50-80%)", mid_conf)
+                        
+                        with col4:
+                            low_conf = len([c for c in data['conf'] if 0 < c <= 50])
+                            st.metric("低信頼度(<50%)", low_conf)
+                        
+                        # 信頼度分布
+                        st.markdown("#### 📈 信頼度分布")
+                        conf_values = [c for c in data['conf'] if c > 0]
+                        if conf_values:
+                            import matplotlib.pyplot as plt
+                            fig, ax = plt.subplots(figsize=(10, 3))
+                            ax.hist(conf_values, bins=20, edgecolor='black', alpha=0.7)
+                            ax.set_xlabel('信頼度 (%)')
+                            ax.set_ylabel('頻度')
+                            ax.set_title('OCR信頼度分布')
+                            ax.grid(True, alpha=0.3)
+                            st.pyplot(fig)
+                            plt.close()
                     
                     # 再実行でオーバーレイを更新
                     st.rerun()
