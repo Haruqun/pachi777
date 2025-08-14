@@ -110,69 +110,69 @@ if uploaded_file is not None:
                 
                     # OCR実行
                     try:
-                    # OCR設定
-                    custom_config = f'--psm {psm_mode} --oem 3'
-                    
-                    # テキスト抽出
-                    text = pytesseract.image_to_string(
-                        ocr_input, 
-                        lang=ocr_lang,
-                        config=custom_config
-                    )
-                    
-                    # データ付きで取得（信頼度含む）
-                    data = pytesseract.image_to_data(
-                        ocr_input,
-                        lang=ocr_lang,
-                        config=custom_config,
-                        output_type=pytesseract.Output.DICT
-                    )
-                    
-                    # 結果表示
-                    st.success("OCR完了！")
-                    
-                    # 全体テキスト表示
-                    st.markdown("### 📝 抽出されたテキスト")
-                    st.text_area("全文", text, height=300)
-                    
-                    # 詳細データ表示
-                    with st.expander("📊 詳細データ（単語ごと）"):
-                        # 信頼度が0以上のテキストのみ抽出
-                        detected_words = []
-                        for i in range(len(data['text'])):
-                            if int(data['conf'][i]) > 0:
-                                detected_words.append({
-                                    'テキスト': data['text'][i],
-                                    '信頼度': f"{data['conf'][i]}%",
-                                    '位置': f"({data['left'][i]}, {data['top'][i]})",
-                                    'サイズ': f"{data['width'][i]}x{data['height'][i]}"
-                                })
+                        # OCR設定
+                        custom_config = f'--psm {psm_mode} --oem 3'
                         
-                        if detected_words:
-                            import pandas as pd
-                            df = pd.DataFrame(detected_words)
-                            st.dataframe(df, use_container_width=True)
-                        else:
-                            st.warning("信頼度の高いテキストが検出されませんでした")
+                        # テキスト抽出
+                        text = pytesseract.image_to_string(
+                            ocr_input, 
+                            lang=ocr_lang,
+                            config=custom_config
+                        )
+                        
+                        # データ付きで取得（信頼度含む）
+                        data = pytesseract.image_to_data(
+                            ocr_input,
+                            lang=ocr_lang,
+                            config=custom_config,
+                            output_type=pytesseract.Output.DICT
+                        )
                     
-                    # 統計情報
-                    st.markdown("### 📈 統計情報")
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        word_count = len([w for w in data['text'] if w.strip()])
-                        st.metric("検出単語数", word_count)
-                    
-                    with col2:
-                        if word_count > 0:
-                            avg_conf = np.mean([int(c) for c in data['conf'] if c > 0])
-                            st.metric("平均信頼度", f"{avg_conf:.1f}%")
-                        else:
-                            st.metric("平均信頼度", "N/A")
-                    
-                    with col3:
-                        line_count = len(text.split('\n'))
-                        st.metric("行数", line_count)
+                        # 結果表示
+                        st.success("OCR完了！")
+                        
+                        # 全体テキスト表示
+                        st.markdown("### 📝 抽出されたテキスト")
+                        st.text_area("全文", text, height=300)
+                        
+                        # 詳細データ表示
+                        with st.expander("📊 詳細データ（単語ごと）"):
+                            # 信頼度が0以上のテキストのみ抽出
+                            detected_words = []
+                            for i in range(len(data['text'])):
+                                if int(data['conf'][i]) > 0:
+                                    detected_words.append({
+                                        'テキスト': data['text'][i],
+                                        '信頼度': f"{data['conf'][i]}%",
+                                        '位置': f"({data['left'][i]}, {data['top'][i]})",
+                                        'サイズ': f"{data['width'][i]}x{data['height'][i]}"
+                                    })
+                            
+                            if detected_words:
+                                import pandas as pd
+                                df = pd.DataFrame(detected_words)
+                                st.dataframe(df, use_container_width=True)
+                            else:
+                                st.warning("信頼度の高いテキストが検出されませんでした")
+                        
+                        # 統計情報
+                        st.markdown("### 📈 統計情報")
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            word_count = len([w for w in data['text'] if w.strip()])
+                            st.metric("検出単語数", word_count)
+                        
+                        with col2:
+                            if word_count > 0:
+                                avg_conf = np.mean([int(c) for c in data['conf'] if c > 0])
+                                st.metric("平均信頼度", f"{avg_conf:.1f}%")
+                            else:
+                                st.metric("平均信頼度", "N/A")
+                        
+                        with col3:
+                            line_count = len(text.split('\n'))
+                            st.metric("行数", line_count)
                     
                     except Exception as e:
                         st.error(f"OCRエラー: {str(e)}")
