@@ -163,7 +163,7 @@ with st.sidebar:
     
     # マスクオーバーレイ設定
     st.subheader("マスクオーバーレイ")
-    use_mask = st.checkbox("mask.pngを使用", value=False)
+    use_mask = st.checkbox("mask2.pngを使用", value=False)
     if use_mask:
         mask_offset_x = st.number_input("X軸オフセット", min_value=-500, max_value=500, value=0, step=1)
         mask_offset_y = st.number_input("Y軸オフセット", min_value=-500, max_value=500, value=-188, step=1)  # デフォルト値: -188（最適値）
@@ -697,11 +697,11 @@ if uploaded_file is not None:
         # 検出結果のオーバーレイ画像を作成（線付き画像を使用）
         vis_img = img_with_lines.copy()
         
-        # mask.pngを使用する場合
+        # mask2.pngを使用する場合
         if 'use_mask' in locals() and use_mask:
-            # mask.pngを読み込み（リサイズ禁止）
+            # mask2.pngを読み込み（リサイズ禁止）
             import os
-            mask_path = os.path.join(os.path.dirname(__file__), 'mask', 'mask.png')
+            mask_path = os.path.join(os.path.dirname(__file__), 'mask', 'mask2.png')
             if os.path.exists(mask_path):
                 mask_img = cv2.imread(mask_path)
                 
@@ -749,7 +749,7 @@ if uploaded_file is not None:
                 if 'black_region_found' in locals() and black_region_found:
                     st.info(f"黒背景左上: ({black_x}, {black_y}) → 実際の基準点: ({base_x}, {base_y})")
             else:
-                st.warning("mask/mask.pngが見つかりません")
+                st.warning("mask/mask2.pngが見つかりません")
         else:
             # OCR領域を描画（Figmaで定義した絶対座標）  
             for name, region in OCR_REGIONS.items():
