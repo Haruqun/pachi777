@@ -15,9 +15,9 @@ st.title("🎰 パチンコ詳細OCR - Site777")
 
 # Expected data items from the image（簡略版）
 EXPECTED_DATA = {
-    'header': 'CRF宇宙戦艦ヤマト',  # ヘッダー
+    'header': 'エヴァンゲリオン',  # ヘッダー（実際のタイトル）
     'store_info': '0026',  # 店舗情報
-    'date_info': '12/1',  # 日付
+    'date_info': '8/6',  # 日付（実際の日付）
     'total_start': '3721',  # 累計スタート
     'normal': '1877',  # 通常
     'chance': '1844',  # チャンス中
@@ -27,8 +27,7 @@ EXPECTED_DATA = {
     'start': '369',  # スタート
     'max_payout': '26830',  # 最高出玉
     'max_hit': '25760',  # 最高一撃獲得
-    'initial_start': '40',  # 初回特賞スタート
-    'prev_final': '107'  # 前日最終スタート
+    'initial_start': '40'  # 初回特賞スタート
 }
 
 # mask2.pngから抽出したOCR領域（黒背景左上を基準とした相対座標）
@@ -137,7 +136,6 @@ OCR_REGIONS_FROM_MASK3 = {
     # 下段テーブル（必要な項目のみ）
     'max_hit': {'x': 33, 'y': 549, 'w': 202, 'h': 61, 'color': 'white'},  # 最高一撃獲得
     'initial_start': {'x': 35, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},  # 初回特賞スタート
-    'prev_final': {'x': 262, 'y': 665, 'w': 201, 'h': 61, 'color': 'white'},  # 前日最終スタート
 }
 
 # デフォルトでmask3を使用（上下分離で精度向上）
@@ -447,7 +445,13 @@ if uploaded_file is not None:
                     all_texts = []  # デバッグ用：全ての検出結果を保存
                     
                     # PSMモードのリスト（領域によって調整）
-                    if region_name in ['ultra', 'middle', 'small']:
+                    if region_name == 'header':
+                        # ヘッダーは長いテキスト行
+                        psm_modes = [7, 13, 8]  # 7:単一テキスト行, 13:生のライン, 8:単一単語
+                    elif region_name == 'date_info':
+                        # 日付は短いテキスト
+                        psm_modes = [8, 7, 13]  # 8:単一単語, 7:単一テキスト行, 13:生のライン
+                    elif region_name in ['ultra', 'middle', 'small']:
                         # 超、中、小は単一数字なので特化したPSMモード
                         psm_modes = [10, 8, 13, 7]  # 10:単一文字, 8:単一単語, 13:生のライン, 7:単一テキスト行
                     elif region_name in ['initial_start', 'prev_final']:
@@ -462,22 +466,32 @@ if uploaded_file is not None:
                     for psm in psm_modes:
                         try:
                             # 領域によって文字制限を設定
+                            # ヘッダーと店舗情報は日本語を含む
+                            if region_name in ['header', 'store_info']:
+                                custom_config = f'--psm {psm} --oem 3'
+                            # 日付は数字と/のみ
+                            elif region_name == 'date_info':
+                                custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789/'
                             # 確率を含む領域は/を許可
-                            if 'rate' in region_name or 'chance_rate' in region_name:
+                            elif 'rate' in region_name or 'chance_rate' in region_name:
                                 custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789/'
                             # 純粋な数値の領域
-                            elif region_name in ['big_hit_count', 'first_hit_count', 'total_start', 
-                                               'normal', 'chance', 'ultra', 'middle', 'small', 
-                                               'start', 'max_payout', 'max_hit', 'chance_hits',
-                                               'initial_start', 'prev_final', 'low_hits']:
+                            elif region_name in ['total_start', 'normal', 'chance', 'ultra', 'middle', 'small', 
+                                               'start', 'max_payout', 'max_hit', 'initial_start', 'prev_final']:
                                 custom_config = f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789'
-                            # その他（混在する可能性がある領域）
+                            # その他
                             else:
                                 custom_config = f'--psm {psm} --oem 3'
                             
-                            # OCR実行して信頼度も取得（日本語も含めて）
-                            data = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, 
-                                                            config=custom_config, lang='jpn')
+                            # OCR実行して信頼度も取得
+                            if region_name in ['header', 'store_info']:
+                                # 日本語を含む領域
+                                data = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, 
+                                                                config=custom_config, lang='jpn')
+                            else:
+                                # 数字のみの領域
+                                data = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, 
+                                                                config=custom_config)
                             
                             # 全てのテキストを収集
                             for i in range(len(data['text'])):
