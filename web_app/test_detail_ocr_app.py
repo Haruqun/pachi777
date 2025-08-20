@@ -111,11 +111,11 @@ if uploaded_file is not None:
             black_frame = detect_black_frame(image)
             if black_frame:
                 x, y, w, h = black_frame
-                # 黒枠の上部指定%を切り取り
-                crop_height = int(h * (crop_ratio / 100))
-                display_image = image.crop((x, y, x + w, y + crop_height))
+                # 黒枠の上部指定%の位置に線を引き、画像の一番上からその線までを切り取り
+                crop_line_y = y + int(h * (crop_ratio / 100))
+                display_image = image.crop((0, 0, image.size[0], crop_line_y))
                 st.image(display_image, use_column_width=True)
-                st.info(f"黒枠検出: {w}×{h}px → 上部{crop_ratio}%切り取り: {w}×{crop_height}px")
+                st.info(f"黒枠検出: {w}×{h}px → 画像上端から黒枠{crop_ratio}%位置まで切り取り: {image.size[0]}×{crop_line_y}px")
             else:
                 st.warning("黒枠を検出できませんでした。全体を表示します。")
                 st.image(image, use_column_width=True)
@@ -135,8 +135,8 @@ if uploaded_file is not None:
             black_frame = detect_black_frame(image)
             if black_frame:
                 x, y, w, h = black_frame
-                crop_height = int(h * (crop_ratio / 100))
-                estimated_tokens = (w * crop_height) // 750
+                crop_line_y = y + int(h * (crop_ratio / 100))
+                estimated_tokens = (width * crop_line_y) // 750
             else:
                 estimated_tokens = (width * height) // 750
         elif 'crop_upper_half' in locals() and crop_upper_half:
@@ -165,8 +165,9 @@ if uploaded_file is not None:
                             black_frame = detect_black_frame(image)
                             if black_frame:
                                 x, y, w, h = black_frame
-                                crop_height = int(h * (crop_ratio / 100))
-                                image_to_process = image.crop((x, y, x + w, y + crop_height))
+                                # 画像の一番上から黒枠内の指定%位置まで切り取り
+                                crop_line_y = y + int(h * (crop_ratio / 100))
+                                image_to_process = image.crop((0, 0, image.size[0], crop_line_y))
                             else:
                                 image_to_process = image
                         elif 'crop_upper_half' in locals() and crop_upper_half:
