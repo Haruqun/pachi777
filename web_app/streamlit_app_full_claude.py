@@ -143,80 +143,26 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
         
         # プロンプト作成
         prompt = """
-この画像からパチンコ台のデータを抽出してJSON形式で返してください。
-画像はテーブル形式になっており、項目名とその値が対応しています。
-
-重要な注意点：
-- 「台 0027」のような表記は「台番号」として抽出してください
-- 「4パチ」「1パチ」等の表記があれば「貸玉」フィールドに入れてください
-- 日付は黒枠の左上にある日付（例：8/7）を読み取ってください（2025/08/07のような形式ではありません）
-- 数字は慎重に読み取ってください（3と7、6と8、0と8などの見間違いに注意）
-
-テーブルの読み方（最重要）：
-- 「項目名」の真下（垂直方向）にある数値がその項目の値です
-- 横や斜めの数値ではなく、必ず垂直下方向の数値を読み取ってください
-- 項目名とその直下の数値を必ず対応させてください
-
-スタート関連の項目の明確な違い（最重要・必ず正確に区別してください）：
-
-1. 「累計スタート」（画像の上部エリア）
-   - 位置：画像の上部、台情報の近くにある
-   - 意味：その日の総回転数（営業開始から現在までの全回転数）
-   - 特徴：すべてのスタート値の中で必ず最も大きい数値
-   - 例：「累計 5432」「累計スタート 5432」のような表記
-
-2. 「通常」（累計スタートのすぐ下）
-   - 位置：累計スタートの直下にある項目
-   - 意味：通常時（大当り中以外）の総回転数
-   - 特徴：必ず累計スタートより小さい数値（累計の60-95%程度が一般的）
-   - 例：累計27,770なら通常は16,000〜26,000程度
-   - 重要：「通常」の数値は累計スタートの60-95%の範囲内
-   - 警告：通常が累計と同じか超える場合は読み取りミス。再確認必要
-
-3. 「スタート」（画像の中央エリア）  
-   - 位置：画像の中央付近にある項目
-   - 意味：前日最終スタートから現在までの回転数（当日の回転数）
-   - 特徴：累計スタートより必ず小さい数値
-   - 例：「スタート 144」のような表記
-
-4. 「初回特賞スタート」（画像の左下エリア）
-   - 位置：画像の左下付近にある独立した項目
-   - 意味：初回の大当りまでに要した回転数
-   - 特徴：初当たりがある場合のみ数値が記載（ない場合は0または空欄）
-   - 例：「初回特賞スタート 187」のような表記
-
-これら4つは完全に異なる数値です。位置から正確に識別してください。
-必ず累計スタート ≥ 通常 ≥ スタート、累計スタート ≥ 初回特賞スタート の関係になります。
+この画像のパチンコ・パチスロの収支管理データから以下の項目のみを抽出して、JSON形式で出力してください：
 
 {
-  "台情報": {
-    "台番号": "string（例：0027）",
-    "機種名": "string",
-    "貸玉": "string（例：4パチ、1パチ）",
-    "日付": "string"
-  },
-  "大当り情報": {
-    "大当り回数": number,
-    "大当り確率": "string（例：1/94）",
-    "初当り回数": number,
-    "初当り確率": "string（例：1/127）"
-  },
-  "スタート情報": {
-    "累計スタート": number（画像上部にある最も大きいスタート数値。必ず他のスタート値より大きい）,
-    "通常": number（累計スタートのすぐ下の「通常」の値。通常時の総回転数。累計の60-95%の範囲内であるべき）,
-    "チャンス中": number（「チャンス中」または「確変中」の回転数）,
-    "スタート": number（画像中央付近の「スタート」項目の数値。当日の回転数。累計スタートより小さい）,
-    "初回特賞スタート": number（画像左下の独立した「初回特賞スタート」項目の数値。初当たりまでの回転数）,
-    "前日最終スタート": number（「前日最終スタート」という項目名の直下の数値）
-  },
-  "ラウンド情報": {
-    "超": number,
-    "中": number,
-    "小": number
+  "台番号": "",
+  "機種名": "",
+  "日付": "",
+  "累計スタート": 0,
+  "初回特賞スタート": 0,
+  "通常": 0,
+  "大当り回数": 0,
+  "初当り回数": 0,
+  "ラウンド内訳": {
+    "超": 0,
+    "中": 0,
+    "小": 0
   }
 }
 
-JSONのみを返してください。説明は不要です。
+数値は整数型、文字列は文字列型で正確に読み取ってください。
+画像内の該当する数値とテキストのみを抽出し、上記8項目以外は出力しないでください。
 
 重要な注意事項：
 1. スタート関連の項目を必ず区別してください
@@ -2167,39 +2113,27 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     'graph_end_x': graph_info.get('end_x') if graph_info else None
                 }
             
-            # Claude APIデータの統合
+            # Claude APIデータの統合（新形式）
             if claude_data:
-                # 台情報
-                if claude_data.get("台情報"):
-                    ocr_data['machine_number'] = claude_data["台情報"].get("台番号", ocr_data.get('machine_number'))
-                    ocr_data['machine_name'] = claude_data["台情報"].get("機種名", ocr_data.get('machine_name'))
-                    ocr_data['date'] = claude_data["台情報"].get("日付", ocr_data.get('date'))
-                    ocr_data['rental_ball'] = claude_data["台情報"].get("貸玉", ocr_data.get('rental_ball'))
+                # 基本項目を直接取得
+                ocr_data['machine_number'] = claude_data.get("台番号", ocr_data.get('machine_number'))
+                ocr_data['machine_name'] = claude_data.get("機種名", ocr_data.get('machine_name'))
+                ocr_data['date'] = claude_data.get("日付", ocr_data.get('date'))
+                ocr_data['total_start'] = claude_data.get("累計スタート", ocr_data.get('total_start'))
+                ocr_data['first_bonus_start'] = claude_data.get("初回特賞スタート", ocr_data.get('first_bonus_start'))
+                ocr_data['normal_start'] = claude_data.get("通常", ocr_data.get('normal_start'))
+                ocr_data['jackpot_count'] = claude_data.get("大当り回数", ocr_data.get('jackpot_count'))
+                ocr_data['first_hit_count'] = claude_data.get("初当り回数", ocr_data.get('first_hit_count'))
                 
-                # スタート情報
-                if claude_data.get("スタート情報"):
-                    ocr_data['total_start'] = claude_data["スタート情報"].get("累計スタート", ocr_data.get('total_start'))
-                    ocr_data['current_rotation'] = claude_data["スタート情報"].get("スタート", ocr_data.get('current_rotation'))
-                    ocr_data['first_bonus_start'] = claude_data["スタート情報"].get("初回特賞スタート", ocr_data.get('first_bonus_start'))
-                    ocr_data['normal_start'] = claude_data["スタート情報"].get("通常", ocr_data.get('normal_start'))
-                    ocr_data['chance_start'] = claude_data["スタート情報"].get("チャンス中", ocr_data.get('chance_start'))
-                    ocr_data['yesterday_final'] = claude_data["スタート情報"].get("前日最終スタート", ocr_data.get('yesterday_final'))
+                # 初回特賞スタートの値を初当たり値として使用し、回転率を正しく計算
+                if claude_data.get("初回特賞スタート"):
+                    first_hit_spins = claude_data["初回特賞スタート"]
                     
-                    # 初回特賞スタートの値を初当たり値として使用し、回転率を正しく計算
-                    if claude_data["スタート情報"].get("初回特賞スタート"):
-                        first_hit_spins = claude_data["スタート情報"]["初回特賞スタート"]
-                        
-                        # 初回特賞スタートの妥当性チェック（通常50-500の範囲）
-                        if first_hit_spins < 30:
-                            # 14のような極端に小さい値は誤読の可能性が高い
-                            # スタート値（当日回転数）と間違えている可能性
-                            current_rotation = claude_data["スタート情報"].get("スタート", 0)
-                            if current_rotation > 30:
-                                # スタート値の方が妥当な場合は入れ替え
-                                first_hit_spins, current_rotation = current_rotation, first_hit_spins
-                                ocr_data['first_bonus_start'] = first_hit_spins
-                                ocr_data['current_rotation'] = current_rotation
-                                ocr_data['first_hit_warning'] = f"⚠️ 初回特賞スタートとスタートの値を入れ替え: {first_hit_spins}回"
+                    # 初回特賞スタートの妥当性チェック（通常50-500の範囲）
+                    if first_hit_spins < 30:
+                        # 14のような極端に小さい値は誤読の可能性が高い
+                        # 現在のJSON形式ではスタート値は含まれないのでスキップ
+                        pass
                         
                         # rotation_metricsが存在しない場合は作成
                         if not rotation_metrics:
@@ -2225,10 +2159,10 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                                 rotation_metrics['rotation_rate_1'] = (first_hit_spins * 1000) / (estimated_balls * 4)
                                 rotation_metrics['first_hit_estimation'] = True  # 推定値であることを記録
                     
-                    # 通常回転数もClaude APIから取得して回転率②を計算
-                    if claude_data["スタート情報"].get("通常"):
-                        normal_spins = claude_data["スタート情報"]["通常"]
-                        total_start = claude_data["スタート情報"].get("累計スタート", 0)
+                # 通常回転数もClaude APIから取得して回転率②を計算
+                if claude_data.get("通常"):
+                    normal_spins = claude_data["通常"]
+                    total_start = claude_data.get("累計スタート", 0)
                         
                         # 通常回転数の妥当性チェック
                         # 1. 累計スタートより大きい場合は明らかに異常
@@ -2255,18 +2189,12 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                         else:
                             rotation_metrics['rotation_rate_2'] = 0
                 
-                # 大当り情報  
-                if claude_data.get("大当り情報"):
-                    ocr_data['jackpot_count'] = claude_data["大当り情報"].get("大当り回数", ocr_data.get('jackpot_count'))
-                    ocr_data['jackpot_probability'] = claude_data["大当り情報"].get("大当り確率", ocr_data.get('jackpot_probability'))
-                    ocr_data['first_hit_count'] = claude_data["大当り情報"].get("初当り回数", ocr_data.get('first_hit_count'))
-                    ocr_data['first_hit_probability'] = claude_data["大当り情報"].get("初当り確率", ocr_data.get('first_hit_probability'))
                 
                 # ラウンド情報
-                if claude_data.get("ラウンド情報"):
-                    ocr_data['round_super'] = claude_data["ラウンド情報"].get("超", ocr_data.get('round_super'))
-                    ocr_data['round_middle'] = claude_data["ラウンド情報"].get("中", ocr_data.get('round_middle'))
-                    ocr_data['round_small'] = claude_data["ラウンド情報"].get("小", ocr_data.get('round_small'))
+                if claude_data.get("ラウンド内訳"):
+                    ocr_data['round_super'] = claude_data["ラウンド内訳"].get("超", ocr_data.get('round_super'))
+                    ocr_data['round_middle'] = claude_data["ラウンド内訳"].get("中", ocr_data.get('round_middle'))
+                    ocr_data['round_small'] = claude_data["ラウンド内訳"].get("小", ocr_data.get('round_small'))
             
             analysis_results.append({
                 'name': uploaded_file.name,
@@ -2493,42 +2421,37 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             # カード形式のHTML作成
                             claude_html = '<div class="claude-card">'
                             
-                            # 台情報
-                            if result['claude_data'].get('台情報'):
-                                info = result['claude_data']['台情報']
-                                if info.get('台番号'):
-                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎰 台番号</span><span class="claude-value">{info.get("台番号", "-")}</span></div>'
-                                if info.get('機種名'):
-                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎮 機種名</span><span class="claude-value">{info.get("機種名", "-")}</span></div>'
-                                if info.get('日付'):
-                                    claude_html += f'<div class="claude-item"><span class="claude-label">📅 日付</span><span class="claude-value">{info.get("日付", "-")}</span></div>'
+                            # 新形式のJSONから直接データを取得
+                            data = result['claude_data']
+                            
+                            # 基本情報
+                            if data.get('台番号'):
+                                claude_html += f'<div class="claude-item"><span class="claude-label">🎰 台番号</span><span class="claude-value">{data.get("台番号", "-")}</span></div>'
+                            if data.get('機種名'):
+                                claude_html += f'<div class="claude-item"><span class="claude-label">🎮 機種名</span><span class="claude-value">{data.get("機種名", "-")}</span></div>'
+                            if data.get('日付'):
+                                claude_html += f'<div class="claude-item"><span class="claude-label">📅 日付</span><span class="claude-value">{data.get("日付", "-")}</span></div>'
                             
                             # スタート情報
-                            if result['claude_data'].get('スタート情報'):
-                                info = result['claude_data']['スタート情報']
-                                if info.get('累計スタート'):
-                                    claude_html += f'<div class="claude-item" style="background-color: #f0f0f0;"><span class="claude-label">📊 累計スタート</span><span class="claude-value positive">{info.get("累計スタート", 0):,}回</span></div>'
-                                if info.get('初回特賞スタート'):
-                                    claude_html += f'<div class="claude-item" style="background-color: #fff3cd;"><span class="claude-label">🎯 初回特賞スタート</span><span class="claude-value positive">{info.get("初回特賞スタート", 0)}回</span></div>'
-                                if info.get('通常'):
-                                    claude_html += f'<div class="claude-item"><span class="claude-label">🔄 通常</span><span class="claude-value">{info.get("通常", 0):,}回</span></div>'
-                                if info.get('チャンス中'):
-                                    claude_html += f'<div class="claude-item"><span class="claude-label">⚡ チャンス中</span><span class="claude-value">{info.get("チャンス中", 0):,}回</span></div>'
+                            if data.get('累計スタート'):
+                                claude_html += f'<div class="claude-item" style="background-color: #f0f0f0;"><span class="claude-label">📊 累計スタート</span><span class="claude-value positive">{data.get("累計スタート", 0):,}回</span></div>'
+                            if data.get('初回特賞スタート'):
+                                claude_html += f'<div class="claude-item" style="background-color: #fff3cd;"><span class="claude-label">🎯 初回特賞スタート</span><span class="claude-value positive">{data.get("初回特賞スタート", 0)}回</span></div>'
+                            if data.get('通常'):
+                                claude_html += f'<div class="claude-item"><span class="claude-label">🔄 通常</span><span class="claude-value">{data.get("通常", 0):,}回</span></div>'
                             
                             # 大当り情報
-                            if result['claude_data'].get('大当り情報'):
-                                info = result['claude_data']['大当り情報']
-                                if info.get('大当り回数'):
-                                    claude_html += f'<div class="claude-item" style="background-color: #d4edda;"><span class="claude-label">🎊 大当り回数</span><span class="claude-value positive">{info.get("大当り回数", 0)}回</span></div>'
-                                if info.get('初当り回数'):
-                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎲 初当り回数</span><span class="claude-value positive">{info.get("初当り回数", 0)}回</span></div>'
+                            if data.get('大当り回数'):
+                                claude_html += f'<div class="claude-item" style="background-color: #d4edda;"><span class="claude-label">🎊 大当り回数</span><span class="claude-value positive">{data.get("大当り回数", 0)}回</span></div>'
+                            if data.get('初当り回数'):
+                                claude_html += f'<div class="claude-item"><span class="claude-label">🎲 初当り回数</span><span class="claude-value positive">{data.get("初当り回数", 0)}回</span></div>'
                             
-                            # ラウンド情報
-                            if result['claude_data'].get('ラウンド情報'):
-                                info = result['claude_data']['ラウンド情報']
-                                super_val = info.get('超', 0)
-                                middle_val = info.get('中', 0)
-                                small_val = info.get('小', 0)
+                            # ラウンド内訳
+                            if data.get('ラウンド内訳'):
+                                rounds = data['ラウンド内訳']
+                                super_val = rounds.get('超', 0)
+                                middle_val = rounds.get('中', 0)
+                                small_val = rounds.get('小', 0)
                                 if super_val or middle_val or small_val:
                                     claude_html += f'<div class="claude-item" style="background-color: #f5f5f5; margin-top: 10px;"><span class="claude-label">🏆 ラウンド内訳</span><span class="claude-value">超:{super_val} 中:{middle_val} 小:{small_val}</span></div>'
                             
