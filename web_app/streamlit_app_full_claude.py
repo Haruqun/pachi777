@@ -2383,83 +2383,97 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 成功時は統計情報を表示（解析結果の下に縦に並べる）
                     if result['success']:
                         # Claude APIデータをカード形式で表示（データがある場合のみ）
-                        if result.get('claude_data'):
-                            st.markdown("##### 🤖 Claude API 読み取りデータ")
-                            
-                            # Claude用のスタイルを定義
-                            st.markdown("""
-                            <style>
-                            .claude-card {
-                                background-color: #f0f2f6;
-                                padding: 15px;
-                                border-radius: 10px;
-                                margin-top: 10px;
-                            }
-                            .claude-item {
-                                display: flex;
-                                justify-content: space-between;
-                                padding: 5px 0;
-                                border-bottom: 1px solid #e0e0e0;
-                            }
-                            .claude-item:last-child {
-                                border-bottom: none;
-                            }
-                            .claude-label {
-                                color: #666;
-                                font-weight: 500;
-                            }
-                            .claude-value {
-                                font-weight: bold;
-                                color: #333;
-                            }
-                            .claude-value.positive {
-                                color: #28a745;
-                            }
-                            </style>
-                            """, unsafe_allow_html=True)
-                            
-                            # カード形式のHTML作成
-                            claude_html = '<div class="claude-card">'
-                            
-                            # 新形式のJSONから直接データを取得
+                        if result.get('claude_data') and result['claude_data']:
+                            # データが存在し、かつ空でないことを確認
                             data = result['claude_data']
                             
-                            # 基本情報
-                            if data.get('台番号'):
-                                claude_html += f'<div class="claude-item"><span class="claude-label">🎰 台番号</span><span class="claude-value">{data.get("台番号", "-")}</span></div>'
-                            if data.get('機種名'):
-                                claude_html += f'<div class="claude-item"><span class="claude-label">🎮 機種名</span><span class="claude-value">{data.get("機種名", "-")}</span></div>'
-                            if data.get('日付'):
-                                claude_html += f'<div class="claude-item"><span class="claude-label">📅 日付</span><span class="claude-value">{data.get("日付", "-")}</span></div>'
+                            # データに実際の内容があるか確認
+                            has_content = any([
+                                data.get('台番号'),
+                                data.get('機種名'),
+                                data.get('日付'),
+                                data.get('累計スタート'),
+                                data.get('初回特賞スタート'),
+                                data.get('通常'),
+                                data.get('大当り回数'),
+                                data.get('初当り回数'),
+                                data.get('ラウンド内訳')
+                            ])
                             
-                            # スタート情報
-                            if data.get('累計スタート'):
-                                claude_html += f'<div class="claude-item" style="background-color: #f0f0f0;"><span class="claude-label">📊 累計スタート</span><span class="claude-value positive">{data.get("累計スタート", 0):,}回</span></div>'
-                            if data.get('初回特賞スタート'):
-                                claude_html += f'<div class="claude-item" style="background-color: #fff3cd;"><span class="claude-label">🎯 初回特賞スタート</span><span class="claude-value positive">{data.get("初回特賞スタート", 0)}回</span></div>'
-                            if data.get('通常'):
-                                claude_html += f'<div class="claude-item"><span class="claude-label">🔄 通常</span><span class="claude-value">{data.get("通常", 0):,}回</span></div>'
-                            
-                            # 大当り情報
-                            if data.get('大当り回数'):
-                                claude_html += f'<div class="claude-item" style="background-color: #d4edda;"><span class="claude-label">🎊 大当り回数</span><span class="claude-value positive">{data.get("大当り回数", 0)}回</span></div>'
-                            if data.get('初当り回数'):
-                                claude_html += f'<div class="claude-item"><span class="claude-label">🎲 初当り回数</span><span class="claude-value positive">{data.get("初当り回数", 0)}回</span></div>'
-                            
-                            # ラウンド内訳
-                            if data.get('ラウンド内訳'):
-                                rounds = data['ラウンド内訳']
-                                super_val = rounds.get('超', 0)
-                                middle_val = rounds.get('中', 0)
-                                small_val = rounds.get('小', 0)
-                                if super_val or middle_val or small_val:
-                                    claude_html += f'<div class="claude-item" style="background-color: #f5f5f5; margin-top: 10px;"><span class="claude-label">🏆 ラウンド内訳</span><span class="claude-value">超:{super_val} 中:{middle_val} 小:{small_val}</span></div>'
-                            
-                            claude_html += '</div>'
-                            
-                            # HTMLを表示
-                            st.markdown(claude_html, unsafe_allow_html=True)
-                            st.markdown("")  # スペース追加
+                            if has_content:
+                                st.markdown("##### 🤖 Claude API 読み取りデータ")
+                                
+                                # Claude用のスタイルを定義
+                                st.markdown("""
+                                <style>
+                                .claude-card {
+                                    background-color: #f0f2f6;
+                                    padding: 15px;
+                                    border-radius: 10px;
+                                    margin-top: 10px;
+                                }
+                                .claude-item {
+                                    display: flex;
+                                    justify-content: space-between;
+                                    padding: 5px 0;
+                                    border-bottom: 1px solid #e0e0e0;
+                                }
+                                .claude-item:last-child {
+                                    border-bottom: none;
+                                }
+                                .claude-label {
+                                    color: #666;
+                                    font-weight: 500;
+                                }
+                                .claude-value {
+                                    font-weight: bold;
+                                    color: #333;
+                                }
+                                .claude-value.positive {
+                                    color: #28a745;
+                                }
+                                </style>
+                                """, unsafe_allow_html=True)
+                                
+                                # カード形式のHTML作成
+                                claude_html = '<div class="claude-card">'
+                                
+                                # 基本情報
+                                if data.get('台番号'):
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎰 台番号</span><span class="claude-value">{data.get("台番号", "-")}</span></div>'
+                                if data.get('機種名'):
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎮 機種名</span><span class="claude-value">{data.get("機種名", "-")}</span></div>'
+                                if data.get('日付'):
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">📅 日付</span><span class="claude-value">{data.get("日付", "-")}</span></div>'
+                                
+                                # スタート情報
+                                if data.get('累計スタート'):
+                                    claude_html += f'<div class="claude-item" style="background-color: #f0f0f0;"><span class="claude-label">📊 累計スタート</span><span class="claude-value positive">{data.get("累計スタート", 0):,}回</span></div>'
+                                if data.get('初回特賞スタート'):
+                                    claude_html += f'<div class="claude-item" style="background-color: #fff3cd;"><span class="claude-label">🎯 初回特賞スタート</span><span class="claude-value positive">{data.get("初回特賞スタート", 0)}回</span></div>'
+                                if data.get('通常'):
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">🔄 通常</span><span class="claude-value">{data.get("通常", 0):,}回</span></div>'
+                                
+                                # 大当り情報
+                                if data.get('大当り回数'):
+                                    claude_html += f'<div class="claude-item" style="background-color: #d4edda;"><span class="claude-label">🎊 大当り回数</span><span class="claude-value positive">{data.get("大当り回数", 0)}回</span></div>'
+                                if data.get('初当り回数'):
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎲 初当り回数</span><span class="claude-value positive">{data.get("初当り回数", 0)}回</span></div>'
+                                
+                                # ラウンド内訳
+                                if data.get('ラウンド内訳'):
+                                    rounds = data['ラウンド内訳']
+                                    super_val = rounds.get('超', 0)
+                                    middle_val = rounds.get('中', 0)
+                                    small_val = rounds.get('小', 0)
+                                    if super_val or middle_val or small_val:
+                                        claude_html += f'<div class="claude-item" style="background-color: #f5f5f5; margin-top: 10px;"><span class="claude-label">🏆 ラウンド内訳</span><span class="claude-value">超:{super_val} 中:{middle_val} 小:{small_val}</span></div>'
+                                
+                                claude_html += '</div>'
+                                
+                                # HTMLを表示
+                                st.markdown(claude_html, unsafe_allow_html=True)
+                                st.markdown("")  # スペース追加
                         
                         # 統計情報をカード風に表示
                         st.markdown("""
