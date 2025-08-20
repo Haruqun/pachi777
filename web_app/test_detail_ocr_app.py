@@ -215,9 +215,9 @@ if uploaded_file is not None:
                         # Claude API設定
                         api_url = "https://api.anthropic.com/v1/messages"
                         headers = {
-                            "x-api-key": api_key,
+                            "X-API-Key": api_key,
                             "anthropic-version": "2023-06-01",
-                            "content-type": "application/json"
+                            "Content-Type": "application/json"
                         }
                         
                         # プロンプト作成（JSON形式固定）
