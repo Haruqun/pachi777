@@ -2163,31 +2163,31 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 if claude_data.get("通常"):
                     normal_spins = claude_data["通常"]
                     total_start = claude_data.get("累計スタート", 0)
-                        
-                        # 通常回転数の妥当性チェック
-                        # 1. 累計スタートより大きい場合は明らかに異常
-                        # 2. 累計スタートの95%より大きい場合も疑わしい（大当たり中にも回転するため）
-                        original_normal_spins = normal_spins
-                        if total_start > 0:
-                            if normal_spins >= total_start:
-                                # 明らかな異常値：累計の85%を仮定
-                                normal_spins = int(total_start * 0.85)
-                                ocr_data['normal_spins_warning'] = f"⚠️ 通常回転数が異常（{original_normal_spins}）のため補正: {normal_spins}"
-                            elif normal_spins > total_start * 0.95:
-                                # 疑わしい値：累計の90%を仮定
-                                normal_spins = int(total_start * 0.90)
-                                ocr_data['normal_spins_warning'] = f"⚠️ 通常回転数が高すぎる（{original_normal_spins}）ため補正: {normal_spins}"
-                        
-                        # rotation_metricsが存在しない場合は作成
-                        if not rotation_metrics:
-                            rotation_metrics = {}
-                        rotation_metrics['normal_decline_spins'] = normal_spins
-                        # 通常時の使用球数はグラフの下降部分から計算されているものを使用
-                        if rotation_metrics.get('normal_decline_balls', 0) > 0:
-                            # 回転率②を再計算（1000円あたりの回転数）
-                            rotation_metrics['rotation_rate_2'] = (normal_spins * 1000) / (rotation_metrics['normal_decline_balls'] * 4)
-                        else:
-                            rotation_metrics['rotation_rate_2'] = 0
+                    
+                    # 通常回転数の妥当性チェック
+                    # 1. 累計スタートより大きい場合は明らかに異常
+                    # 2. 累計スタートの95%より大きい場合も疑わしい（大当たり中にも回転するため）
+                    original_normal_spins = normal_spins
+                    if total_start > 0:
+                        if normal_spins >= total_start:
+                            # 明らかな異常値：累計の85%を仮定
+                            normal_spins = int(total_start * 0.85)
+                            ocr_data['normal_spins_warning'] = f"⚠️ 通常回転数が異常（{original_normal_spins}）のため補正: {normal_spins}"
+                        elif normal_spins > total_start * 0.95:
+                            # 疑わしい値：累計の90%を仮定
+                            normal_spins = int(total_start * 0.90)
+                            ocr_data['normal_spins_warning'] = f"⚠️ 通常回転数が高すぎる（{original_normal_spins}）ため補正: {normal_spins}"
+                    
+                    # rotation_metricsが存在しない場合は作成
+                    if not rotation_metrics:
+                        rotation_metrics = {}
+                    rotation_metrics['normal_decline_spins'] = normal_spins
+                    # 通常時の使用球数はグラフの下降部分から計算されているものを使用
+                    if rotation_metrics.get('normal_decline_balls', 0) > 0:
+                        # 回転率②を再計算（1000円あたりの回転数）
+                        rotation_metrics['rotation_rate_2'] = (normal_spins * 1000) / (rotation_metrics['normal_decline_balls'] * 4)
+                    else:
+                        rotation_metrics['rotation_rate_2'] = 0
                 
                 
                 # ラウンド情報
