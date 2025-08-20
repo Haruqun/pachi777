@@ -188,6 +188,8 @@ if uploaded_file is not None:
         if st.button("🔍 画像解析実行", type="primary", use_container_width=True):
             if not api_key:
                 st.error("APIキーを入力してください")
+            elif not api_key.startswith("sk-"):
+                st.error("APIキーの形式が正しくありません。'sk-'で始まる必要があります。")
             else:
                 with st.spinner("画像解析中..."):
                     try:
@@ -321,8 +323,16 @@ JSONのみを返してください。説明は不要です。
                             ]
                         }
                         
+                        # デバッグ情報
+                        st.info(f"使用モデル: {model_id}")
+                        
                         response = requests.post(api_url, headers=headers, json=request_data)
-                        response.raise_for_status()
+                        
+                        # エラーチェック
+                        if response.status_code != 200:
+                            st.error(f"APIエラー: {response.status_code}")
+                            st.error(f"レスポンス: {response.text}")
+                            response.raise_for_status()
                         
                         # 結果取得
                         response_data = response.json()
