@@ -2753,8 +2753,8 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         ocr_html = '<div class="ocr-card"><div class="ocr-title">📱 site7データ</div>'
                         
                         # 通常回転数の警告があれば表示
-                        if ocr_data.get('normal_spins_warning'):
-                            ocr_html += f'<div style="color: #ff6b6b; margin: 10px 0; padding: 8px; background: #fff5f5; border-radius: 4px; font-size: 0.9em;">{ocr_data["normal_spins_warning"]}</div>'
+                        if ocr.get('normal_spins_warning'):
+                            ocr_html += f'<div style="color: #ff6b6b; margin: 10px 0; padding: 8px; background: #fff5f5; border-radius: 4px; font-size: 0.9em;">{ocr["normal_spins_warning"]}</div>'
 
                         # 台番号（デバッグ情報付き）
                         if ocr.get('machine_number'):
