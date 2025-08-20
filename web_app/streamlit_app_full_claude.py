@@ -2425,46 +2425,78 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         if result.get('claude_data'):
                             st.markdown("##### 🤖 Claude API 読み取りデータ")
                             
+                            # Claude用のスタイルを定義
+                            st.markdown("""
+                            <style>
+                            .claude-card {
+                                background-color: #f0f2f6;
+                                padding: 15px;
+                                border-radius: 10px;
+                                margin-top: 10px;
+                            }
+                            .claude-item {
+                                display: flex;
+                                justify-content: space-between;
+                                padding: 5px 0;
+                                border-bottom: 1px solid #e0e0e0;
+                            }
+                            .claude-item:last-child {
+                                border-bottom: none;
+                            }
+                            .claude-label {
+                                color: #666;
+                                font-weight: 500;
+                            }
+                            .claude-value {
+                                font-weight: bold;
+                                color: #333;
+                            }
+                            .claude-value.positive {
+                                color: #28a745;
+                            }
+                            </style>
+                            """, unsafe_allow_html=True)
+                            
                             # カード形式のHTML作成
-                            claude_html = '<div class="stat-card">'
+                            claude_html = '<div class="claude-card">'
                             
                             # 台情報
                             if result['claude_data'].get('台情報'):
                                 info = result['claude_data']['台情報']
                                 if info.get('台番号'):
-                                    claude_html += f'<div class="stat-item"><span class="stat-label">🎰 台番号</span><span class="stat-value">{info.get("台番号", "-")}</span></div>'
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎰 台番号</span><span class="claude-value">{info.get("台番号", "-")}</span></div>'
                                 if info.get('機種名'):
-                                    claude_html += f'<div class="stat-item"><span class="stat-label">🎮 機種名</span><span class="stat-value">{info.get("機種名", "-")}</span></div>'
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎮 機種名</span><span class="claude-value">{info.get("機種名", "-")}</span></div>'
                                 if info.get('貸玉'):
-                                    claude_html += f'<div class="stat-item"><span class="stat-label">💰 貸玉</span><span class="stat-value">{info.get("貸玉", "-")}</span></div>'
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">💰 貸玉</span><span class="claude-value">{info.get("貸玉", "-")}</span></div>'
                                 if info.get('日付'):
-                                    claude_html += f'<div class="stat-item"><span class="stat-label">📅 日付</span><span class="stat-value">{info.get("日付", "-")}</span></div>'
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">📅 日付</span><span class="claude-value">{info.get("日付", "-")}</span></div>'
                             
                             # スタート情報
                             if result['claude_data'].get('スタート情報'):
                                 info = result['claude_data']['スタート情報']
                                 if info.get('累計スタート'):
-                                    claude_html += f'<div class="stat-item" style="background-color: #f0f0f0;"><span class="stat-label">📊 累計スタート</span><span class="stat-value positive">{info.get("累計スタート", 0):,}回</span></div>'
+                                    claude_html += f'<div class="claude-item" style="background-color: #f0f0f0;"><span class="claude-label">📊 累計スタート</span><span class="claude-value positive">{info.get("累計スタート", 0):,}回</span></div>'
                                 if info.get('初回特賞スタート'):
-                                    claude_html += f'<div class="stat-item" style="background-color: #fff3cd;"><span class="stat-label">🎯 初回特賞スタート</span><span class="stat-value positive">{info.get("初回特賞スタート", 0)}回</span></div>'
+                                    claude_html += f'<div class="claude-item" style="background-color: #fff3cd;"><span class="claude-label">🎯 初回特賞スタート</span><span class="claude-value positive">{info.get("初回特賞スタート", 0)}回</span></div>'
                                 if info.get('通常'):
-                                    claude_html += f'<div class="stat-item"><span class="stat-label">🔄 通常</span><span class="stat-value">{info.get("通常", 0):,}回</span></div>'
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">🔄 通常</span><span class="claude-value">{info.get("通常", 0):,}回</span></div>'
                                 if info.get('チャンス中'):
-                                    claude_html += f'<div class="stat-item"><span class="stat-label">⚡ チャンス中</span><span class="stat-value">{info.get("チャンス中", 0):,}回</span></div>'
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">⚡ チャンス中</span><span class="claude-value">{info.get("チャンス中", 0):,}回</span></div>'
                                 if info.get('前日最終スタート'):
-                                    claude_html += f'<div class="stat-item"><span class="stat-label">🌙 前日最終</span><span class="stat-value">{info.get("前日最終スタート", 0)}回</span></div>'
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">🌙 前日最終</span><span class="claude-value">{info.get("前日最終スタート", 0)}回</span></div>'
                             
                             # 大当り情報
                             if result['claude_data'].get('大当り情報'):
                                 info = result['claude_data']['大当り情報']
                                 if info.get('大当り回数'):
-                                    claude_html += f'<div class="stat-item" style="background-color: #d4edda;"><span class="stat-label">🎊 大当り回数</span><span class="stat-value positive">{info.get("大当り回数", 0)}回</span></div>'
+                                    claude_html += f'<div class="claude-item" style="background-color: #d4edda;"><span class="claude-label">🎊 大当り回数</span><span class="claude-value positive">{info.get("大当り回数", 0)}回</span></div>'
                                 if info.get('大当り確率'):
-                                    claude_html += f'<div class="stat-item"><span class="stat-label">📈 大当り確率</span><span class="stat-value">{info.get("大当り確率", "-")}</span></div>'
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">📈 大当り確率</span><span class="claude-value">{info.get("大当り確率", "-")}</span></div>'
                                 if info.get('初当り回数'):
-                                    claude_html += f'<div class="stat-item"><span class="stat-label">🎲 初当り回数</span><span class="stat-value positive">{info.get("初当り回数", 0)}回</span></div>'
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎲 初当り回数</span><span class="claude-value positive">{info.get("初当り回数", 0)}回</span></div>'
                                 if info.get('初当り確率'):
-                                    claude_html += f'<div class="stat-item"><span class="stat-label">📉 初当り確率</span><span class="stat-value">{info.get("初当り確率", "-")}</span></div>'
+                                    claude_html += f'<div class="claude-item"><span class="claude-label">📉 初当り確率</span><span class="claude-value">{info.get("初当り確率", "-")}</span></div>'
                             
                             # ラウンド情報
                             if result['claude_data'].get('ラウンド情報'):
@@ -2473,7 +2505,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 middle_val = info.get('中', 0)
                                 small_val = info.get('小', 0)
                                 if super_val or middle_val or small_val:
-                                    claude_html += f'<div class="stat-item" style="background-color: #f5f5f5; margin-top: 10px;"><span class="stat-label">🏆 ラウンド内訳</span><span class="stat-value">超:{super_val} 中:{middle_val} 小:{small_val}</span></div>'
+                                    claude_html += f'<div class="claude-item" style="background-color: #f5f5f5; margin-top: 10px;"><span class="claude-label">🏆 ラウンド内訳</span><span class="claude-value">超:{super_val} 中:{middle_val} 小:{small_val}</span></div>'
                             
                             claude_html += '</div>'
                             
