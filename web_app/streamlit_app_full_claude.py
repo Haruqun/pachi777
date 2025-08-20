@@ -78,17 +78,8 @@ with st.sidebar:
             help="Haikuは高速で低コスト、Sonnetは高精度です"
         )
         st.session_state.claude_model = model_option
-        
-        # 詳細画像がない場合にメイン画像でClaude APIを使用するオプション
-        use_on_main = st.checkbox(
-            "詳細画像がない場合、メイン画像でClaude APIを使用",
-            value=False,
-            help="詳細画像をアップロードしない場合でも、メイン画像からデータを読み取ります"
-        )
-        st.session_state.use_claude_on_main = use_on_main
     else:
         st.session_state.claude_model = None
-        st.session_state.use_claude_on_main = False
     
     st.session_state.claude_api_key = api_key if use_claude else None
 
@@ -1524,55 +1515,44 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             ocr_data = extract_site7_data(img_array)
             ocr_end_time = time.time()
         
-        # Claude APIで詳細データを読み取る
+        # Claude APIで詳細データを読み取る（詳細画像がある場合のみ）
         detail_image_used = None  # 使用した詳細画像を保存（元画像）
         detail_image_cropped = None  # 切り抜き後の画像を保存
         
-        # Claude APIが有効な場合
-        if st.session_state.get('claude_api_key'):
-            # 詳細画像がある場合はそれを使用
-            if detail_files:
-                # ファイル名のベースを取得（拡張子を除く）
-                base_name = uploaded_file.name.rsplit('.', 1)[0]
-                
-                # 対応する詳細画像を探す
-                for detail_file in detail_files:
-                    detail_base = detail_file.name.rsplit('.', 1)[0]
-                    # ファイル名に共通部分があるか確認
-                    if base_name in detail_base or detail_base in base_name or base_name.split('_')[0] in detail_base:
-                        detail_text.text(f'🤖 {detail_file.name} をClaude APIで解析中...')
-                        # Claude APIで詳細データを読み取り
-                        detail_image = Image.open(detail_file)
-                        detail_image_used = detail_image  # 元画像を保存
-                        
-                        # 黒枠検出と切り抜き（50%固定）
-                        detail_image_cropped = detect_black_frame_and_crop(detail_image, crop_ratio=50)
-                        if not detail_image_cropped:
-                            detail_image_cropped = detail_image  # 黒枠検出できない場合は元画像を使用
-                        
-                        claude_data = extract_data_with_claude(
-                            detail_image, 
-                            st.session_state.claude_api_key,
-                            st.session_state.get('claude_model', 'claude-3-haiku-20240307')
-                        )
-                        if claude_data:
-                            detail_text.text(f'✅ Claude APIで詳細データ取得成功: {len(claude_data)} 項目')
-                        else:
-                            detail_text.text(f'⚠️ Claude APIからデータを取得できませんでした')
-                        break
+        # Claude APIが有効かつ詳細画像がある場合
+        if st.session_state.get('claude_api_key') and detail_files:
+            # ファイル名のベースを取得（拡張子を除く）
+            base_name = uploaded_file.name.rsplit('.', 1)[0]
             
-            # 詳細画像がない場合でも、メイン画像でClaude APIを試す（オプション）
-            elif st.session_state.get('use_claude_on_main', False):
-                detail_text.text(f'🤖 {uploaded_file.name} をClaude APIで解析中...')
-                claude_data = extract_data_with_claude(
-                    image, 
-                    st.session_state.claude_api_key,
-                    st.session_state.get('claude_model', 'claude-3-haiku-20240307')
-                )
-                if claude_data:
-                    detail_text.text(f'✅ Claude APIで詳細データ取得成功: {len(claude_data)} 項目')
-                else:
-                    detail_text.text(f'⚠️ Claude APIからデータを取得できませんでした')
+            # 対応する詳細画像を探す
+            for detail_file in detail_files:
+                detail_base = detail_file.name.rsplit('.', 1)[0]
+                # ファイル名に共通部分があるか確認
+                if base_name in detail_base or detail_base in base_name or base_name.split('_')[0] in detail_base:
+                    detail_text.text(f'🤖 {detail_file.name} をClaude APIで解析中...')
+                    
+                    # ファイルポインタをリセット
+                    detail_file.seek(0)
+                    
+                    # Claude APIで詳細データを読み取り
+                    detail_image = Image.open(detail_file)
+                    detail_image_used = detail_image.copy()  # 元画像をコピーして保存
+                    
+                    # 黒枠検出と切り抜き（50%固定）
+                    detail_image_cropped = detect_black_frame_and_crop(detail_image, crop_ratio=50)
+                    if not detail_image_cropped:
+                        detail_image_cropped = detail_image.copy()  # 黒枠検出できない場合は元画像を使用
+                    
+                    claude_data = extract_data_with_claude(
+                        detail_image, 
+                        st.session_state.claude_api_key,
+                        st.session_state.get('claude_model', 'claude-3-haiku-20240307')
+                    )
+                    if claude_data:
+                        detail_text.text(f'✅ Claude APIで詳細データ取得成功: {len(claude_data)} 項目')
+                    else:
+                        detail_text.text(f'⚠️ Claude APIからデータを取得できませんでした')
+                    break
             
             # OCR処理時間の詳細表示（デバッグモードの場合）
             if ocr_data and ocr_data.get('ocr_timings'):
@@ -2414,20 +2394,18 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
 
                     # 成功時は統計情報を表示（解析結果の下に縦に並べる）
                     if result['success']:
-                        # Claude APIデータをカード形式で表示（データがある場合のみ）
-                        if result.get('claude_data') is not None:
-                            # データが存在することを確認
-                            data = result['claude_data']
-                            
-                            # デバッグ：Claude APIデータの内容を確認
-                            if st.session_state.get('debug_mode', False):
-                                st.write(f"Debug - Claude API data: {data}")
-                            
-                            # Claude APIデータがある場合は常に表示（空でも枠を表示）
-                            st.markdown("##### 🤖 Claude API 読み取りデータ")
-                            
-                            # Claude用のスタイルを定義
-                            st.markdown("""
+                        # Claude APIデータをカード形式で常に表示
+                        st.markdown("##### 🤖 Claude API 読み取りデータ")
+                        
+                        # データを取得（Noneの場合は空の辞書）
+                        data = result.get('claude_data', {})
+                        
+                        # デバッグ：Claude APIデータの内容を確認
+                        if st.session_state.get('debug_mode', False):
+                            st.write(f"Debug - Claude API data: {data}")
+                        
+                        # Claude用のスタイルを定義
+                        st.markdown("""
                                 <style>
                                 .claude-card {
                                     background-color: #f0f2f6;
@@ -2492,15 +2470,15 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 if super_val or middle_val or small_val:
                                     claude_html += f'<div class="claude-item" style="background-color: #f5f5f5; margin-top: 10px;"><span class="claude-label">🏆 ラウンド内訳</span><span class="claude-value">超:{super_val} 中:{middle_val} 小:{small_val}</span></div>'
                             
-                            # データがない場合のメッセージ
-                            if not any([data.get(k) for k in ['台番号', '機種名', '日付', '累計スタート', '初回特賞スタート', '通常', '大当り回数', '初当り回数', 'ラウンド内訳']]):
-                                claude_html += '<div class="claude-item"><span class="claude-label">⚠️</span><span class="claude-value">データを読み取れませんでした</span></div>'
-                            
-                            claude_html += '</div>'
-                            
-                            # HTMLを表示
-                            st.markdown(claude_html, unsafe_allow_html=True)
-                            st.markdown("")  # スペース追加
+                        # データがない場合のメッセージ
+                        if not data or not any([data.get(k) for k in ['台番号', '機種名', '日付', '累計スタート', '初回特賞スタート', '通常', '大当り回数', '初当り回数', 'ラウンド内訳']]):
+                            claude_html += '<div class="claude-item"><span class="claude-label">⚠️</span><span class="claude-value">出玉詳細画像をアップロードしてください</span></div>'
+                        
+                        claude_html += '</div>'
+                        
+                        # HTMLを表示
+                        st.markdown(claude_html, unsafe_allow_html=True)
+                        st.markdown("")  # スペース追加
                         
                         # 統計情報をカード風に表示
                         st.markdown("""
