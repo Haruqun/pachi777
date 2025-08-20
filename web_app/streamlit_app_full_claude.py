@@ -1537,6 +1537,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             ocr_end_time = time.time()
         
         # Claude APIで詳細データを読み取る（対応する詳細画像がある場合）
+        detail_image_used = None  # 使用した詳細画像を保存
         if detail_files and st.session_state.get('claude_api_key'):
             # ファイル名のベースを取得（拡張子を除く）
             base_name = uploaded_file.name.rsplit('.', 1)[0]
@@ -1549,6 +1550,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     detail_text.text(f'🤖 {detail_file.name} をClaude APIで解析中...')
                     # Claude APIで詳細データを読み取り
                     detail_image = Image.open(detail_file)
+                    detail_image_used = detail_image  # 画像を保存
                     claude_data = extract_data_with_claude(
                         detail_image, 
                         st.session_state.claude_api_key,
@@ -2146,6 +2148,22 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     ocr_data['normal_start'] = claude_data["スタート情報"].get("通常", ocr_data.get('normal_start'))
                     ocr_data['chance_start'] = claude_data["スタート情報"].get("チャンス中", ocr_data.get('chance_start'))
                     ocr_data['yesterday_final'] = claude_data["スタート情報"].get("前日最終スタート", ocr_data.get('yesterday_final'))
+                    
+                    # 初回特賞スタートの値を初当たり値として使用
+                    if claude_data["スタート情報"].get("初回特賞スタート"):
+                        first_hit_val = claude_data["スタート情報"]["初回特賞スタート"]
+                        # 使用球数を計算（4円パチンコの場合：回転数 × 250 / 回転率）
+                        # デフォルトの回転率を20とする
+                        first_hit_used_balls = int(first_hit_val * 250 / 20)
+                    
+                    # 通常回転数もClaude APIから取得
+                    if claude_data["スタート情報"].get("通常"):
+                        # rotation_metricsを更新
+                        if rotation_metrics:
+                            rotation_metrics['normal_decline_spins'] = claude_data["スタート情報"]["通常"]
+                            # 回転率②を再計算
+                            if rotation_metrics.get('normal_decline_balls', 0) > 0:
+                                rotation_metrics['rotation_rate_2'] = (rotation_metrics['normal_decline_spins'] * 1000) / (rotation_metrics['normal_decline_balls'] * 4)
                 
                 # 大当り情報  
                 if claude_data.get("大当り情報"):
@@ -2170,6 +2188,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 'original_image': img_with_grid,  # グリッド付き元画像を保存
                 'cropped_image': cropped_img,  # 切り抜き画像
                 'overlay_image': overlay_img,  # オーバーレイ画像
+                'detail_image': detail_image_used,  # Claude APIで解析した詳細画像
                 'success': True,
                 'max_val': int(max_val),
                 'min_val': int(min_val),
@@ -2337,6 +2356,11 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
 
                     # 解析結果画像
                     st.image(result['overlay_image'], use_column_width=True)
+                    
+                    # Claude APIで解析した詳細画像がある場合、表示
+                    if result.get('detail_image'):
+                        st.markdown("##### 📋 出玉詳細画像（Claude API解析済み）")
+                        st.image(result['detail_image'], use_column_width=True)
 
                     # 元画像を折りたたみ可能に
                     with st.expander("📷 元画像を表示"):
@@ -2344,6 +2368,46 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
 
                     # 成功時は統計情報を表示（解析結果の下に縦に並べる）
                     if result['success']:
+                        # Claude APIデータを表示（データがある場合のみ）
+                        if result.get('claude_data'):
+                            st.markdown("##### 🤖 Claude API 読み取りデータ")
+                            claude_col1, claude_col2 = st.columns(2)
+                            
+                            with claude_col1:
+                                # 台情報
+                                if result['claude_data'].get('台情報'):
+                                    info = result['claude_data']['台情報']
+                                    st.markdown(f"**台番号:** {info.get('台番号', '-')}")
+                                    st.markdown(f"**機種名:** {info.get('機種名', '-')}")
+                                    st.markdown(f"**貸玉:** {info.get('貸玉', '-')}")
+                                    st.markdown(f"**日付:** {info.get('日付', '-')}")
+                                
+                                # 大当り情報
+                                if result['claude_data'].get('大当り情報'):
+                                    info = result['claude_data']['大当り情報']
+                                    st.markdown(f"**大当り回数:** {info.get('大当り回数', '-')}回")
+                                    st.markdown(f"**大当り確率:** {info.get('大当り確率', '-')}")
+                                    st.markdown(f"**初当り回数:** {info.get('初当り回数', '-')}回")
+                                    st.markdown(f"**初当り確率:** {info.get('初当り確率', '-')}")
+                            
+                            with claude_col2:
+                                # スタート情報
+                                if result['claude_data'].get('スタート情報'):
+                                    info = result['claude_data']['スタート情報']
+                                    st.markdown(f"**累計スタート:** {info.get('累計スタート', '-')}回")
+                                    st.markdown(f"**初回特賞スタート:** {info.get('初回特賞スタート', '-')}回")
+                                    st.markdown(f"**通常:** {info.get('通常', '-')}回")
+                                    st.markdown(f"**チャンス中:** {info.get('チャンス中', '-')}回")
+                                    st.markdown(f"**前日最終:** {info.get('前日最終スタート', '-')}回")
+                                
+                                # 出玉情報
+                                if result['claude_data'].get('出玉情報'):
+                                    info = result['claude_data']['出玉情報']
+                                    st.markdown(f"**最高出玉:** {info.get('最高出玉', '-')}玉")
+                                    st.markdown(f"**最高一撃:** {info.get('最高一撃獲得', '-')}玉")
+                            
+                            st.markdown("---")
+                        
                         # 統計情報をカード風に表示
                         st.markdown("""
                 <style>
