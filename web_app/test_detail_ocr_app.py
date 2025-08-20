@@ -30,11 +30,26 @@ with st.sidebar:
     
     # Claude API設定
     st.header("🔧 API設定")
+    
+    # 複数の方法でAPIキーを取得
+    default_api_key = ""
+    
+    # 1. Streamlit Secretsから取得（Streamlit Cloud用）
+    try:
+        if "ANTHROPIC_API_KEY" in st.secrets:
+            default_api_key = st.secrets["ANTHROPIC_API_KEY"]
+    except:
+        pass
+    
+    # 2. 環境変数から取得（ローカル開発用）
+    if not default_api_key:
+        default_api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    
     api_key = st.text_input(
         "Anthropic API Key",
         type="password",
-        value=os.getenv("ANTHROPIC_API_KEY", ""),
-        help="Claude APIキーを入力してください"
+        value=default_api_key,
+        help="Claude APIキーを入力してください（環境変数またはSecretsで設定済みの場合は自動入力されます）"
     )
     
     st.divider()

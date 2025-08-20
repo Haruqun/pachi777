@@ -21,6 +21,15 @@ Thumbs.db
 
 # Environment
 .env
+.env.local
+
+# Streamlit
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# API Keys（絶対にコミットしない）
+api_keys.json
+secrets.json
 
 # Project specific - data files
 graphs/manual_crop/
