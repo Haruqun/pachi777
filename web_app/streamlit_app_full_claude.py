@@ -2397,8 +2397,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         # Claude APIデータをカード形式で常に表示
                         st.markdown("##### 🤖 Claude API 読み取りデータ")
                         
-                        # データを取得（Noneの場合は空の辞書）
-                        data = result.get('claude_data', {})
+                        # データを取得（Noneや辞書でない場合は空の辞書）
+                        data = result.get('claude_data')
+                        if not isinstance(data, dict):
+                            data = {}
                         
                         # デバッグ：Claude APIデータの内容を確認
                         if st.session_state.get('debug_mode', False):
