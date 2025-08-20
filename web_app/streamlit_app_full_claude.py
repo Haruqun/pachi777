@@ -2434,41 +2434,41 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                     color: #28a745;
                                 }
                             </style>
-                            """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
+                        
+                        # カード形式のHTML作成
+                        claude_html = '<div class="claude-card">'
+                        
+                        # 基本情報
+                        if data.get('台番号'):
+                            claude_html += f'<div class="claude-item"><span class="claude-label">🎰 台番号</span><span class="claude-value">{data.get("台番号", "-")}</span></div>'
+                        if data.get('機種名'):
+                            claude_html += f'<div class="claude-item"><span class="claude-label">🎮 機種名</span><span class="claude-value">{data.get("機種名", "-")}</span></div>'
+                        if data.get('日付'):
+                            claude_html += f'<div class="claude-item"><span class="claude-label">📅 日付</span><span class="claude-value">{data.get("日付", "-")}</span></div>'
                             
-                            # カード形式のHTML作成
-                            claude_html = '<div class="claude-card">'
-                            
-                            # 基本情報
-                            if data.get('台番号'):
-                                claude_html += f'<div class="claude-item"><span class="claude-label">🎰 台番号</span><span class="claude-value">{data.get("台番号", "-")}</span></div>'
-                            if data.get('機種名'):
-                                claude_html += f'<div class="claude-item"><span class="claude-label">🎮 機種名</span><span class="claude-value">{data.get("機種名", "-")}</span></div>'
-                            if data.get('日付'):
-                                claude_html += f'<div class="claude-item"><span class="claude-label">📅 日付</span><span class="claude-value">{data.get("日付", "-")}</span></div>'
-                            
-                            # スタート情報
-                            if data.get('累計スタート'):
-                                claude_html += f'<div class="claude-item" style="background-color: #f0f0f0;"><span class="claude-label">📊 累計スタート</span><span class="claude-value positive">{data.get("累計スタート", 0):,}回</span></div>'
-                            if data.get('初回特賞スタート'):
-                                claude_html += f'<div class="claude-item" style="background-color: #fff3cd;"><span class="claude-label">🎯 初回特賞スタート</span><span class="claude-value positive">{data.get("初回特賞スタート", 0)}回</span></div>'
-                            if data.get('通常'):
-                                claude_html += f'<div class="claude-item"><span class="claude-label">🔄 通常</span><span class="claude-value">{data.get("通常", 0):,}回</span></div>'
-                            
-                            # 大当り情報
-                            if data.get('大当り回数'):
-                                claude_html += f'<div class="claude-item" style="background-color: #d4edda;"><span class="claude-label">🎊 大当り回数</span><span class="claude-value positive">{data.get("大当り回数", 0)}回</span></div>'
-                            if data.get('初当り回数'):
-                                claude_html += f'<div class="claude-item"><span class="claude-label">🎲 初当り回数</span><span class="claude-value positive">{data.get("初当り回数", 0)}回</span></div>'
-                            
-                            # ラウンド内訳
-                            if data.get('ラウンド内訳'):
-                                rounds = data['ラウンド内訳']
-                                super_val = rounds.get('超', 0)
-                                middle_val = rounds.get('中', 0)
-                                small_val = rounds.get('小', 0)
-                                if super_val or middle_val or small_val:
-                                    claude_html += f'<div class="claude-item" style="background-color: #f5f5f5; margin-top: 10px;"><span class="claude-label">🏆 ラウンド内訳</span><span class="claude-value">超:{super_val} 中:{middle_val} 小:{small_val}</span></div>'
+                        # スタート情報
+                        if data.get('累計スタート'):
+                            claude_html += f'<div class="claude-item" style="background-color: #f0f0f0;"><span class="claude-label">📊 累計スタート</span><span class="claude-value positive">{data.get("累計スタート", 0):,}回</span></div>'
+                        if data.get('初回特賞スタート'):
+                            claude_html += f'<div class="claude-item" style="background-color: #fff3cd;"><span class="claude-label">🎯 初回特賞スタート</span><span class="claude-value positive">{data.get("初回特賞スタート", 0)}回</span></div>'
+                        if data.get('通常'):
+                            claude_html += f'<div class="claude-item"><span class="claude-label">🔄 通常</span><span class="claude-value">{data.get("通常", 0):,}回</span></div>'
+                        
+                        # 大当り情報
+                        if data.get('大当り回数'):
+                            claude_html += f'<div class="claude-item" style="background-color: #d4edda;"><span class="claude-label">🎊 大当り回数</span><span class="claude-value positive">{data.get("大当り回数", 0)}回</span></div>'
+                        if data.get('初当り回数'):
+                            claude_html += f'<div class="claude-item"><span class="claude-label">🎲 初当り回数</span><span class="claude-value positive">{data.get("初当り回数", 0)}回</span></div>'
+                        
+                        # ラウンド内訳
+                        if data.get('ラウンド内訳'):
+                            rounds = data['ラウンド内訳']
+                            super_val = rounds.get('超', 0)
+                            middle_val = rounds.get('中', 0)
+                            small_val = rounds.get('小', 0)
+                            if super_val or middle_val or small_val:
+                                claude_html += f'<div class="claude-item" style="background-color: #f5f5f5; margin-top: 10px;"><span class="claude-label">🏆 ラウンド内訳</span><span class="claude-value">超:{super_val} 中:{middle_val} 小:{small_val}</span></div>'
                             
                         # データがない場合のメッセージ
                         if not data or not any([data.get(k) for k in ['台番号', '機種名', '日付', '累計スタート', '初回特賞スタート', '通常', '大当り回数', '初当り回数', 'ラウンド内訳']]):
