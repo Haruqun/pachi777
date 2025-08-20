@@ -292,10 +292,10 @@ JSONのみを返してください。説明は不要です。
                         
                         # モデル選択
                         if "Sonnet" in model_option:
-                            model_id = "claude-3-5-sonnet-20241022"
+                            model_id = "claude-3-5-sonnet-20241022"  # 最新のSonnet 3.5
                             max_tokens = 2000
                         else:
-                            model_id = "claude-3-haiku-20240307"
+                            model_id = "claude-3-haiku-20240307"  # Haiku
                             max_tokens = 1500
                         
                         # API呼び出し
@@ -324,14 +324,23 @@ JSONのみを返してください。説明は不要です。
                         }
                         
                         # デバッグ情報
-                        st.info(f"使用モデル: {model_id}")
+                        with st.expander("APIリクエスト情報", expanded=False):
+                            st.code(f"エンドポイント: {api_url}")
+                            st.code(f"使用モデル: {model_id}")
+                            st.code(f"APIキー: {'設定済み' if api_key else '未設定'}")
+                            st.code(f"APIキーの最初の8文字: {api_key[:8] if api_key else 'N/A'}...")
                         
                         response = requests.post(api_url, headers=headers, json=request_data)
                         
                         # エラーチェック
                         if response.status_code != 200:
-                            st.error(f"APIエラー: {response.status_code}")
-                            st.error(f"レスポンス: {response.text}")
+                            st.error(f"APIエラー: ステータスコード {response.status_code}")
+                            try:
+                                error_data = response.json()
+                                st.error(f"エラータイプ: {error_data.get('error', {}).get('type', 'Unknown')}")
+                                st.error(f"エラーメッセージ: {error_data.get('error', {}).get('message', response.text)}")
+                            except:
+                                st.error(f"レスポンス: {response.text}")
                             response.raise_for_status()
                         
                         # 結果取得
