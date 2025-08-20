@@ -6,6 +6,8 @@ import os
 import io
 from datetime import datetime
 import requests
+import numpy as np
+import cv2
 
 st.set_page_config(
     page_title="パチンコ画像解析 - Claude API",
@@ -39,8 +41,58 @@ with st.sidebar:
     
     # 処理オプション
     st.header("⚙️ 処理オプション")
-    crop_upper_half = st.checkbox("上半分のみ処理（コスト50%削減）", value=True)
+    crop_method = st.radio(
+        "切り取り方法",
+        ["黒枠検出（自動）", "単純分割"],
+        index=0,
+        help="黒枠検出: 黒枠領域を自動検出して上部を切り取り"
+    )
+    
+    if crop_method == "黒枠検出（自動）":
+        crop_ratio = st.slider(
+            "黒枠上部の切り取り比率",
+            min_value=30,
+            max_value=70,
+            value=50,
+            step=5,
+            format="%d%%",
+            help="黒枠領域の上部何%を切り取るか"
+        )
+    else:
+        crop_upper_half = st.checkbox("上半分のみ処理（コスト50%削減）", value=True)
+    
     show_raw_output = st.checkbox("生データも表示", value=False)
+
+def detect_black_frame(image):
+    """黒枠領域を検出する関数"""
+    # PILからOpenCV形式に変換
+    img_array = np.array(image)
+    if len(img_array.shape) == 2:
+        gray = img_array
+    else:
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    
+    # エッジ検出
+    edges = cv2.Canny(gray, 50, 150)
+    
+    # 輪郭検出
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    if not contours:
+        return None
+    
+    # 最大の輪郭を見つける（黒枠の可能性が高い）
+    largest_contour = max(contours, key=cv2.contourArea)
+    
+    # バウンディングボックスを取得
+    x, y, w, h = cv2.boundingRect(largest_contour)
+    
+    # 画像サイズに対して妥当な大きさかチェック
+    img_h, img_w = gray.shape
+    if w > img_w * 0.5 and h > img_h * 0.5:
+        return (x, y, w, h)
+    
+    return None
 
 # メインエリア
 if uploaded_file is not None:
@@ -53,8 +105,21 @@ if uploaded_file is not None:
     with col_left:
         st.subheader("🖼️ 画像")
         
-        # 上半分処理の場合
-        if crop_upper_half:
+        # 画像処理と表示
+        if crop_method == "黒枠検出（自動）":
+            # 黒枠検出
+            black_frame = detect_black_frame(image)
+            if black_frame:
+                x, y, w, h = black_frame
+                # 黒枠の上部指定%を切り取り
+                crop_height = int(h * (crop_ratio / 100))
+                display_image = image.crop((x, y, x + w, y + crop_height))
+                st.image(display_image, use_column_width=True)
+                st.info(f"黒枠検出: {w}×{h}px → 上部{crop_ratio}%切り取り: {w}×{crop_height}px")
+            else:
+                st.warning("黒枠を検出できませんでした。全体を表示します。")
+                st.image(image, use_column_width=True)
+        elif 'crop_upper_half' in locals() and crop_upper_half:
             width, height = image.size
             display_image = image.crop((0, 0, width, height // 2))
             st.image(display_image, use_column_width=True)
@@ -66,7 +131,15 @@ if uploaded_file is not None:
         st.info(f"画像サイズ: {width} x {height}px")
         
         # コスト表示
-        if crop_upper_half:
+        if crop_method == "黒枠検出（自動）":
+            black_frame = detect_black_frame(image)
+            if black_frame:
+                x, y, w, h = black_frame
+                crop_height = int(h * (crop_ratio / 100))
+                estimated_tokens = (w * crop_height) // 750
+            else:
+                estimated_tokens = (width * height) // 750
+        elif 'crop_upper_half' in locals() and crop_upper_half:
             estimated_tokens = (width * height // 2) // 750
         else:
             estimated_tokens = (width * height) // 750
@@ -88,7 +161,15 @@ if uploaded_file is not None:
                 with st.spinner("画像解析中..."):
                     try:
                         # 画像の準備
-                        if crop_upper_half:
+                        if crop_method == "黒枠検出（自動）":
+                            black_frame = detect_black_frame(image)
+                            if black_frame:
+                                x, y, w, h = black_frame
+                                crop_height = int(h * (crop_ratio / 100))
+                                image_to_process = image.crop((x, y, x + w, y + crop_height))
+                            else:
+                                image_to_process = image
+                        elif 'crop_upper_half' in locals() and crop_upper_half:
                             width, height = image.size
                             image_to_process = image.crop((0, 0, width, height // 2))
                         else:
