@@ -52,6 +52,15 @@ with st.sidebar:
         help="Claude APIキーを入力してください（環境変数またはSecretsで設定済みの場合は自動入力されます）"
     )
     
+    # モデル選択
+    st.subheader("🤖 モデル選択")
+    model_option = st.selectbox(
+        "使用するモデル",
+        ["Claude 3 Haiku (高速・低コスト)", "Claude 3.5 Sonnet (高精度・推奨)"],
+        index=1,  # デフォルトはSonnet
+        help="Sonnetは精度が高く、複雑な画像解析に適しています"
+    )
+    
     st.divider()
     
     # 処理オプション
@@ -159,12 +168,19 @@ if uploaded_file is not None:
         else:
             estimated_tokens = (width * height) // 750
         
-        input_cost = estimated_tokens * 0.25 / 1000000
-        output_cost = 200 * 1.25 / 1000000  # 出力を少し増やす
+        # モデルによってコストが異なる
+        if "Sonnet" in model_option:
+            input_cost = estimated_tokens * 3.0 / 1000000  # Sonnet: $3 per 1M tokens
+            output_cost = 300 * 15.0 / 1000000  # Sonnet: $15 per 1M tokens
+        else:
+            input_cost = estimated_tokens * 0.25 / 1000000  # Haiku: $0.25 per 1M tokens
+            output_cost = 200 * 1.25 / 1000000  # Haiku: $1.25 per 1M tokens
+        
         total_cost_usd = input_cost + output_cost
         total_cost_jpy = total_cost_usd * 150
         
-        st.success(f"推定コスト: ${total_cost_usd:.4f} (約{total_cost_jpy:.2f}円)")
+        model_name = "Sonnet" if "Sonnet" in model_option else "Haiku"
+        st.success(f"推定コスト ({model_name}): ${total_cost_usd:.4f} (約{total_cost_jpy:.2f}円)")
     
     with col_right:
         st.subheader("📊 解析結果")
@@ -272,10 +288,18 @@ JSONのみを返してください。説明は不要です。
    - 各項目の真下にある数値を正確に読み取ってください
 """
                         
+                        # モデル選択
+                        if "Sonnet" in model_option:
+                            model_id = "claude-3-5-sonnet-20241022"
+                            max_tokens = 2000
+                        else:
+                            model_id = "claude-3-haiku-20240307"
+                            max_tokens = 1500
+                        
                         # API呼び出し
                         request_data = {
-                            "model": "claude-3-haiku-20240307",
-                            "max_tokens": 1500,
+                            "model": model_id,
+                            "max_tokens": max_tokens,
                             "messages": [
                                 {
                                     "role": "user",
