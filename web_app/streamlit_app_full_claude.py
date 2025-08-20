@@ -1503,7 +1503,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         
         # OCRでデータ抽出を試みる（スキップ設定を確認）
         ocr_data = {}
-        claude_data = {}
+        claude_data = None  # Noneで初期化して、データがある場合のみ表示
         
         if not st.session_state.get('skip_ocr', False):
             detail_text.text(f'🔍 {uploaded_file.name} のOCR解析を実行中...')
