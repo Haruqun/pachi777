@@ -78,8 +78,17 @@ with st.sidebar:
             help="Haikuは高速で低コスト、Sonnetは高精度です"
         )
         st.session_state.claude_model = model_option
+        
+        # 詳細画像がない場合にメイン画像でClaude APIを使用するオプション
+        use_on_main = st.checkbox(
+            "詳細画像がない場合、メイン画像でClaude APIを使用",
+            value=False,
+            help="詳細画像をアップロードしない場合でも、メイン画像からデータを読み取ります"
+        )
+        st.session_state.use_claude_on_main = use_on_main
     else:
         st.session_state.claude_model = None
+        st.session_state.use_claude_on_main = False
     
     st.session_state.claude_api_key = api_key if use_claude else None
 
@@ -213,6 +222,8 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
         
         # エラーチェック
         if response.status_code != 200:
+            print(f"Claude API Error: {response.status_code}")
+            print(f"Response: {response.text}")
             return None
         
         # 結果取得
@@ -221,9 +232,11 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
         
         # JSON形式でパース
         json_data = json.loads(result)
+        print(f"Claude API Success: {json_data}")
         return json_data
         
     except Exception as e:
+        print(f"Claude API Exception: {str(e)}")
         return None
 
 def extract_machine_number_from_orange_bar(image):
@@ -1511,36 +1524,55 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             ocr_data = extract_site7_data(img_array)
             ocr_end_time = time.time()
         
-        # Claude APIで詳細データを読み取る（対応する詳細画像がある場合）
+        # Claude APIで詳細データを読み取る
         detail_image_used = None  # 使用した詳細画像を保存（元画像）
         detail_image_cropped = None  # 切り抜き後の画像を保存
-        if detail_files and st.session_state.get('claude_api_key'):
-            # ファイル名のベースを取得（拡張子を除く）
-            base_name = uploaded_file.name.rsplit('.', 1)[0]
+        
+        # Claude APIが有効な場合
+        if st.session_state.get('claude_api_key'):
+            # 詳細画像がある場合はそれを使用
+            if detail_files:
+                # ファイル名のベースを取得（拡張子を除く）
+                base_name = uploaded_file.name.rsplit('.', 1)[0]
+                
+                # 対応する詳細画像を探す
+                for detail_file in detail_files:
+                    detail_base = detail_file.name.rsplit('.', 1)[0]
+                    # ファイル名に共通部分があるか確認
+                    if base_name in detail_base or detail_base in base_name or base_name.split('_')[0] in detail_base:
+                        detail_text.text(f'🤖 {detail_file.name} をClaude APIで解析中...')
+                        # Claude APIで詳細データを読み取り
+                        detail_image = Image.open(detail_file)
+                        detail_image_used = detail_image  # 元画像を保存
+                        
+                        # 黒枠検出と切り抜き（50%固定）
+                        detail_image_cropped = detect_black_frame_and_crop(detail_image, crop_ratio=50)
+                        if not detail_image_cropped:
+                            detail_image_cropped = detail_image  # 黒枠検出できない場合は元画像を使用
+                        
+                        claude_data = extract_data_with_claude(
+                            detail_image, 
+                            st.session_state.claude_api_key,
+                            st.session_state.get('claude_model', 'claude-3-haiku-20240307')
+                        )
+                        if claude_data:
+                            detail_text.text(f'✅ Claude APIで詳細データ取得成功: {len(claude_data)} 項目')
+                        else:
+                            detail_text.text(f'⚠️ Claude APIからデータを取得できませんでした')
+                        break
             
-            # 対応する詳細画像を探す
-            for detail_file in detail_files:
-                detail_base = detail_file.name.rsplit('.', 1)[0]
-                # ファイル名に共通部分があるか確認
-                if base_name in detail_base or detail_base in base_name or base_name.split('_')[0] in detail_base:
-                    detail_text.text(f'🤖 {detail_file.name} をClaude APIで解析中...')
-                    # Claude APIで詳細データを読み取り
-                    detail_image = Image.open(detail_file)
-                    detail_image_used = detail_image  # 元画像を保存
-                    
-                    # 黒枠検出と切り抜き（50%固定）
-                    detail_image_cropped = detect_black_frame_and_crop(detail_image, crop_ratio=50)
-                    if not detail_image_cropped:
-                        detail_image_cropped = detail_image  # 黒枠検出できない場合は元画像を使用
-                    
-                    claude_data = extract_data_with_claude(
-                        detail_image, 
-                        st.session_state.claude_api_key,
-                        st.session_state.get('claude_model', 'claude-3-haiku-20240307')
-                    )
-                    if claude_data:
-                        detail_text.text(f'✅ Claude APIで詳細データ取得成功')
-                    break
+            # 詳細画像がない場合でも、メイン画像でClaude APIを試す（オプション）
+            elif st.session_state.get('use_claude_on_main', False):
+                detail_text.text(f'🤖 {uploaded_file.name} をClaude APIで解析中...')
+                claude_data = extract_data_with_claude(
+                    image, 
+                    st.session_state.claude_api_key,
+                    st.session_state.get('claude_model', 'claude-3-haiku-20240307')
+                )
+                if claude_data:
+                    detail_text.text(f'✅ Claude APIで詳細データ取得成功: {len(claude_data)} 項目')
+                else:
+                    detail_text.text(f'⚠️ Claude APIからデータを取得できませんでした')
             
             # OCR処理時間の詳細表示（デバッグモードの場合）
             if ocr_data and ocr_data.get('ocr_timings'):
@@ -2383,28 +2415,19 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 成功時は統計情報を表示（解析結果の下に縦に並べる）
                     if result['success']:
                         # Claude APIデータをカード形式で表示（データがある場合のみ）
-                        if result.get('claude_data') and result['claude_data']:
-                            # データが存在し、かつ空でないことを確認
+                        if result.get('claude_data') is not None:
+                            # データが存在することを確認
                             data = result['claude_data']
                             
-                            # データに実際の内容があるか確認
-                            has_content = any([
-                                data.get('台番号'),
-                                data.get('機種名'),
-                                data.get('日付'),
-                                data.get('累計スタート'),
-                                data.get('初回特賞スタート'),
-                                data.get('通常'),
-                                data.get('大当り回数'),
-                                data.get('初当り回数'),
-                                data.get('ラウンド内訳')
-                            ])
+                            # デバッグ：Claude APIデータの内容を確認
+                            if st.session_state.get('debug_mode', False):
+                                st.write(f"Debug - Claude API data: {data}")
                             
-                            if has_content:
-                                st.markdown("##### 🤖 Claude API 読み取りデータ")
-                                
-                                # Claude用のスタイルを定義
-                                st.markdown("""
+                            # Claude APIデータがある場合は常に表示（空でも枠を表示）
+                            st.markdown("##### 🤖 Claude API 読み取りデータ")
+                            
+                            # Claude用のスタイルを定義
+                            st.markdown("""
                                 <style>
                                 .claude-card {
                                     background-color: #f0f2f6;
@@ -2432,48 +2455,52 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 .claude-value.positive {
                                     color: #28a745;
                                 }
-                                </style>
-                                """, unsafe_allow_html=True)
-                                
-                                # カード形式のHTML作成
-                                claude_html = '<div class="claude-card">'
-                                
-                                # 基本情報
-                                if data.get('台番号'):
-                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎰 台番号</span><span class="claude-value">{data.get("台番号", "-")}</span></div>'
-                                if data.get('機種名'):
-                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎮 機種名</span><span class="claude-value">{data.get("機種名", "-")}</span></div>'
-                                if data.get('日付'):
-                                    claude_html += f'<div class="claude-item"><span class="claude-label">📅 日付</span><span class="claude-value">{data.get("日付", "-")}</span></div>'
-                                
-                                # スタート情報
-                                if data.get('累計スタート'):
-                                    claude_html += f'<div class="claude-item" style="background-color: #f0f0f0;"><span class="claude-label">📊 累計スタート</span><span class="claude-value positive">{data.get("累計スタート", 0):,}回</span></div>'
-                                if data.get('初回特賞スタート'):
-                                    claude_html += f'<div class="claude-item" style="background-color: #fff3cd;"><span class="claude-label">🎯 初回特賞スタート</span><span class="claude-value positive">{data.get("初回特賞スタート", 0)}回</span></div>'
-                                if data.get('通常'):
-                                    claude_html += f'<div class="claude-item"><span class="claude-label">🔄 通常</span><span class="claude-value">{data.get("通常", 0):,}回</span></div>'
-                                
-                                # 大当り情報
-                                if data.get('大当り回数'):
-                                    claude_html += f'<div class="claude-item" style="background-color: #d4edda;"><span class="claude-label">🎊 大当り回数</span><span class="claude-value positive">{data.get("大当り回数", 0)}回</span></div>'
-                                if data.get('初当り回数'):
-                                    claude_html += f'<div class="claude-item"><span class="claude-label">🎲 初当り回数</span><span class="claude-value positive">{data.get("初当り回数", 0)}回</span></div>'
-                                
-                                # ラウンド内訳
-                                if data.get('ラウンド内訳'):
-                                    rounds = data['ラウンド内訳']
-                                    super_val = rounds.get('超', 0)
-                                    middle_val = rounds.get('中', 0)
-                                    small_val = rounds.get('小', 0)
-                                    if super_val or middle_val or small_val:
-                                        claude_html += f'<div class="claude-item" style="background-color: #f5f5f5; margin-top: 10px;"><span class="claude-label">🏆 ラウンド内訳</span><span class="claude-value">超:{super_val} 中:{middle_val} 小:{small_val}</span></div>'
-                                
-                                claude_html += '</div>'
-                                
-                                # HTMLを表示
-                                st.markdown(claude_html, unsafe_allow_html=True)
-                                st.markdown("")  # スペース追加
+                            </style>
+                            """, unsafe_allow_html=True)
+                            
+                            # カード形式のHTML作成
+                            claude_html = '<div class="claude-card">'
+                            
+                            # 基本情報
+                            if data.get('台番号'):
+                                claude_html += f'<div class="claude-item"><span class="claude-label">🎰 台番号</span><span class="claude-value">{data.get("台番号", "-")}</span></div>'
+                            if data.get('機種名'):
+                                claude_html += f'<div class="claude-item"><span class="claude-label">🎮 機種名</span><span class="claude-value">{data.get("機種名", "-")}</span></div>'
+                            if data.get('日付'):
+                                claude_html += f'<div class="claude-item"><span class="claude-label">📅 日付</span><span class="claude-value">{data.get("日付", "-")}</span></div>'
+                            
+                            # スタート情報
+                            if data.get('累計スタート'):
+                                claude_html += f'<div class="claude-item" style="background-color: #f0f0f0;"><span class="claude-label">📊 累計スタート</span><span class="claude-value positive">{data.get("累計スタート", 0):,}回</span></div>'
+                            if data.get('初回特賞スタート'):
+                                claude_html += f'<div class="claude-item" style="background-color: #fff3cd;"><span class="claude-label">🎯 初回特賞スタート</span><span class="claude-value positive">{data.get("初回特賞スタート", 0)}回</span></div>'
+                            if data.get('通常'):
+                                claude_html += f'<div class="claude-item"><span class="claude-label">🔄 通常</span><span class="claude-value">{data.get("通常", 0):,}回</span></div>'
+                            
+                            # 大当り情報
+                            if data.get('大当り回数'):
+                                claude_html += f'<div class="claude-item" style="background-color: #d4edda;"><span class="claude-label">🎊 大当り回数</span><span class="claude-value positive">{data.get("大当り回数", 0)}回</span></div>'
+                            if data.get('初当り回数'):
+                                claude_html += f'<div class="claude-item"><span class="claude-label">🎲 初当り回数</span><span class="claude-value positive">{data.get("初当り回数", 0)}回</span></div>'
+                            
+                            # ラウンド内訳
+                            if data.get('ラウンド内訳'):
+                                rounds = data['ラウンド内訳']
+                                super_val = rounds.get('超', 0)
+                                middle_val = rounds.get('中', 0)
+                                small_val = rounds.get('小', 0)
+                                if super_val or middle_val or small_val:
+                                    claude_html += f'<div class="claude-item" style="background-color: #f5f5f5; margin-top: 10px;"><span class="claude-label">🏆 ラウンド内訳</span><span class="claude-value">超:{super_val} 中:{middle_val} 小:{small_val}</span></div>'
+                            
+                            # データがない場合のメッセージ
+                            if not any([data.get(k) for k in ['台番号', '機種名', '日付', '累計スタート', '初回特賞スタート', '通常', '大当り回数', '初当り回数', 'ラウンド内訳']]):
+                                claude_html += '<div class="claude-item"><span class="claude-label">⚠️</span><span class="claude-value">データを読み取れませんでした</span></div>'
+                            
+                            claude_html += '</div>'
+                            
+                            # HTMLを表示
+                            st.markdown(claude_html, unsafe_allow_html=True)
+                            st.markdown("")  # スペース追加
                         
                         # 統計情報をカード風に表示
                         st.markdown("""
