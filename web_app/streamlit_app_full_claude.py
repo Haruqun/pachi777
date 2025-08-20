@@ -2368,45 +2368,73 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
 
                     # 成功時は統計情報を表示（解析結果の下に縦に並べる）
                     if result['success']:
-                        # Claude APIデータを表示（データがある場合のみ）
+                        # Claude APIデータをカード形式で表示（データがある場合のみ）
                         if result.get('claude_data'):
                             st.markdown("##### 🤖 Claude API 読み取りデータ")
-                            claude_col1, claude_col2 = st.columns(2)
                             
-                            with claude_col1:
-                                # 台情報
-                                if result['claude_data'].get('台情報'):
-                                    info = result['claude_data']['台情報']
-                                    st.markdown(f"**台番号:** {info.get('台番号', '-')}")
-                                    st.markdown(f"**機種名:** {info.get('機種名', '-')}")
-                                    st.markdown(f"**貸玉:** {info.get('貸玉', '-')}")
-                                    st.markdown(f"**日付:** {info.get('日付', '-')}")
-                                
-                                # 大当り情報
-                                if result['claude_data'].get('大当り情報'):
-                                    info = result['claude_data']['大当り情報']
-                                    st.markdown(f"**大当り回数:** {info.get('大当り回数', '-')}回")
-                                    st.markdown(f"**大当り確率:** {info.get('大当り確率', '-')}")
-                                    st.markdown(f"**初当り回数:** {info.get('初当り回数', '-')}回")
-                                    st.markdown(f"**初当り確率:** {info.get('初当り確率', '-')}")
+                            # カード形式のHTML作成
+                            claude_html = '<div class="stat-card">'
                             
-                            with claude_col2:
-                                # スタート情報
-                                if result['claude_data'].get('スタート情報'):
-                                    info = result['claude_data']['スタート情報']
-                                    st.markdown(f"**累計スタート:** {info.get('累計スタート', '-')}回")
-                                    st.markdown(f"**初回特賞スタート:** {info.get('初回特賞スタート', '-')}回")
-                                    st.markdown(f"**通常:** {info.get('通常', '-')}回")
-                                    st.markdown(f"**チャンス中:** {info.get('チャンス中', '-')}回")
-                                    st.markdown(f"**前日最終:** {info.get('前日最終スタート', '-')}回")
-                                
-                                # 出玉情報
-                                if result['claude_data'].get('出玉情報'):
-                                    info = result['claude_data']['出玉情報']
-                                    st.markdown(f"**最高出玉:** {info.get('最高出玉', '-')}玉")
-                                    st.markdown(f"**最高一撃:** {info.get('最高一撃獲得', '-')}玉")
+                            # 台情報
+                            if result['claude_data'].get('台情報'):
+                                info = result['claude_data']['台情報']
+                                if info.get('台番号'):
+                                    claude_html += f'<div class="stat-item"><span class="stat-label">🎰 台番号</span><span class="stat-value">{info.get("台番号", "-")}</span></div>'
+                                if info.get('機種名'):
+                                    claude_html += f'<div class="stat-item"><span class="stat-label">🎮 機種名</span><span class="stat-value">{info.get("機種名", "-")}</span></div>'
+                                if info.get('貸玉'):
+                                    claude_html += f'<div class="stat-item"><span class="stat-label">💰 貸玉</span><span class="stat-value">{info.get("貸玉", "-")}</span></div>'
+                                if info.get('日付'):
+                                    claude_html += f'<div class="stat-item"><span class="stat-label">📅 日付</span><span class="stat-value">{info.get("日付", "-")}</span></div>'
                             
-                            st.markdown("---")
+                            # スタート情報
+                            if result['claude_data'].get('スタート情報'):
+                                info = result['claude_data']['スタート情報']
+                                if info.get('累計スタート'):
+                                    claude_html += f'<div class="stat-item" style="background-color: #f0f0f0;"><span class="stat-label">📊 累計スタート</span><span class="stat-value positive">{info.get("累計スタート", 0):,}回</span></div>'
+                                if info.get('初回特賞スタート'):
+                                    claude_html += f'<div class="stat-item" style="background-color: #fff3cd;"><span class="stat-label">🎯 初回特賞スタート</span><span class="stat-value positive">{info.get("初回特賞スタート", 0)}回</span></div>'
+                                if info.get('通常'):
+                                    claude_html += f'<div class="stat-item"><span class="stat-label">🔄 通常</span><span class="stat-value">{info.get("通常", 0):,}回</span></div>'
+                                if info.get('チャンス中'):
+                                    claude_html += f'<div class="stat-item"><span class="stat-label">⚡ チャンス中</span><span class="stat-value">{info.get("チャンス中", 0):,}回</span></div>'
+                                if info.get('前日最終スタート'):
+                                    claude_html += f'<div class="stat-item"><span class="stat-label">🌙 前日最終</span><span class="stat-value">{info.get("前日最終スタート", 0)}回</span></div>'
+                            
+                            # 大当り情報
+                            if result['claude_data'].get('大当り情報'):
+                                info = result['claude_data']['大当り情報']
+                                if info.get('大当り回数'):
+                                    claude_html += f'<div class="stat-item" style="background-color: #d4edda;"><span class="stat-label">🎊 大当り回数</span><span class="stat-value positive">{info.get("大当り回数", 0)}回</span></div>'
+                                if info.get('大当り確率'):
+                                    claude_html += f'<div class="stat-item"><span class="stat-label">📈 大当り確率</span><span class="stat-value">{info.get("大当り確率", "-")}</span></div>'
+                                if info.get('初当り回数'):
+                                    claude_html += f'<div class="stat-item"><span class="stat-label">🎲 初当り回数</span><span class="stat-value positive">{info.get("初当り回数", 0)}回</span></div>'
+                                if info.get('初当り確率'):
+                                    claude_html += f'<div class="stat-item"><span class="stat-label">📉 初当り確率</span><span class="stat-value">{info.get("初当り確率", "-")}</span></div>'
+                            
+                            # 出玉情報
+                            if result['claude_data'].get('出玉情報'):
+                                info = result['claude_data']['出玉情報']
+                                if info.get('最高出玉'):
+                                    claude_html += f'<div class="stat-item" style="background-color: #cff4fc;"><span class="stat-label">💎 最高出玉</span><span class="stat-value positive">{info.get("最高出玉", 0):,}玉</span></div>'
+                                if info.get('最高一撃獲得'):
+                                    claude_html += f'<div class="stat-item" style="background-color: #cff4fc;"><span class="stat-label">⚡ 最高一撃</span><span class="stat-value positive">{info.get("最高一撃獲得", 0):,}玉</span></div>'
+                            
+                            # ラウンド情報
+                            if result['claude_data'].get('ラウンド情報'):
+                                info = result['claude_data']['ラウンド情報']
+                                super_val = info.get('超', 0)
+                                middle_val = info.get('中', 0)
+                                small_val = info.get('小', 0)
+                                if super_val or middle_val or small_val:
+                                    claude_html += f'<div class="stat-item" style="background-color: #f5f5f5; margin-top: 10px;"><span class="stat-label">🏆 ラウンド内訳</span><span class="stat-value">超:{super_val} 中:{middle_val} 小:{small_val}</span></div>'
+                            
+                            claude_html += '</div>'
+                            
+                            # HTMLを表示
+                            st.markdown(claude_html, unsafe_allow_html=True)
+                            st.markdown("")  # スペース追加
                         
                         # 統計情報をカード風に表示
                         st.markdown("""
