@@ -110,32 +110,37 @@ if uploaded_file is not None:
                         # プロンプト作成（JSON形式固定）
                         prompt = """
 この画像からパチンコ台のデータを抽出してJSON形式で返してください。
-以下の項目を抽出してください（存在しない項目はnullとしてください）：
+画像内のテキストを正確に読み取って、以下の項目を抽出してください：
+
+重要な注意点：
+- 「台 0027」のような表記は「台番号」として抽出してください（店舗番号ではありません）
+- 「4パチ」「1パチ」等の表記があれば「貸玉」フィールドに入れてください
+- 日付は表示されている形式のまま抽出してください
 
 {
-  "店舗情報": {
-    "店舗番号": "string",
+  "台情報": {
+    "台番号": "string（例：0027）",
     "機種名": "string",
-    "番台": "string",
+    "貸玉": "string（例：4パチ、1パチ）",
     "日付": "string"
   },
   "大当り情報": {
     "大当り回数": number,
-    "大当り確率": "string",
+    "大当り確率": "string（例：1/94）",
     "初当り回数": number,
-    "初当り確率": "string"
+    "初当り確率": "string（例：1/127）"
   },
   "スタート情報": {
     "累計スタート": number,
     "通常": number,
     "チャンス中": number,
-    "初回特賞スタート": number,
-    "前日最終スタート": number
+    "初回特賞スタート": number（表示されていない場合はnull）,
+    "前日最終スタート": number（表示されていない場合はnull）
   },
   "出玉情報": {
     "最高出玉": number,
-    "最高一撃獲得": number,
-    "現在出玉": number
+    "最高一撃獲得": number（表示されていない場合はnull）,
+    "現在出玉": number（表示されていない場合はnull）
   },
   "ラウンド情報": {
     "超": number,
@@ -145,6 +150,7 @@ if uploaded_file is not None:
 }
 
 JSONのみを返してください。説明は不要です。
+存在しない項目はnullとしてください。
 """
                         
                         # API呼び出し
@@ -206,6 +212,15 @@ JSONのみを返してください。説明は不要です。
                             with col3:
                                 if json_data.get("出玉情報"):
                                     st.metric("最高出玉", json_data["出玉情報"].get("最高出玉", "N/A"))
+                            
+                            # 台情報の表示
+                            if json_data.get("台情報"):
+                                st.markdown("### 🎰 台情報")
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.metric("台番号", json_data["台情報"].get("台番号", "N/A"))
+                                with col2:
+                                    st.metric("貸玉", json_data["台情報"].get("貸玉", "N/A"))
                             
                             # 生データ表示（オプション）
                             if show_raw_output:
