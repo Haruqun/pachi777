@@ -56,9 +56,9 @@ with st.sidebar:
     st.subheader("🤖 モデル選択")
     model_option = st.selectbox(
         "使用するモデル",
-        ["Claude 3 Haiku (高速・低コスト)", "Claude 3.5 Sonnet (高精度・推奨)"],
+        ["Claude 3 Haiku (高速・低コスト)", "Claude Sonnet 4 (最新・高精度・推奨)"],
         index=1,  # デフォルトはSonnet
-        help="Sonnetは精度が高く、複雑な画像解析に適しています"
+        help="Sonnet 4は最新モデルで、最も高い精度の画像解析が可能です"
     )
     
     st.divider()
@@ -292,7 +292,7 @@ JSONのみを返してください。説明は不要です。
                         
                         # モデル選択
                         if "Sonnet" in model_option:
-                            model_id = "claude-3-5-sonnet-20241022"  # 最新のSonnet 3.5
+                            model_id = "claude-sonnet-4-20250514"  # 最新のSonnet 4
                             max_tokens = 2000
                         else:
                             model_id = "claude-3-haiku-20240307"  # Haiku
