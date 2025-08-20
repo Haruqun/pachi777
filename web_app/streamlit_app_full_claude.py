@@ -162,23 +162,29 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
 1. 「累計スタート」（画像の上部エリア）
    - 位置：画像の上部、台情報の近くにある
    - 意味：その日の総回転数（営業開始から現在までの全回転数）
-   - 特徴：3つのスタート値の中で必ず最も大きい数値
+   - 特徴：すべてのスタート値の中で必ず最も大きい数値
    - 例：「累計 5432」「累計スタート 5432」のような表記
 
-2. 「スタート」（画像の中央エリア）  
+2. 「通常」（累計スタートのすぐ下）
+   - 位置：累計スタートの直下にある項目
+   - 意味：通常時（大当り中以外）の総回転数
+   - 特徴：累計スタートより小さく、重要な数値
+   - 例：「通常 4500」のような表記
+
+3. 「スタート」（画像の中央エリア）  
    - 位置：画像の中央付近にある項目
    - 意味：前日最終スタートから現在までの回転数（当日の回転数）
    - 特徴：累計スタートより必ず小さい数値
    - 例：「スタート 144」のような表記
 
-3. 「初回特賞スタート」（画像の左下エリア）
+4. 「初回特賞スタート」（画像の左下エリア）
    - 位置：画像の左下付近にある独立した項目
    - 意味：初回の大当りまでに要した回転数
    - 特徴：初当たりがある場合のみ数値が記載（ない場合は0または空欄）
    - 例：「初回特賞スタート 187」のような表記
 
-これら3つは完全に異なる数値です。位置から正確に識別してください。
-必ず累計スタート ≥ スタート、累計スタート ≥ 初回特賞スタート の関係になります。
+これら4つは完全に異なる数値です。位置から正確に識別してください。
+必ず累計スタート ≥ 通常 ≥ スタート、累計スタート ≥ 初回特賞スタート の関係になります。
 
 {
   "台情報": {
@@ -195,15 +201,11 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
   },
   "スタート情報": {
     "累計スタート": number（画像上部にある最も大きいスタート数値。必ず他のスタート値より大きい）,
-    "通常": number,
-    "チャンス中": number,
+    "通常": number（累計スタートのすぐ下にある「通常」の値。通常時の総回転数を表す重要な数値）,
+    "チャンス中": number（「チャンス中」または「確変中」の回転数）,
     "スタート": number（画像中央付近の「スタート」項目の数値。当日の回転数。累計スタートより小さい）,
     "初回特賞スタート": number（画像左下の独立した「初回特賞スタート」項目の数値。初当たりまでの回転数）,
     "前日最終スタート": number（「前日最終スタート」という項目名の直下の数値）
-  },
-  "出玉情報": {
-    "最高出玉": number,
-    "最高一撃獲得": number（この項目名の直下の数値を必ず読み取る）
   },
   "ラウンド情報": {
     "超": number,
@@ -2179,21 +2181,36 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     ocr_data['chance_start'] = claude_data["スタート情報"].get("チャンス中", ocr_data.get('chance_start'))
                     ocr_data['yesterday_final'] = claude_data["スタート情報"].get("前日最終スタート", ocr_data.get('yesterday_final'))
                     
-                    # 初回特賞スタートの値を初当たり値として使用
+                    # 初回特賞スタートの値を初当たり値として使用し、回転率を正しく計算
                     if claude_data["スタート情報"].get("初回特賞スタート"):
-                        first_hit_val = claude_data["スタート情報"]["初回特賞スタート"]
-                        # 使用球数を計算（4円パチンコの場合：回転数 × 250 / 回転率）
-                        # デフォルトの回転率を20とする
-                        first_hit_used_balls = int(first_hit_val * 250 / 20)
+                        first_hit_spins = claude_data["スタート情報"]["初回特賞スタート"]
+                        # グラフから取得した初当たり位置での使用球数を使用
+                        if first_hit_val and first_hit_used_balls:
+                            # rotation_metricsが存在しない場合は作成
+                            if not rotation_metrics:
+                                rotation_metrics = {}
+                            # 初回特賞スタートの回転数で更新
+                            rotation_metrics['first_hit_spins'] = first_hit_spins
+                            rotation_metrics['first_hit_balls'] = abs(first_hit_used_balls)
+                            # 回転率①を再計算（1000円あたりの回転数）
+                            if first_hit_used_balls != 0:
+                                rotation_metrics['rotation_rate_1'] = (first_hit_spins * 1000) / (abs(first_hit_used_balls) * 4)
+                            else:
+                                rotation_metrics['rotation_rate_1'] = 0
                     
-                    # 通常回転数もClaude APIから取得
+                    # 通常回転数もClaude APIから取得して回転率②を計算
                     if claude_data["スタート情報"].get("通常"):
-                        # rotation_metricsを更新
-                        if rotation_metrics:
-                            rotation_metrics['normal_decline_spins'] = claude_data["スタート情報"]["通常"]
-                            # 回転率②を再計算
-                            if rotation_metrics.get('normal_decline_balls', 0) > 0:
-                                rotation_metrics['rotation_rate_2'] = (rotation_metrics['normal_decline_spins'] * 1000) / (rotation_metrics['normal_decline_balls'] * 4)
+                        normal_spins = claude_data["スタート情報"]["通常"]
+                        # rotation_metricsが存在しない場合は作成
+                        if not rotation_metrics:
+                            rotation_metrics = {}
+                        rotation_metrics['normal_decline_spins'] = normal_spins
+                        # 通常時の使用球数はグラフの下降部分から計算されているものを使用
+                        if rotation_metrics.get('normal_decline_balls', 0) > 0:
+                            # 回転率②を再計算（1000円あたりの回転数）
+                            rotation_metrics['rotation_rate_2'] = (normal_spins * 1000) / (rotation_metrics['normal_decline_balls'] * 4)
+                        else:
+                            rotation_metrics['rotation_rate_2'] = 0
                 
                 # 大当り情報  
                 if claude_data.get("大当り情報"):
@@ -2201,11 +2218,6 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     ocr_data['jackpot_probability'] = claude_data["大当り情報"].get("大当り確率", ocr_data.get('jackpot_probability'))
                     ocr_data['first_hit_count'] = claude_data["大当り情報"].get("初当り回数", ocr_data.get('first_hit_count'))
                     ocr_data['first_hit_probability'] = claude_data["大当り情報"].get("初当り確率", ocr_data.get('first_hit_probability'))
-                
-                # 出玉情報
-                if claude_data.get("出玉情報"):
-                    ocr_data['max_balls'] = claude_data["出玉情報"].get("最高出玉", ocr_data.get('max_balls'))
-                    ocr_data['max_single_win'] = claude_data["出玉情報"].get("最高一撃獲得", ocr_data.get('max_single_win'))
                 
                 # ラウンド情報
                 if claude_data.get("ラウンド情報"):
@@ -2443,14 +2455,6 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                     claude_html += f'<div class="stat-item"><span class="stat-label">🎲 初当り回数</span><span class="stat-value positive">{info.get("初当り回数", 0)}回</span></div>'
                                 if info.get('初当り確率'):
                                     claude_html += f'<div class="stat-item"><span class="stat-label">📉 初当り確率</span><span class="stat-value">{info.get("初当り確率", "-")}</span></div>'
-                            
-                            # 出玉情報
-                            if result['claude_data'].get('出玉情報'):
-                                info = result['claude_data']['出玉情報']
-                                if info.get('最高出玉'):
-                                    claude_html += f'<div class="stat-item" style="background-color: #cff4fc;"><span class="stat-label">💎 最高出玉</span><span class="stat-value positive">{info.get("最高出玉", 0):,}玉</span></div>'
-                                if info.get('最高一撃獲得'):
-                                    claude_html += f'<div class="stat-item" style="background-color: #cff4fc;"><span class="stat-label">⚡ 最高一撃</span><span class="stat-value positive">{info.get("最高一撃獲得", 0):,}玉</span></div>'
                             
                             # ラウンド情報
                             if result['claude_data'].get('ラウンド情報'):
