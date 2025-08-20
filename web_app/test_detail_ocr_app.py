@@ -1,11 +1,19 @@
 import streamlit as st
 from PIL import Image
-import anthropic
 import base64
 import json
 import os
 import io
 from datetime import datetime
+import subprocess
+import sys
+
+# anthropicパッケージのインストールを試みる
+try:
+    import anthropic
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "anthropic"])
+    import anthropic
 
 st.set_page_config(
     page_title="パチンコ画像解析 - Claude API",
