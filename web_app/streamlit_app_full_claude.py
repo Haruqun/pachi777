@@ -1537,7 +1537,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             ocr_end_time = time.time()
         
         # Claude APIで詳細データを読み取る（対応する詳細画像がある場合）
-        detail_image_used = None  # 使用した詳細画像を保存
+        detail_image_used = None  # 使用した詳細画像を保存（元画像）
+        detail_image_cropped = None  # 切り抜き後の画像を保存
         if detail_files and st.session_state.get('claude_api_key'):
             # ファイル名のベースを取得（拡張子を除く）
             base_name = uploaded_file.name.rsplit('.', 1)[0]
@@ -1550,7 +1551,13 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     detail_text.text(f'🤖 {detail_file.name} をClaude APIで解析中...')
                     # Claude APIで詳細データを読み取り
                     detail_image = Image.open(detail_file)
-                    detail_image_used = detail_image  # 画像を保存
+                    detail_image_used = detail_image  # 元画像を保存
+                    
+                    # 黒枠検出と切り抜き（50%固定）
+                    detail_image_cropped = detect_black_frame_and_crop(detail_image, crop_ratio=50)
+                    if not detail_image_cropped:
+                        detail_image_cropped = detail_image  # 黒枠検出できない場合は元画像を使用
+                    
                     claude_data = extract_data_with_claude(
                         detail_image, 
                         st.session_state.claude_api_key,
@@ -2188,7 +2195,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 'original_image': img_with_grid,  # グリッド付き元画像を保存
                 'cropped_image': cropped_img,  # 切り抜き画像
                 'overlay_image': overlay_img,  # オーバーレイ画像
-                'detail_image': detail_image_used,  # Claude APIで解析した詳細画像
+                'detail_image': detail_image_used,  # Claude APIで解析した詳細画像（元画像）
+                'detail_image_cropped': detail_image_cropped,  # Claude APIで解析した詳細画像（切り抜き後）
                 'success': True,
                 'max_val': int(max_val),
                 'min_val': int(min_val),
@@ -2357,10 +2365,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 解析結果画像
                     st.image(result['overlay_image'], use_column_width=True)
                     
-                    # Claude APIで解析した詳細画像がある場合、表示
-                    if result.get('detail_image'):
-                        st.markdown("##### 📋 出玉詳細画像（Claude API解析済み）")
-                        st.image(result['detail_image'], use_column_width=True)
+                    # Claude APIで解析した詳細画像（切り抜き後）がある場合、表示
+                    if result.get('detail_image_cropped'):
+                        st.markdown("##### 📋 出玉詳細（切り抜き画像・Claude API解析済み）")
+                        st.image(result['detail_image_cropped'], use_column_width=True)
 
                     # 元画像を折りたたみ可能に
                     with st.expander("📷 元画像を表示"):
