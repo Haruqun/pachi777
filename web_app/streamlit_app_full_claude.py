@@ -2188,19 +2188,42 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     # 初回特賞スタートの値を初当たり値として使用し、回転率を正しく計算
                     if claude_data["スタート情報"].get("初回特賞スタート"):
                         first_hit_spins = claude_data["スタート情報"]["初回特賞スタート"]
+                        
+                        # 初回特賞スタートの妥当性チェック（通常50-500の範囲）
+                        if first_hit_spins < 30:
+                            # 14のような極端に小さい値は誤読の可能性が高い
+                            # スタート値（当日回転数）と間違えている可能性
+                            current_rotation = claude_data["スタート情報"].get("スタート", 0)
+                            if current_rotation > 30:
+                                # スタート値の方が妥当な場合は入れ替え
+                                first_hit_spins, current_rotation = current_rotation, first_hit_spins
+                                ocr_data['first_bonus_start'] = first_hit_spins
+                                ocr_data['current_rotation'] = current_rotation
+                                ocr_data['first_hit_warning'] = f"⚠️ 初回特賞スタートとスタートの値を入れ替え: {first_hit_spins}回"
+                        
+                        # rotation_metricsが存在しない場合は作成
+                        if not rotation_metrics:
+                            rotation_metrics = {}
+                        
+                        # 初回特賞スタートの回転数を記録
+                        rotation_metrics['first_hit_spins'] = first_hit_spins
+                        
                         # グラフから取得した初当たり位置での使用球数を使用
                         if first_hit_val and first_hit_used_balls:
-                            # rotation_metricsが存在しない場合は作成
-                            if not rotation_metrics:
-                                rotation_metrics = {}
-                            # 初回特賞スタートの回転数で更新
-                            rotation_metrics['first_hit_spins'] = first_hit_spins
                             rotation_metrics['first_hit_balls'] = abs(first_hit_used_balls)
                             # 回転率①を再計算（1000円あたりの回転数）
                             if first_hit_used_balls != 0:
                                 rotation_metrics['rotation_rate_1'] = (first_hit_spins * 1000) / (abs(first_hit_used_balls) * 4)
                             else:
                                 rotation_metrics['rotation_rate_1'] = 0
+                        else:
+                            # グラフから初当たりが検出できない場合でも、初回特賞スタートの値を使用
+                            # 最低値を初当たり位置と仮定して計算
+                            if min_val and min_val < 0:
+                                estimated_balls = abs(min_val)
+                                rotation_metrics['first_hit_balls'] = estimated_balls
+                                rotation_metrics['rotation_rate_1'] = (first_hit_spins * 1000) / (estimated_balls * 4)
+                                rotation_metrics['first_hit_estimation'] = True  # 推定値であることを記録
                     
                     # 通常回転数もClaude APIから取得して回転率②を計算
                     if claude_data["スタート情報"].get("通常"):
@@ -2752,9 +2775,11 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
 
                         ocr_html = '<div class="ocr-card"><div class="ocr-title">📱 site7データ</div>'
                         
-                        # 通常回転数の警告があれば表示
+                        # 警告メッセージがあれば表示
                         if ocr.get('normal_spins_warning'):
                             ocr_html += f'<div style="color: #ff6b6b; margin: 10px 0; padding: 8px; background: #fff5f5; border-radius: 4px; font-size: 0.9em;">{ocr["normal_spins_warning"]}</div>'
+                        if ocr.get('first_hit_warning'):
+                            ocr_html += f'<div style="color: #ff6b6b; margin: 10px 0; padding: 8px; background: #fff5f5; border-radius: 4px; font-size: 0.9em;">{ocr["first_hit_warning"]}</div>'
 
                         # 台番号（デバッグ情報付き）
                         if ocr.get('machine_number'):
