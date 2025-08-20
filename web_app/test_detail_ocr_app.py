@@ -5,15 +5,7 @@ import json
 import os
 import io
 from datetime import datetime
-import subprocess
-import sys
-
-# anthropicパッケージのインストールを試みる
-try:
-    import anthropic
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "anthropic"])
-    import anthropic
+import requests
 
 st.set_page_config(
     page_title="パチンコ画像解析 - Claude API",
@@ -107,8 +99,13 @@ if uploaded_file is not None:
                         image_to_process.save(buffered, format="PNG")
                         img_base64 = base64.b64encode(buffered.getvalue()).decode()
                         
-                        # Claude APIクライアント初期化
-                        client = anthropic.Anthropic(api_key=api_key)
+                        # Claude API設定
+                        api_url = "https://api.anthropic.com/v1/messages"
+                        headers = {
+                            "x-api-key": api_key,
+                            "anthropic-version": "2023-06-01",
+                            "content-type": "application/json"
+                        }
                         
                         # プロンプト作成（JSON形式固定）
                         prompt = """
@@ -151,10 +148,10 @@ JSONのみを返してください。説明は不要です。
 """
                         
                         # API呼び出し
-                        message = client.messages.create(
-                            model="claude-3-haiku-20240307",
-                            max_tokens=1500,
-                            messages=[
+                        request_data = {
+                            "model": "claude-3-haiku-20240307",
+                            "max_tokens": 1500,
+                            "messages": [
                                 {
                                     "role": "user",
                                     "content": [
@@ -173,10 +170,14 @@ JSONのみを返してください。説明は不要です。
                                     ]
                                 }
                             ]
-                        )
+                        }
+                        
+                        response = requests.post(api_url, headers=headers, json=request_data)
+                        response.raise_for_status()
                         
                         # 結果取得
-                        result = message.content[0].text
+                        response_data = response.json()
+                        result = response_data["content"][0]["text"]
                         
                         # 結果表示
                         st.success("✅ 解析完了！")
