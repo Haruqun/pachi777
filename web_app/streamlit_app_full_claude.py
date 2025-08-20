@@ -169,8 +169,9 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
    - 位置：累計スタートの直下にある項目
    - 意味：通常時（大当り中以外）の総回転数
    - 特徴：必ず累計スタートより小さい数値（累計の60-95%程度が一般的）
-   - 例：「通常 4500」のような表記
-   - 注意：絶対に累計スタートより大きくならない
+   - 例：累計27,770なら通常は16,000〜26,000程度
+   - 重要：「通常」の数値は累計スタートの60-95%の範囲内
+   - 警告：通常が累計と同じか超える場合は読み取りミス。再確認必要
 
 3. 「スタート」（画像の中央エリア）  
    - 位置：画像の中央付近にある項目
@@ -202,7 +203,7 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
   },
   "スタート情報": {
     "累計スタート": number（画像上部にある最も大きいスタート数値。必ず他のスタート値より大きい）,
-    "通常": number（累計スタートのすぐ下にある「通常」の値。通常時の総回転数。必ず累計スタートより小さい）,
+    "通常": number（累計スタートのすぐ下の「通常」の値。通常時の総回転数。累計の60-95%の範囲内であるべき）,
     "チャンス中": number（「チャンス中」または「確変中」の回転数）,
     "スタート": number（画像中央付近の「スタート」項目の数値。当日の回転数。累計スタートより小さい）,
     "初回特賞スタート": number（画像左下の独立した「初回特賞スタート」項目の数値。初当たりまでの回転数）,
@@ -2206,10 +2207,19 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                         normal_spins = claude_data["スタート情報"]["通常"]
                         total_start = claude_data["スタート情報"].get("累計スタート", 0)
                         
-                        # 通常回転数の妥当性チェック（累計スタートより小さくなければならない）
-                        if normal_spins > total_start and total_start > 0:
-                            # 異常値の場合、累計スタートの90%を仮定
-                            normal_spins = int(total_start * 0.9)
+                        # 通常回転数の妥当性チェック
+                        # 1. 累計スタートより大きい場合は明らかに異常
+                        # 2. 累計スタートの95%より大きい場合も疑わしい（大当たり中にも回転するため）
+                        original_normal_spins = normal_spins
+                        if total_start > 0:
+                            if normal_spins >= total_start:
+                                # 明らかな異常値：累計の85%を仮定
+                                normal_spins = int(total_start * 0.85)
+                                ocr_data['normal_spins_warning'] = f"⚠️ 通常回転数が異常（{original_normal_spins}）のため補正: {normal_spins}"
+                            elif normal_spins > total_start * 0.95:
+                                # 疑わしい値：累計の90%を仮定
+                                normal_spins = int(total_start * 0.90)
+                                ocr_data['normal_spins_warning'] = f"⚠️ 通常回転数が高すぎる（{original_normal_spins}）ため補正: {normal_spins}"
                         
                         # rotation_metricsが存在しない場合は作成
                         if not rotation_metrics:
@@ -2741,6 +2751,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         """, unsafe_allow_html=True)
 
                         ocr_html = '<div class="ocr-card"><div class="ocr-title">📱 site7データ</div>'
+                        
+                        # 通常回転数の警告があれば表示
+                        if ocr_data.get('normal_spins_warning'):
+                            ocr_html += f'<div style="color: #ff6b6b; margin: 10px 0; padding: 8px; background: #fff5f5; border-radius: 4px; font-size: 0.9em;">{ocr_data["normal_spins_warning"]}</div>'
 
                         # 台番号（デバッグ情報付き）
                         if ocr.get('machine_number'):
