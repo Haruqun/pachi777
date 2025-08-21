@@ -1749,9 +1749,34 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 
                 if debug_mode:
                     st.write(f"Debug - Checking detail file: {detail_file.name} (base: {detail_base})")
+                    st.write(f"  - Main file base: '{base_name}'")
+                    st.write(f"  - Detail file base: '{detail_base}'")
                 
-                # ファイル名に共通部分があるか確認
-                if base_name in detail_base or detail_base in base_name or base_name.split('_')[0] in detail_base:
+                # ファイル名に共通部分があるか確認（より柔軟なマッチング）
+                # 1. 完全一致
+                # 2. 部分一致
+                # 3. 番号の一致（例: "8" が "detail_8" に一致）
+                # 4. 数字部分の一致（例: "graph_008.png" と "detail_8.png"）
+                match_conditions = [
+                    base_name == detail_base,  # 完全一致
+                    base_name in detail_base,  # base_nameが含まれる
+                    detail_base in base_name,  # detail_baseが含まれる
+                    base_name.split('_')[0] in detail_base,  # アンダースコア前の部分
+                ]
+                
+                # 数字部分を抽出してマッチング
+                import re
+                base_numbers = re.findall(r'\d+', base_name)
+                detail_numbers = re.findall(r'\d+', detail_base)
+                if base_numbers and detail_numbers:
+                    # 数字部分が一致（先頭のゼロを無視）
+                    for bn in base_numbers:
+                        for dn in detail_numbers:
+                            if int(bn) == int(dn):
+                                match_conditions.append(True)
+                                break
+                
+                if any(match_conditions):
                     matched = True
                     if debug_mode:
                         st.write(f"Debug - MATCHED! Processing {detail_file.name}")
@@ -2749,7 +2774,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 st.caption("読み取りデータに誤りがある場合は、以下から再処理できます")
                                 
                                 # フィードバック入力
-                                feedback_key = f"feedback_{i}"
+                                feedback_key = f"feedback_{idx}"
                                 feedback = st.text_area(
                                     "どの項目が間違っていますか？",
                                     placeholder="例: 累計スタートは2318ではなく3318です。初回特賞スタートは7ではなく107です。",
@@ -2758,7 +2783,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 )
                                 
                                 # 再処理ボタン
-                                retry_button_key = f"retry_claude_{i}"
+                                retry_button_key = f"retry_claude_{idx}"
                                 if st.button("🔄 Claude APIで再処理", key=retry_button_key, use_container_width=True):
                                     if result.get('detail_image_cropped') or result.get('detail_image'):
                                         # 使用する画像を決定
