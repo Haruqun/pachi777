@@ -42,6 +42,47 @@ if 'GLOBAL_USER_PASSWORD' not in st.session_state:
     st.session_state.GLOBAL_USER_PASSWORD = st._global_passwords['user']
     st.session_state.GLOBAL_ADMIN_PASSWORD = st._global_passwords['admin']
 
+# APIキー保存用のデータベース関数
+def save_api_key_to_db(api_key):
+    """APIキーをデータベースに保存"""
+    conn = sqlite3.connect('presets.db')
+    c = conn.cursor()
+    
+    # api_keysテーブルが存在しない場合は作成
+    c.execute('''CREATE TABLE IF NOT EXISTS api_keys
+                 (id INTEGER PRIMARY KEY,
+                  key_type TEXT UNIQUE,
+                  api_key TEXT,
+                  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    
+    # APIキーを保存または更新
+    c.execute('''INSERT OR REPLACE INTO api_keys (key_type, api_key, updated_at)
+                 VALUES (?, ?, CURRENT_TIMESTAMP)''', ('anthropic', api_key))
+    
+    conn.commit()
+    conn.close()
+
+def load_api_key_from_db():
+    """データベースからAPIキーを読み込み"""
+    try:
+        conn = sqlite3.connect('presets.db')
+        c = conn.cursor()
+        
+        # api_keysテーブルが存在するか確認
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='api_keys'")
+        if not c.fetchone():
+            conn.close()
+            return ""
+        
+        # APIキーを取得
+        c.execute("SELECT api_key FROM api_keys WHERE key_type = ?", ('anthropic',))
+        result = c.fetchone()
+        conn.close()
+        
+        return result[0] if result else ""
+    except:
+        return ""
+
 # Claude API設定をサイドバーに配置
 with st.sidebar:
     st.header("🤖 Claude API設定")
@@ -49,23 +90,48 @@ with st.sidebar:
     # 複数の方法でAPIキーを取得
     default_api_key = ""
     
-    # 1. Streamlit Secretsから取得（Streamlit Cloud用）
-    try:
-        if "ANTHROPIC_API_KEY" in st.secrets:
-            default_api_key = st.secrets["ANTHROPIC_API_KEY"]
-    except:
-        pass
+    # 1. データベースから取得（admin777でログイン後に保存したキー）
+    if st.session_state.get('is_admin', False):
+        saved_key = load_api_key_from_db()
+        if saved_key:
+            default_api_key = saved_key
     
-    # 2. 環境変数から取得（ローカル開発用）
+    # 2. Streamlit Secretsから取得（Streamlit Cloud用）
+    if not default_api_key:
+        try:
+            if "ANTHROPIC_API_KEY" in st.secrets:
+                default_api_key = st.secrets["ANTHROPIC_API_KEY"]
+        except:
+            pass
+    
+    # 3. 環境変数から取得（ローカル開発用）
     if not default_api_key:
         default_api_key = os.getenv("ANTHROPIC_API_KEY", "")
     
+    # APIキー入力フィールド
     api_key = st.text_input(
         "Anthropic API Key",
         type="password",
         value=default_api_key,
-        help="Claude APIキーを入力してください（詳細データ読み取りに使用）"
+        help="Claude APIキーを入力してください（詳細データ読み取りに使用）",
+        key="api_key_input"
     )
+    
+    # 管理者の場合はAPIキー保存ボタンを表示
+    if st.session_state.get('is_admin', False):
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 APIキーを保存", key="save_api_key", use_container_width=True):
+                if api_key:
+                    save_api_key_to_db(api_key)
+                    st.success("APIキーを保存しました")
+                else:
+                    st.warning("APIキーを入力してください")
+        with col2:
+            if st.button("🗑️ APIキーを削除", key="delete_api_key", use_container_width=True):
+                save_api_key_to_db("")
+                st.success("APIキーを削除しました")
+                st.rerun()
     
     use_claude = st.checkbox("Claude APIで詳細データを読み取る", value=bool(api_key))
     
