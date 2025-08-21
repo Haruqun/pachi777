@@ -289,6 +289,10 @@ def extract_data_with_claude_with_prompt(image, api_key, prompt, model="claude-3
         if response.status_code != 200:
             print(f"Claude API Error: {response.status_code}")
             print(f"Response: {response.text}")
+            # Streamlitの警告も表示（デバッグ用）
+            import streamlit as st
+            if st.session_state.get('debug_mode', False):
+                st.error(f"Claude API Error {response.status_code}: {response.text[:500]}")
             return None
         
         # 結果取得
@@ -308,6 +312,11 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
     """Claude APIを使用してパチンコ画像からデータを抽出"""
     try:
         print(f"Claude API called with model: {model}")
+        
+        # APIキーの確認
+        if not api_key:
+            print("Claude API Error: No API key provided")
+            return None
         
         # 黒枠検出と切り取り（固定50%）
         cropped_image = detect_black_frame_and_crop(image, crop_ratio=50)
@@ -406,6 +415,10 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
         if response.status_code != 200:
             print(f"Claude API Error: {response.status_code}")
             print(f"Response: {response.text}")
+            # Streamlitの警告も表示（デバッグ用）
+            import streamlit as st
+            if st.session_state.get('debug_mode', False):
+                st.error(f"Claude API Error {response.status_code}: {response.text[:500]}")
             return None
         
         # 結果取得
@@ -1757,6 +1770,13 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     if not detail_image_cropped:
                         detail_image_cropped = detail_image.copy()  # 黒枠検出できない場合は元画像を使用
                     
+                    # Claude API呼び出しのデバッグ
+                    if debug_mode:
+                        st.write(f"Debug - About to call Claude API for {detail_file.name}")
+                        st.write(f"Debug - API Key exists: {bool(st.session_state.claude_api_key)}")
+                        st.write(f"Debug - API Key length: {len(st.session_state.claude_api_key) if st.session_state.claude_api_key else 0}")
+                        st.write(f"Debug - Model: {st.session_state.get('claude_model', 'claude-3-haiku-20240307')}")
+                    
                     claude_data = extract_data_with_claude(
                         detail_image, 
                         st.session_state.claude_api_key,
@@ -1765,6 +1785,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     
                     if debug_mode:
                         st.write(f"Debug - Claude API returned data for {detail_file.name}: {claude_data}")
+                        if claude_data is None:
+                            st.write("Debug - Claude API returned None - check console logs for error details")
                     
                     if claude_data:
                         detail_text.text(f'✅ Claude APIで詳細データ取得成功: {len(claude_data)} 項目')
