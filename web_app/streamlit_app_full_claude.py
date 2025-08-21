@@ -83,84 +83,82 @@ def load_api_key_from_db():
     except:
         return ""
 
-# Claude API設定をサイドバーに配置
-with st.sidebar:
-    st.header("🤖 Claude API設定")
-    
-    # 複数の方法でAPIキーを取得
-    default_api_key = ""
-    saved_from_db = False
-    
-    # 1. データベースから取得（admin777でログイン後に保存したキー）
-    if st.session_state.get('is_admin', False):
-        saved_key = load_api_key_from_db()
-        if saved_key:
-            default_api_key = saved_key
-            saved_from_db = True
-    
-    # 2. Streamlit Secretsから取得（Streamlit Cloud用）
-    if not default_api_key:
-        try:
-            if "ANTHROPIC_API_KEY" in st.secrets:
-                default_api_key = st.secrets["ANTHROPIC_API_KEY"]
-        except:
-            pass
-    
-    # 3. 環境変数から取得（ローカル開発用）
-    if not default_api_key:
-        default_api_key = os.getenv("ANTHROPIC_API_KEY", "")
-    
-    # 管理者で保存済みキーがある場合は、表示を変更
-    if st.session_state.get('is_admin', False) and saved_from_db:
-        # 保存済みの場合は状態表示のみ
-        st.success("✅ APIキー設定済み")
-        st.caption(f"キーの先頭: {default_api_key[:10]}...")
+# APIキーの取得（管理者の場合のみサイドバー表示）
+default_api_key = ""
+
+# 1. データベースから取得（保存されたキー）
+saved_key = load_api_key_from_db()
+if saved_key:
+    default_api_key = saved_key
+
+# 2. Streamlit Secretsから取得（Streamlit Cloud用）
+if not default_api_key:
+    try:
+        if "ANTHROPIC_API_KEY" in st.secrets:
+            default_api_key = st.secrets["ANTHROPIC_API_KEY"]
+    except:
+        pass
+
+# 3. 環境変数から取得（ローカル開発用）
+if not default_api_key:
+    default_api_key = os.getenv("ANTHROPIC_API_KEY", "")
+
+# 管理者の場合のみClaude API設定をサイドバーに表示
+if st.session_state.get('is_admin', False):
+    with st.sidebar:
+        st.header("🤖 Claude API設定")
         
-        # 編集モードのトグル
-        edit_mode = st.checkbox("APIキーを編集", value=False, key="edit_api_key_mode")
+        saved_from_db = bool(saved_key)
         
-        if edit_mode:
-            # 編集モードの場合は入力フィールドを表示
+        # 保存済みキーがある場合は、表示を変更
+        if saved_from_db:
+            # 保存済みの場合は状態表示のみ
+            st.success("✅ APIキー設定済み")
+            st.caption(f"キーの先頭: {default_api_key[:10]}...")
+            
+            # 編集モードのトグル
+            edit_mode = st.checkbox("APIキーを編集", value=False, key="edit_api_key_mode")
+            
+            if edit_mode:
+                # 編集モードの場合は入力フィールドを表示
+                api_key = st.text_input(
+                    "新しいAPI Key",
+                    type="password",
+                    value=default_api_key,
+                    help="新しいClaude APIキーを入力してください",
+                    key="api_key_input_edit"
+                )
+            else:
+                # 通常モードでは保存済みキーを使用
+                api_key = default_api_key
+            
+            # 管理者用ボタン
+            col1, col2 = st.columns(2)
+            with col1:
+                if edit_mode and st.button("💾 更新", key="update_api_key", use_container_width=True):
+                    if api_key and api_key != default_api_key:
+                        save_api_key_to_db(api_key)
+                        st.success("APIキーを更新しました")
+                        st.rerun()
+                    elif api_key == default_api_key:
+                        st.info("変更がありません")
+                    else:
+                        st.warning("APIキーを入力してください")
+            with col2:
+                if st.button("🗑️ 削除", key="delete_api_key", use_container_width=True):
+                    save_api_key_to_db("")
+                    st.success("APIキーを削除しました")
+                    st.rerun()
+        else:
+            # 保存済みキーがない場合
             api_key = st.text_input(
-                "新しいAPI Key",
+                "Anthropic API Key",
                 type="password",
                 value=default_api_key,
-                help="新しいClaude APIキーを入力してください",
-                key="api_key_input_edit"
+                help="Claude APIキーを入力してください（詳細データ読み取りに使用）",
+                key="api_key_input"
             )
-        else:
-            # 通常モードでは保存済みキーを使用
-            api_key = default_api_key
-        
-        # 管理者用ボタン
-        col1, col2 = st.columns(2)
-        with col1:
-            if edit_mode and st.button("💾 更新", key="update_api_key", use_container_width=True):
-                if api_key and api_key != default_api_key:
-                    save_api_key_to_db(api_key)
-                    st.success("APIキーを更新しました")
-                    st.rerun()
-                elif api_key == default_api_key:
-                    st.info("変更がありません")
-                else:
-                    st.warning("APIキーを入力してください")
-        with col2:
-            if st.button("🗑️ 削除", key="delete_api_key", use_container_width=True):
-                save_api_key_to_db("")
-                st.success("APIキーを削除しました")
-                st.rerun()
-    else:
-        # 通常の入力フィールド表示（管理者でない場合、または保存済みキーがない場合）
-        api_key = st.text_input(
-            "Anthropic API Key",
-            type="password",
-            value=default_api_key,
-            help="Claude APIキーを入力してください（詳細データ読み取りに使用）",
-            key="api_key_input"
-        )
-        
-        # 管理者の場合は保存ボタンを表示
-        if st.session_state.get('is_admin', False):
+            
             if st.button("💾 APIキーを保存", key="save_api_key", use_container_width=True):
                 if api_key:
                     save_api_key_to_db(api_key)
@@ -168,22 +166,30 @@ with st.sidebar:
                     st.rerun()
                 else:
                     st.warning("APIキーを入力してください")
-    
-    use_claude = st.checkbox("Claude APIで詳細データを読み取る", value=bool(api_key))
-    
-    if use_claude:
-        model_option = st.selectbox(
-            "使用するモデル",
-            ["claude-3-haiku-20240307", "claude-sonnet-4-20250514"],
-            index=0,
-            format_func=lambda x: "Claude 3 Haiku (高速・低コスト)" if "haiku" in x else "Claude Sonnet 4 (高精度)",
-            help="Haikuは高速で低コスト、Sonnetは高精度です"
-        )
-        st.session_state.claude_model = model_option
+        
+        use_claude = st.checkbox("Claude APIで詳細データを読み取る", value=bool(api_key))
+        
+        if use_claude:
+            model_option = st.selectbox(
+                "使用するモデル",
+                ["claude-3-haiku-20240307", "claude-sonnet-4-20250514"],
+                index=0,
+                format_func=lambda x: "Claude 3 Haiku (高速・低コスト)" if "haiku" in x else "Claude Sonnet 4 (高精度)",
+                help="Haikuは高速で低コスト、Sonnetは高精度です"
+            )
+            st.session_state.claude_model = model_option
+        else:
+            st.session_state.claude_model = None
+        
+        st.session_state.claude_api_key = api_key if use_claude else None
+else:
+    # 管理者以外の場合は、保存されたAPIキーを自動的に使用
+    if default_api_key:
+        st.session_state.claude_api_key = default_api_key
+        st.session_state.claude_model = 'claude-3-haiku-20240307'  # デフォルトモデル
     else:
+        st.session_state.claude_api_key = None
         st.session_state.claude_model = None
-    
-    st.session_state.claude_api_key = api_key if use_claude else None
 
 def detect_black_frame_and_crop(image, crop_ratio=50):
     """黒枠領域を検出して上部を切り取る（固定50%）"""
