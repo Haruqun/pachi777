@@ -89,12 +89,14 @@ with st.sidebar:
     
     # 複数の方法でAPIキーを取得
     default_api_key = ""
+    saved_from_db = False
     
     # 1. データベースから取得（admin777でログイン後に保存したキー）
     if st.session_state.get('is_admin', False):
         saved_key = load_api_key_from_db()
         if saved_key:
             default_api_key = saved_key
+            saved_from_db = True
     
     # 2. Streamlit Secretsから取得（Streamlit Cloud用）
     if not default_api_key:
@@ -108,30 +110,64 @@ with st.sidebar:
     if not default_api_key:
         default_api_key = os.getenv("ANTHROPIC_API_KEY", "")
     
-    # APIキー入力フィールド
-    api_key = st.text_input(
-        "Anthropic API Key",
-        type="password",
-        value=default_api_key,
-        help="Claude APIキーを入力してください（詳細データ読み取りに使用）",
-        key="api_key_input"
-    )
-    
-    # 管理者の場合はAPIキー保存ボタンを表示
-    if st.session_state.get('is_admin', False):
+    # 管理者で保存済みキーがある場合は、表示を変更
+    if st.session_state.get('is_admin', False) and saved_from_db:
+        # 保存済みの場合は状態表示のみ
+        st.success("✅ APIキー設定済み")
+        st.caption(f"キーの先頭: {default_api_key[:10]}...")
+        
+        # 編集モードのトグル
+        edit_mode = st.checkbox("APIキーを編集", value=False, key="edit_api_key_mode")
+        
+        if edit_mode:
+            # 編集モードの場合は入力フィールドを表示
+            api_key = st.text_input(
+                "新しいAPI Key",
+                type="password",
+                value=default_api_key,
+                help="新しいClaude APIキーを入力してください",
+                key="api_key_input_edit"
+            )
+        else:
+            # 通常モードでは保存済みキーを使用
+            api_key = default_api_key
+        
+        # 管理者用ボタン
         col1, col2 = st.columns(2)
         with col1:
+            if edit_mode and st.button("💾 更新", key="update_api_key", use_container_width=True):
+                if api_key and api_key != default_api_key:
+                    save_api_key_to_db(api_key)
+                    st.success("APIキーを更新しました")
+                    st.rerun()
+                elif api_key == default_api_key:
+                    st.info("変更がありません")
+                else:
+                    st.warning("APIキーを入力してください")
+        with col2:
+            if st.button("🗑️ 削除", key="delete_api_key", use_container_width=True):
+                save_api_key_to_db("")
+                st.success("APIキーを削除しました")
+                st.rerun()
+    else:
+        # 通常の入力フィールド表示（管理者でない場合、または保存済みキーがない場合）
+        api_key = st.text_input(
+            "Anthropic API Key",
+            type="password",
+            value=default_api_key,
+            help="Claude APIキーを入力してください（詳細データ読み取りに使用）",
+            key="api_key_input"
+        )
+        
+        # 管理者の場合は保存ボタンを表示
+        if st.session_state.get('is_admin', False):
             if st.button("💾 APIキーを保存", key="save_api_key", use_container_width=True):
                 if api_key:
                     save_api_key_to_db(api_key)
                     st.success("APIキーを保存しました")
+                    st.rerun()
                 else:
                     st.warning("APIキーを入力してください")
-        with col2:
-            if st.button("🗑️ APIキーを削除", key="delete_api_key", use_container_width=True):
-                save_api_key_to_db("")
-                st.success("APIキーを削除しました")
-                st.rerun()
     
     use_claude = st.checkbox("Claude APIで詳細データを読み取る", value=bool(api_key))
     
