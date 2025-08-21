@@ -183,6 +183,85 @@ def detect_black_frame_and_crop(image, crop_ratio=50):
     
     return None
 
+def extract_data_with_claude_with_prompt(image, api_key, prompt, model="claude-3-haiku-20240307"):
+    """Claude APIを使用してカスタムプロンプトでデータを抽出"""
+    try:
+        print(f"Claude API called with custom prompt and model: {model}")
+        
+        # 黒枠検出と切り取り（固定50%）
+        cropped_image = detect_black_frame_and_crop(image, crop_ratio=50)
+        if cropped_image:
+            image_to_process = cropped_image
+            print("Using cropped image")
+        else:
+            # 黒枠が検出できない場合は元画像を使用
+            image_to_process = image
+            print("Using original image (no black frame detected)")
+        
+        # 画像をbase64エンコード
+        buffered = io.BytesIO()
+        image_to_process.save(buffered, format="PNG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode()
+        
+        # API リクエスト
+        headers = {
+            "anthropic-version": "2023-06-01",
+            "x-api-key": api_key,
+            "content-type": "application/json"
+        }
+        
+        # リクエストボディを構築
+        request_body = {
+            "model": model,
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/png",
+                                "data": img_base64
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": prompt
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        # APIリクエスト送信
+        response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers=headers,
+            json=request_body,
+            timeout=30
+        )
+        
+        # エラーチェック
+        if response.status_code != 200:
+            print(f"Claude API Error: {response.status_code}")
+            print(f"Response: {response.text}")
+            return None
+        
+        # 結果取得
+        response_data = response.json()
+        result = response_data["content"][0]["text"]
+        
+        # JSON形式でパース
+        json_data = json.loads(result)
+        print(f"Claude API Success with custom prompt: {json_data}")
+        return json_data
+        
+    except Exception as e:
+        print(f"Claude API Exception: {str(e)}")
+        return None
+
 def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
     """Claude APIを使用してパチンコ画像からデータを抽出"""
     try:
@@ -2586,6 +2665,83 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         # HTMLを表示
                         st.markdown(claude_html, unsafe_allow_html=True)
                         st.markdown("")  # スペース追加
+                        
+                        # Claude APIデータ再処理ボタン（データがある場合のみ表示）
+                        if data and any([data.get(k) for k in ['台番号', '機種名', '日付', '累計スタート', '初回特賞スタート', '通常', '大当り回数', '初当り回数', 'ラウンド内訳']]):
+                            # 再処理用のエクスパンダー
+                            with st.expander("🔄 データに誤りがある場合"):
+                                st.caption("読み取りデータに誤りがある場合は、以下から再処理できます")
+                                
+                                # フィードバック入力
+                                feedback_key = f"feedback_{i}"
+                                feedback = st.text_area(
+                                    "どの項目が間違っていますか？",
+                                    placeholder="例: 累計スタートは2318ではなく3318です。初回特賞スタートは7ではなく107です。",
+                                    key=feedback_key,
+                                    height=100
+                                )
+                                
+                                # 再処理ボタン
+                                retry_button_key = f"retry_claude_{i}"
+                                if st.button("🔄 Claude APIで再処理", key=retry_button_key, use_container_width=True):
+                                    if result.get('detail_image_cropped') or result.get('detail_image'):
+                                        # 使用する画像を決定
+                                        image_to_retry = result.get('detail_image_cropped') or result.get('detail_image')
+                                        
+                                        # フィードバック付きのプロンプトを作成
+                                        retry_prompt = """
+この画像のパチンコ・パチスロの収支管理データから以下の項目のみを抽出して、JSON形式で出力してください。
+
+【前回の読み取りに関するフィードバック】
+"""
+                                        if feedback:
+                                            retry_prompt += feedback + "\n\n"
+                                        else:
+                                            retry_prompt += "データの読み取り精度を上げて、再度確認してください。\n\n"
+                                        
+                                        retry_prompt += """
+【抽出する項目】
+{
+  "台番号": "",
+  "機種名": "",
+  "日付": "",
+  "累計スタート": 0,
+  "初回特賞スタート": 0,
+  "通常": 0,
+  "大当り回数": 0,
+  "初当り回数": 0,
+  "ラウンド内訳": {
+    "超": 0,
+    "中": 0,
+    "小": 0
+  }
+}
+
+注意事項：
+- 数値は正確に読み取ってください
+- 特に桁数に注意してください（例: 2318と3318の違い）
+- 不明な項目は0または空文字列としてください
+- JSONのみを出力し、他の説明は不要です
+"""
+                                        
+                                        # 再処理を実行
+                                        with st.spinner("Claude APIで再処理中..."):
+                                            retry_data = extract_data_with_claude_with_prompt(
+                                                image_to_retry,
+                                                st.session_state.claude_api_key,
+                                                retry_prompt,
+                                                st.session_state.get('claude_model', 'claude-3-haiku-20240307')
+                                            )
+                                            
+                                            if retry_data:
+                                                # 結果を更新
+                                                result['claude_data'] = retry_data
+                                                st.success("✅ 再処理が完了しました")
+                                                st.rerun()
+                                            else:
+                                                st.error("❌ 再処理に失敗しました")
+                                    else:
+                                        st.warning("⚠️ 再処理用の画像が見つかりません")
                         
                         # 統計情報をカード風に表示
                         st.markdown("""
