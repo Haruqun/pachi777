@@ -1732,95 +1732,57 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             st.write(f"Debug - Detail files count: {len(detail_files) if detail_files else 0}")
             if detail_files:
                 st.write(f"Debug - Detail file names: {[f.name for f in detail_files]}")
-            st.write(f"Debug - Current file: {uploaded_file.name}")
+            st.write(f"Debug - Current image index: {idx}")
         
         # Claude APIが有効かつ詳細画像がある場合
+        # シンプルに：インデックスで対応する詳細画像を使用
         if st.session_state.get('claude_api_key') and detail_files:
-            # ファイル名のベースを取得（拡張子を除く）
-            base_name = uploaded_file.name.rsplit('.', 1)[0]
-            
-            if debug_mode:
-                st.write(f"Debug - Base name: {base_name}")
-            
-            # 対応する詳細画像を探す
-            matched = False
-            for detail_file in detail_files:
-                detail_base = detail_file.name.rsplit('.', 1)[0]
+            # インデックスが範囲内の場合、対応する詳細画像を使用
+            if idx < len(detail_files):
+                detail_file = detail_files[idx]
                 
                 if debug_mode:
-                    st.write(f"Debug - Checking detail file: {detail_file.name} (base: {detail_base})")
-                    st.write(f"  - Main file base: '{base_name}'")
-                    st.write(f"  - Detail file base: '{detail_base}'")
+                    st.write(f"Debug - Using detail file at index {idx}: {detail_file.name}")
                 
-                # ファイル名に共通部分があるか確認（より柔軟なマッチング）
-                # 1. 完全一致
-                # 2. 部分一致
-                # 3. 番号の一致（例: "8" が "detail_8" に一致）
-                # 4. 数字部分の一致（例: "graph_008.png" と "detail_8.png"）
-                match_conditions = [
-                    base_name == detail_base,  # 完全一致
-                    base_name in detail_base,  # base_nameが含まれる
-                    detail_base in base_name,  # detail_baseが含まれる
-                    base_name.split('_')[0] in detail_base,  # アンダースコア前の部分
-                ]
+                detail_text.text(f'🤖 {detail_file.name} をClaude APIで解析中...')
                 
-                # 数字部分を抽出してマッチング
-                import re
-                base_numbers = re.findall(r'\d+', base_name)
-                detail_numbers = re.findall(r'\d+', detail_base)
-                if base_numbers and detail_numbers:
-                    # 数字部分が一致（先頭のゼロを無視）
-                    for bn in base_numbers:
-                        for dn in detail_numbers:
-                            if int(bn) == int(dn):
-                                match_conditions.append(True)
-                                break
+                # ファイルポインタをリセット
+                detail_file.seek(0)
                 
-                if any(match_conditions):
-                    matched = True
-                    if debug_mode:
-                        st.write(f"Debug - MATCHED! Processing {detail_file.name}")
-                    
-                    detail_text.text(f'🤖 {detail_file.name} をClaude APIで解析中...')
-                    
-                    # ファイルポインタをリセット
-                    detail_file.seek(0)
-                    
-                    # Claude APIで詳細データを読み取り
-                    detail_image = Image.open(detail_file)
-                    detail_image_used = detail_image.copy()  # 元画像をコピーして保存
-                    
-                    # 黒枠検出と切り抜き（50%固定）
-                    detail_image_cropped = detect_black_frame_and_crop(detail_image, crop_ratio=50)
-                    if not detail_image_cropped:
-                        detail_image_cropped = detail_image.copy()  # 黒枠検出できない場合は元画像を使用
-                    
-                    # Claude API呼び出しのデバッグ
-                    if debug_mode:
-                        st.write(f"Debug - About to call Claude API for {detail_file.name}")
-                        st.write(f"Debug - API Key exists: {bool(st.session_state.claude_api_key)}")
-                        st.write(f"Debug - API Key length: {len(st.session_state.claude_api_key) if st.session_state.claude_api_key else 0}")
-                        st.write(f"Debug - Model: {st.session_state.get('claude_model', 'claude-3-haiku-20240307')}")
-                    
-                    claude_data = extract_data_with_claude(
-                        detail_image, 
-                        st.session_state.claude_api_key,
-                        st.session_state.get('claude_model', 'claude-3-haiku-20240307')
-                    )
-                    
-                    if debug_mode:
-                        st.write(f"Debug - Claude API returned data for {detail_file.name}: {claude_data}")
-                        if claude_data is None:
-                            st.write("Debug - Claude API returned None - check console logs for error details")
-                    
-                    if claude_data:
-                        detail_text.text(f'✅ Claude APIで詳細データ取得成功: {len(claude_data)} 項目')
-                    else:
-                        detail_text.text(f'⚠️ Claude APIからデータを取得できませんでした')
-                    break
-            
-            if not matched and debug_mode:
-                st.write(f"Debug - No matching detail file found for {uploaded_file.name}")
+                # Claude APIで詳細データを読み取り
+                detail_image = Image.open(detail_file)
+                detail_image_used = detail_image.copy()  # 元画像をコピーして保存
+                
+                # 黒枠検出と切り抜き（50%固定）
+                detail_image_cropped = detect_black_frame_and_crop(detail_image, crop_ratio=50)
+                if not detail_image_cropped:
+                    detail_image_cropped = detail_image.copy()  # 黒枠検出できない場合は元画像を使用
+                
+                # Claude API呼び出しのデバッグ
+                if debug_mode:
+                    st.write(f"Debug - About to call Claude API for {detail_file.name}")
+                    st.write(f"Debug - API Key exists: {bool(st.session_state.claude_api_key)}")
+                    st.write(f"Debug - API Key length: {len(st.session_state.claude_api_key) if st.session_state.claude_api_key else 0}")
+                    st.write(f"Debug - Model: {st.session_state.get('claude_model', 'claude-3-haiku-20240307')}")
+                
+                claude_data = extract_data_with_claude(
+                    detail_image, 
+                    st.session_state.claude_api_key,
+                    st.session_state.get('claude_model', 'claude-3-haiku-20240307')
+                )
+                
+                if debug_mode:
+                    st.write(f"Debug - Claude API returned data: {claude_data}")
+                    if claude_data is None:
+                        st.write("Debug - Claude API returned None - check console logs for error details")
+                
+                if claude_data:
+                    detail_text.text(f'✅ Claude APIで詳細データ取得成功: {len(claude_data)} 項目')
+                else:
+                    detail_text.text(f'⚠️ Claude APIからデータを取得できませんでした')
+            else:
+                if debug_mode:
+                    st.write(f"Debug - No detail file at index {idx} (only {len(detail_files)} detail files)")
         elif debug_mode:
             if not st.session_state.get('claude_api_key'):
                 st.write("Debug - Claude API Key not set")
