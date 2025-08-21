@@ -1764,7 +1764,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                     )
                     
                     if debug_mode:
-                        st.write(f"Debug - Claude API response: {claude_data}")
+                        st.write(f"Debug - Claude API returned data for {detail_file.name}: {claude_data}")
                     
                     if claude_data:
                         detail_text.text(f'✅ Claude APIで詳細データ取得成功: {len(claude_data)} 項目')
@@ -2630,7 +2630,19 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         
                         # デバッグ：Claude APIデータの内容を確認
                         if debug_mode:
-                            st.write(f"Debug - Claude API data: {data}")
+                            st.write("=== Claude API Debug Info ===")
+                            st.write(f"1. result.get('claude_data') raw value: {result.get('claude_data')}")
+                            st.write(f"2. data type: {type(data)}")
+                            st.write(f"3. data contents: {data}")
+                            st.write(f"4. Is data empty dict? {data == {}}")
+                            st.write(f"5. detail_image exists? {result.get('detail_image') is not None}")
+                            st.write(f"6. detail_image_cropped exists? {result.get('detail_image_cropped') is not None}")
+                            st.write(f"7. Claude API Key set? {bool(st.session_state.get('claude_api_key'))}")
+                            if data:
+                                st.write(f"8. Data keys: {list(data.keys())}")
+                                for key, value in data.items():
+                                    st.write(f"   - {key}: {value} (type: {type(value)})")
+                            st.write("=========================")
                         
                         # Claude用のスタイルを定義
                         st.markdown("""
