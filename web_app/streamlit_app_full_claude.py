@@ -1204,8 +1204,7 @@ with col3:
     st.info(f"💱 交換レート: {rate:.2f}円/{unit}")
 
 # デバッグモード
-debug_mode = st.checkbox("🐛 デバッグモード", value=False, key="debug_mode", help="Claude APIのデバッグ情報を表示します")
-st.session_state.debug_mode = debug_mode
+debug_mode = st.checkbox("🐛 デバッグモード", value=False, key="debug_mode_checkbox", help="Claude APIのデバッグ情報を表示します")
 
 # 使い方ガイド
 show_analysis_help = st.checkbox("📖 解析の使い方を表示", value=False, key="show_analysis_help")
@@ -1528,7 +1527,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         detail_image_cropped = None  # 切り抜き後の画像を保存
         
         # デバッグ出力
-        if st.session_state.get('debug_mode', False):
+        if debug_mode:
             st.write(f"Debug - Claude API Key exists: {bool(st.session_state.get('claude_api_key'))}")
             st.write(f"Debug - Detail files count: {len(detail_files) if detail_files else 0}")
             if detail_files:
@@ -1540,7 +1539,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             # ファイル名のベースを取得（拡張子を除く）
             base_name = uploaded_file.name.rsplit('.', 1)[0]
             
-            if st.session_state.get('debug_mode', False):
+            if debug_mode:
                 st.write(f"Debug - Base name: {base_name}")
             
             # 対応する詳細画像を探す
@@ -1548,13 +1547,13 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             for detail_file in detail_files:
                 detail_base = detail_file.name.rsplit('.', 1)[0]
                 
-                if st.session_state.get('debug_mode', False):
+                if debug_mode:
                     st.write(f"Debug - Checking detail file: {detail_file.name} (base: {detail_base})")
                 
                 # ファイル名に共通部分があるか確認
                 if base_name in detail_base or detail_base in base_name or base_name.split('_')[0] in detail_base:
                     matched = True
-                    if st.session_state.get('debug_mode', False):
+                    if debug_mode:
                         st.write(f"Debug - MATCHED! Processing {detail_file.name}")
                     
                     detail_text.text(f'🤖 {detail_file.name} をClaude APIで解析中...')
@@ -1577,7 +1576,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                         st.session_state.get('claude_model', 'claude-3-haiku-20240307')
                     )
                     
-                    if st.session_state.get('debug_mode', False):
+                    if debug_mode:
                         st.write(f"Debug - Claude API response: {claude_data}")
                     
                     if claude_data:
@@ -1586,9 +1585,9 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                         detail_text.text(f'⚠️ Claude APIからデータを取得できませんでした')
                     break
             
-            if not matched and st.session_state.get('debug_mode', False):
+            if not matched and debug_mode:
                 st.write(f"Debug - No matching detail file found for {uploaded_file.name}")
-        elif st.session_state.get('debug_mode', False):
+        elif debug_mode:
             if not st.session_state.get('claude_api_key'):
                 st.write("Debug - Claude API Key not set")
             if not detail_files:
@@ -2443,7 +2442,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             data = {}
                         
                         # デバッグ：Claude APIデータの内容を確認
-                        if st.session_state.get('debug_mode', False):
+                        if debug_mode:
                             st.write(f"Debug - Claude API data: {data}")
                         
                         # Claude用のスタイルを定義
