@@ -120,13 +120,17 @@ def detect_black_frame_and_crop(image, crop_ratio=50):
 def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
     """Claude APIを使用してパチンコ画像からデータを抽出"""
     try:
+        print(f"Claude API called with model: {model}")
+        
         # 黒枠検出と切り取り（固定50%）
         cropped_image = detect_black_frame_and_crop(image, crop_ratio=50)
         if cropped_image:
             image_to_process = cropped_image
+            print("Using cropped image")
         else:
             # 黒枠が検出できない場合は元画像を使用
             image_to_process = image
+            print("Using original image (no black frame detected)")
         
         # 画像をbase64エンコード
         buffered = io.BytesIO()
@@ -1199,6 +1203,10 @@ with col3:
     rate = st.session_state.settings.get('exchange_rate', 3.57145 if st.session_state.game_type == "パチンコ" else 17.86)
     st.info(f"💱 交換レート: {rate:.2f}円/{unit}")
 
+# デバッグモード
+debug_mode = st.checkbox("🐛 デバッグモード", value=False, key="debug_mode", help="Claude APIのデバッグ情報を表示します")
+st.session_state.debug_mode = debug_mode
+
 # 使い方ガイド
 show_analysis_help = st.checkbox("📖 解析の使い方を表示", value=False, key="show_analysis_help")
 if show_analysis_help:
@@ -1519,16 +1527,36 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         detail_image_used = None  # 使用した詳細画像を保存（元画像）
         detail_image_cropped = None  # 切り抜き後の画像を保存
         
+        # デバッグ出力
+        if st.session_state.get('debug_mode', False):
+            st.write(f"Debug - Claude API Key exists: {bool(st.session_state.get('claude_api_key'))}")
+            st.write(f"Debug - Detail files count: {len(detail_files) if detail_files else 0}")
+            if detail_files:
+                st.write(f"Debug - Detail file names: {[f.name for f in detail_files]}")
+            st.write(f"Debug - Current file: {uploaded_file.name}")
+        
         # Claude APIが有効かつ詳細画像がある場合
         if st.session_state.get('claude_api_key') and detail_files:
             # ファイル名のベースを取得（拡張子を除く）
             base_name = uploaded_file.name.rsplit('.', 1)[0]
             
+            if st.session_state.get('debug_mode', False):
+                st.write(f"Debug - Base name: {base_name}")
+            
             # 対応する詳細画像を探す
+            matched = False
             for detail_file in detail_files:
                 detail_base = detail_file.name.rsplit('.', 1)[0]
+                
+                if st.session_state.get('debug_mode', False):
+                    st.write(f"Debug - Checking detail file: {detail_file.name} (base: {detail_base})")
+                
                 # ファイル名に共通部分があるか確認
                 if base_name in detail_base or detail_base in base_name or base_name.split('_')[0] in detail_base:
+                    matched = True
+                    if st.session_state.get('debug_mode', False):
+                        st.write(f"Debug - MATCHED! Processing {detail_file.name}")
+                    
                     detail_text.text(f'🤖 {detail_file.name} をClaude APIで解析中...')
                     
                     # ファイルポインタをリセット
@@ -1548,11 +1576,23 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                         st.session_state.claude_api_key,
                         st.session_state.get('claude_model', 'claude-3-haiku-20240307')
                     )
+                    
+                    if st.session_state.get('debug_mode', False):
+                        st.write(f"Debug - Claude API response: {claude_data}")
+                    
                     if claude_data:
                         detail_text.text(f'✅ Claude APIで詳細データ取得成功: {len(claude_data)} 項目')
                     else:
                         detail_text.text(f'⚠️ Claude APIからデータを取得できませんでした')
                     break
+            
+            if not matched and st.session_state.get('debug_mode', False):
+                st.write(f"Debug - No matching detail file found for {uploaded_file.name}")
+        elif st.session_state.get('debug_mode', False):
+            if not st.session_state.get('claude_api_key'):
+                st.write("Debug - Claude API Key not set")
+            if not detail_files:
+                st.write("Debug - No detail files uploaded")
             
             # OCR処理時間の詳細表示（デバッグモードの場合）
             if ocr_data and ocr_data.get('ocr_timings'):
