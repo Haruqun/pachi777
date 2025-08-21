@@ -287,12 +287,35 @@ def extract_data_with_claude_with_prompt(image, api_key, prompt, model="claude-3
         
         # エラーチェック
         if response.status_code != 200:
-            print(f"Claude API Error: {response.status_code}")
-            print(f"Response: {response.text}")
-            # Streamlitの警告も表示（デバッグ用）
+            error_msg = f"Claude API Error {response.status_code}"
+            print(f"{error_msg}: {response.text}")
+            
+            # エラーメッセージを解析
+            try:
+                error_data = response.json()
+                if 'error' in error_data:
+                    error_detail = error_data['error'].get('message', response.text)
+                    error_type = error_data['error'].get('type', 'unknown')
+                else:
+                    error_detail = response.text
+                    error_type = 'unknown'
+            except:
+                error_detail = response.text
+                error_type = 'unknown'
+            
+            # Streamlitにエラー表示（常に表示）
             import streamlit as st
-            if st.session_state.get('debug_mode', False):
-                st.error(f"Claude API Error {response.status_code}: {response.text[:500]}")
+            if response.status_code == 401:
+                st.error("❌ Claude API認証エラー: APIキーが無効です")
+            elif response.status_code == 429:
+                st.error("❌ Claude APIレート制限: しばらく待ってから再試行してください")
+            elif response.status_code == 400:
+                if 'credit' in error_detail.lower() or 'balance' in error_detail.lower():
+                    st.error("❌ Claude APIクレジット不足: APIの利用制限に達しました")
+                else:
+                    st.error(f"❌ Claude APIリクエストエラー: {error_detail[:200]}")
+            else:
+                st.error(f"❌ Claude APIエラー ({response.status_code}): {error_detail[:200]}")
             return None
         
         # 結果取得
@@ -413,12 +436,36 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
         
         # エラーチェック
         if response.status_code != 200:
-            print(f"Claude API Error: {response.status_code}")
-            print(f"Response: {response.text}")
-            # Streamlitの警告も表示（デバッグ用）
+            error_msg = f"Claude API Error {response.status_code}"
+            print(f"{error_msg}: {response.text}")
+            
+            # エラーメッセージを解析
+            try:
+                error_data = response.json()
+                if 'error' in error_data:
+                    error_detail = error_data['error'].get('message', response.text)
+                    error_type = error_data['error'].get('type', 'unknown')
+                else:
+                    error_detail = response.text
+                    error_type = 'unknown'
+            except:
+                error_detail = response.text
+                error_type = 'unknown'
+            
+            # Streamlitにエラー表示（常に表示）
             import streamlit as st
-            if st.session_state.get('debug_mode', False):
-                st.error(f"Claude API Error {response.status_code}: {response.text[:500]}")
+            if response.status_code == 401:
+                st.error("❌ Claude API認証エラー: APIキーが無効です")
+            elif response.status_code == 429:
+                st.error("❌ Claude APIレート制限: しばらく待ってから再試行してください")
+            elif response.status_code == 400:
+                if 'credit' in error_detail.lower() or 'balance' in error_detail.lower():
+                    st.error("❌ Claude APIクレジット不足: APIの利用制限に達しました")
+                else:
+                    st.error(f"❌ Claude APIリクエストエラー: {error_detail[:200]}")
+            else:
+                st.error(f"❌ Claude APIエラー ({response.status_code}): {error_detail[:200]}")
+            
             return None
         
         # 結果取得
@@ -426,12 +473,31 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
         result = response_data["content"][0]["text"]
         
         # JSON形式でパース
-        json_data = json.loads(result)
-        print(f"Claude API Success: {json_data}")
-        return json_data
+        try:
+            json_data = json.loads(result)
+            print(f"Claude API Success: {json_data}")
+            return json_data
+        except json.JSONDecodeError as e:
+            print(f"JSON Parse Error: {str(e)}")
+            print(f"Raw response: {result}")
+            import streamlit as st
+            st.error(f"❌ Claude APIの応答が正しいJSON形式ではありません: {result[:200]}")
+            return None
         
+    except requests.exceptions.Timeout:
+        print("Claude API Timeout")
+        import streamlit as st
+        st.error("❌ Claude APIタイムアウト: 応答時間が長すぎます")
+        return None
+    except requests.exceptions.ConnectionError:
+        print("Claude API Connection Error")
+        import streamlit as st
+        st.error("❌ Claude API接続エラー: ネットワークを確認してください")
+        return None
     except Exception as e:
         print(f"Claude API Exception: {str(e)}")
+        import streamlit as st
+        st.error(f"❌ Claude APIエラー: {str(e)}")
         return None
 
 def extract_machine_number_from_orange_bar(image):
