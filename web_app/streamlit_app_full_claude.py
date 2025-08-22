@@ -198,6 +198,13 @@ def preprocess_image_for_claude(image):
         import numpy as np
         from PIL import Image, ImageDraw, ImageFont
         
+        # まず黒枠を検出
+        black_frame_info = detect_black_frame_regions(image)
+        
+        if black_frame_info and st.session_state.get('show_preprocess_preview', False):
+            # 黒枠検出のオーバーレイ画像を返す（デバッグ用）
+            return black_frame_info['debug_overlay']
+        
         # PILイメージをOpenCV形式に変換
         img_array = np.array(image)
         height, width = img_array.shape[:2]
@@ -270,6 +277,90 @@ def preprocess_image_for_claude(image):
         import streamlit as st
         if st.session_state.get('debug_mode', False):
             st.error(f"❌ 画像前処理エラー: {str(e)}")
+        return None
+
+def detect_black_frame_regions(image):
+    """画像から黒枠領域を検出して、各領域の座標と可視化画像を返す"""
+    try:
+        import cv2
+        import numpy as np
+        from PIL import Image, ImageDraw
+        
+        # PILイメージをOpenCV形式に変換
+        img_array = np.array(image)
+        if len(img_array.shape) == 2:
+            gray = img_array
+        else:
+            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        
+        height, width = gray.shape
+        
+        # エッジ検出
+        edges = cv2.Canny(gray, 30, 100)
+        
+        # 輪郭検出
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # オーバーレイ画像作成（デバッグ用）
+        overlay = image.copy()
+        draw = ImageDraw.Draw(overlay)
+        
+        # 検出された領域を格納
+        detected_regions = []
+        
+        # 面積でソートして大きい順に処理
+        sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
+        
+        for i, contour in enumerate(sorted_contours[:10]):  # 上位10個まで
+            area = cv2.contourArea(contour)
+            x, y, w, h = cv2.boundingRect(contour)
+            
+            # 画像サイズに対する割合を計算
+            area_ratio = area / (width * height)
+            
+            # ある程度の大きさの矩形のみを対象
+            if area_ratio > 0.01 and w > width * 0.1 and h > height * 0.05:
+                detected_regions.append({
+                    'x': x,
+                    'y': y, 
+                    'width': w,
+                    'height': h,
+                    'area': area,
+                    'area_ratio': area_ratio
+                })
+                
+                # オーバーレイに矩形を描画
+                color = (255, 0, 0) if i == 0 else (0, 255, 0) if i == 1 else (0, 0, 255)
+                draw.rectangle([x, y, x+w, y+h], outline=color, width=3)
+                
+                # ラベルを追加
+                label = f"Region {i+1}: {w}x{h} ({area_ratio*100:.1f}%)"
+                draw.text((x+5, y+5), label, fill=color)
+        
+        # 右上の黒枠候補を特定（累計スタートなどが含まれる領域）
+        right_top_frame = None
+        for region in detected_regions:
+            # 右上にある程度の大きさの枠を探す
+            if (region['x'] > width * 0.4 and 
+                region['y'] < height * 0.5 and
+                region['width'] > width * 0.2 and
+                region['height'] > height * 0.1):
+                right_top_frame = region
+                # この領域を特別にマーク
+                x, y, w, h = region['x'], region['y'], region['width'], region['height']
+                draw.rectangle([x-2, y-2, x+w+2, y+h+2], outline=(255, 255, 0), width=5)
+                draw.text((x+5, y-20), "RIGHT TOP FRAME (TARGET)", fill=(255, 255, 0))
+                break
+        
+        return {
+            'regions': detected_regions,
+            'right_top_frame': right_top_frame,
+            'debug_overlay': overlay,
+            'original_size': (width, height)
+        }
+        
+    except Exception as e:
+        print(f"Black frame detection error: {str(e)}")
         return None
 
 def detect_black_frame_and_crop(image, crop_ratio=50):
