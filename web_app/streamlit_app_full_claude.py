@@ -191,6 +191,87 @@ else:
         st.session_state.claude_api_key = None
         st.session_state.claude_model = None
 
+def preprocess_image_for_claude(image):
+    """Claude API用に画像を前処理して必要な領域のみを抽出"""
+    try:
+        import cv2
+        import numpy as np
+        from PIL import Image, ImageDraw, ImageFont
+        
+        # PILイメージをOpenCV形式に変換
+        img_array = np.array(image)
+        height, width = img_array.shape[:2]
+        
+        # 結果を格納する画像（白背景）
+        result_height = int(height * 0.6)  # 高さを60%に縮小
+        result_img = Image.new('RGB', (width, result_height), 'white')
+        
+        # 1. 右上の黒枠領域を検出して切り出し（累計スタート、通常を含む）
+        # 黒枠は通常、画面右上の20-40%の領域にある
+        roi_top = int(height * 0.15)
+        roi_bottom = int(height * 0.45)
+        roi_left = int(width * 0.5)
+        roi_right = width
+        
+        # 右上領域を切り出し
+        top_right_region = image.crop((roi_left, roi_top, roi_right, roi_bottom))
+        
+        # 2. 画面上部の大当り回数・初当り回数領域（赤青の大きな数字）
+        jackpot_top = int(height * 0.35)
+        jackpot_bottom = int(height * 0.50)
+        jackpot_region = image.crop((0, jackpot_top, width, jackpot_bottom))
+        
+        # 3. 画面下部のテーブル領域（初回特賞スタートを含む）
+        table_top = int(height * 0.75)
+        table_bottom = int(height * 0.95)
+        table_region = image.crop((0, table_top, width, table_bottom))
+        
+        # 4. ラウンド内訳領域（超・中・小）
+        round_top = int(height * 0.50)
+        round_bottom = int(height * 0.65)
+        round_left = 0
+        round_right = int(width * 0.4)
+        round_region = image.crop((round_left, round_top, round_right, round_bottom))
+        
+        # 領域を結合
+        current_y = 10
+        
+        # ラベルを追加して貼り付け
+        draw = ImageDraw.Draw(result_img)
+        
+        # 右上領域（累計スタート、通常）
+        draw.text((10, current_y), "【右上黒枠領域】", fill='black')
+        current_y += 20
+        result_img.paste(top_right_region, (10, current_y))
+        current_y += top_right_region.height + 20
+        
+        # 大当り回数領域
+        draw.text((10, current_y), "【大当り回数・初当り回数】", fill='black')
+        current_y += 20
+        result_img.paste(jackpot_region, (10, current_y))
+        current_y += jackpot_region.height + 20
+        
+        # ラウンド内訳
+        draw.text((10, current_y), "【ラウンド内訳】", fill='black')
+        current_y += 20
+        result_img.paste(round_region, (10, current_y))
+        current_y += round_region.height + 20
+        
+        # 下部テーブル
+        draw.text((10, current_y), "【下部テーブル（初回特賞スタート）】", fill='black')
+        current_y += 20
+        if current_y + table_region.height <= result_height:
+            result_img.paste(table_region, (10, current_y))
+        
+        return result_img
+        
+    except Exception as e:
+        print(f"Image preprocessing error: {str(e)}")
+        import streamlit as st
+        if st.session_state.get('debug_mode', False):
+            st.error(f"❌ 画像前処理エラー: {str(e)}")
+        return None
+
 def detect_black_frame_and_crop(image, crop_ratio=50):
     """黒枠領域を検出して上部を切り取る（固定50%）"""
     # PILからOpenCV形式に変換
@@ -348,15 +429,40 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
                 st.error("❌ No API key provided to extract_data_with_claude")
             return None
         
-        # 黒枠検出と切り取り（固定50%）
-        cropped_image = detect_black_frame_and_crop(image, crop_ratio=50)
-        if cropped_image:
-            image_to_process = cropped_image
-            print("Using cropped image")
+        # 画像前処理モードの確認（デバッグ用）
+        preprocess_mode = st.session_state.get('claude_preprocess_mode', False)
+        
+        if preprocess_mode:
+            # 新しい前処理: 必要な領域のみを抽出して結合
+            print("Using preprocessed image mode")
+            if st.session_state.get('debug_mode', False):
+                st.info("🔧 画像前処理モード: 必要な領域のみを抽出")
+            
+            # 画像前処理関数を呼び出し
+            preprocessed_image = preprocess_image_for_claude(image)
+            if preprocessed_image:
+                image_to_process = preprocessed_image
+                print("Using preprocessed image")
+            else:
+                # 前処理に失敗した場合は従来の処理にフォールバック
+                print("Preprocessing failed, falling back to cropping")
+                cropped_image = detect_black_frame_and_crop(image, crop_ratio=50)
+                if cropped_image:
+                    image_to_process = cropped_image
+                    print("Using cropped image")
+                else:
+                    image_to_process = image
+                    print("Using original image")
         else:
-            # 黒枠が検出できない場合は元画像を使用
-            image_to_process = image
-            print("Using original image (no black frame detected)")
+            # 従来の処理: 黒枠検出と切り取り（固定50%）
+            cropped_image = detect_black_frame_and_crop(image, crop_ratio=50)
+            if cropped_image:
+                image_to_process = cropped_image
+                print("Using cropped image")
+            else:
+                # 黒枠が検出できない場合は元画像を使用
+                image_to_process = image
+                print("Using original image (no black frame detected)")
         
         # 画像をbase64エンコード
         buffered = io.BytesIO()
@@ -1504,6 +1610,23 @@ with col3:
 
 # デバッグモード
 debug_mode = st.checkbox("🐛 デバッグモード", value=False, key="debug_mode_checkbox", help="Claude APIのデバッグ情報を表示します")
+
+# Claude API前処理モード（デバッグ用）
+if debug_mode:
+    st.session_state.claude_preprocess_mode = st.checkbox(
+        "🔧 画像前処理モード（実験的）", 
+        value=st.session_state.get('claude_preprocess_mode', False),
+        help="Claude API用に画像を前処理して必要な領域のみを抽出します"
+    )
+    
+    # 前処理画像のプレビュー
+    if st.session_state.get('claude_preprocess_mode', False):
+        show_preprocess_preview = st.checkbox(
+            "👁️ 前処理画像プレビュー",
+            value=False,
+            help="前処理後の画像を表示します"
+        )
+        st.session_state.show_preprocess_preview = show_preprocess_preview
 
 # 使い方ガイド
 show_analysis_help = st.checkbox("📖 解析の使い方を表示", value=False, key="show_analysis_help")
@@ -2759,6 +2882,16 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     if result.get('detail_image_cropped'):
                         st.markdown("##### 📋 出玉詳細（切り抜き画像・Claude API解析済み）")
                         st.image(result['detail_image_cropped'], use_column_width=True)
+                        
+                        # 前処理画像のプレビュー（デバッグモード時）
+                        if st.session_state.get('show_preprocess_preview', False) and result.get('detail_image'):
+                            with st.expander("🔧 前処理画像プレビュー（デバッグ用）"):
+                                # 元の詳細画像から前処理画像を生成
+                                preprocessed = preprocess_image_for_claude(result['detail_image'])
+                                if preprocessed:
+                                    st.image(preprocessed, caption="前処理後の画像（Claude APIに送信される画像）", use_column_width=True)
+                                else:
+                                    st.warning("前処理画像の生成に失敗しました")
 
                     # 元画像を折りたたみ可能に
                     with st.expander("📷 元画像を表示"):
