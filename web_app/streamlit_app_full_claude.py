@@ -336,9 +336,16 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
     try:
         print(f"Claude API called with model: {model}")
         
+        # デバッグ表示
+        import streamlit as st
+        if st.session_state.get('debug_mode', False):
+            st.info(f"📡 extract_data_with_claude called with model: {model}")
+        
         # APIキーの確認
         if not api_key:
             print("Claude API Error: No API key provided")
+            if st.session_state.get('debug_mode', False):
+                st.error("❌ No API key provided to extract_data_with_claude")
             return None
         
         # 黒枠検出と切り取り（固定50%）
@@ -432,7 +439,18 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
             ]
         }
         
+        # デバッグ：API呼び出し前
+        import streamlit as st
+        if st.session_state.get('debug_mode', False):
+            st.info(f"📤 Sending request to Claude API...")
+            st.write(f"  URL: {api_url}")
+            st.write(f"  Headers: x-api-key={api_key[:10]}... (length: {len(api_key)})")
+        
         response = requests.post(api_url, headers=headers, json=request_data)
+        
+        # デバッグ：API呼び出し後
+        if st.session_state.get('debug_mode', False):
+            st.info(f"📥 Received response: Status Code = {response.status_code}")
         
         # エラーチェック
         if response.status_code != 200:
@@ -476,6 +494,8 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
         try:
             json_data = json.loads(result)
             print(f"Claude API Success: {json_data}")
+            if st.session_state.get('debug_mode', False):
+                st.success(f"✅ Claude API Success! Parsed JSON data")
             return json_data
         except json.JSONDecodeError as e:
             print(f"JSON Parse Error: {str(e)}")
@@ -1826,21 +1846,36 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 
                 # Claude API呼び出しのデバッグ
                 if debug_mode:
-                    st.write(f"Debug - About to call Claude API for {detail_file.name}")
-                    st.write(f"Debug - API Key exists: {bool(st.session_state.claude_api_key)}")
-                    st.write(f"Debug - API Key length: {len(st.session_state.claude_api_key) if st.session_state.claude_api_key else 0}")
-                    st.write(f"Debug - Model: {st.session_state.get('claude_model', 'claude-3-haiku-20240307')}")
+                    st.write("="*50)
+                    st.write(f"🔍 Debug - Claude API Call for {detail_file.name}")
+                    st.write(f"  📍 API Key exists: {bool(st.session_state.claude_api_key)}")
+                    st.write(f"  📍 API Key length: {len(st.session_state.claude_api_key) if st.session_state.claude_api_key else 0}")
+                    st.write(f"  📍 Model: {st.session_state.get('claude_model', 'claude-3-haiku-20240307')}")
+                    st.write(f"  📍 Calling Claude API NOW...")
                 
-                claude_data = extract_data_with_claude(
-                    detail_image, 
-                    st.session_state.claude_api_key,
-                    st.session_state.get('claude_model', 'claude-3-haiku-20240307')
-                )
+                # デバッグ用のエラーキャプチャ
+                api_error = None
+                try:
+                    claude_data = extract_data_with_claude(
+                        detail_image, 
+                        st.session_state.claude_api_key,
+                        st.session_state.get('claude_model', 'claude-3-haiku-20240307')
+                    )
+                except Exception as e:
+                    api_error = str(e)
+                    claude_data = None
+                    if debug_mode:
+                        st.error(f"❌ Exception during Claude API call: {api_error}")
                 
                 if debug_mode:
-                    st.write(f"Debug - Claude API returned data: {claude_data}")
-                    if claude_data is None:
-                        st.write("Debug - Claude API returned None - check console logs for error details")
+                    if claude_data is not None:
+                        st.success(f"✅ Claude API SUCCESS! Returned data: {claude_data}")
+                    else:
+                        st.error(f"❌ Claude API FAILED! Returned: None")
+                        if api_error:
+                            st.error(f"  Error details: {api_error}")
+                        st.warning("⚠️ Check the error messages above for details")
+                    st.write("="*50)
                 
                 if claude_data:
                     detail_text.text(f'✅ Claude APIで詳細データ取得成功: {len(claude_data)} 項目')
