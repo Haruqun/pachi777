@@ -2549,6 +2549,12 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                                 rotation_metrics['first_hit_balls'] = estimated_balls
                                 rotation_metrics['rotation_rate_1'] = (first_hit_spins * 1000) / (estimated_balls * 4)
                                 rotation_metrics['first_hit_estimation'] = True  # 推定値であることを記録
+                            else:
+                                # 最低値がプラスの場合でも、初回特賞スタートの値があれば表示用に保存
+                                # ただし、使用玉数が不明なので回転率は計算できない
+                                rotation_metrics['first_hit_balls'] = 0  # 使用玉数は不明
+                                rotation_metrics['rotation_rate_1'] = 0  # 計算不可
+                                rotation_metrics['first_hit_estimation'] = False
                     
                 # 通常回転数もClaude APIから取得して回転率②を計算
                 if claude_data.get("通常"):
@@ -3024,7 +3030,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             else:
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
                             # デバッグ情報（初当たりまで）
-                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}{unit}使用</div>'
+                            if metrics.get("first_hit_balls", 0) > 0:
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}{unit}使用</div>'
+                            else:
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転（使用{unit}数不明）</div>'
                             
                         # 回転率②は常に表示（0の場合も含む）
                         if metrics.get('rotation_rate_2', 0) >= 0:
