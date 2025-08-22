@@ -514,7 +514,12 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
             print(f"JSON Parse Error: {str(e)}")
             print(f"Raw response: {result}")
             import streamlit as st
-            st.error(f"❌ Claude APIの応答が正しいJSON形式ではありません: {result[:200]}")
+            # エラーをセッションステートに保存（消えないようにする）
+            if 'claude_errors' not in st.session_state:
+                st.session_state.claude_errors = []
+            error_msg = f"❌ Claude APIの応答が正しいJSON形式ではありません:\n{result[:500]}"
+            st.session_state.claude_errors.append(error_msg)
+            st.error(error_msg)
             return None
         
     except requests.exceptions.Timeout:
@@ -1731,6 +1736,13 @@ if uploaded_files:
         status_text = st.empty()
         detail_text = st.empty()
         
+        # Claude APIエラー表示用（消えないようにする）
+        if 'claude_errors' not in st.session_state:
+            st.session_state.claude_errors = []
+        
+        # 解析開始時にエラーをクリア
+        st.session_state.claude_errors = []
+        
         # プログレスバーをセッションステートに保存
         st.session_state.progress_bar = progress_bar
         st.session_state.status_text = status_text
@@ -1868,6 +1880,9 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 
                 # デバッグ用のエラーキャプチャ
                 api_error = None
+                # エラーメッセージ用のコンテナを作成（消えないようにする）
+                error_container = st.container()
+                
                 try:
                     claude_data = extract_data_with_claude(
                         detail_image, 
@@ -1877,7 +1892,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 except Exception as e:
                     api_error = str(e)
                     claude_data = None
-                    if debug_mode:
+                    with error_container:
                         st.error(f"❌ Exception during Claude API call: {api_error}")
                 
                 if debug_mode:
@@ -2680,6 +2695,13 @@ with st.expander("使い方と注意事項を確認する"):
     - OCRで読み取った累計スタートを使用して精密計算
     - 初当たりが検出されない場合は回転率①は表示されません
     """)
+
+# Claude APIエラーがある場合は表示
+if 'claude_errors' in st.session_state and st.session_state.claude_errors:
+    st.markdown("### ⚠️ Claude APIエラー")
+    for error in st.session_state.claude_errors:
+        st.error(error)
+    st.markdown("---")
 
 # 解析結果を表示
 if 'analysis_results' in st.session_state and st.session_state.analysis_results:
