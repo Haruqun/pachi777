@@ -373,16 +373,9 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
         
         # プロンプト作成
         prompt = """
-この画像のパチンコ・パチスロの収支管理データから以下の項目のみを抽出して、JSON形式で出力してください。
-
-【読み取り方法】
-各項目は「項目名」というテキストラベルと、その直下にある数値のペアで構成されています。
-テキストラベルから離れた位置にある数値は、その項目の値ではありません。
-必ずテキストラベルの直下（数十ピクセル以内）の数値のみを読み取ってください。
-
-例：
-- 「累計スタート」というテキストの直下にある数値が累計スタートの値
-- 「最高出玉」というテキストの直下にある数値は最高出玉の値（累計スタートではない）
+以下のJSONフォーマットで、画像から読み取ったデータのみを出力してください。
+説明文、前置き、後書きなど、JSON以外のテキストは一切含めないでください。
+純粋なJSONのみを返してください。
 
 {
   "台番号": "",
@@ -400,8 +393,14 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
   }
 }
 
-数値は整数型、文字列は文字列型で正確に読み取ってください。
-画像内の該当する数値とテキストのみを抽出し、上記8項目以外は出力しないでください。
+【読み取り方法】
+各項目は「項目名」というテキストラベルと、その直下にある数値のペアで構成されています。
+テキストラベルから離れた位置にある数値は、その項目の値ではありません。
+必ずテキストラベルの直下（数十ピクセル以内）の数値のみを読み取ってください。
+
+例：
+- 「累計スタート」というテキストの直下にある数値が累計スタートの値
+- 「最高出玉」というテキストの直下にある数値は最高出玉の値（累計スタートではない）
 
 重要な注意事項：
 1. スタート関連の項目を必ず区別してください
@@ -425,6 +424,8 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
    - 「最高出玉」の数値は累計スタートではありません
    - 「累計スタート」というテキストラベルの直下の数値のみが累計スタートです
    - 通常、累計スタートは回転数（100～10000程度）、最高出玉は玉数（1000～50000程度）です
+
+重要：JSONのみを出力してください。説明文は不要です。{で始まり}で終わるJSONデータのみを返してください。
 """
         
         # API呼び出し
@@ -505,22 +506,36 @@ def extract_data_with_claude(image, api_key, model="claude-3-haiku-20240307"):
         
         # JSON形式でパース
         try:
+            # まず、そのままパースを試みる
             json_data = json.loads(result)
             print(f"Claude API Success: {json_data}")
             if st.session_state.get('debug_mode', False):
                 st.success(f"✅ Claude API Success! Parsed JSON data")
             return json_data
         except json.JSONDecodeError as e:
-            print(f"JSON Parse Error: {str(e)}")
-            print(f"Raw response: {result}")
-            import streamlit as st
-            # エラーをセッションステートに保存（消えないようにする）
-            if 'claude_errors' not in st.session_state:
-                st.session_state.claude_errors = []
-            error_msg = f"❌ Claude APIの応答が正しいJSON形式ではありません:\n{result[:500]}"
-            st.session_state.claude_errors.append(error_msg)
-            st.error(error_msg)
-            return None
+            # JSONパースに失敗した場合、JSONだけを抽出
+            try:
+                # {で始まり}で終わる部分を探す
+                import re
+                json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', result, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group()
+                    json_data = json.loads(json_str)
+                    print(f"Claude API Success (extracted JSON): {json_data}")
+                    if st.session_state.get('debug_mode', False):
+                        st.warning(f"⚠️ JSONを抽出してパース成功")
+                    return json_data
+            except:
+                print(f"JSON Parse Error: {str(e)}")
+                print(f"Raw response: {result}")
+                import streamlit as st
+                # エラーをセッションステートに保存（消えないようにする）
+                if 'claude_errors' not in st.session_state:
+                    st.session_state.claude_errors = []
+                error_msg = f"❌ Claude APIの応答が正しいJSON形式ではありません:\n{result[:500]}"
+                st.session_state.claude_errors.append(error_msg)
+                st.error(error_msg)
+                return None
         
     except requests.exceptions.Timeout:
         print("Claude API Timeout")
