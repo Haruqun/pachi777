@@ -3011,8 +3011,17 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             return "zero"
 
                     unit = get_unit()
-                    first_hit_text = f"{result['first_hit_val']:,}{unit}" if result['first_hit_val'] is not None else "なし"
-                    first_hit_class = get_value_class(result['first_hit_val']) if result['first_hit_val'] is not None else ""
+                    # 初当たり玉数の表示を改善
+                    if result['first_hit_val'] is not None:
+                        first_hit_text = f"{result['first_hit_val']:,}{unit}"
+                        first_hit_class = get_value_class(result['first_hit_val'])
+                    else:
+                        # グラフ最低値がプラスの場合は特別な表示
+                        if result.get('min_val', 0) > 0:
+                            first_hit_text = "不明（グラフ範囲外）"
+                        else:
+                            first_hit_text = "なし"
+                        first_hit_class = ""
 
                     # 補正係数の表示を準備（非表示にする）
                     correction_info = ""
@@ -3033,7 +3042,12 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             if metrics.get("first_hit_balls", 0) > 0:
                                 rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}{unit}使用</div>'
                             else:
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転（使用{unit}数不明）</div>'
+                                # グラフ最低値がプラスの場合の説明を追加
+                                if result.get('min_val', 0) > 0:
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転</div>'
+                                    rotation_detail += f'<div style="font-size: 0.7em; color: #999; margin-left: 20px;">　 （初当たりが早いか持ち玉遊技のため計算不可）</div>'
+                                else:
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転（使用{unit}数不明）</div>'
                             
                         # 回転率②は常に表示（0の場合も含む）
                         if metrics.get('rotation_rate_2', 0) >= 0:
