@@ -201,9 +201,15 @@ def preprocess_image_for_claude(image):
         # まず黒枠を検出
         black_frame_info = detect_black_frame_regions(image)
         
-        if black_frame_info and st.session_state.get('show_preprocess_preview', False):
-            # 黒枠検出のオーバーレイ画像を返す（デバッグ用）
-            return black_frame_info['debug_overlay']
+        if st.session_state.get('show_preprocess_preview', False):
+            if black_frame_info:
+                # 黒枠検出のオーバーレイ画像を返す（デバッグ用）
+                return black_frame_info['debug_overlay']
+            else:
+                # 黒枠検出に失敗した場合はエラーメッセージ
+                import streamlit as st
+                st.error("黒枠検出に失敗しました。元の画像を使用します。")
+                return None
         
         # PILイメージをOpenCV形式に変換
         img_array = np.array(image)
@@ -286,6 +292,48 @@ def detect_black_frame_regions(image):
         import numpy as np
         from PIL import Image, ImageDraw
         
+        # まずはシンプルにオーバーレイだけ作成（デバッグ用）
+        overlay = image.copy()
+        draw = ImageDraw.Draw(overlay)
+        
+        # 画像サイズを取得
+        width, height = image.size
+        
+        # テスト用: 固定領域を描画
+        # 右上の想定領域（累計スタートがある場所）
+        test_region = {
+            'x': int(width * 0.55),
+            'y': int(height * 0.15),
+            'width': int(width * 0.4),
+            'height': int(height * 0.25)
+        }
+        
+        # 黄色で囲む
+        x, y, w, h = test_region['x'], test_region['y'], test_region['width'], test_region['height']
+        draw.rectangle([x, y, x+w, y+h], outline=(255, 255, 0), width=5)
+        draw.text((x+5, y-20), "TEST: Expected Right Top Frame", fill=(255, 255, 0))
+        
+        # 下部のテーブル領域（初回特賞スタートがある場所）
+        table_region = {
+            'x': 0,
+            'y': int(height * 0.75),
+            'width': width,
+            'height': int(height * 0.2)
+        }
+        
+        x, y, w, h = table_region['x'], table_region['y'], table_region['width'], table_region['height']
+        draw.rectangle([x, y, x+w, y+h], outline=(0, 255, 255), width=3)
+        draw.text((x+5, y+5), "TEST: Expected Table Region", fill=(0, 255, 255))
+        
+        return {
+            'regions': [test_region, table_region],
+            'right_top_frame': test_region,
+            'debug_overlay': overlay,
+            'original_size': (width, height)
+        }
+        
+        # 以下は元のコード（一旦コメントアウト）
+        '''
         # PILイメージをOpenCV形式に変換
         img_array = np.array(image)
         if len(img_array.shape) == 2:
@@ -358,9 +406,15 @@ def detect_black_frame_regions(image):
             'debug_overlay': overlay,
             'original_size': (width, height)
         }
+        '''
         
     except Exception as e:
         print(f"Black frame detection error: {str(e)}")
+        import streamlit as st
+        if st.session_state.get('debug_mode', False):
+            st.error(f"❌ 黒枠検出エラー: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def detect_black_frame_and_crop(image, crop_ratio=50):
