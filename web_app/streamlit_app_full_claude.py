@@ -324,9 +324,9 @@ def detect_and_draw_black_frames(image):
             else:
                 color = (0, 100, 255)  # 青
             
-            draw.rectangle([x, y, x+w, y+h], outline=color, width=2)
-            # サイズ情報を表示
-            draw.text((x, y-15), f"{w}x{h}", fill=color)
+            draw.rectangle([x, y, x+w, y+h], outline=color, width=5)
+            # サイズ情報を表示（フォントサイズを大きく）
+            draw.text((x, y-25), f"{w}x{h}", fill=color, font_size=24)
     
     return overlay
 
