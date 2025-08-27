@@ -7,6 +7,9 @@ AI Graph Analysis Report - Claude Edition
 # テストモード設定
 OVERLAY_TEST_MODE = True  # 黒枠検出テストモード
 
+# デフォルト画像幅（標準サイズ）
+DEFAULT_IMAGE_WIDTH = 400
+
 import streamlit as st
 from datetime import datetime
 import cv2
@@ -288,6 +291,23 @@ def preprocess_image_for_claude(image):
             st.error(f"❌ 画像前処理エラー: {str(e)}")
         return None
 
+def resize_to_default_width(image, target_width=DEFAULT_IMAGE_WIDTH):
+    """画像を指定幅にリサイズ（アスペクト比保持）
+    
+    Args:
+        image: PIL Image
+        target_width: 目標の横幅（デフォルト400px）
+    
+    Returns:
+        リサイズされたPIL Image
+    """
+    width, height = image.size
+    if width != target_width:
+        ratio = target_width / width
+        new_height = int(height * ratio)
+        return image.resize((target_width, new_height), Image.Resampling.LANCZOS)
+    return image
+
 def detect_and_draw_black_frames(image, overlay_mask=True):
     """黒枠を検出して線を引いたオーバーレイ画像を返す
     
@@ -341,6 +361,15 @@ def detect_and_draw_black_frames(image, overlay_mask=True):
             overlay_path = "web_app/mask/overlay.png"
             if os.path.exists(overlay_path):
                 mask_img = Image.open(overlay_path)
+                
+                # 画像サイズに応じてoverlay.pngをスケール調整
+                img_width = overlay.size[0]
+                # overlay.pngは元々800px幅の画像用なので、現在の画像幅に合わせてスケール
+                scale_ratio = img_width / 800.0  # 元のoverlay.pngは800px幅の画像用
+                if scale_ratio != 1.0:
+                    mask_w_scaled = int(mask_img.size[0] * scale_ratio)
+                    mask_h_scaled = int(mask_img.size[1] * scale_ratio)
+                    mask_img = mask_img.resize((mask_w_scaled, mask_h_scaled), Image.Resampling.LANCZOS)
                 
                 # 黒枠の右下を基準点とする
                 x, y, w, h = black_frame_rect
@@ -1928,6 +1957,9 @@ if OVERLAY_TEST_MODE and detail_files:
             # 画像を読み込み
             detail_image = Image.open(detail_file)
             
+            # デフォルト幅にリサイズ
+            detail_image = resize_to_default_width(detail_image)
+            
             # 黒枠を検出してオーバーレイ
             overlay = detect_and_draw_black_frames(detail_image)
             
@@ -2163,6 +2195,9 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             # 画像を読み込み
             detail_image = Image.open(detail_file)
             
+            # デフォルト幅にリサイズ
+            detail_image = resize_to_default_width(detail_image)
+            
             # 黒枠を検出してオーバーレイ
             overlay = detect_and_draw_black_frames(detail_image)
             
@@ -2241,6 +2276,10 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         
         # 画像を読み込み
         image = Image.open(uploaded_file)
+        
+        # デフォルト幅にリサイズ（グラフ画像）
+        image = resize_to_default_width(image)
+        
         img_array = np.array(image)
         height, width = img_array.shape[:2]
         
@@ -2283,6 +2322,9 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 
                 # Claude APIで詳細データを読み取り
                 detail_image = Image.open(detail_file)
+                
+                # デフォルト幅にリサイズ
+                detail_image = resize_to_default_width(detail_image)
                 detail_image_used = detail_image.copy()  # 元画像をコピーして保存
                 
                 # 黒枠検出と切り抜き（50%固定）
