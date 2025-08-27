@@ -214,7 +214,7 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
 9. スタート（現在の回転数）
 10. 超/中/小の各回数
 11. 最高出玉
-12. 初回持玉スタート
+12. 初回特賞スタート
 
 JSON形式で結果を返してください。数値は単位なしの数字のみで返してください。
 表示されていない項目はnullとしてください。
@@ -2608,7 +2608,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                     if claude_data.get('initial_ball_starts') is not None:
                                         html_content += f'''
                                         <div class="stat-item">
-                                            <span class="stat-label">🎱 初回持玉スタート</span>
+                                            <span class="stat-label">🎱 初回特賞スタート</span>
                                             <span class="stat-value">{claude_data['initial_ball_starts']}回</span>
                                         </div>'''
                                     
@@ -2686,28 +2686,44 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 回転率データの準備（パチンコのみ）
                     rotation_html = ""
                     rotation_detail = ""
-                    if result.get('rotation_metrics') and st.session_state.game_type == 'パチンコ':
-                        metrics = result['rotation_metrics']
-                        if metrics.get('rotation_rate_1', 0) >= 0:
-                            if metrics['rotation_rate_1'] > 0:
-                                # 異常値チェック（現実的な範囲: 10-35回/千円）
-                                warning = " ⚠️" if metrics['rotation_rate_1'] < 10 or metrics['rotation_rate_1'] > 35 else ""
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{metrics["rotation_rate_1"]:.1f}回/千円{warning}</span></div>'
-                            else:
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
-                            # デバッグ情報（初当たりまで）
-                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}{unit}使用</div>'
+                    if st.session_state.game_type == 'パチンコ':
+                        # Claude AIから通常回転数を取得して回転率①を計算
+                        rotation_rate_1_calculated = False
+                        if result.get('claude_analysis') and result['claude_analysis'].get('success'):
+                            claude_data = result['claude_analysis'].get('data', {})
+                            if claude_data.get('normal_rotations') and result.get('first_hit_val'):
+                                normal_rotations = claude_data['normal_rotations']
+                                first_hit_balls = abs(result['first_hit_val'])
+                                if first_hit_balls > 0:
+                                    rotation_rate_1 = (normal_rotations / first_hit_balls) * 250
+                                    warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {normal_rotations}回転 ÷ {first_hit_balls}{unit}使用</div>'
+                                    rotation_rate_1_calculated = True
+                        
+                        # AI取得できなかった場合は従来のグラフから取得
+                        if not rotation_rate_1_calculated and result.get('rotation_metrics'):
+                            metrics = result['rotation_metrics']
+                            if metrics.get('rotation_rate_1', 0) >= 0:
+                                if metrics['rotation_rate_1'] > 0:
+                                    warning = " ⚠️" if metrics['rotation_rate_1'] < 10 or metrics['rotation_rate_1'] > 35 else ""
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{metrics["rotation_rate_1"]:.1f}回/千円{warning}</span></div>'
+                                else:
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}{unit}使用</div>'
                             
                         # 回転率②は常に表示（0の場合も含む）
-                        if metrics.get('rotation_rate_2', 0) >= 0:
-                            if metrics['rotation_rate_2'] > 0:
-                                # 異常値チェック（現実的な範囲: 10-30回/千円）
-                                warning = " ⚠️" if metrics['rotation_rate_2'] < 10 or metrics['rotation_rate_2'] > 30 else ""
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{metrics["rotation_rate_2"]:.1f}回/千円{warning}</span></div>'
-                            else:
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
-                            # デバッグ情報（通常時）
-                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {metrics["normal_decline_spins"]}回転 ÷ {metrics["normal_decline_balls"]}{unit}使用</div>'
+                        if result.get('rotation_metrics'):
+                            metrics = result['rotation_metrics']
+                            if metrics.get('rotation_rate_2', 0) >= 0:
+                                if metrics['rotation_rate_2'] > 0:
+                                    # 異常値チェック（現実的な範囲: 10-30回/千円）
+                                    warning = " ⚠️" if metrics['rotation_rate_2'] < 10 or metrics['rotation_rate_2'] > 30 else ""
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{metrics["rotation_rate_2"]:.1f}回/千円{warning}</span></div>'
+                                else:
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
+                                # デバッグ情報（通常時）
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {metrics["normal_decline_spins"]}回転 ÷ {metrics["normal_decline_balls"]}{unit}使用</div>'
                         
                         # 回転率③（現在スタートベース）の表示
                         if metrics.get('rotation_rate_3', 0) > 0:
@@ -2721,9 +2737,20 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 初当たり関連のHTMLを条件分岐で生成
                     first_hit_html = ""
                     if st.session_state.game_type == 'パチンコ':
-                        first_hit_spins = (result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0
+                        # Claude AIから初当たり回転数を取得（なければグラフから）
+                        first_hit_spins = 0
+                        if result.get('claude_analysis') and result['claude_analysis'].get('success'):
+                            claude_data = result['claude_analysis'].get('data', {})
+                            # 通常回転数を初当たり回転数として使用
+                            if claude_data.get('normal_rotations'):
+                                first_hit_spins = claude_data['normal_rotations']
+                        
+                        if first_hit_spins == 0:
+                            # AI取得できなかった場合はグラフから取得
+                            first_hit_spins = (result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0
+                        
                         first_hit_html = f'<div class="stat-item"><span class="stat-label">🎰 初当たり{unit}数</span><span class="stat-value {first_hit_class}">{first_hit_text}</span></div>'
-                        first_hit_html += f'<div class="stat-item"><span class="stat-label">🎲 初当たり回転数</span><span class="stat-value">{first_hit_spins}回</span></div>'
+                        first_hit_html += f'<div class="stat-item"><span class="stat-label">🎲 初当たり回転数</span><span class="stat-value">{first_hit_spins:,}回</span></div>'
                     
                     # 大当り回数の計算
                     if st.session_state.game_type == 'パチンコ':
