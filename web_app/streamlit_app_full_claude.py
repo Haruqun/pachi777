@@ -311,22 +311,18 @@ def detect_and_draw_black_frames(image):
     # 面積でソートして大きい順に処理
     sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
     
-    # 検出された輪郭を描画（上位20個まで）
-    for i, contour in enumerate(sorted_contours[:20]):
+    # 最大の輪郭のみを描画
+    if sorted_contours:
+        contour = sorted_contours[0]  # 最大の輪郭のみ
         x, y, w, h = cv2.boundingRect(contour)
-        # 小さすぎる矩形は除外
-        if w > 50 and h > 30:
-            # 色を変えて描画（最初は黄色、次は赤、その後は青）
-            if i == 0:
-                color = (255, 255, 0)  # 黄色
-            elif i == 1:
-                color = (255, 0, 0)    # 赤
-            else:
-                color = (0, 100, 255)  # 青
-            
-            draw.rectangle([x, y, x+w, y+h], outline=color, width=5)
-            # サイズ情報を表示（フォントサイズを大きく）
-            draw.text((x, y-25), f"{w}x{h}", fill=color, font_size=24)
+        
+        # 画像サイズに対して十分大きい場合のみ描画
+        img_height, img_width = img_array.shape[:2]
+        if w > img_width * 0.3 and h > img_height * 0.2:
+            # 太い黄色の線で描画
+            draw.rectangle([x, y, x+w, y+h], outline=(255, 255, 0), width=10)
+            # サイズ情報を表示
+            draw.text((x+10, y+10), f"最大黒枠: {w}x{h}px", fill=(255, 255, 0))
     
     return overlay
 
