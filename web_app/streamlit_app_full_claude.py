@@ -4,8 +4,8 @@ AI Graph Analysis Report - Claude Edition
 高精度データ抽出・解析システム with Claude API
 """
 
-# テストモード設定
-OVERLAY_TEST_MODE = True  # 黒枠検出テストモード
+# テストモード設定（廃止）
+OVERLAY_TEST_MODE = False  # 黒枠検出テストモード（廃止）
 
 # デフォルト画像幅（標準サイズ）
 DEFAULT_IMAGE_WIDTH = 400
@@ -200,89 +200,17 @@ else:
 def preprocess_image_for_claude(image):
     """Claude API用に画像を前処理して必要な領域のみを抽出"""
     try:
-        import cv2
-        import numpy as np
-        from PIL import Image, ImageDraw, ImageFont
+        # 黒枠を検出して上半分を切り抜く
+        cropped_image = detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=True)
         
-        # まず黒枠を検出
-        black_frame_info = detect_black_frame_regions(image)
-        
-        if st.session_state.get('show_preprocess_preview', False):
-            if black_frame_info:
-                # 黒枠検出のオーバーレイ画像を返す（デバッグ用）
-                return black_frame_info['debug_overlay']
-            else:
-                # 黒枠検出に失敗した場合はエラーメッセージ
-                import streamlit as st
-                st.error("黒枠検出に失敗しました。元の画像を使用します。")
-                return None
-        
-        # PILイメージをOpenCV形式に変換
-        img_array = np.array(image)
-        height, width = img_array.shape[:2]
-        
-        # 結果を格納する画像（白背景）
-        result_height = int(height * 0.6)  # 高さを60%に縮小
-        result_img = Image.new('RGB', (width, result_height), 'white')
-        
-        # 1. 右上の黒枠領域を検出して切り出し（累計スタート、通常を含む）
-        # 黒枠は通常、画面右上の20-40%の領域にある
-        roi_top = int(height * 0.15)
-        roi_bottom = int(height * 0.45)
-        roi_left = int(width * 0.5)
-        roi_right = width
-        
-        # 右上領域を切り出し
-        top_right_region = image.crop((roi_left, roi_top, roi_right, roi_bottom))
-        
-        # 2. 画面上部の大当り回数・初当り回数領域（赤青の大きな数字）
-        jackpot_top = int(height * 0.35)
-        jackpot_bottom = int(height * 0.50)
-        jackpot_region = image.crop((0, jackpot_top, width, jackpot_bottom))
-        
-        # 3. 画面下部のテーブル領域（初回特賞スタートを含む）
-        table_top = int(height * 0.75)
-        table_bottom = int(height * 0.95)
-        table_region = image.crop((0, table_top, width, table_bottom))
-        
-        # 4. ラウンド内訳領域（超・中・小）
-        round_top = int(height * 0.50)
-        round_bottom = int(height * 0.65)
-        round_left = 0
-        round_right = int(width * 0.4)
-        round_region = image.crop((round_left, round_top, round_right, round_bottom))
-        
-        # 領域を結合
-        current_y = 10
-        
-        # ラベルを追加して貼り付け
-        draw = ImageDraw.Draw(result_img)
-        
-        # 右上領域（累計スタート、通常）
-        draw.text((10, current_y), "【右上黒枠領域】", fill='black')
-        current_y += 20
-        result_img.paste(top_right_region, (10, current_y))
-        current_y += top_right_region.height + 20
-        
-        # 大当り回数領域
-        draw.text((10, current_y), "【大当り回数・初当り回数】", fill='black')
-        current_y += 20
-        result_img.paste(jackpot_region, (10, current_y))
-        current_y += jackpot_region.height + 20
-        
-        # ラウンド内訳
-        draw.text((10, current_y), "【ラウンド内訳】", fill='black')
-        current_y += 20
-        result_img.paste(round_region, (10, current_y))
-        current_y += round_region.height + 20
-        
-        # 下部テーブル
-        draw.text((10, current_y), "【下部テーブル（初回特賞スタート）】", fill='black')
-        current_y += 20
-        if current_y + table_region.height <= result_height:
-            result_img.paste(table_region, (10, current_y))
-        
-        return result_img
+        # 切り抜いた画像をそのまま返す（解析用）
+        if cropped_image:
+            return cropped_image
+        else:
+            # 黒枠検出に失敗した場合は元画像を使用
+            import streamlit as st
+            st.warning("黒枠検出に失敗しました。元の画像を使用します。")
+            return image
         
     except Exception as e:
         print(f"Image preprocessing error: {str(e)}")
@@ -358,11 +286,6 @@ def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False
         if w > img_width * 0.2 and h > img_height * 0.1:  # 閾値を緩める
             # 黒枠の位置のみ保存（描画はしない）
             black_frame_rect = (x, y, w, h)
-            
-            # 黒枠の50%位置に線を引く
-            middle_y = y + h // 2
-            draw.line([(0, middle_y), (img_width, middle_y)], fill=(255, 0, 0), width=3)
-            draw.text((10, middle_y - 25), f"50% Line (Y={middle_y})", fill=(255, 0, 0))
     
     # overlay.pngを重ねる
     if overlay_mask and black_frame_rect:
@@ -403,17 +326,8 @@ def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False
                 overlay.paste(mask_img, (paste_x, paste_y), mask_img)
                 overlay = overlay.convert('RGB')
                 
-                # デバッグ情報テキストを追加
-                draw = ImageDraw.Draw(overlay)
-                debug_text = [
-                    f"黒枠: x={x}, y={y}, w={w}, h={h}",
-                    f"黒枠左上: ({x}, {y})",
-                    f"Overlay: {mask_w}x{mask_h}px",
-                    f"Overlay位置: ({paste_x}, {paste_y})",
-                    f"重なり確認: 黒枠とOverlayの左上が一致"
-                ]
-                for i, text in enumerate(debug_text):
-                    draw.text((10, 10 + i*20), text, fill=(0, 255, 0))
+                # デバッグ情報は削除（必要に応じてコメントアウト）
+                # draw = ImageDraw.Draw(overlay)
         except Exception as e:
             print(f"Overlay.png読み込みエラー: {str(e)}")
     
@@ -423,12 +337,6 @@ def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False
         middle_y = y + h // 2
         # 画像の一番上から50%線までを切り抜く
         overlay = overlay.crop((0, 0, overlay.width, middle_y))
-        
-        # デバッグ情報を追加
-        draw = ImageDraw.Draw(overlay)
-        draw.text((10, overlay.height - 30), 
-                 f"Cropped at Y={middle_y} (Upper half of black frame)", 
-                 fill=(0, 255, 255))
     
     return overlay
 
@@ -1966,40 +1874,7 @@ with col2:
         key="detail_uploader"
     )
 
-# テストモード用ボタン（アップロード直下に配置）
-if OVERLAY_TEST_MODE and detail_files:
-    st.markdown("---")
-    st.markdown("### 🔬 黒枠検出テストモード")
-    if st.button("🔬 黒枠検出テストを実行", type="primary", use_container_width=True):
-        # テストモード実行
-        st.markdown("### 🔬 黒枠検出結果")
-        
-        for idx, detail_file in enumerate(detail_files):
-            st.markdown(f"#### 画像 {idx + 1}: {detail_file.name}")
-            
-            # 画像を読み込み
-            detail_image = Image.open(detail_file)
-            
-            # デフォルト幅にリサイズ
-            detail_image = resize_to_default_width(detail_image)
-            
-            # 黒枠を検出してオーバーレイ（上半分切り抜きも実行）
-            overlay = detect_and_draw_black_frames(detail_image, overlay_mask=True, crop_upper_half=True)
-            
-            # 2列で表示
-            col1_test, col2_test = st.columns(2)
-            with col1_test:
-                st.markdown("**元画像**")
-                st.image(detail_image, use_column_width=True)
-            with col2_test:
-                st.markdown("**黒枠検出結果**")
-                st.image(overlay, use_column_width=True)
-            
-            st.markdown("---")
-        
-        st.success("✅ 黒枠検出テスト完了")
-        st.stop()  # ここで処理を停止
-    st.markdown("---")
+# テストモード削除（廃止）
 
 if uploaded_files:
     # 重複チェック
@@ -2207,71 +2082,39 @@ elif st.session_state.uploaded_file_names:
 # 解析を実行
 if uploaded_files and st.session_state.get('start_analysis', False):
     
-    # テストモードの場合
-    if OVERLAY_TEST_MODE:
-        st.markdown("### 🔬 黒枠検出テストモード")
-        
-        # 詳細画像のみ処理
-        for idx, detail_file in enumerate(detail_files or []):
-            st.markdown(f"#### 画像 {idx + 1}")
-            
-            # 画像を読み込み
-            detail_image = Image.open(detail_file)
-            
-            # デフォルト幅にリサイズ
-            detail_image = resize_to_default_width(detail_image)
-            
-            # 黒枠を検出してオーバーレイ（上半分切り抜きも実行）
-            overlay = detect_and_draw_black_frames(detail_image, overlay_mask=True, crop_upper_half=True)
-            
-            # 2列で表示
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown("**元画像**")
-                st.image(detail_image, use_column_width=True)
-            with col2:
-                st.markdown("**黒枠検出結果**")
-                st.image(overlay, use_column_width=True)
-            
-            st.markdown("---")
-        
-        # テストモード終了
-        st.session_state.start_analysis = False
-        st.success("✅ 黒枠検出テスト完了")
-        
-    else:
-        # 通常モード（既存の処理）
-        # 解析結果セクション
-        st.markdown("### 🎯 解析結果")
-        
-        # 現在使用中のプリセットを表示
-        current_preset_name = st.session_state.get('current_preset_name', 'デフォルト')
-        
-        st.info(f"📋 使用プリセット: **{current_preset_name}**")
+    # テストモード削除（通常の解析処理のみ実行）
+    # 通常モード（既存の処理）
+    # 解析結果セクション
+    st.markdown("### 🎯 解析結果")
     
-        # 現在の設定値を表示
-        with st.expander("🔧 使用中の設定値", expanded=False):
-            current_settings = st.session_state.get('settings', default_settings)
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.markdown("**切り抜き設定**")
-                st.text(f"上方向: {current_settings.get('crop_top', 246)}px")
-                st.text(f"下方向: {current_settings.get('crop_bottom', 247)}px")
-                st.text(f"左余白: {current_settings.get('left_margin', 125)}px")
-                st.text(f"右余白: {current_settings.get('right_margin', 125)}px")
-        
-            with col2:
-                st.markdown("**検索範囲**")
-                st.text(f"開始位置: +{current_settings.get('search_start_offset', 50)}px")
-                st.text(f"終了位置: +{current_settings.get('search_end_offset', 500)}px")
-        
-            with col3:
-                st.markdown("**グリッドライン調整**")
-                st.text(f"+30k: {current_settings.get('grid_30k_offset', 0):+d}px")
-                st.text(f"-30k: {current_settings.get('grid_minus_30k_offset', 0):+d}px")
+    # 現在使用中のプリセットを表示
+    current_preset_name = st.session_state.get('current_preset_name', 'デフォルト')
     
-        # セッションステートからプログレスバーを取得（既に上部で作成済み）
+    st.info(f"📋 使用プリセット: **{current_preset_name}**")
+    
+    # 現在の設定値を表示
+    with st.expander("🔧 使用中の設定値", expanded=False):
+        current_settings = st.session_state.get('settings', default_settings)
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("**切り抜き設定**")
+            st.text(f"上方向: {current_settings.get('crop_top', 246)}px")
+            st.text(f"下方向: {current_settings.get('crop_bottom', 247)}px")
+            st.text(f"左余白: {current_settings.get('left_margin', 125)}px")
+            st.text(f"右余白: {current_settings.get('right_margin', 125)}px")
+        
+        with col2:
+            st.markdown("**検索範囲**")
+            st.text(f"開始位置: +{current_settings.get('search_start_offset', 50)}px")
+            st.text(f"終了位置: +{current_settings.get('search_end_offset', 500)}px")
+        
+        with col3:
+            st.markdown("**グリッドライン調整**")
+            st.text(f"+30k: {current_settings.get('grid_30k_offset', 0):+d}px")
+            st.text(f"-30k: {current_settings.get('grid_minus_30k_offset', 0):+d}px")
+    
+    # セッションステートからプログレスバーを取得（既に上部で作成済み）
         progress_bar = st.session_state.get('progress_bar')
         status_text = st.session_state.get('status_text')
         detail_text = st.session_state.get('detail_text')
