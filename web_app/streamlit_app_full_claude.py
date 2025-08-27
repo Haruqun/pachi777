@@ -179,6 +179,122 @@ def preprocess_detail_image(image):
     return processed
 # ========== 出玉詳細画像処理用の関数群ここまで ==========
 
+def analyze_with_claude(image, api_key, model="claude-3-5-sonnet-20241022"):
+    """Claude APIを使って出玉詳細画像を解析する
+    
+    Args:
+        image: PIL Image形式の画像
+        api_key: Claude APIキー
+        model: 使用するClaudeモデル
+        
+    Returns:
+        解析結果の辞書
+    """
+    import anthropic
+    import base64
+    from io import BytesIO
+    
+    try:
+        # 画像をbase64エンコード
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode()
+        
+        # Claude APIクライアントを初期化
+        client = anthropic.Anthropic(api_key=api_key)
+        
+        # プロンプトを作成
+        prompt = """この画像はパチンコの出玉詳細情報です。以下の情報を抽出してください：
+
+1. 台番号
+2. 機種名
+3. 総投資金額
+4. 総獲得玉数
+5. 収支（プラス/マイナス）
+6. 大当たり回数
+7. 各大当たりの詳細（何回転目、獲得玉数など）
+8. その他の重要な情報
+
+JSON形式で結果を返してください。数値は半角数字のみで返してください。
+例：
+{
+    "machine_number": "123",
+    "machine_name": "機種名",
+    "total_investment": 10000,
+    "total_balls_won": 5000,
+    "profit_loss": -5000,
+    "jackpot_count": 3,
+    "jackpot_details": [
+        {"rotation": 100, "balls_won": 2000},
+        {"rotation": 250, "balls_won": 1500}
+    ],
+    "additional_info": "その他の情報"
+}"""
+        
+        # Claude APIを呼び出し
+        response = client.messages.create(
+            model=model,
+            max_tokens=2000,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/png",
+                                "data": img_base64
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": prompt
+                        }
+                    ]
+                }
+            ]
+        )
+        
+        # 応答を解析
+        result_text = response.content[0].text
+        
+        # JSONを解析
+        import json
+        import re
+        
+        # JSONブロックを抽出
+        json_match = re.search(r'\{[\s\S]*\}', result_text)
+        if json_match:
+            try:
+                result_dict = json.loads(json_match.group())
+                return {
+                    'success': True,
+                    'data': result_dict,
+                    'raw_text': result_text
+                }
+            except json.JSONDecodeError:
+                # JSON解析に失敗した場合はテキストとして返す
+                return {
+                    'success': True,
+                    'data': None,
+                    'raw_text': result_text
+                }
+        else:
+            return {
+                'success': True,
+                'data': None,
+                'raw_text': result_text
+            }
+            
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e),
+            'data': None,
+            'raw_text': None
+        }
+
 def extract_machine_number_from_orange_bar(image):
     """オレンジバー付近から台番号を抽出"""
     try:
@@ -1171,6 +1287,79 @@ if show_analysis_help:
     - 解析結果はCSVダウンロード可能です
     """)
 
+# ========== サイドバー：管理者機能 ==========
+with st.sidebar:
+    st.markdown("### ⚙️ 管理者機能")
+    
+    # ログイン状態を確認
+    if 'is_admin' not in st.session_state:
+        st.session_state.is_admin = False
+    
+    if not st.session_state.is_admin:
+        # ログインフォーム
+        with st.form("admin_login"):
+            password = st.text_input("管理者パスワード", type="password")
+            submit = st.form_submit_button("ログイン")
+            
+            if submit:
+                if password == st.session_state.GLOBAL_ADMIN_PASSWORD:
+                    st.session_state.is_admin = True
+                    st.success("✅ 管理者としてログインしました")
+                    st.rerun()
+                else:
+                    st.error("❌ パスワードが正しくありません")
+    else:
+        # 管理者としてログイン済み
+        st.success("🔐 管理者モード")
+        
+        # Claude API設定
+        st.markdown("#### 🤖 Claude API設定")
+        
+        # APIキー入力
+        api_key = st.text_input(
+            "Claude APIキー",
+            value=st.session_state.get('claude_api_key', ''),
+            type="password",
+            help="Anthropic社のClaude APIキーを入力してください"
+        )
+        
+        # モデル選択
+        model = st.selectbox(
+            "使用モデル",
+            ["claude-3-5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
+            index=0,
+            help="使用するClaudeモデルを選択"
+        )
+        
+        if st.button("APIキーを保存", type="primary"):
+            if api_key:
+                st.session_state.claude_api_key = api_key
+                st.session_state.claude_model = model
+                st.success("✅ APIキーを保存しました（リブートまで有効）")
+            else:
+                st.error("❌ APIキーを入力してください")
+        
+        # 現在の設定状況
+        if st.session_state.get('claude_api_key'):
+            st.info(f"📝 APIキー設定済み: {st.session_state.claude_api_key[:10]}...")
+            st.info(f"🤖 使用モデル: {st.session_state.get('claude_model', 'claude-3-5-sonnet-20241022')}")
+        
+        # ログアウト
+        if st.button("ログアウト", type="secondary"):
+            st.session_state.is_admin = False
+            st.rerun()
+    
+    # Claude API利用状況の表示
+    st.markdown("---")
+    if st.session_state.get('claude_api_key'):
+        st.markdown("### 🎯 Claude API")
+        st.success("✅ 利用可能")
+        st.caption("出玉詳細画像から詳細データを抽出できます")
+    else:
+        st.markdown("### 🎯 Claude API")
+        st.warning("⚠️ 未設定")
+        st.caption("管理者ログイン後、APIキーを設定してください")
+
 # STEP 1: ファイルアップロード
 st.markdown("### 📤 STEP 1: 解析したいグラフ画像をアップロード")
 st.caption("site7のグラフ画像を選択してください（複数可）")
@@ -1552,12 +1741,27 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         
         # 出玉詳細画像の処理（もしあれば）
         detail_image_processed = None
+        claude_analysis_result = None
         if detail_files and idx < len(detail_files):
             try:
                 detail_text.text(f'📊 出玉詳細画像を処理中...')
                 detail_image = Image.open(detail_files[idx])
                 detail_image_processed = preprocess_detail_image(detail_image)
                 detail_text.text(f'✅ 出玉詳細画像処理完了')
+                
+                # Claude APIで解析（APIキーが設定されている場合）
+                if st.session_state.get('claude_api_key'):
+                    detail_text.text(f'🤖 Claude APIで解析中...')
+                    claude_analysis_result = analyze_with_claude(
+                        detail_image_processed,
+                        st.session_state.claude_api_key,
+                        st.session_state.get('claude_model', 'claude-3-5-sonnet-20241022')
+                    )
+                    if claude_analysis_result['success']:
+                        detail_text.text(f'✅ Claude API解析完了')
+                    else:
+                        detail_text.text(f'⚠️ Claude API解析エラー: {claude_analysis_result.get("error", "不明なエラー")}')
+                
             except Exception as e:
                 print(f"出玉詳細画像処理エラー: {str(e)}")
                 detail_text.text(f'⚠️ 出玉詳細画像処理エラー')
@@ -2068,6 +2272,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 'cropped_image': cropped_img,  # 切り抜き画像
                 'overlay_image': overlay_img,  # オーバーレイ画像
                 'detail_image_processed': detail_image_processed,  # 処理済み出玉詳細画像
+                'claude_analysis': claude_analysis_result,  # Claude API解析結果
                 'success': True,
                 'max_val': int(max_val),
                 'min_val': int(min_val),
@@ -2240,6 +2445,51 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         with st.expander("📊 出玉詳細画像（処理済み）"):
                             st.image(result['detail_image_processed'], use_column_width=True)
                             st.caption("黒枠検出 + overlay.png + 50%切り抜き適用済み")
+                    
+                    # Claude API解析結果（もしあれば）
+                    if result.get('claude_analysis') and result['claude_analysis']['success']:
+                        with st.expander("🤖 Claude AI解析結果"):
+                            claude_data = result['claude_analysis'].get('data')
+                            if claude_data:
+                                # JSON形式で解析結果が取得できた場合
+                                col1, col2 = st.columns(2)
+                                
+                                with col1:
+                                    st.markdown("**📋 基本情報**")
+                                    if 'machine_number' in claude_data:
+                                        st.write(f"台番号: {claude_data['machine_number']}")
+                                    if 'machine_name' in claude_data:
+                                        st.write(f"機種名: {claude_data['machine_name']}")
+                                    if 'total_investment' in claude_data:
+                                        st.write(f"総投資金額: ¥{claude_data['total_investment']:,}")
+                                    if 'total_balls_won' in claude_data:
+                                        st.write(f"総獲得玉数: {claude_data['total_balls_won']:,}玉")
+                                
+                                with col2:
+                                    st.markdown("**💰 収支情報**")
+                                    if 'profit_loss' in claude_data:
+                                        profit = claude_data['profit_loss']
+                                        if profit >= 0:
+                                            st.success(f"収支: +¥{profit:,}")
+                                        else:
+                                            st.error(f"収支: -¥{abs(profit):,}")
+                                    if 'jackpot_count' in claude_data:
+                                        st.write(f"大当たり回数: {claude_data['jackpot_count']}回")
+                                
+                                # 大当たり詳細
+                                if 'jackpot_details' in claude_data and claude_data['jackpot_details']:
+                                    st.markdown("**🎰 大当たり詳細**")
+                                    jackpot_df = pd.DataFrame(claude_data['jackpot_details'])
+                                    st.dataframe(jackpot_df, use_container_width=True)
+                                
+                                # その他の情報
+                                if 'additional_info' in claude_data and claude_data['additional_info']:
+                                    st.markdown("**📝 その他の情報**")
+                                    st.info(claude_data['additional_info'])
+                            else:
+                                # テキスト形式で結果が返された場合
+                                st.markdown("**解析結果（テキスト）**")
+                                st.text(result['claude_analysis']['raw_text'])
 
                     # 元画像を折りたたみ可能に
                     with st.expander("📷 元画像を表示"):
