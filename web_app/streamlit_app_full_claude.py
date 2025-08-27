@@ -179,7 +179,7 @@ def preprocess_detail_image(image):
     return processed
 # ========== 出玉詳細画像処理用の関数群ここまで ==========
 
-def analyze_with_claude(image, api_key, model="claude-3-haiku-20240307"):
+def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
     """Claude APIを使って出玉詳細画像を解析する（HTTP API版）
     
     Args:
@@ -1351,9 +1351,9 @@ with st.sidebar:
         # モデル選択
         model = st.selectbox(
             "使用モデル",
-            ["claude-3-haiku-20240307", "claude-3-5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229"],
+            ["claude-3-5-haiku-20241022", "claude-3-haiku-20240307", "claude-3-5-sonnet-20241022"],
             index=0,
-            help="使用するClaudeモデルを選択（Haikuが最も高速・安価）"
+            help="使用するClaudeモデルを選択（Haiku 3.5が最も高速・安価）"
         )
         
         if st.button("APIキーを保存", type="primary"):
@@ -1367,7 +1367,7 @@ with st.sidebar:
         # 現在の設定状況
         if st.session_state.get('claude_api_key'):
             st.info(f"📝 APIキー設定済み: {st.session_state.claude_api_key[:10]}...")
-            st.info(f"🤖 使用モデル: {st.session_state.get('claude_model', 'claude-3-haiku-20240307')}")
+            st.info(f"🤖 使用モデル: {st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')}")
         
         # ログアウト
         if st.button("ログアウト", type="secondary"):
@@ -1781,7 +1781,7 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                         claude_analysis_result = analyze_with_claude(
                             detail_image_processed,
                             st.session_state.claude_api_key,
-                            st.session_state.get('claude_model', 'claude-3-haiku-20240307')
+                            st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
                         )
                         if claude_analysis_result['success']:
                             detail_text.text(f'✅ Claude API解析完了')
