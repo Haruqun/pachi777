@@ -3184,42 +3184,76 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     '最低値': result['min_val'],
                     '現在値': result['current_val'],
                     '初当たり球数': result['first_hit_val'] if result['first_hit_val'] is not None else None,
-                    '初当たり回転数': (result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0,
+                    # Claude AIから初回特賞スタートを初当たり回転数として取得
+                    '初当たり回転数': (
+                        result.get('claude_analysis', {}).get('data', {}).get('initial_ball_starts', 0) or
+                        (result.get('rotation_metrics') or {}).get('first_hit_spins', 0)
+                    ) if result.get('first_hit_val') is not None else 0,
                     '収支（円）': int(result['current_val'] * st.session_state.settings.get('exchange_rate', 3.57145)),
                     '総獲得球数': result.get('total_jackpot_balls', 0),
                     '大当り回数（グラフ）': result.get('jackpot_count', 0),  # 列名を変更
                     '色': result['dominant_color']
                 }
                 
-                # 回転率データを追加（利用可能な場合）
-                if result.get('rotation_metrics'):
-                    metrics = result['rotation_metrics']
-                    if metrics['rotation_rate_1'] > 0:
-                        # 異常値に絵文字を追加（現実的な範囲: 10-35回/千円）
-                        rate1_str = f"{metrics['rotation_rate_1']:.1f}"
-                        if metrics['rotation_rate_1'] < 10 or metrics['rotation_rate_1'] > 35:
-                            rate1_str += " ⚠️"  # 異常値警告
-                        row['回転率①'] = rate1_str
+                # 回転率データを追加
+                # Claude AIからデータを取得（なければグラフから）
+                claude_data = result.get('claude_analysis', {}).get('data', {}) if result.get('claude_analysis') and result['claude_analysis'].get('success') else {}
+                
+                # 回転率①の計算（初回特賞スタートベース）
+                if claude_data.get('initial_ball_starts') and result.get('first_hit_val'):
+                    initial_ball_starts = claude_data['initial_ball_starts']
+                    first_hit_balls = abs(result['first_hit_val'])
+                    if first_hit_balls > 0:
+                        rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
+                        warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
+                        row['回転率①'] = f"{rotation_rate_1:.1f}{warning}"
                     else:
                         row['回転率①'] = '-'
-                    
-                    if metrics['rotation_rate_2'] > 0:
-                        # 異常値に絵文字を追加（現実的な範囲: 10-30回/千円）
-                        rate2_str = f"{metrics['rotation_rate_2']:.1f}"
-                        if metrics['rotation_rate_2'] < 10 or metrics['rotation_rate_2'] > 30:
-                            rate2_str += " ⚠️"  # 異常値警告
-                        row['回転率②'] = rate2_str
+                elif result.get('rotation_metrics'):
+                    metrics = result['rotation_metrics']
+                    if metrics.get('rotation_rate_1', 0) > 0:
+                        warning = " ⚠️" if metrics['rotation_rate_1'] < 10 or metrics['rotation_rate_1'] > 35 else ""
+                        row['回転率①'] = f"{metrics['rotation_rate_1']:.1f}{warning}"
+                    else:
+                        row['回転率①'] = '-'
+                else:
+                    row['回転率①'] = '-'
+                
+                # 回転率②の計算（通常回転数ベース）
+                if claude_data.get('normal_rotations'):
+                    normal_rotations = claude_data['normal_rotations']
+                    total_jackpot_balls = result.get('total_jackpot_balls', 0)
+                    first_hit_balls = abs(result.get('first_hit_val', 0))
+                    normal_balls = first_hit_balls + total_jackpot_balls
+                    if normal_balls > 0:
+                        rotation_rate_2 = (normal_rotations / normal_balls) * 250
+                        warning = " ⚠️" if rotation_rate_2 < 10 or rotation_rate_2 > 30 else ""
+                        row['回転率②'] = f"{rotation_rate_2:.1f}{warning}"
                     else:
                         row['回転率②'] = '-'
-                        
-                    # 詳細データ
-                    row['初当り使用玉'] = metrics['first_hit_balls'] if metrics['first_hit_balls'] > 0 else '-'
-                    
-                    # 通常回転数を追加
-                    if 'normal_decline_spins' in metrics:
-                        row['通常回転数'] = metrics['normal_decline_spins'] if metrics['normal_decline_spins'] > 0 else 0
+                elif result.get('rotation_metrics'):
+                    metrics = result['rotation_metrics']
+                    if metrics.get('rotation_rate_2', 0) > 0:
+                        warning = " ⚠️" if metrics['rotation_rate_2'] < 10 or metrics['rotation_rate_2'] > 30 else ""
+                        row['回転率②'] = f"{metrics['rotation_rate_2']:.1f}{warning}"
                     else:
-                        row['通常回転数'] = 0
+                        row['回転率②'] = '-'
+                else:
+                    row['回転率②'] = '-'
+                
+                # 初当り使用玉
+                if result.get('rotation_metrics'):
+                    row['初当り使用玉'] = result['rotation_metrics']['first_hit_balls'] if result['rotation_metrics'].get('first_hit_balls', 0) > 0 else '-'
+                else:
+                    row['初当り使用玉'] = '-'
+                
+                # 通常回転数を追加
+                if claude_data.get('normal_rotations'):
+                    row['通常回転数'] = claude_data['normal_rotations']
+                elif result.get('rotation_metrics') and 'normal_decline_spins' in result['rotation_metrics']:
+                    row['通常回転数'] = result['rotation_metrics']['normal_decline_spins'] if result['rotation_metrics']['normal_decline_spins'] > 0 else 0
+                else:
+                    row['通常回転数'] = 0
                 # OCRデータを追加（OCRスキップモードでない場合のみ）
                 if not st.session_state.get('skip_ocr', False) and result.get('ocr_data'):
                     ocr = result['ocr_data']
