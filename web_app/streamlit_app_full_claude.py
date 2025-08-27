@@ -2687,18 +2687,18 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     rotation_html = ""
                     rotation_detail = ""
                     if st.session_state.game_type == 'パチンコ':
-                        # Claude AIから通常回転数を取得して回転率①を計算
+                        # Claude AIから初回特賞スタートを取得して回転率①を計算
                         rotation_rate_1_calculated = False
                         if result.get('claude_analysis') and result['claude_analysis'].get('success'):
                             claude_data = result['claude_analysis'].get('data', {})
-                            if claude_data.get('normal_rotations') and result.get('first_hit_val'):
-                                normal_rotations = claude_data['normal_rotations']
+                            if claude_data.get('initial_ball_starts') and result.get('first_hit_val'):
+                                initial_ball_starts = claude_data['initial_ball_starts']
                                 first_hit_balls = abs(result['first_hit_val'])
                                 if first_hit_balls > 0:
-                                    rotation_rate_1 = (normal_rotations / first_hit_balls) * 250
+                                    rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
                                     warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
-                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {normal_rotations}回転 ÷ {first_hit_balls}{unit}使用</div>'
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {first_hit_balls}{unit}使用</div>'
                                     rotation_rate_1_calculated = True
                         
                         # AI取得できなかった場合は従来のグラフから取得
@@ -2712,8 +2712,26 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
                                 rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}{unit}使用</div>'
                             
-                        # 回転率②は常に表示（0の場合も含む）
-                        if result.get('rotation_metrics'):
+                        # 回転率②の計算 - Claude AIから通常回転数を取得
+                        rotation_rate_2_calculated = False
+                        if result.get('claude_analysis') and result['claude_analysis'].get('success'):
+                            claude_data = result['claude_analysis'].get('data', {})
+                            # 通常回転数と総獲得玉数から回転率②を計算
+                            if claude_data.get('normal_rotations'):
+                                normal_rotations = claude_data['normal_rotations']
+                                # 通常時の使用玉数 = 初当たり玉数 + 総獲得玉数
+                                total_jackpot_balls = result.get('total_jackpot_balls', 0)
+                                first_hit_balls = abs(result.get('first_hit_val', 0))
+                                normal_balls = first_hit_balls + total_jackpot_balls
+                                if normal_balls > 0:
+                                    rotation_rate_2 = (normal_rotations / normal_balls) * 250
+                                    warning = " ⚠️" if rotation_rate_2 < 10 or rotation_rate_2 > 30 else ""
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{rotation_rate_2:.1f}回/千円{warning}</span></div>'
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {normal_rotations}回転 ÷ {normal_balls}{unit}使用</div>'
+                                    rotation_rate_2_calculated = True
+                        
+                        # AI取得できなかった場合は従来のグラフから取得
+                        if not rotation_rate_2_calculated and result.get('rotation_metrics'):
                             metrics = result['rotation_metrics']
                             if metrics.get('rotation_rate_2', 0) >= 0:
                                 if metrics['rotation_rate_2'] > 0:
@@ -2726,10 +2744,12 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {metrics["normal_decline_spins"]}回転 ÷ {metrics["normal_decline_balls"]}{unit}使用</div>'
                         
                         # 回転率③（現在スタートベース）の表示
-                        if metrics.get('rotation_rate_3', 0) > 0:
-                            # 異常値チェック（現実的な範囲: 10-35回/千円）
-                            warning = " ⚠️" if metrics['rotation_rate_3'] < 10 or metrics['rotation_rate_3'] > 35 else ""
-                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率③(最終大当り後)</span><span class="stat-value positive">{metrics["rotation_rate_3"]:.1f}回/千円{warning}</span></div>'
+                        if result.get('rotation_metrics'):
+                            metrics = result['rotation_metrics']
+                            if metrics.get('rotation_rate_3', 0) > 0:
+                                # 異常値チェック（現実的な範囲: 10-35回/千円）
+                                warning = " ⚠️" if metrics['rotation_rate_3'] < 10 or metrics['rotation_rate_3'] > 35 else ""
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率③(最終大当り後)</span><span class="stat-value positive">{metrics["rotation_rate_3"]:.1f}回/千円{warning}</span></div>'
                             # デバッグ情報（現在スタートベース）
                             if metrics.get('ocr_current_start', 0) > 0:
                                 rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 最終大当り後: {metrics["ocr_current_start"]}回転（OCRスタート値）</div>'
@@ -2737,13 +2757,13 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     # 初当たり関連のHTMLを条件分岐で生成
                     first_hit_html = ""
                     if st.session_state.game_type == 'パチンコ':
-                        # Claude AIから初当たり回転数を取得（なければグラフから）
+                        # Claude AIから初回特賞スタートを初当たり回転数として取得（なければグラフから）
                         first_hit_spins = 0
                         if result.get('claude_analysis') and result['claude_analysis'].get('success'):
                             claude_data = result['claude_analysis'].get('data', {})
-                            # 通常回転数を初当たり回転数として使用
-                            if claude_data.get('normal_rotations'):
-                                first_hit_spins = claude_data['normal_rotations']
+                            # 初回特賞スタートを初当たり回転数として使用
+                            if claude_data.get('initial_ball_starts'):
+                                first_hit_spins = claude_data['initial_ball_starts']
                         
                         if first_hit_spins == 0:
                             # AI取得できなかった場合はグラフから取得
