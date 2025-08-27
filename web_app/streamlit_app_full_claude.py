@@ -2499,82 +2499,112 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             with st.expander("🤖 Claude AI解析結果", expanded=True):
                                 claude_data = result['claude_analysis'].get('data')
                                 if claude_data:
-                                    # JSON形式で解析結果が取得できた場合
-                                    # site7のレイアウトに合わせて表示
+                                    # カード風のスタイルで表示
                                     
-                                    # 基本情報
-                                    col1, col2 = st.columns([3, 1])
-                                    with col1:
-                                        if claude_data.get('machine_name'):
-                                            st.markdown(f"### {claude_data['machine_name']}")
-                                    with col2:
-                                        if claude_data.get('date'):
-                                            st.markdown(f"### {claude_data['date']}")
+                                    # 機種名と日付
+                                    if claude_data.get('machine_name'):
+                                        st.markdown(f"### 🎰 {claude_data['machine_name']}")
+                                    if claude_data.get('date'):
+                                        st.caption(f"📅 {claude_data['date']}")
+                                    
+                                    # カード風のHTMLスタイル
+                                    html_content = '<div class="stat-card">'
                                     
                                     # 台番号
                                     if claude_data.get('machine_number'):
-                                        st.markdown(f"**台番号:** {claude_data['machine_number']}")
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🎯 台番号</span>
+                                            <span class="stat-value">{claude_data['machine_number']}</span>
+                                        </div>'''
                                     
-                                    st.divider()
+                                    # 大当たり情報
+                                    if claude_data.get('total_jackpots') is not None:
+                                        prob = f" (1/{claude_data.get('total_jackpot_probability', '?')})" if claude_data.get('total_jackpot_probability') else ""
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🎯 大当り回数</span>
+                                            <span class="stat-value positive">{claude_data['total_jackpots']}回{prob}</span>
+                                        </div>'''
                                     
-                                    # 大当たり情報を3列で表示
-                                    col1, col2, col3 = st.columns(3)
-                                    
-                                    with col1:
-                                        st.markdown("**🎯 大当り回数**")
-                                        if claude_data.get('total_jackpots') is not None:
-                                            prob = f"(1/{claude_data.get('total_jackpot_probability', '?')})" if claude_data.get('total_jackpot_probability') else ""
-                                            st.metric("", f"{claude_data['total_jackpots']}回 {prob}")
-                                    
-                                    with col2:
-                                        st.markdown("**🎯 初当り回数**")
-                                        if claude_data.get('first_jackpots') is not None:
-                                            prob = f"(1/{claude_data.get('first_jackpot_probability', '?')})" if claude_data.get('first_jackpot_probability') else ""
-                                            st.metric("", f"{claude_data['first_jackpots']}回 {prob}")
-                                    
-                                    with col3:
-                                        st.markdown("**📊 累計スタート**")
-                                        if claude_data.get('total_rotations') is not None:
-                                            st.metric("", f"{claude_data['total_rotations']:,}回")
+                                    if claude_data.get('first_jackpots') is not None:
+                                        prob = f" (1/{claude_data.get('first_jackpot_probability', '?')})" if claude_data.get('first_jackpot_probability') else ""
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🎯 初当り回数</span>
+                                            <span class="stat-value positive">{claude_data['first_jackpots']}回{prob}</span>
+                                        </div>'''
                                     
                                     # 大当たり内訳
-                                    col1, col2, col3 = st.columns(3)
+                                    if claude_data.get('big_jackpots') is not None:
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🔴 超</span>
+                                            <span class="stat-value">{claude_data['big_jackpots']}回</span>
+                                        </div>'''
                                     
-                                    with col1:
-                                        st.markdown("**超**")
-                                        if claude_data.get('big_jackpots') is not None:
-                                            st.metric("", f"{claude_data['big_jackpots']}回", label_visibility="collapsed")
+                                    if claude_data.get('medium_jackpots') is not None:
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🟡 中</span>
+                                            <span class="stat-value">{claude_data['medium_jackpots']}回</span>
+                                        </div>'''
                                     
-                                    with col2:
-                                        st.markdown("**中**")
-                                        if claude_data.get('medium_jackpots') is not None:
-                                            st.metric("", f"{claude_data['medium_jackpots']}回", label_visibility="collapsed")
-                                    
-                                    with col3:
-                                        st.markdown("**小**")
-                                        if claude_data.get('small_jackpots') is not None:
-                                            st.metric("", f"{claude_data['small_jackpots']}回", label_visibility="collapsed")
-                                    
-                                    st.divider()
+                                    if claude_data.get('small_jackpots') is not None:
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🔵 小</span>
+                                            <span class="stat-value">{claude_data['small_jackpots']}回</span>
+                                        </div>'''
                                     
                                     # 回転数情報
-                                    col1, col2 = st.columns(2)
+                                    if claude_data.get('total_rotations') is not None:
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">📊 累計スタート</span>
+                                            <span class="stat-value">{claude_data['total_rotations']:,}回</span>
+                                        </div>'''
                                     
-                                    with col1:
-                                        st.markdown("**🔄 回転数情報**")
-                                        if claude_data.get('normal_rotations') is not None:
-                                            st.write(f"通常: {claude_data['normal_rotations']:,}回")
-                                        if claude_data.get('chance_rotations') is not None:
-                                            st.write(f"チャンス中: {claude_data['chance_rotations']:,}回")
-                                        if claude_data.get('current_rotations') is not None:
-                                            st.write(f"現在: {claude_data['current_rotations']}回")
+                                    if claude_data.get('normal_rotations') is not None:
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🔄 通常回転数</span>
+                                            <span class="stat-value">{claude_data['normal_rotations']:,}回</span>
+                                        </div>'''
                                     
-                                    with col2:
-                                        st.markdown("**💰 その他情報**")
-                                        if claude_data.get('max_balls') is not None:
-                                            st.write(f"最高出玉: {claude_data['max_balls']:,}玉")
-                                        if claude_data.get('initial_ball_starts') is not None:
-                                            st.write(f"初回持玉スタート: {claude_data['initial_ball_starts']}回")
+                                    if claude_data.get('chance_rotations') is not None:
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🎊 チャンス中回転数</span>
+                                            <span class="stat-value">{claude_data['chance_rotations']:,}回</span>
+                                        </div>'''
+                                    
+                                    if claude_data.get('current_rotations') is not None:
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">⏰ 現在回転数</span>
+                                            <span class="stat-value">{claude_data['current_rotations']}回</span>
+                                        </div>'''
+                                    
+                                    # その他情報
+                                    if claude_data.get('max_balls') is not None:
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">💰 最高出玉</span>
+                                            <span class="stat-value positive">{claude_data['max_balls']:,}玉</span>
+                                        </div>'''
+                                    
+                                    if claude_data.get('initial_ball_starts') is not None:
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🎱 初回持玉スタート</span>
+                                            <span class="stat-value">{claude_data['initial_ball_starts']}回</span>
+                                        </div>'''
+                                    
+                                    html_content += '</div>'
+                                    
+                                    # HTMLを表示
+                                    st.markdown(html_content, unsafe_allow_html=True)
                                 else:
                                     # テキスト形式で結果が返された場合
                                     st.markdown("**解析結果（テキスト）**")
