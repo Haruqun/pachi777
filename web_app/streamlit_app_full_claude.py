@@ -373,11 +373,11 @@ def detect_and_draw_black_frames(image, overlay_mask=True):
                 base_x = x + w  # 黒枠の右端
                 base_y = y + h  # 黒枠の下端
                 
-                # overlay.pngを黒枠の右下に配置
                 # overlay.pngのサイズ
                 mask_w, mask_h = mask_img.size
                 
-                # 配置位置を計算（右下を基準に）
+                # overlay.pngの右下を黒枠の右下に合わせる
+                # overlay.pngの右下が(base_x, base_y)になるように配置
                 paste_x = base_x - mask_w
                 paste_y = base_y - mask_h
                 
@@ -393,11 +393,17 @@ def detect_and_draw_black_frames(image, overlay_mask=True):
                 overlay.paste(mask_img, (paste_x, paste_y), mask_img)
                 overlay = overlay.convert('RGB')
                 
-                # 情報テキストを追加
+                # デバッグ情報テキストを追加
                 draw = ImageDraw.Draw(overlay)
-                draw.text((paste_x+10, paste_y-30), 
-                         f"Overlay位置: ({paste_x}, {paste_y})", 
-                         fill=(0, 255, 0))
+                debug_text = [
+                    f"黒枠: x={x}, y={y}, w={w}, h={h}",
+                    f"黒枠右下: ({base_x}, {base_y})",
+                    f"Overlay: {mask_w}x{mask_h}px",
+                    f"Overlay位置: ({paste_x}, {paste_y})",
+                    f"Overlay右下: ({paste_x + mask_w}, {paste_y + mask_h})"
+                ]
+                for i, text in enumerate(debug_text):
+                    draw.text((10, 10 + i*20), text, fill=(0, 255, 0))
         except Exception as e:
             print(f"Overlay.png読み込みエラー: {str(e)}")
     
