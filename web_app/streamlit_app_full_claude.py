@@ -930,10 +930,10 @@ if 'csv_columns' not in st.session_state:
 if 'game_type' not in st.session_state:
     st.session_state.game_type = 'パチンコ'  # デフォルトはパチンコ
 
-# Claude APIキーの初期化（データベースから読み込み）
+# Claude APIキーの初期化（専用データベースから読み込み）
 if 'claude_api_key' not in st.session_state:
     try:
-        conn = sqlite3.connect('presets.db')
+        conn = sqlite3.connect('apikey.db')
         cursor = conn.cursor()
         
         # APIキーを読み込み
@@ -951,7 +951,7 @@ if 'claude_api_key' not in st.session_state:
         
         conn.close()
     except Exception:
-        # エラーが発生しても続行
+        # エラーが発生しても続行（初回起動時など）
         pass
 
 
@@ -1397,9 +1397,9 @@ with st.sidebar:
                 st.session_state.claude_api_key = api_key
                 st.session_state.claude_model = model
                 
-                # データベースに保存
+                # 専用のデータベースに保存
                 try:
-                    conn = sqlite3.connect('presets.db')
+                    conn = sqlite3.connect('apikey.db')
                     cursor = conn.cursor()
                     
                     # テーブルが存在しない場合は作成
@@ -1443,7 +1443,7 @@ with st.sidebar:
                         del st.session_state.claude_model
                     
                     # データベースから削除
-                    conn = sqlite3.connect('presets.db')
+                    conn = sqlite3.connect('apikey.db')
                     cursor = conn.cursor()
                     cursor.execute("DELETE FROM api_keys WHERE key_name = 'claude_api'")
                     conn.commit()
