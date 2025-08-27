@@ -4,6 +4,9 @@ AI Graph Analysis Report - Claude Edition
 高精度データ抽出・解析システム with Claude API
 """
 
+# テストモード設定
+OVERLAY_TEST_MODE = True  # 黒枠検出テストモード
+
 import streamlit as st
 from datetime import datetime
 import cv2
@@ -284,6 +287,48 @@ def preprocess_image_for_claude(image):
         if st.session_state.get('debug_mode', False):
             st.error(f"❌ 画像前処理エラー: {str(e)}")
         return None
+
+def detect_and_draw_black_frames(image):
+    """黒枠を検出して線を引いたオーバーレイ画像を返す"""
+    import cv2
+    import numpy as np
+    from PIL import ImageDraw
+    
+    # OpenCV形式に変換
+    img_array = np.array(image)
+    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    
+    # エッジ検出
+    edges = cv2.Canny(gray, 50, 150)
+    
+    # 輪郭検出
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # オーバーレイ用の画像
+    overlay = image.copy()
+    draw = ImageDraw.Draw(overlay)
+    
+    # 面積でソートして大きい順に処理
+    sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    
+    # 検出された輪郭を描画（上位20個まで）
+    for i, contour in enumerate(sorted_contours[:20]):
+        x, y, w, h = cv2.boundingRect(contour)
+        # 小さすぎる矩形は除外
+        if w > 50 and h > 30:
+            # 色を変えて描画（最初は黄色、次は赤、その後は青）
+            if i == 0:
+                color = (255, 255, 0)  # 黄色
+            elif i == 1:
+                color = (255, 0, 0)    # 赤
+            else:
+                color = (0, 100, 255)  # 青
+            
+            draw.rectangle([x, y, x+w, y+h], outline=color, width=2)
+            # サイズ情報を表示
+            draw.text((x, y-15), f"{w}x{h}", fill=color)
+    
+    return overlay
 
 def detect_black_frame_regions(image):
     """画像から黒枠領域を検出して、各領域の座標と可視化画像を返す"""
@@ -2025,40 +2070,72 @@ elif st.session_state.uploaded_file_names:
 
 # 解析を実行
 if uploaded_files and st.session_state.get('start_analysis', False):
-    # 解析結果セクション
-    st.markdown("### 🎯 解析結果")
     
-    # 現在使用中のプリセットを表示
-    current_preset_name = st.session_state.get('current_preset_name', 'デフォルト')
-    
-    st.info(f"📋 使用プリセット: **{current_preset_name}**")
-    
-    # 現在の設定値を表示
-    with st.expander("🔧 使用中の設定値", expanded=False):
-        current_settings = st.session_state.get('settings', default_settings)
-        col1, col2, col3 = st.columns(3)
+    # テストモードの場合
+    if OVERLAY_TEST_MODE:
+        st.markdown("### 🔬 黒枠検出テストモード")
         
-        with col1:
-            st.markdown("**切り抜き設定**")
-            st.text(f"上方向: {current_settings.get('crop_top', 246)}px")
-            st.text(f"下方向: {current_settings.get('crop_bottom', 247)}px")
-            st.text(f"左余白: {current_settings.get('left_margin', 125)}px")
-            st.text(f"右余白: {current_settings.get('right_margin', 125)}px")
+        # 詳細画像のみ処理
+        for idx, detail_file in enumerate(detail_files or []):
+            st.markdown(f"#### 画像 {idx + 1}")
+            
+            # 画像を読み込み
+            detail_image = Image.open(detail_file)
+            
+            # 黒枠を検出してオーバーレイ
+            overlay = detect_and_draw_black_frames(detail_image)
+            
+            # 2列で表示
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**元画像**")
+                st.image(detail_image, use_column_width=True)
+            with col2:
+                st.markdown("**黒枠検出結果**")
+                st.image(overlay, use_column_width=True)
+            
+            st.markdown("---")
         
-        with col2:
-            st.markdown("**検索範囲**")
-            st.text(f"開始位置: +{current_settings.get('search_start_offset', 50)}px")
-            st.text(f"終了位置: +{current_settings.get('search_end_offset', 500)}px")
+        # テストモード終了
+        st.session_state.start_analysis = False
+        st.success("✅ 黒枠検出テスト完了")
         
-        with col3:
-            st.markdown("**グリッドライン調整**")
-            st.text(f"+30k: {current_settings.get('grid_30k_offset', 0):+d}px")
-            st.text(f"-30k: {current_settings.get('grid_minus_30k_offset', 0):+d}px")
+    else:
+        # 通常モード（既存の処理）
+        # 解析結果セクション
+        st.markdown("### 🎯 解析結果")
+        
+        # 現在使用中のプリセットを表示
+        current_preset_name = st.session_state.get('current_preset_name', 'デフォルト')
+        
+        st.info(f"📋 使用プリセット: **{current_preset_name}**")
     
-    # セッションステートからプログレスバーを取得（既に上部で作成済み）
-    progress_bar = st.session_state.get('progress_bar')
-    status_text = st.session_state.get('status_text')
-    detail_text = st.session_state.get('detail_text')
+        # 現在の設定値を表示
+        with st.expander("🔧 使用中の設定値", expanded=False):
+            current_settings = st.session_state.get('settings', default_settings)
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.markdown("**切り抜き設定**")
+                st.text(f"上方向: {current_settings.get('crop_top', 246)}px")
+                st.text(f"下方向: {current_settings.get('crop_bottom', 247)}px")
+                st.text(f"左余白: {current_settings.get('left_margin', 125)}px")
+                st.text(f"右余白: {current_settings.get('right_margin', 125)}px")
+        
+            with col2:
+                st.markdown("**検索範囲**")
+                st.text(f"開始位置: +{current_settings.get('search_start_offset', 50)}px")
+                st.text(f"終了位置: +{current_settings.get('search_end_offset', 500)}px")
+        
+            with col3:
+                st.markdown("**グリッドライン調整**")
+                st.text(f"+30k: {current_settings.get('grid_30k_offset', 0):+d}px")
+                st.text(f"-30k: {current_settings.get('grid_minus_30k_offset', 0):+d}px")
+    
+        # セッションステートからプログレスバーを取得（既に上部で作成済み）
+        progress_bar = st.session_state.get('progress_bar')
+        status_text = st.session_state.get('status_text')
+        detail_text = st.session_state.get('detail_text')
     
     # プログレスバーが存在しない場合（通常はない）
     if not progress_bar:
