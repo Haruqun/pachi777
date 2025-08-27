@@ -2489,9 +2489,9 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
 
                     # 出玉詳細画像（もしあれば）
                     if result.get('detail_image_processed'):
-                        with st.expander("📊 出玉詳細画像（処理済み）"):
-                            st.image(result['detail_image_processed'], use_column_width=True)
-                            st.caption("黒枠検出 + overlay.png + 50%切り抜き適用済み")
+                        st.markdown("### 📊 出玉詳細画像（オプション）")
+                        st.image(result['detail_image_processed'], use_column_width=True)
+                        st.caption("黒枠検出 + overlay.png + 50%切り抜き適用済み")
                     
                     # 元画像を折りたたみ可能に
                     with st.expander("📷 元画像を表示"):
