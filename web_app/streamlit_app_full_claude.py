@@ -2497,16 +2497,16 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                     with st.expander("📷 元画像を表示"):
                         st.image(result['original_image'], use_column_width=True)
                     
-                    # Claude API解析結果の表示（エキスパンダーなしで直接表示・統計情報の前に配置）
-                    if result.get('claude_analysis'):
-                        if result['claude_analysis'] and result['claude_analysis']['success']:
-                            claude_data = result['claude_analysis'].get('data')
-                            if claude_data:
-                                # カード風のスタイルで表示
-                                st.markdown("### 🤖 Claude AI解析結果")
-                                
-                                # カード風のHTMLスタイル
-                                html_content = '<div class="stat-card">'
+                    # 成功時は統計情報を表示（解析結果の下に縦に並べる）
+                    if result['success']:
+                        # Claude API解析結果の表示（統計情報の上に配置）
+                        if result.get('claude_analysis'):
+                            if result['claude_analysis'] and result['claude_analysis']['success']:
+                                claude_data = result['claude_analysis'].get('data')
+                                if claude_data:
+                                    # カード風のHTMLスタイル
+                                    html_content = '<div class="stat-card">'
+                                    html_content += '<div class="ocr-title">🤖 Claude AI解析結果</div>'
                                 
                                 # 機種名と日付をカード内に含める
                                 if claude_data.get('machine_name'):
@@ -2531,21 +2531,19 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                             <span class="stat-value">{claude_data['machine_number']}</span>
                                         </div>'''
                                     
-                                    # 大当たり情報
+                                    # 大当たり情報（確率表示なし）
                                     if claude_data.get('total_jackpots') is not None:
-                                        prob = f" (1/{claude_data.get('total_jackpot_probability', '?')})" if claude_data.get('total_jackpot_probability') else ""
                                         html_content += f'''
                                         <div class="stat-item">
                                             <span class="stat-label">🎯 大当り回数</span>
-                                            <span class="stat-value positive">{claude_data['total_jackpots']}回{prob}</span>
+                                            <span class="stat-value positive">{claude_data['total_jackpots']}回</span>
                                         </div>'''
                                     
                                     if claude_data.get('first_jackpots') is not None:
-                                        prob = f" (1/{claude_data.get('first_jackpot_probability', '?')})" if claude_data.get('first_jackpot_probability') else ""
                                         html_content += f'''
                                         <div class="stat-item">
                                             <span class="stat-label">🎯 初当り回数</span>
-                                            <span class="stat-value positive">{claude_data['first_jackpots']}回{prob}</span>
+                                            <span class="stat-value positive">{claude_data['first_jackpots']}回</span>
                                         </div>'''
                                     
                                     # 大当たり内訳
@@ -2622,18 +2620,15 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                     # テキスト形式で結果が返された場合
                                     st.markdown("**解析結果（テキスト）**")
                                     st.text(result['claude_analysis']['raw_text'])
-                        else:
-                            # APIエラーの場合
-                            if result['claude_analysis']:
-                                with st.expander("🤖 Claude AI解析結果（エラー）", expanded=False):
-                                    st.error(f"解析エラー: {result['claude_analysis'].get('error', '不明なエラー')}")
-                    elif result.get('detail_image_processed') and not st.session_state.get('claude_api_key'):
-                        # APIキーが設定されていない場合のメッセージ
-                        with st.expander("🤖 Claude AI解析"):
-                            st.info("Claude APIキーが設定されていません。管理者ログインしてAPIキーを設定してください。")
-
-                    # 成功時は統計情報を表示（解析結果の下に縦に並べる）
-                    if result['success']:
+                            else:
+                                # APIエラーの場合
+                                if result['claude_analysis']:
+                                    with st.expander("🤖 Claude AI解析結果（エラー）", expanded=False):
+                                        st.error(f"解析エラー: {result['claude_analysis'].get('error', '不明なエラー')}")
+                        elif result.get('detail_image_processed') and not st.session_state.get('claude_api_key'):
+                            # APIキーが設定されていない場合のメッセージ
+                            with st.expander("🤖 Claude AI解析"):
+                                st.info("Claude APIキーが設定されていません。管理者ログインしてAPIキーを設定してください。")
                         # 統計情報をカード風に表示
                         st.markdown("""
                 <style>
