@@ -1483,36 +1483,36 @@ uploaded_files = st.file_uploader(
 )
 
 # 出玉詳細画像のアップローダー（オプション）
-with st.expander("📊 出玉詳細画像（オプション）", expanded=False):
-    st.caption("出玉詳細画像をアップロードすると、より詳細な解析が可能になります")
-    detail_files = st.file_uploader(
-        "出玉詳細画像を選択",
-        type=['jpg', 'jpeg', 'png'],
-        accept_multiple_files=True,
-        help="出玉詳細画像をアップロードすると、黒枠検出とoverlay処理が実行されます",
-        key="detail_uploader"
-    )
+st.subheader("📊 出玉詳細画像（オプション）")
+st.caption("出玉詳細画像をアップロードすると、より詳細な解析が可能になります")
+detail_files = st.file_uploader(
+    "出玉詳細画像を選択",
+    type=['jpg', 'jpeg', 'png'],
+    accept_multiple_files=True,
+    help="出玉詳細画像をアップロードすると、黒枠検出とoverlay処理が実行されます",
+    key="detail_uploader"
+)
+
+if detail_files:
+    st.success(f"✅ {len(detail_files)}枚の出玉詳細画像がアップロードされました")
     
-    if detail_files:
-        st.success(f"✅ {len(detail_files)}枚の出玉詳細画像がアップロードされました")
-        
-        # プレビューオプション
-        if st.checkbox("出玉詳細画像の前処理プレビューを表示", key="preview_detail"):
-            for idx, detail_file in enumerate(detail_files[:3]):  # 最初の3枚まで表示
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.caption(f"元画像 - {detail_file.name}")
-                    original_img = Image.open(detail_file)
-                    st.image(original_img, use_column_width=True)
-                with col2:
-                    st.caption("前処理後（黒枠検出＋overlay＋50%切り抜き）")
-                    processed_img = preprocess_detail_image(original_img)
-                    st.image(processed_img, use_column_width=True)
-                
-                if idx >= 2:  # 3枚表示したら終了
-                    if len(detail_files) > 3:
-                        st.info(f"他に{len(detail_files) - 3}枚の画像があります")
-                    break
+    # プレビューオプション
+    if st.checkbox("出玉詳細画像の前処理プレビューを表示", key="preview_detail"):
+        for idx, detail_file in enumerate(detail_files[:3]):  # 最初の3枚まで表示
+            col1, col2 = st.columns(2)
+            with col1:
+                st.caption(f"元画像 - {detail_file.name}")
+                original_img = Image.open(detail_file)
+                st.image(original_img, use_column_width=True)
+            with col2:
+                st.caption("前処理後（黒枠検出＋overlay＋50%切り抜き）")
+                processed_img = preprocess_detail_image(original_img)
+                st.image(processed_img, use_column_width=True)
+            
+            if idx >= 2:  # 3枚表示したら終了
+                if len(detail_files) > 3:
+                    st.info(f"他に{len(detail_files) - 3}枚の画像があります")
+                break
 
 if uploaded_files:
     # 重複チェック
