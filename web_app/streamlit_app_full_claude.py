@@ -340,18 +340,15 @@ def detect_and_draw_black_frames(image, overlay_mask=True):
     # 黒枠の位置を保存
     black_frame_rect = None
     
-    # 最大の輪郭のみを描画
+    # 最大の輪郭のみを検出（描画はしない）
     if sorted_contours:
         contour = sorted_contours[0]  # 最大の輪郭のみ
         x, y, w, h = cv2.boundingRect(contour)
         
-        # 画像サイズに対して十分大きい場合のみ描画
+        # 画像サイズに対して十分大きい場合のみ保存
         img_height, img_width = img_array.shape[:2]
         if w > img_width * 0.3 and h > img_height * 0.2:
-            # 太い黄色の線で描画
-            draw.rectangle([x, y, x+w, y+h], outline=(255, 255, 0), width=10)
-            # サイズ情報を表示
-            draw.text((x+10, y+10), f"最大黒枠: {w}x{h}px", fill=(255, 255, 0))
+            # 黒枠の位置のみ保存（描画はしない）
             black_frame_rect = (x, y, w, h)
     
     # overlay.pngを重ねる
@@ -429,10 +426,8 @@ def detect_black_frame_regions(image):
             'height': int(height * 0.25)
         }
         
-        # 黄色で囲む
+        # 領域の位置を保存（描画はしない）
         x, y, w, h = test_region['x'], test_region['y'], test_region['width'], test_region['height']
-        draw.rectangle([x, y, x+w, y+h], outline=(255, 255, 0), width=5)
-        draw.text((x+5, y-20), "TEST: Expected Right Top Frame", fill=(255, 255, 0))
         
         # 下部のテーブル領域（初回特賞スタートがある場所）
         table_region = {
@@ -443,8 +438,7 @@ def detect_black_frame_regions(image):
         }
         
         x, y, w, h = table_region['x'], table_region['y'], table_region['width'], table_region['height']
-        draw.rectangle([x, y, x+w, y+h], outline=(0, 255, 255), width=3)
-        draw.text((x+5, y+5), "TEST: Expected Table Region", fill=(0, 255, 255))
+        # 領域の位置のみ保存（描画はしない）
         
         return {
             'regions': [test_region, table_region],
