@@ -201,31 +201,43 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
         img_base64 = base64.b64encode(buffered.getvalue()).decode()
         
         # プロンプトを作成
-        prompt = """この画像はパチンコの出玉詳細情報です。以下の情報を抽出してください：
+        prompt = """この画像はパチンコ台の出玉詳細情報です。画像に表示されている以下の情報を正確に抽出してください：
 
-1. 台番号
-2. 機種名
-3. 総投資金額
-4. 総獲得玉数
-5. 収支（プラス/マイナス）
-6. 大当たり回数
-7. 各大当たりの詳細（何回転目、獲得玉数など）
-8. その他の重要な情報
+1. 台番号（数字のみ）
+2. 機種名（完全な名前）
+3. 日付（表示形式のまま）
+4. 大当り回数（括弧内の確率分母も含む）
+5. 初当り回数（括弧内の確率分母も含む）
+6. 通常（通常回転数）
+7. チャンス中の数値（大当たり中の回転数）
+8. 累計スタート（総回転数）
+9. スタート（現在の回転数）
+10. 超/中/小の各回数
+11. 最高出玉
+12. 初回持玉スタート
 
-JSON形式で結果を返してください。数値は半角数字のみで返してください。
+JSON形式で結果を返してください。数値は単位なしの数字のみで返してください。
+表示されていない項目はnullとしてください。
+推測や計算は行わず、画像に表示されている値のみを返してください。
+
 例：
 {
-    "machine_number": "123",
-    "machine_name": "機種名",
-    "total_investment": 10000,
-    "total_balls_won": 5000,
-    "profit_loss": -5000,
-    "jackpot_count": 3,
-    "jackpot_details": [
-        {"rotation": 100, "balls_won": 2000},
-        {"rotation": 250, "balls_won": 1500}
-    ],
-    "additional_info": "その他の情報"
+    "machine_number": "0008",
+    "machine_name": "Re：ゼロから始める異世界生活 season2 M13",
+    "date": "8/27",
+    "total_jackpots": 20,
+    "total_jackpot_probability": 115,
+    "first_jackpots": 7,
+    "first_jackpot_probability": 214,
+    "normal_rotations": 1500,
+    "chance_rotations": 818,
+    "total_rotations": 2318,
+    "current_rotations": 39,
+    "big_jackpots": 18,
+    "medium_jackpots": 0,
+    "small_jackpots": 2,
+    "max_balls": 16380,
+    "initial_ball_starts": 14
 }"""
         
         # Claude API エンドポイント
@@ -2488,33 +2500,81 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 claude_data = result['claude_analysis'].get('data')
                                 if claude_data:
                                     # JSON形式で解析結果が取得できた場合
-                                    # 実際に取得できたデータのみを表示
-                                    st.markdown("**📊 解析データ**")
+                                    # site7のレイアウトに合わせて表示
                                     
-                                    # データを整形して表示
-                                    for key, value in claude_data.items():
-                                        if value is not None and value != "":
-                                            # リストや辞書の場合は別処理
-                                            if isinstance(value, list):
-                                                if key == 'jackpot_details' and value:
-                                                    st.markdown(f"**{key}:**")
-                                                    df = pd.DataFrame(value)
-                                                    st.dataframe(df, use_container_width=True)
-                                            elif isinstance(value, dict):
-                                                st.markdown(f"**{key}:**")
-                                                st.json(value)
-                                            else:
-                                                # シンプルな値の場合
-                                                # 数値の場合はカンマ区切りにする
-                                                if isinstance(value, (int, float)):
-                                                    if 'investment' in key or 'profit' in key or 'loss' in key or key.endswith('_yen'):
-                                                        st.write(f"**{key}:** ¥{value:,.0f}")
-                                                    elif 'balls' in key or key.endswith('_balls'):
-                                                        st.write(f"**{key}:** {value:,.0f}玉")
-                                                    else:
-                                                        st.write(f"**{key}:** {value:,.0f}")
-                                                else:
-                                                    st.write(f"**{key}:** {value}")
+                                    # 基本情報
+                                    col1, col2 = st.columns([3, 1])
+                                    with col1:
+                                        if claude_data.get('machine_name'):
+                                            st.markdown(f"### {claude_data['machine_name']}")
+                                    with col2:
+                                        if claude_data.get('date'):
+                                            st.markdown(f"### {claude_data['date']}")
+                                    
+                                    # 台番号
+                                    if claude_data.get('machine_number'):
+                                        st.markdown(f"**台番号:** {claude_data['machine_number']}")
+                                    
+                                    st.divider()
+                                    
+                                    # 大当たり情報を3列で表示
+                                    col1, col2, col3 = st.columns(3)
+                                    
+                                    with col1:
+                                        st.markdown("**🎯 大当り回数**")
+                                        if claude_data.get('total_jackpots') is not None:
+                                            prob = f"(1/{claude_data.get('total_jackpot_probability', '?')})" if claude_data.get('total_jackpot_probability') else ""
+                                            st.metric("", f"{claude_data['total_jackpots']}回 {prob}")
+                                    
+                                    with col2:
+                                        st.markdown("**🎯 初当り回数**")
+                                        if claude_data.get('first_jackpots') is not None:
+                                            prob = f"(1/{claude_data.get('first_jackpot_probability', '?')})" if claude_data.get('first_jackpot_probability') else ""
+                                            st.metric("", f"{claude_data['first_jackpots']}回 {prob}")
+                                    
+                                    with col3:
+                                        st.markdown("**📊 累計スタート**")
+                                        if claude_data.get('total_rotations') is not None:
+                                            st.metric("", f"{claude_data['total_rotations']:,}回")
+                                    
+                                    # 大当たり内訳
+                                    col1, col2, col3 = st.columns(3)
+                                    
+                                    with col1:
+                                        st.markdown("**超**")
+                                        if claude_data.get('big_jackpots') is not None:
+                                            st.metric("", f"{claude_data['big_jackpots']}回", label_visibility="collapsed")
+                                    
+                                    with col2:
+                                        st.markdown("**中**")
+                                        if claude_data.get('medium_jackpots') is not None:
+                                            st.metric("", f"{claude_data['medium_jackpots']}回", label_visibility="collapsed")
+                                    
+                                    with col3:
+                                        st.markdown("**小**")
+                                        if claude_data.get('small_jackpots') is not None:
+                                            st.metric("", f"{claude_data['small_jackpots']}回", label_visibility="collapsed")
+                                    
+                                    st.divider()
+                                    
+                                    # 回転数情報
+                                    col1, col2 = st.columns(2)
+                                    
+                                    with col1:
+                                        st.markdown("**🔄 回転数情報**")
+                                        if claude_data.get('normal_rotations') is not None:
+                                            st.write(f"通常: {claude_data['normal_rotations']:,}回")
+                                        if claude_data.get('chance_rotations') is not None:
+                                            st.write(f"チャンス中: {claude_data['chance_rotations']:,}回")
+                                        if claude_data.get('current_rotations') is not None:
+                                            st.write(f"現在: {claude_data['current_rotations']}回")
+                                    
+                                    with col2:
+                                        st.markdown("**💰 その他情報**")
+                                        if claude_data.get('max_balls') is not None:
+                                            st.write(f"最高出玉: {claude_data['max_balls']:,}玉")
+                                        if claude_data.get('initial_ball_starts') is not None:
+                                            st.write(f"初回持玉スタート: {claude_data['initial_ball_starts']}回")
                                 else:
                                     # テキスト形式で結果が返された場合
                                     st.markdown("**解析結果（テキスト）**")
