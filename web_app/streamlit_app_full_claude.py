@@ -2488,40 +2488,33 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 claude_data = result['claude_analysis'].get('data')
                                 if claude_data:
                                     # JSON形式で解析結果が取得できた場合
-                                    col1, col2 = st.columns(2)
+                                    # 実際に取得できたデータのみを表示
+                                    st.markdown("**📊 解析データ**")
                                     
-                                    with col1:
-                                        st.markdown("**📋 基本情報**")
-                                        if 'machine_number' in claude_data:
-                                            st.write(f"台番号: {claude_data['machine_number']}")
-                                        if 'machine_name' in claude_data:
-                                            st.write(f"機種名: {claude_data['machine_name']}")
-                                        if 'total_investment' in claude_data:
-                                            st.write(f"総投資金額: ¥{claude_data['total_investment']:,}")
-                                        if 'total_balls_won' in claude_data:
-                                            st.write(f"総獲得玉数: {claude_data['total_balls_won']:,}玉")
-                                    
-                                    with col2:
-                                        st.markdown("**💰 収支情報**")
-                                        if 'profit_loss' in claude_data:
-                                            profit = claude_data['profit_loss']
-                                            if profit >= 0:
-                                                st.success(f"収支: +¥{profit:,}")
+                                    # データを整形して表示
+                                    for key, value in claude_data.items():
+                                        if value is not None and value != "":
+                                            # リストや辞書の場合は別処理
+                                            if isinstance(value, list):
+                                                if key == 'jackpot_details' and value:
+                                                    st.markdown(f"**{key}:**")
+                                                    df = pd.DataFrame(value)
+                                                    st.dataframe(df, use_container_width=True)
+                                            elif isinstance(value, dict):
+                                                st.markdown(f"**{key}:**")
+                                                st.json(value)
                                             else:
-                                                st.error(f"収支: -¥{abs(profit):,}")
-                                        if 'jackpot_count' in claude_data:
-                                            st.write(f"大当たり回数: {claude_data['jackpot_count']}回")
-                                    
-                                    # 大当たり詳細
-                                    if 'jackpot_details' in claude_data and claude_data['jackpot_details']:
-                                        st.markdown("**🎰 大当たり詳細**")
-                                        jackpot_df = pd.DataFrame(claude_data['jackpot_details'])
-                                        st.dataframe(jackpot_df, use_container_width=True)
-                                    
-                                    # その他の情報
-                                    if 'additional_info' in claude_data and claude_data['additional_info']:
-                                        st.markdown("**📝 その他の情報**")
-                                        st.info(claude_data['additional_info'])
+                                                # シンプルな値の場合
+                                                # 数値の場合はカンマ区切りにする
+                                                if isinstance(value, (int, float)):
+                                                    if 'investment' in key or 'profit' in key or 'loss' in key or key.endswith('_yen'):
+                                                        st.write(f"**{key}:** ¥{value:,.0f}")
+                                                    elif 'balls' in key or key.endswith('_balls'):
+                                                        st.write(f"**{key}:** {value:,.0f}玉")
+                                                    else:
+                                                        st.write(f"**{key}:** {value:,.0f}")
+                                                else:
+                                                    st.write(f"**{key}:** {value}")
                                 else:
                                     # テキスト形式で結果が返された場合
                                     st.markdown("**解析結果（テキスト）**")
