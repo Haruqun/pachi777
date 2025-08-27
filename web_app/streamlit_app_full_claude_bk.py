@@ -39,146 +39,6 @@ if 'GLOBAL_USER_PASSWORD' not in st.session_state:
     st.session_state.GLOBAL_USER_PASSWORD = st._global_passwords['user']
     st.session_state.GLOBAL_ADMIN_PASSWORD = st._global_passwords['admin']
 
-# ========== 出玉詳細画像処理用の関数群 ==========
-# デフォルト画像幅（標準サイズ）
-DEFAULT_IMAGE_WIDTH = 400
-
-def resize_to_default_width(image, target_width=DEFAULT_IMAGE_WIDTH):
-    """画像を指定幅にリサイズ（アスペクト比保持）
-    
-    Args:
-        image: PIL Image
-        target_width: 目標の横幅（デフォルト400px）
-    
-    Returns:
-        リサイズされたPIL Image
-    """
-    width, height = image.size
-    if width != target_width:
-        ratio = target_width / width
-        new_height = int(height * ratio)
-        return image.resize((target_width, new_height), Image.Resampling.LANCZOS)
-    return image
-
-def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False):
-    """黒枠を検出してoverlay.pngを重ねる、オプションで上半分を切り抜く
-    
-    Args:
-        image: 入力画像（PIL Image）
-        overlay_mask: Trueの場合、overlay.pngを重ねる
-        crop_upper_half: Trueの場合、黒枠の50%線で上半分を切り抜く
-        
-    Returns:
-        処理済み画像（PIL Image）
-    """
-    import os
-    
-    # OpenCV形式に変換
-    img_array = np.array(image)
-    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-    
-    # 黒い領域を検出（閾値処理）
-    # 黒い背景（値が低い）部分のみを検出
-    threshold = 30  # 黒とみなす最大値
-    black_mask = (gray < threshold).astype(np.uint8) * 255
-    
-    # ノイズ除去のための形態学処理
-    kernel = np.ones((5,5), np.uint8)
-    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
-    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
-    
-    # 輪郭検出
-    contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    # オーバーレイ用の画像
-    overlay = image.copy()
-    
-    # 面積でソートして大きい順に処理
-    sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    
-    # 黒枠の位置を保存
-    black_frame_rect = None
-    
-    # 最大の黒い領域を検出（描画はしない）
-    if sorted_contours:
-        contour = sorted_contours[0]  # 最大の領域のみ
-        x, y, w, h = cv2.boundingRect(contour)
-        
-        # 画像サイズに対して十分大きい場合のみ保存
-        img_height, img_width = img_array.shape[:2]
-        if w > img_width * 0.2 and h > img_height * 0.1:  # 閾値を緩める
-            # 黒枠の位置のみ保存
-            black_frame_rect = (x, y, w, h)
-    
-    # overlay.pngを重ねる
-    if overlay_mask and black_frame_rect:
-        try:
-            # overlay.pngの読み込み
-            overlay_path = "web_app/mask/overlay.png"
-            if os.path.exists(overlay_path):
-                mask_img = Image.open(overlay_path)
-                
-                # 画像サイズに応じてoverlay.pngをスケール調整
-                img_width = overlay.size[0]
-                # overlay.pngは元々800px幅の画像用なので、現在の画像幅に合わせてスケール
-                scale_ratio = img_width / 800.0  # 元のoverlay.pngは800px幅の画像用
-                if scale_ratio != 1.0:
-                    mask_w_scaled = int(mask_img.size[0] * scale_ratio)
-                    mask_h_scaled = int(mask_img.size[1] * scale_ratio)
-                    mask_img = mask_img.resize((mask_w_scaled, mask_h_scaled), Image.Resampling.LANCZOS)
-                
-                # 黒枠の左上を基準点とする
-                x, y, w, h = black_frame_rect
-                
-                # overlay.pngのサイズ
-                mask_w, mask_h = mask_img.size
-                
-                # overlay.pngの左上を黒枠の左上に合わせる
-                paste_x = x
-                paste_y = y
-                
-                # 画像の範囲内に収める
-                paste_x = max(0, paste_x)
-                paste_y = max(0, paste_y)
-                
-                # RGBAに変換してアルファブレンディング
-                overlay = overlay.convert('RGBA')
-                mask_img = mask_img.convert('RGBA')
-                
-                # 重ねる
-                overlay.paste(mask_img, (paste_x, paste_y), mask_img)
-                overlay = overlay.convert('RGB')
-                
-        except Exception as e:
-            print(f"Overlay.png読み込みエラー: {str(e)}")
-    
-    # 上半分を切り抜く処理
-    if crop_upper_half and black_frame_rect:
-        x, y, w, h = black_frame_rect
-        middle_y = y + h // 2
-        # 画像の一番上から50%線までを切り抜く
-        overlay = overlay.crop((0, 0, overlay.width, middle_y))
-    
-    return overlay
-
-def preprocess_detail_image(image):
-    """出玉詳細画像の前処理
-    
-    Args:
-        image: PIL Image
-        
-    Returns:
-        処理済み画像（PIL Image）
-    """
-    # 標準幅にリサイズ
-    image = resize_to_default_width(image)
-    
-    # 黒枠検出、overlay.png適用、上半分切り抜き
-    processed = detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=True)
-    
-    return processed
-# ========== 出玉詳細画像処理用の関数群ここまで ==========
-
 def extract_machine_number_from_orange_bar(image):
     """オレンジバー付近から台番号を抽出"""
     try:
@@ -1183,38 +1043,6 @@ uploaded_files = st.file_uploader(
     key="graph_uploader"
 )
 
-# 出玉詳細画像のアップローダー（オプション）
-with st.expander("📊 出玉詳細画像（オプション）", expanded=False):
-    st.caption("出玉詳細画像をアップロードすると、より詳細な解析が可能になります")
-    detail_files = st.file_uploader(
-        "出玉詳細画像を選択",
-        type=['jpg', 'jpeg', 'png'],
-        accept_multiple_files=True,
-        help="出玉詳細画像をアップロードすると、黒枠検出とoverlay処理が実行されます",
-        key="detail_uploader"
-    )
-    
-    if detail_files:
-        st.success(f"✅ {len(detail_files)}枚の出玉詳細画像がアップロードされました")
-        
-        # プレビューオプション
-        if st.checkbox("出玉詳細画像の前処理プレビューを表示", key="preview_detail"):
-            for idx, detail_file in enumerate(detail_files[:3]):  # 最初の3枚まで表示
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.caption(f"元画像 - {detail_file.name}")
-                    original_img = Image.open(detail_file)
-                    st.image(original_img, use_column_width=True)
-                with col2:
-                    st.caption("前処理後（黒枠検出＋overlay＋50%切り抜き）")
-                    processed_img = preprocess_detail_image(original_img)
-                    st.image(processed_img, use_column_width=True)
-                
-                if idx >= 2:  # 3枚表示したら終了
-                    if len(detail_files) > 3:
-                        st.info(f"他に{len(detail_files) - 3}枚の画像があります")
-                    break
-
 if uploaded_files:
     # 重複チェック
     seen_names = {}
@@ -1549,18 +1377,6 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         
         # 切り抜き実行
         cropped_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
-        
-        # 出玉詳細画像の処理（もしあれば）
-        detail_image_processed = None
-        if detail_files and idx < len(detail_files):
-            try:
-                detail_text.text(f'📊 出玉詳細画像を処理中...')
-                detail_image = Image.open(detail_files[idx])
-                detail_image_processed = preprocess_detail_image(detail_image)
-                detail_text.text(f'✅ 出玉詳細画像処理完了')
-            except Exception as e:
-                print(f"出玉詳細画像処理エラー: {str(e)}")
-                detail_text.text(f'⚠️ 出玉詳細画像処理エラー')
         
         # グリッドラインを追加
         # 切り抜き画像の高さは493px（246+247）
@@ -2067,7 +1883,6 @@ if uploaded_files and st.session_state.get('start_analysis', False):
                 'original_image': img_with_grid,  # グリッド付き元画像を保存
                 'cropped_image': cropped_img,  # 切り抜き画像
                 'overlay_image': overlay_img,  # オーバーレイ画像
-                'detail_image_processed': detail_image_processed,  # 処理済み出玉詳細画像
                 'success': True,
                 'max_val': int(max_val),
                 'min_val': int(min_val),
@@ -2234,12 +2049,6 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
 
                     # 解析結果画像
                     st.image(result['overlay_image'], use_column_width=True)
-
-                    # 出玉詳細画像（もしあれば）
-                    if result.get('detail_image_processed'):
-                        with st.expander("📊 出玉詳細画像（処理済み）"):
-                            st.image(result['detail_image_processed'], use_column_width=True)
-                            st.caption("黒枠検出 + overlay.png + 50%切り抜き適用済み")
 
                     # 元画像を折りたたみ可能に
                     with st.expander("📷 元画像を表示"):
