@@ -288,11 +288,17 @@ def preprocess_image_for_claude(image):
             st.error(f"❌ 画像前処理エラー: {str(e)}")
         return None
 
-def detect_and_draw_black_frames(image):
-    """黒枠を検出して線を引いたオーバーレイ画像を返す"""
+def detect_and_draw_black_frames(image, overlay_mask=True):
+    """黒枠を検出して線を引いたオーバーレイ画像を返す
+    
+    Args:
+        image: 入力画像
+        overlay_mask: Trueの場合、overlay.pngを重ねる
+    """
     import cv2
     import numpy as np
     from PIL import ImageDraw
+    import os
     
     # OpenCV形式に変換
     img_array = np.array(image)
@@ -311,6 +317,9 @@ def detect_and_draw_black_frames(image):
     # 面積でソートして大きい順に処理
     sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
     
+    # 黒枠の位置を保存
+    black_frame_rect = None
+    
     # 最大の輪郭のみを描画
     if sorted_contours:
         contour = sorted_contours[0]  # 最大の輪郭のみ
@@ -323,6 +332,48 @@ def detect_and_draw_black_frames(image):
             draw.rectangle([x, y, x+w, y+h], outline=(255, 255, 0), width=10)
             # サイズ情報を表示
             draw.text((x+10, y+10), f"最大黒枠: {w}x{h}px", fill=(255, 255, 0))
+            black_frame_rect = (x, y, w, h)
+    
+    # overlay.pngを重ねる
+    if overlay_mask and black_frame_rect:
+        try:
+            # overlay.pngの読み込み
+            overlay_path = "web_app/mask/overlay.png"
+            if os.path.exists(overlay_path):
+                mask_img = Image.open(overlay_path)
+                
+                # 黒枠の右下を基準点とする
+                x, y, w, h = black_frame_rect
+                base_x = x + w  # 黒枠の右端
+                base_y = y + h  # 黒枠の下端
+                
+                # overlay.pngを黒枠の右下に配置
+                # overlay.pngのサイズ
+                mask_w, mask_h = mask_img.size
+                
+                # 配置位置を計算（右下を基準に）
+                paste_x = base_x - mask_w
+                paste_y = base_y - mask_h
+                
+                # 画像の範囲内に収める
+                paste_x = max(0, paste_x)
+                paste_y = max(0, paste_y)
+                
+                # RGBAに変換してアルファブレンディング
+                overlay = overlay.convert('RGBA')
+                mask_img = mask_img.convert('RGBA')
+                
+                # 重ねる
+                overlay.paste(mask_img, (paste_x, paste_y), mask_img)
+                overlay = overlay.convert('RGB')
+                
+                # 情報テキストを追加
+                draw = ImageDraw.Draw(overlay)
+                draw.text((paste_x+10, paste_y-30), 
+                         f"Overlay位置: ({paste_x}, {paste_y})", 
+                         fill=(0, 255, 0))
+        except Exception as e:
+            print(f"Overlay.png読み込みエラー: {str(e)}")
     
     return overlay
 
