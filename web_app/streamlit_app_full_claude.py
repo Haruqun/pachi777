@@ -60,6 +60,28 @@ def resize_to_default_width(image, target_width=DEFAULT_IMAGE_WIDTH):
         return image.resize((target_width, new_height), Image.Resampling.LANCZOS)
     return image
 
+def normalize_machine_number(number_str):
+    """台番号を正規化（0005→5, 5番台→5など）
+    
+    Args:
+        number_str: 台番号の文字列
+        
+    Returns:
+        int: 正規化された台番号（数値）、抽出できない場合はNone
+    """
+    if not number_str:
+        return None
+    
+    # 文字列から数字だけを抽出
+    numbers = re.findall(r'\d+', str(number_str))
+    if numbers:
+        # 最初の数字を整数に変換（先頭の0を除去）
+        try:
+            return int(numbers[0])
+        except:
+            return None
+    return None
+
 def calculate_black_ratio(image, black_threshold=50):
     """画像内の黒色の割合を計算する
     
@@ -2539,8 +2561,80 @@ if graph_files and st.session_state.get('start_analysis', False):
             })
         
         # 各画像の処理完了時に進捗を更新
-        progress_end = (idx + 1) / len(uploaded_files)
+        progress_end = (idx + 1) / len(graph_files)
         progress_bar.progress(progress_end)
+    
+    # 出玉詳細画像の処理
+    detail_analysis_results = []
+    if detail_files:
+        status_text.text(f'出玉詳細画像を処理中...')
+        for idx, detail_file in enumerate(detail_files):
+            detail_text.text(f'📷 {detail_file.name} の詳細画像を処理中...')
+            detail_file.seek(0)
+            
+            # Claude APIで解析（APIキーがある場合）
+            claude_result = None
+            if st.session_state.get('claude_api_key'):
+                try:
+                    detail_img = Image.open(detail_file)
+                    # 前処理を適用
+                    processed_detail = preprocess_detail_image(detail_img)
+                    
+                    # Claude APIで解析
+                    api_result = analyze_with_claude(
+                        processed_detail,
+                        st.session_state.claude_api_key,
+                        st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
+                    )
+                    
+                    if api_result and api_result.get('success'):
+                        claude_result = api_result.get('data', {})
+                        # 台番号を正規化
+                        if claude_result.get('machine_number'):
+                            claude_result['normalized_machine_number'] = normalize_machine_number(claude_result['machine_number'])
+                except Exception as e:
+                    st.warning(f"⚠️ {detail_file.name} のClaude解析でエラー: {str(e)}")
+            
+            detail_analysis_results.append({
+                'name': detail_file.name,
+                'claude_data': claude_result
+            })
+    
+    # 台番号でペアリング
+    paired_results = []
+    unpaired_graphs = []
+    unpaired_details = []
+    
+    # グラフ結果に正規化した台番号を追加
+    for result in analysis_results:
+        machine_num = None
+        # OCRから台番号を取得
+        if result.get('ocr_data') and result['ocr_data'].get('machine_number'):
+            machine_num = normalize_machine_number(result['ocr_data']['machine_number'])
+        result['normalized_machine_number'] = machine_num
+        
+        # ペアを探す
+        paired = False
+        for detail in detail_analysis_results:
+            detail_machine_num = detail.get('claude_data', {}).get('normalized_machine_number')
+            if machine_num and detail_machine_num and machine_num == detail_machine_num:
+                # ペアリング成功
+                paired_results.append({
+                    'graph': result,
+                    'detail': detail,
+                    'machine_number': machine_num
+                })
+                paired = True
+                detail['paired'] = True  # 使用済みフラグ
+                break
+        
+        if not paired:
+            unpaired_graphs.append(result)
+    
+    # ペアリングされなかった詳細画像
+    for detail in detail_analysis_results:
+        if not detail.get('paired'):
+            unpaired_details.append(detail)
     
     # プログレスバーを完了
     progress_bar.progress(1.0)
@@ -2548,8 +2642,12 @@ if graph_files and st.session_state.get('start_analysis', False):
     detail_text.empty()
     time.sleep(1.0)  # 完了メッセージを表示する時間
     
-    # 結果を保存
+    # 結果を保存（ペアリング情報も含めて）
     st.session_state.analysis_results = analysis_results
+    st.session_state.detail_analysis_results = detail_analysis_results
+    st.session_state.paired_results = paired_results
+    st.session_state.unpaired_graphs = unpaired_graphs
+    st.session_state.unpaired_details = unpaired_details
     
     # Reset analysis state
     st.session_state.start_analysis = False
@@ -2628,12 +2726,57 @@ with st.expander("使い方と注意事項を確認する"):
 
 # 解析結果を表示
 if 'analysis_results' in st.session_state and st.session_state.analysis_results:
-    analysis_results = st.session_state.analysis_results
+    # ペアリングされた結果と個別結果を取得
+    paired_results = st.session_state.get('paired_results', [])
+    unpaired_graphs = st.session_state.get('unpaired_graphs', [])
+    unpaired_details = st.session_state.get('unpaired_details', [])
     
     # 結果をグリッド表示
     st.markdown("### 📊 解析結果一覧")
-
-    # 解析結果を3列で表示（行ごとに処理）
+    
+    # ペアリング状況を表示
+    if paired_results or unpaired_graphs or unpaired_details:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if paired_results:
+                st.success(f"🔗 ペアリング成功: {len(paired_results)}組")
+        with col2:
+            if unpaired_graphs:
+                st.info(f"📊 単独グラフ: {len(unpaired_graphs)}枚")
+        with col3:
+            if unpaired_details:
+                st.info(f"📋 単独詳細: {len(unpaired_details)}枚")
+    
+    # ペアリングされた結果を先に表示
+    if paired_results:
+        st.markdown("#### 🔗 ペアリング済み（グラフ＋詳細）")
+        for row_idx in range(0, len(paired_results), 3):
+            cols = st.columns(3)
+            for col_idx in range(3):
+                result_idx = row_idx + col_idx
+                if result_idx < len(paired_results):
+                    paired = paired_results[result_idx]
+                    result = paired['graph']  # グラフデータ
+                    detail_data = paired['detail']['claude_data'] if paired['detail'].get('claude_data') else {}
+                    
+                    # 既存の表示ロジックを使用（claude_analysisをdetail_dataで上書き）
+                    if detail_data:
+                        result['claude_analysis'] = {'success': True, 'data': detail_data}
+                    
+                    with cols[col_idx]:
+                        # 既存の表示コードを使用（後で抽出）
+                        pass  # この部分は後で実装
+    
+    # 単独のグラフ結果を表示
+    if unpaired_graphs:
+        if paired_results:
+            st.markdown("---")
+        st.markdown("#### 📊 グラフのみ")
+        analysis_results = unpaired_graphs
+    else:
+        analysis_results = []
+    
+    # 既存の解析結果を3列で表示（行ごとに処理）
     for row_idx in range(0, len(analysis_results), 3):
         cols = st.columns(3)
         
