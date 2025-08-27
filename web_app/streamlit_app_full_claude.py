@@ -2883,7 +2883,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             claude_data = result['claude_analysis'].get('data', {})
                             if claude_data.get('initial_ball_starts') and result.get('first_hit_val'):
                                 initial_ball_starts = claude_data['initial_ball_starts']
-                                first_hit_balls = abs(result['first_hit_val'])
+                                first_hit_balls = abs(result.get('first_hit_val') or 0)
                                 if first_hit_balls > 0:
                                     rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
                                     warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
@@ -2911,7 +2911,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                                 normal_rotations = claude_data['normal_rotations']
                                 # 通常時の使用玉数 = 初当たり玉数 + 総獲得玉数
                                 total_jackpot_balls = result.get('total_jackpot_balls', 0)
-                                first_hit_balls = abs(result.get('first_hit_val', 0))
+                                first_hit_balls = abs(result.get('first_hit_val') or 0)
                                 normal_balls = first_hit_balls + total_jackpot_balls
                                 if normal_balls > 0:
                                     rotation_rate_2 = (normal_rotations / normal_balls) * 250
@@ -3392,7 +3392,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 # 回転率①の計算（初回特賞スタートベース）
                 if claude_data.get('initial_ball_starts') and result.get('first_hit_val'):
                     initial_ball_starts = claude_data['initial_ball_starts']
-                    first_hit_balls = abs(result['first_hit_val'])
+                    first_hit_balls = abs(result.get('first_hit_val') or 0)
                     if first_hit_balls > 0:
                         rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
                         warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
@@ -3413,7 +3413,7 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 if claude_data.get('normal_rotations'):
                     normal_rotations = claude_data['normal_rotations']
                     total_jackpot_balls = result.get('total_jackpot_balls', 0)
-                    first_hit_balls = abs(result.get('first_hit_val', 0))
+                    first_hit_balls = abs(result.get('first_hit_val') or 0)
                     normal_balls = first_hit_balls + total_jackpot_balls
                     if normal_balls > 0:
                         rotation_rate_2 = (normal_rotations / normal_balls) * 250
