@@ -60,6 +60,33 @@ def resize_to_default_width(image, target_width=DEFAULT_IMAGE_WIDTH):
         return image.resize((target_width, new_height), Image.Resampling.LANCZOS)
     return image
 
+def calculate_black_ratio(image, black_threshold=50):
+    """画像内の黒色の割合を計算する
+    
+    Args:
+        image: PIL Image
+        black_threshold: 黒色と判定する画素値の閾値（デフォルト: 50）
+        
+    Returns:
+        float: 黒色の割合（0.0-1.0）
+    """
+    # numpyに変換
+    img_array = np.array(image)
+    
+    # RGB画像の場合
+    if len(img_array.shape) == 3:
+        # グレースケールに変換
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    else:
+        gray = img_array
+    
+    # 黒色のピクセル数をカウント
+    black_pixels = np.sum(gray < black_threshold)
+    total_pixels = gray.shape[0] * gray.shape[1]
+    
+    black_ratio = black_pixels / total_pixels
+    return black_ratio
+
 def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False):
     """黒枠を検出してoverlay.pngを重ねる、オプションで上半分を切り抜く
     
@@ -1469,30 +1496,107 @@ with st.sidebar:
         st.markdown("### 🎯 Claude API")
         st.warning("⚠️ 未設定")
         st.caption("管理者ログイン後、APIキーを設定してください")
+    
+    # デバッグセクション（管理者のみ）
+    if st.session_state.get('is_admin', False):
+        st.markdown("---")
+        st.markdown("### 🔍 デバッグ: 画像分類闾値")
+        
+        # 闾値設定
+        black_threshold = st.slider(
+            "黒色判定の闾値（画素値）",
+            min_value=20,
+            max_value=100,
+            value=50,
+            help="この値以下の画素値を黒色と判定します"
+        )
+        
+        detail_threshold = st.slider(
+            "出玉詳細画像判定の闾値（黒色割合）",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.3,
+            step=0.05,
+            format="%.2f",
+            help="黒色割合がこの値以上の場合、出玉詳細画像と判定します"
+        )
+        
+        st.session_state['black_pixel_threshold'] = black_threshold
+        st.session_state['detail_image_threshold'] = detail_threshold
 
-# STEP 1: ファイルアップロード
-st.markdown("### 📤 STEP 1: 解析したいグラフ画像をアップロード")
-st.caption("site7のグラフ画像を選択してください（複数可）")
+# STEP 1: ファイルアップロード（統合版）
+st.markdown("### 📤 STEP 1: 画像をアップロード")
+st.caption("グラフ画像と出玉詳細画像を自動的に分類します")
 
 uploaded_files = st.file_uploader(
-    "画像を選択",
+    "画像を選択（グラフ画像・出玉詳細画像の両方可）",
     type=['jpg', 'jpeg', 'png'],
     accept_multiple_files=True,
-    help="複数の画像を一度にアップロードできます（JPG, PNG形式）",
-    key="graph_uploader"
+    help="複数の画像を一度にアップロードできます。黒色の割合で自動的に分類されます。",
+    key="unified_uploader"
 )
 
-# 出玉詳細画像のアップローダー（オプション）
-st.subheader("📊 出玉詳細画像（オプション）")
-st.caption("出玉詳細画像をアップロードすると、より詳細な解析が可能になります")
-detail_files = st.file_uploader(
-    "出玉詳細画像を選択",
-    type=['jpg', 'jpeg', 'png'],
-    accept_multiple_files=True,
-    help="出玉詳細画像をアップロードすると、黒枠検出とoverlay処理が実行されます",
-    key="detail_uploader"
-)
+# アップロードされた画像を分類
+graph_files = []
+detail_files = []
 
+if uploaded_files:
+    # 黒色割合で画像を分類
+    detail_threshold = st.session_state.get('detail_image_threshold', 0.3)
+    
+    # デバッグ表示用のデータ
+    debug_data = []
+    
+    # 黒色判定の閾値を取得
+    black_pixel_threshold = st.session_state.get('black_pixel_threshold', 50)
+    
+    for file in uploaded_files:
+        file.seek(0)
+        img = Image.open(file)
+        black_ratio = calculate_black_ratio(img, black_threshold=black_pixel_threshold)
+        
+        # デバッグ情報を保存
+        debug_data.append({
+            'name': file.name,
+            'ratio': black_ratio,
+            'type': '出玉詳細' if black_ratio >= detail_threshold else 'グラフ'
+        })
+        
+        # 分類
+        file.seek(0)  # ファイルポインタをリセット
+        if black_ratio >= detail_threshold:
+            detail_files.append(file)
+        else:
+            graph_files.append(file)
+    
+    # 分類結果を表示
+    col1, col2 = st.columns(2)
+    with col1:
+        if graph_files:
+            st.success(f"📊 グラフ画像: {len(graph_files)}枚")
+    with col2:
+        if detail_files:
+            st.success(f"📋 出玉詳細画像: {len(detail_files)}枚")
+    
+    # デバッグ情報表示（管理者のみ）
+    if st.session_state.get('is_admin', False) and st.checkbox("🔍 デバッグ: 黒色割合を表示", key="show_debug"):
+        st.markdown("#### 画像別黒色割合")
+        for data in debug_data:
+            col1, col2, col3 = st.columns([3, 2, 1])
+            with col1:
+                st.text(data['name'])
+            with col2:
+                # プログレスバーで黒色割合を表示
+                st.progress(data['ratio'], text=f"{data['ratio']:.1%}")
+            with col3:
+                if data['type'] == '出玉詳細':
+                    st.markdown("📋 **出玉詳細**")
+                else:
+                    st.markdown("📊 グラフ")
+        
+        st.caption(f"闾値: {detail_threshold:.1%} 以上を出玉詳細画像と判定")
+
+# 以前のdetail_files向けの処理を維持
 if detail_files:
     st.success(f"✅ {len(detail_files)}枚の出玉詳細画像がアップロードされました")
     
@@ -1514,16 +1618,29 @@ if detail_files:
                     st.info(f"他に{len(detail_files) - 3}枚の画像があります")
                 break
 
-if uploaded_files:
+if graph_files or detail_files:
+    # すべてのファイルを統合してから重複チェック
+    all_files = graph_files + detail_files
+    
     # 重複チェック
     seen_names = {}
-    unique_files = []
+    unique_graph_files = []
+    unique_detail_files = []
     duplicate_names = []
     
-    for file in uploaded_files:
+    for file in graph_files:
         if file.name not in seen_names:
             seen_names[file.name] = 1
-            unique_files.append(file)
+            unique_graph_files.append(file)
+        else:
+            seen_names[file.name] += 1
+            if seen_names[file.name] == 2:  # 初めての重複
+                duplicate_names.append(file.name)
+    
+    for file in detail_files:
+        if file.name not in seen_names:
+            seen_names[file.name] = 1
+            unique_detail_files.append(file)
         else:
             seen_names[file.name] += 1
             if seen_names[file.name] == 2:  # 初めての重複
@@ -1532,19 +1649,19 @@ if uploaded_files:
     # アップロード結果を表示
     duplicate_count = sum(count - 1 for count in seen_names.values() if count > 1)
     if duplicate_count > 0:
-        st.success(f"✅ {len(unique_files)}枚の画像がアップロードされました")
+        total_unique = len(unique_graph_files) + len(unique_detail_files)
+        st.success(f"✅ {total_unique}枚の画像がアップロードされました")
         with st.expander(f"ℹ️ {duplicate_count}枚の重複ファイルをスキップしました", expanded=False):
             for name in duplicate_names:
                 count = seen_names[name]
                 st.caption(f"• {name} ({count}回アップロード、1枚のみ使用)")
-    else:
-        st.success(f"✅ {len(unique_files)}枚の画像がアップロードされました")
     
     # 以降はunique_filesを使用
-    uploaded_files = unique_files
+    graph_files = unique_graph_files
+    detail_files = unique_detail_files
     
     # ファイル名をセッションステートに保存
-    st.session_state.uploaded_file_names = [f.name for f in uploaded_files]
+    st.session_state.uploaded_file_names = [f.name for f in graph_files + detail_files]
     
     # STEP 2: プリセット選択
     st.markdown("### 📋 STEP 2: 解析設定を選択")
@@ -1709,7 +1826,7 @@ elif st.session_state.uploaded_file_names:
         st.rerun()
 
 # 解析を実行
-if uploaded_files and st.session_state.get('start_analysis', False):
+if graph_files and st.session_state.get('start_analysis', False):
     # 解析結果セクション
     st.markdown("### 🎯 解析結果")
     
@@ -1758,11 +1875,11 @@ if uploaded_files and st.session_state.get('start_analysis', False):
     analysis_results = []
     
     # 各画像を処理
-    for idx, uploaded_file in enumerate(uploaded_files):
+    for idx, uploaded_file in enumerate(graph_files):
         # 進捗更新（開始時）
-        progress_start = idx / len(uploaded_files)
+        progress_start = idx / len(graph_files)
         progress_bar.progress(progress_start)
-        status_text.text(f'処理中... ({idx + 1}/{len(uploaded_files)})')
+        status_text.text(f'処理中... ({idx + 1}/{len(graph_files)})')
         detail_text.text(f'📷 {uploaded_file.name} の画像を読み込み中...')
         time.sleep(0.1)  # 視覚的フィードバックのため少し徇機
         
