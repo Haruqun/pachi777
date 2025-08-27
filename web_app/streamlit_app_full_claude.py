@@ -180,7 +180,7 @@ def preprocess_detail_image(image):
 # ========== 出玉詳細画像処理用の関数群ここまで ==========
 
 def analyze_with_claude(image, api_key, model="claude-3-5-sonnet-20241022"):
-    """Claude APIを使って出玉詳細画像を解析する
+    """Claude APIを使って出玉詳細画像を解析する（HTTP API版）
     
     Args:
         image: PIL Image形式の画像
@@ -190,18 +190,15 @@ def analyze_with_claude(image, api_key, model="claude-3-5-sonnet-20241022"):
     Returns:
         解析結果の辞書
     """
-    import anthropic
     import base64
     from io import BytesIO
+    import requests
     
     try:
         # 画像をbase64エンコード
         buffered = BytesIO()
         image.save(buffered, format="PNG")
         img_base64 = base64.b64encode(buffered.getvalue()).decode()
-        
-        # Claude APIクライアントを初期化
-        client = anthropic.Anthropic(api_key=api_key)
         
         # プロンプトを作成
         prompt = """この画像はパチンコの出玉詳細情報です。以下の情報を抽出してください：
@@ -231,11 +228,21 @@ JSON形式で結果を返してください。数値は半角数字のみで返�
     "additional_info": "その他の情報"
 }"""
         
-        # Claude APIを呼び出し
-        response = client.messages.create(
-            model=model,
-            max_tokens=2000,
-            messages=[
+        # Claude API エンドポイント
+        url = "https://api.anthropic.com/v1/messages"
+        
+        # リクエストヘッダー
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        }
+        
+        # リクエストボディ
+        data = {
+            "model": model,
+            "max_tokens": 2000,
+            "messages": [
                 {
                     "role": "user",
                     "content": [
@@ -254,39 +261,57 @@ JSON形式で結果を返してください。数値は半角数字のみで返�
                     ]
                 }
             ]
-        )
+        }
         
-        # 応答を解析
-        result_text = response.content[0].text
+        # APIリクエストを送信
+        response = requests.post(url, headers=headers, json=data, timeout=30)
         
-        # JSONを解析
-        import json
-        import re
-        
-        # JSONブロックを抽出
-        json_match = re.search(r'\{[\s\S]*\}', result_text)
-        if json_match:
-            try:
-                result_dict = json.loads(json_match.group())
-                return {
-                    'success': True,
-                    'data': result_dict,
-                    'raw_text': result_text
-                }
-            except json.JSONDecodeError:
-                # JSON解析に失敗した場合はテキストとして返す
+        if response.status_code == 200:
+            response_data = response.json()
+            result_text = response_data['content'][0]['text']
+            
+            # JSONを解析
+            import re
+            
+            # JSONブロックを抽出
+            json_match = re.search(r'\{[\s\S]*\}', result_text)
+            if json_match:
+                try:
+                    result_dict = json.loads(json_match.group())
+                    return {
+                        'success': True,
+                        'data': result_dict,
+                        'raw_text': result_text
+                    }
+                except json.JSONDecodeError:
+                    # JSON解析に失敗した場合はテキストとして返す
+                    return {
+                        'success': True,
+                        'data': None,
+                        'raw_text': result_text
+                    }
+            else:
                 return {
                     'success': True,
                     'data': None,
                     'raw_text': result_text
                 }
         else:
+            error_msg = f"API Error: {response.status_code} - {response.text}"
             return {
-                'success': True,
+                'success': False,
+                'error': error_msg,
                 'data': None,
-                'raw_text': result_text
+                'raw_text': None
             }
             
+    except requests.exceptions.Timeout:
+        return {
+            'success': False,
+            'error': "APIリクエストがタイムアウトしました",
+            'data': None,
+            'raw_text': None
+        }
     except Exception as e:
         return {
             'success': False,
