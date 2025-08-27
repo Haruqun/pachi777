@@ -1867,6 +1867,38 @@ with col2:
         key="detail_uploader"
     )
 
+# テストモード用ボタン（アップロード直下に配置）
+if OVERLAY_TEST_MODE and detail_files:
+    st.markdown("---")
+    st.markdown("### 🔬 黒枠検出テストモード")
+    if st.button("🔬 黒枠検出テストを実行", type="primary", use_container_width=True):
+        # テストモード実行
+        st.markdown("### 🔬 黒枠検出結果")
+        
+        for idx, detail_file in enumerate(detail_files):
+            st.markdown(f"#### 画像 {idx + 1}: {detail_file.name}")
+            
+            # 画像を読み込み
+            detail_image = Image.open(detail_file)
+            
+            # 黒枠を検出してオーバーレイ
+            overlay = detect_and_draw_black_frames(detail_image)
+            
+            # 2列で表示
+            col1_test, col2_test = st.columns(2)
+            with col1_test:
+                st.markdown("**元画像**")
+                st.image(detail_image, use_column_width=True)
+            with col2_test:
+                st.markdown("**黒枠検出結果**")
+                st.image(overlay, use_column_width=True)
+            
+            st.markdown("---")
+        
+        st.success("✅ 黒枠検出テスト完了")
+        st.stop()  # ここで処理を停止
+    st.markdown("---")
+
 if uploaded_files:
     # 重複チェック
     seen_names = {}
@@ -2029,14 +2061,16 @@ if uploaded_files:
     
     st.caption("設定を確認したら、解析ボタンをクリックしてください")
     
-    if st.button("🚀 解析を開始", type="primary", use_container_width=True):
-        st.session_state.start_analysis = True
-        st.session_state.skip_ocr = skip_ocr
-        st.session_state.show_ocr_debug = show_ocr_debug
-        # データエディタのセッションステートをリセット
-        if 'edited_df' in st.session_state:
-            del st.session_state.edited_df
-        st.rerun()
+    # テストモードでも通常の解析ボタンは非表示にする
+    if not OVERLAY_TEST_MODE:
+        if st.button("🚀 解析を開始", type="primary", use_container_width=True):
+            st.session_state.start_analysis = True
+            st.session_state.skip_ocr = skip_ocr
+            st.session_state.show_ocr_debug = show_ocr_debug
+            # データエディタのセッションステートをリセット
+            if 'edited_df' in st.session_state:
+                del st.session_state.edited_df
+            st.rerun()
     
     # プログレスバー（解析中のみ表示）
     if st.session_state.get('start_analysis', False) and uploaded_files:
