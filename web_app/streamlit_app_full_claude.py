@@ -2315,6 +2315,23 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         left = settings['left_margin']  # 左右の余白
         right = width - settings['right_margin']  # 左右の余白
         
+        # デバッグ情報を表示
+        if debug_mode or st.session_state.get('show_crop_debug', False):
+            st.warning(f"""
+            🔍 **切り抜きデバッグ情報 - {uploaded_file.name}**
+            - 元画像サイズ: {width} x {height}px
+            - ゼロライン位置: Y={zero_line_y}px
+            - 切り抜き設定: 上={crop_top_offset}px, 下={crop_bottom_offset}px
+            - 計算された範囲: top={top}, bottom={bottom} (高さ={bottom-top}px)
+            - 左右余白: left={left}, right={right} (幅={right-left}px)
+            """)
+            
+            # 切り抜きサイズの妥当性チェック
+            if bottom - top > height * 0.8:
+                st.error(f"⚠️ 切り抜き高さ({bottom-top}px)が画像高さ({height}px)の80%を超えています")
+            if bottom - top < 100:
+                st.error(f"⚠️ 切り抜き高さ({bottom-top}px)が小さすぎます")
+        
         # 切り抜き実行
         cropped_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
         
@@ -2386,8 +2403,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
         # アナライザーを初期化
         analyzer = WebCompatibleAnalyzer()
         
-        # グリッドラインなしの画像を使用
-        analysis_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
+        # 既に切り抜かれた画像を使用（グリッドライン付き）
+        analysis_img = cropped_img.copy()
         
         # 0ラインの位置を設定
         analyzer.zero_y = zero_line_in_crop
