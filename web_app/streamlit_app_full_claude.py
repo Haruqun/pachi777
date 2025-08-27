@@ -324,11 +324,18 @@ def detect_and_draw_black_frames(image, overlay_mask=True):
     img_array = np.array(image)
     gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
     
-    # エッジ検出
-    edges = cv2.Canny(gray, 50, 150)
+    # 黒い領域を検出（閾値処理）
+    # 黒い背景（値が低い）部分のみを検出
+    threshold = 30  # 黒とみなす最大値
+    black_mask = (gray < threshold).astype(np.uint8) * 255
+    
+    # ノイズ除去のための形態学処理
+    kernel = np.ones((5,5), np.uint8)
+    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
+    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
     
     # 輪郭検出
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     # オーバーレイ用の画像
     overlay = image.copy()
@@ -340,14 +347,14 @@ def detect_and_draw_black_frames(image, overlay_mask=True):
     # 黒枠の位置を保存
     black_frame_rect = None
     
-    # 最大の輪郭のみを検出（描画はしない）
+    # 最大の黒い領域を検出（描画はしない）
     if sorted_contours:
-        contour = sorted_contours[0]  # 最大の輪郭のみ
+        contour = sorted_contours[0]  # 最大の領域のみ
         x, y, w, h = cv2.boundingRect(contour)
         
         # 画像サイズに対して十分大きい場合のみ保存
         img_height, img_width = img_array.shape[:2]
-        if w > img_width * 0.3 and h > img_height * 0.2:
+        if w > img_width * 0.2 and h > img_height * 0.1:  # 閾値を緩める
             # 黒枠の位置のみ保存（描画はしない）
             black_frame_rect = (x, y, w, h)
     
@@ -368,18 +375,15 @@ def detect_and_draw_black_frames(image, overlay_mask=True):
                     mask_h_scaled = int(mask_img.size[1] * scale_ratio)
                     mask_img = mask_img.resize((mask_w_scaled, mask_h_scaled), Image.Resampling.LANCZOS)
                 
-                # 黒枠の右下を基準点とする
+                # 黒枠の左上を基準点とする
                 x, y, w, h = black_frame_rect
-                base_x = x + w  # 黒枠の右端
-                base_y = y + h  # 黒枠の下端
                 
                 # overlay.pngのサイズ
                 mask_w, mask_h = mask_img.size
                 
-                # overlay.pngの右下を黒枠の右下に合わせる
-                # overlay.pngの右下が(base_x, base_y)になるように配置
-                paste_x = base_x - mask_w
-                paste_y = base_y - mask_h
+                # overlay.pngの左上を黒枠の左上に合わせる
+                paste_x = x
+                paste_y = y
                 
                 # 画像の範囲内に収める
                 paste_x = max(0, paste_x)
@@ -397,10 +401,10 @@ def detect_and_draw_black_frames(image, overlay_mask=True):
                 draw = ImageDraw.Draw(overlay)
                 debug_text = [
                     f"黒枠: x={x}, y={y}, w={w}, h={h}",
-                    f"黒枠右下: ({base_x}, {base_y})",
+                    f"黒枠左上: ({x}, {y})",
                     f"Overlay: {mask_w}x{mask_h}px",
                     f"Overlay位置: ({paste_x}, {paste_y})",
-                    f"Overlay右下: ({paste_x + mask_w}, {paste_y + mask_h})"
+                    f"重なり確認: 黒枠とOverlayの左上が一致"
                 ]
                 for i, text in enumerate(debug_text):
                     draw.text((10, 10 + i*20), text, fill=(0, 255, 0))
