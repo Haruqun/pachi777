@@ -2493,22 +2493,35 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                             st.image(result['detail_image_processed'], use_column_width=True)
                             st.caption("黒枠検出 + overlay.png + 50%切り抜き適用済み")
                     
-                    # Claude API解析結果の表示
+                    # 元画像を折りたたみ可能に
+                    with st.expander("📷 元画像を表示"):
+                        st.image(result['original_image'], use_column_width=True)
+                    
+                    # Claude API解析結果の表示（エキスパンダーなしで直接表示・統計情報の前に配置）
                     if result.get('claude_analysis'):
                         if result['claude_analysis'] and result['claude_analysis']['success']:
-                            with st.expander("🤖 Claude AI解析結果", expanded=True):
-                                claude_data = result['claude_analysis'].get('data')
-                                if claude_data:
-                                    # カード風のスタイルで表示
-                                    
-                                    # 機種名と日付
-                                    if claude_data.get('machine_name'):
-                                        st.markdown(f"### 🎰 {claude_data['machine_name']}")
-                                    if claude_data.get('date'):
-                                        st.caption(f"📅 {claude_data['date']}")
-                                    
-                                    # カード風のHTMLスタイル
-                                    html_content = '<div class="stat-card">'
+                            claude_data = result['claude_analysis'].get('data')
+                            if claude_data:
+                                # カード風のスタイルで表示
+                                st.markdown("### 🤖 Claude AI解析結果")
+                                
+                                # カード風のHTMLスタイル
+                                html_content = '<div class="stat-card">'
+                                
+                                # 機種名と日付をカード内に含める
+                                if claude_data.get('machine_name'):
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🎰 機種名</span>
+                                        <span class="stat-value" style="font-size: 1.1em;">{claude_data['machine_name']}</span>
+                                    </div>'''
+                                
+                                if claude_data.get('date'):
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">📅 日付</span>
+                                        <span class="stat-value">{claude_data['date']}</span>
+                                    </div>'''
                                     
                                     # 台番号
                                     if claude_data.get('machine_number'):
@@ -2618,10 +2631,6 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                         # APIキーが設定されていない場合のメッセージ
                         with st.expander("🤖 Claude AI解析"):
                             st.info("Claude APIキーが設定されていません。管理者ログインしてAPIキーを設定してください。")
-
-                    # 元画像を折りたたみ可能に
-                    with st.expander("📷 元画像を表示"):
-                        st.image(result['original_image'], use_column_width=True)
 
                     # 成功時は統計情報を表示（解析結果の下に縦に並べる）
                     if result['success']:
