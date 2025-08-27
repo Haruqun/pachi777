@@ -930,6 +930,30 @@ if 'csv_columns' not in st.session_state:
 if 'game_type' not in st.session_state:
     st.session_state.game_type = 'パチンコ'  # デフォルトはパチンコ
 
+# Claude APIキーの初期化（データベースから読み込み）
+if 'claude_api_key' not in st.session_state:
+    try:
+        conn = sqlite3.connect('presets.db')
+        cursor = conn.cursor()
+        
+        # APIキーを読み込み
+        cursor.execute('''
+            SELECT api_key, model FROM api_keys 
+            WHERE key_name = 'claude_api'
+            ORDER BY created_at DESC 
+            LIMIT 1
+        ''')
+        result = cursor.fetchone()
+        
+        if result:
+            st.session_state.claude_api_key = result[0]
+            st.session_state.claude_model = result[1] if result[1] else 'claude-3-5-haiku-20241022'
+        
+        conn.close()
+    except Exception:
+        # エラーが発生しても続行
+        pass
+
 
 # URLパラメータによる自動ログインチェック
 query_params = st.query_params
@@ -1372,7 +1396,35 @@ with st.sidebar:
             if api_key:
                 st.session_state.claude_api_key = api_key
                 st.session_state.claude_model = model
-                st.success("✅ APIキーを保存しました（リブートまで有効）")
+                
+                # データベースに保存
+                try:
+                    conn = sqlite3.connect('presets.db')
+                    cursor = conn.cursor()
+                    
+                    # テーブルが存在しない場合は作成
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS api_keys (
+                            id INTEGER PRIMARY KEY,
+                            key_name TEXT UNIQUE,
+                            api_key TEXT,
+                            model TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    ''')
+                    
+                    # APIキーを保存または更新
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO api_keys (key_name, api_key, model)
+                        VALUES (?, ?, ?)
+                    ''', ('claude_api', api_key, model))
+                    
+                    conn.commit()
+                    conn.close()
+                    
+                    st.success("✅ APIキーを保存しました")
+                except Exception as e:
+                    st.error(f"❌ 保存エラー: {str(e)}")
             else:
                 st.error("❌ APIキーを入力してください")
         
@@ -1380,6 +1432,27 @@ with st.sidebar:
         if st.session_state.get('claude_api_key'):
             st.info(f"📝 APIキー設定済み: {st.session_state.claude_api_key[:10]}...")
             st.info(f"🤖 使用モデル: {st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')}")
+            
+            # APIキー削除ボタン
+            if st.button("🗑️ APIキーを削除", type="secondary"):
+                try:
+                    # セッションステートから削除
+                    if 'claude_api_key' in st.session_state:
+                        del st.session_state.claude_api_key
+                    if 'claude_model' in st.session_state:
+                        del st.session_state.claude_model
+                    
+                    # データベースから削除
+                    conn = sqlite3.connect('presets.db')
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM api_keys WHERE key_name = 'claude_api'")
+                    conn.commit()
+                    conn.close()
+                    
+                    st.success("✅ APIキーを削除しました")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ 削除エラー: {str(e)}")
         
         # ログアウト
         if st.button("ログアウト", type="secondary"):
