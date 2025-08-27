@@ -308,12 +308,13 @@ def resize_to_default_width(image, target_width=DEFAULT_IMAGE_WIDTH):
         return image.resize((target_width, new_height), Image.Resampling.LANCZOS)
     return image
 
-def detect_and_draw_black_frames(image, overlay_mask=True):
+def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False):
     """黒枠を検出して線を引いたオーバーレイ画像を返す
     
     Args:
         image: 入力画像
         overlay_mask: Trueの場合、overlay.pngを重ねる
+        crop_upper_half: Trueの場合、黒枠の50%線で上半分を切り抜く
     """
     import cv2
     import numpy as np
@@ -357,6 +358,11 @@ def detect_and_draw_black_frames(image, overlay_mask=True):
         if w > img_width * 0.2 and h > img_height * 0.1:  # 閾値を緩める
             # 黒枠の位置のみ保存（描画はしない）
             black_frame_rect = (x, y, w, h)
+            
+            # 黒枠の50%位置に線を引く
+            middle_y = y + h // 2
+            draw.line([(0, middle_y), (img_width, middle_y)], fill=(255, 0, 0), width=3)
+            draw.text((10, middle_y - 25), f"50% Line (Y={middle_y})", fill=(255, 0, 0))
     
     # overlay.pngを重ねる
     if overlay_mask and black_frame_rect:
@@ -410,6 +416,19 @@ def detect_and_draw_black_frames(image, overlay_mask=True):
                     draw.text((10, 10 + i*20), text, fill=(0, 255, 0))
         except Exception as e:
             print(f"Overlay.png読み込みエラー: {str(e)}")
+    
+    # 上半分を切り抜く処理
+    if crop_upper_half and black_frame_rect:
+        x, y, w, h = black_frame_rect
+        middle_y = y + h // 2
+        # 画像の一番上から50%線までを切り抜く
+        overlay = overlay.crop((0, 0, overlay.width, middle_y))
+        
+        # デバッグ情報を追加
+        draw = ImageDraw.Draw(overlay)
+        draw.text((10, overlay.height - 30), 
+                 f"Cropped at Y={middle_y} (Upper half of black frame)", 
+                 fill=(0, 255, 255))
     
     return overlay
 
@@ -1964,8 +1983,8 @@ if OVERLAY_TEST_MODE and detail_files:
             # デフォルト幅にリサイズ
             detail_image = resize_to_default_width(detail_image)
             
-            # 黒枠を検出してオーバーレイ
-            overlay = detect_and_draw_black_frames(detail_image)
+            # 黒枠を検出してオーバーレイ（上半分切り抜きも実行）
+            overlay = detect_and_draw_black_frames(detail_image, overlay_mask=True, crop_upper_half=True)
             
             # 2列で表示
             col1_test, col2_test = st.columns(2)
@@ -2202,8 +2221,8 @@ if uploaded_files and st.session_state.get('start_analysis', False):
             # デフォルト幅にリサイズ
             detail_image = resize_to_default_width(detail_image)
             
-            # 黒枠を検出してオーバーレイ
-            overlay = detect_and_draw_black_frames(detail_image)
+            # 黒枠を検出してオーバーレイ（上半分切り抜きも実行）
+            overlay = detect_and_draw_black_frames(detail_image, overlay_mask=True, crop_upper_half=True)
             
             # 2列で表示
             col1, col2 = st.columns(2)
