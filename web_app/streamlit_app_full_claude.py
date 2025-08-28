@@ -1644,6 +1644,63 @@ if detail_files:
                     st.info(f"他に{len(detail_files) - 3}枚の画像があります")
                 break
 
+# 交換レートと超中小設定（画像アップロード前でも表示）
+st.markdown("### ⚙️ 解析設定")
+
+# 交換レート設定
+unit = get_unit()
+default_rate = 3.57145 if st.session_state.game_type == "パチンコ" else 17.86
+help_text = "1玉あたりの交換レート（円）。28玉交換の場合は3.57145円/玉" if st.session_state.game_type == "パチンコ" else "1枚あたりの交換レート（円）。5.6枚交換の場合は17.86円/枚"
+
+exchange_rate = st.number_input(
+    f"💱 交換レート（円/{unit}）",
+    min_value=0.1,
+    max_value=20.0,
+    value=st.session_state.settings.get('exchange_rate', default_rate),
+    step=0.01,
+    format="%.5f",
+    help=help_text
+)
+st.session_state.settings['exchange_rate'] = exchange_rate
+
+# パチンコの場合のみ超中小の払い出し球数設定を表示
+if st.session_state.game_type == "パチンコ":
+    st.markdown("##### 🎰 大当たり払い出し球数")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        big_balls = st.number_input(
+            "超（大）",
+            min_value=100,
+            max_value=3000,
+            value=st.session_state.settings.get('big_jackpot_balls', 1500),
+            step=50,
+            help="超（大）の1回あたりの払い出し球数"
+        )
+        st.session_state.settings['big_jackpot_balls'] = big_balls
+    
+    with col2:
+        middle_balls = st.number_input(
+            "中",
+            min_value=100,
+            max_value=2000,
+            value=st.session_state.settings.get('middle_jackpot_balls', 750),
+            step=50,
+            help="中の1回あたりの払い出し球数"
+        )
+        st.session_state.settings['middle_jackpot_balls'] = middle_balls
+    
+    with col3:
+        small_balls = st.number_input(
+            "小",
+            min_value=100,
+            max_value=1000,
+            value=st.session_state.settings.get('small_jackpot_balls', 450),
+            step=50,
+            help="小の1回あたりの払い出し球数"
+        )
+        st.session_state.settings['small_jackpot_balls'] = small_balls
+
 if graph_files or detail_files:
     # すべてのファイルを統合してから重複チェック
     all_files = graph_files + detail_files
@@ -1800,60 +1857,6 @@ if graph_files or detail_files:
             help="OCRで読み取ったテキストを確認できます。台番号が認識されない場合のトラブルシューティングに使用してください。"
         )
     
-    
-    # 交換レート設定
-    unit = get_unit()
-    default_rate = 3.57145 if st.session_state.game_type == "パチンコ" else 17.86
-    help_text = "1玉あたりの交換レート（円）。28玉交換の場合は3.57145円/玉" if st.session_state.game_type == "パチンコ" else "1枚あたりの交換レート（円）。5.6枚交換の場合は17.86円/枚"
-    
-    exchange_rate = st.number_input(
-        f"💱 交換レート（円/{unit}）",
-        min_value=0.1,
-        max_value=20.0,
-        value=st.session_state.settings.get('exchange_rate', default_rate),
-        step=0.01,
-        format="%.5f",
-        help=help_text
-    )
-    st.session_state.settings['exchange_rate'] = exchange_rate
-    
-    # パチンコの場合のみ超中小の払い出し球数設定を表示
-    if st.session_state.game_type == "パチンコ":
-        st.markdown("##### 🎰 大当たり払い出し球数")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            big_balls = st.number_input(
-                "超（大）",
-                min_value=100,
-                max_value=3000,
-                value=st.session_state.settings.get('big_jackpot_balls', 1500),
-                step=50,
-                help="超（大）の1回あたりの払い出し球数"
-            )
-            st.session_state.settings['big_jackpot_balls'] = big_balls
-        
-        with col2:
-            middle_balls = st.number_input(
-                "中",
-                min_value=100,
-                max_value=2000,
-                value=st.session_state.settings.get('middle_jackpot_balls', 750),
-                step=50,
-                help="中の1回あたりの払い出し球数"
-            )
-            st.session_state.settings['middle_jackpot_balls'] = middle_balls
-        
-        with col3:
-            small_balls = st.number_input(
-                "小",
-                min_value=100,
-                max_value=1000,
-                value=st.session_state.settings.get('small_jackpot_balls', 450),
-                step=50,
-                help="小の1回あたりの払い出し球数"
-            )
-            st.session_state.settings['small_jackpot_balls'] = small_balls
     
     st.caption("設定を確認したら、解析ボタンをクリックしてください")
     
