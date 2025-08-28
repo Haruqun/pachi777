@@ -2725,7 +2725,7 @@ with st.expander("使い方と注意事項を確認する"):
     """)
 
 # 解析結果を表示
-if 'analysis_results' in st.session_state and st.session_state.analysis_results:
+if 'analysis_results' in st.session_state:
     # ペアリングされた結果と個別結果を取得
     paired_results = st.session_state.get('paired_results', [])
     unpaired_graphs = st.session_state.get('unpaired_graphs', [])
@@ -2747,34 +2747,33 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
             if unpaired_details:
                 st.info(f"📋 単独詳細: {len(unpaired_details)}枚")
     
-    # ペアリングされた結果を先に表示
-    if paired_results:
-        st.markdown("#### 🔗 ペアリング済み（グラフ＋詳細）")
-        for row_idx in range(0, len(paired_results), 3):
-            cols = st.columns(3)
-            for col_idx in range(3):
-                result_idx = row_idx + col_idx
-                if result_idx < len(paired_results):
-                    paired = paired_results[result_idx]
-                    result = paired['graph']  # グラフデータ
-                    detail_data = paired['detail']['claude_data'] if paired['detail'].get('claude_data') else {}
-                    
-                    # 既存の表示ロジックを使用（claude_analysisをdetail_dataで上書き）
-                    if detail_data:
-                        result['claude_analysis'] = {'success': True, 'data': detail_data}
-                    
-                    with cols[col_idx]:
-                        # 既存の表示コードを使用（後で抽出）
-                        pass  # この部分は後で実装
+    # すべての結果を統合して表示用リストを作成
+    all_results = []
     
-    # 単独のグラフ結果を表示
-    if unpaired_graphs:
-        if paired_results:
-            st.markdown("---")
-        st.markdown("#### 📊 グラフのみ")
-        analysis_results = unpaired_graphs
-    else:
-        analysis_results = []
+    # ペアリングされた結果を先に追加
+    for paired in paired_results:
+        result = paired['graph'].copy()  # グラフデータをコピー
+        detail_data = paired['detail']['claude_data'] if paired['detail'].get('claude_data') else {}
+        
+        # 既存のClaude分析データを上書き（ペアリングされた詳細データで）
+        if detail_data:
+            result['claude_analysis'] = {'success': True, 'data': detail_data}
+        result['is_paired'] = True  # ペアリングフラグを追加
+        all_results.append(result)
+    
+    # 単独のグラフ結果を追加
+    for graph in unpaired_graphs:
+        result = graph.copy()
+        result['is_paired'] = False
+        all_results.append(result)
+    
+    # analysis_resultsを更新して既存のコードで表示
+    analysis_results = all_results
+    
+    # デバッグ情報（一時的）
+    if not analysis_results:
+        st.warning("⚠️ 表示する解析結果がありません")
+        st.info(f"デバッグ情報: paired={len(paired_results)}, unpaired_graphs={len(unpaired_graphs)}, unpaired_details={len(unpaired_details)}")
     
     # 既存の解析結果を3列で表示（行ごとに処理）
     for row_idx in range(0, len(analysis_results), 3):
@@ -2787,6 +2786,10 @@ if 'analysis_results' in st.session_state and st.session_state.analysis_results:
                 result = analysis_results[idx]
                 
                 with cols[col_idx]:
+                    # ペアリング状態を表示
+                    if result.get('is_paired'):
+                        st.success("🔗 ペアリング済み", icon="✅")
+                    
                     # 台番号を常に編集可能なテキストフォームで表示
                     col_num, col_input = st.columns([1, 4])
                     with col_num:
