@@ -926,7 +926,11 @@ default_settings = {
     'grid_30k_offset': 1,       # +30000ライン（最上部）
     'grid_minus_30k_offset': -34, # -30000ライン（最下部）
     'exchange_rate': 3.57145,    # 交換レート（円/玉）デフォルトは28玉交換
-    'zero_line_adjustment': 0    # ゼロライン調整値
+    'zero_line_adjustment': 0,   # ゼロライン調整値
+    # 超中小の払い出し球数
+    'big_jackpot_balls': 1500,   # 超（大）の払い出し球数
+    'middle_jackpot_balls': 750,  # 中の払い出し球数
+    'small_jackpot_balls': 450    # 小の払い出し球数
 }
 
 # セッションステートの初期化（エキスパンダーより前に行う）
@@ -1813,6 +1817,44 @@ if graph_files or detail_files:
     )
     st.session_state.settings['exchange_rate'] = exchange_rate
     
+    # パチンコの場合のみ超中小の払い出し球数設定を表示
+    if st.session_state.game_type == "パチンコ":
+        st.markdown("##### 🎰 大当たり払い出し球数")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            big_balls = st.number_input(
+                "超（大）",
+                min_value=100,
+                max_value=3000,
+                value=st.session_state.settings.get('big_jackpot_balls', 1500),
+                step=50,
+                help="超（大）の1回あたりの払い出し球数"
+            )
+            st.session_state.settings['big_jackpot_balls'] = big_balls
+        
+        with col2:
+            middle_balls = st.number_input(
+                "中",
+                min_value=100,
+                max_value=2000,
+                value=st.session_state.settings.get('middle_jackpot_balls', 750),
+                step=50,
+                help="中の1回あたりの払い出し球数"
+            )
+            st.session_state.settings['middle_jackpot_balls'] = middle_balls
+        
+        with col3:
+            small_balls = st.number_input(
+                "小",
+                min_value=100,
+                max_value=1000,
+                value=st.session_state.settings.get('small_jackpot_balls', 450),
+                step=50,
+                help="小の1回あたりの払い出し球数"
+            )
+            st.session_state.settings['small_jackpot_balls'] = small_balls
+    
     st.caption("設定を確認したら、解析ボタンをクリックしてください")
     
     if st.button("🚀 解析を開始", type="primary", use_container_width=True):
@@ -2300,9 +2342,33 @@ if graph_files and st.session_state.get('start_analysis', False):
                 # 使用球数は最低値の絶対値
                 first_hit_used_balls = abs(min_val_before_first)
 
-            # 総獲得球数の計算（大当り時の増加分の合計）
-            # 補正後の値（graph_values）を使用
+            # 総獲得球数の計算
+            # Claude APIで超中小の回数が取得できている場合は、それを優先
             total_jackpot_balls = 0
+            total_jackpot_balls_from_ai = None  # AI計算による総獲得球数
+            
+            # Claude APIデータがある場合、超中小の回数から計算
+            if ocr_data and st.session_state.game_type == 'パチンコ':
+                claude_data = ocr_data.get('claude_analysis', {}).get('data', {}) if ocr_data.get('claude_analysis') else {}
+                if claude_data and all(k in claude_data for k in ['big_jackpots', 'medium_jackpots', 'small_jackpots']):
+                    # 超中小の回数が全て取得できている場合
+                    big_count = claude_data.get('big_jackpots', 0) or 0
+                    middle_count = claude_data.get('medium_jackpots', 0) or 0
+                    small_count = claude_data.get('small_jackpots', 0) or 0
+                    
+                    # 払い出し球数設定を取得
+                    big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
+                    middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
+                    small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                    
+                    # AI計算による総獲得球数
+                    total_jackpot_balls_from_ai = (
+                        big_count * big_balls +
+                        middle_count * middle_balls +
+                        small_count * small_balls
+                    )
+            
+            # グラフから総獲得球数を計算（従来の方法）
             jackpot_count = 0  # 大当り回数をカウント
             jackpot_details = []  # 各大当りの詳細情報
             # 遊技種別に応じた閾値
@@ -2348,6 +2414,11 @@ if graph_files and st.session_state.get('start_analysis', False):
                 else:
                     i += 1
             
+            # AI計算が利用可能な場合はそれを優先
+            if total_jackpot_balls_from_ai is not None:
+                total_jackpot_balls_graph = total_jackpot_balls  # グラフから計算した値を保持
+                total_jackpot_balls = total_jackpot_balls_from_ai  # AI計算値を使用
+                
             # 平均獲得球数を計算
             avg_jackpot_balls = total_jackpot_balls / jackpot_count if jackpot_count > 0 else 0
 
@@ -2538,7 +2609,9 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'current_val': int(current_val),
                 'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
                 'first_hit_used_balls': int(first_hit_used_balls),  # 初当たりまでの使用球数
-                'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数を追加
+                'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数（AI優先）
+                'total_jackpot_balls_from_ai': int(total_jackpot_balls_from_ai) if total_jackpot_balls_from_ai is not None else None,  # AI計算による総獲得球数
+                'total_jackpot_balls_graph': int(total_jackpot_balls_graph) if 'total_jackpot_balls_graph' in locals() else int(total_jackpot_balls),  # グラフから計算した総獲得球数
                 'jackpot_count': jackpot_count,  # 大当り回数（グラフから検出）
                 'avg_jackpot_balls': int(avg_jackpot_balls),  # 平均獲得球数
                 'jackpot_details': jackpot_details,  # 各大当りの詳細
@@ -3151,7 +3224,16 @@ if 'analysis_results' in st.session_state:
                     
                     # 残りの統計情報を追加
                     html_content += f'<div class="stat-item"><span class="stat-label">🎯 {jackpot_label}</span><span class="stat-value positive">{jackpot_count}回</span></div>'
-                    html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数</span><span class="stat-value positive">{result.get("total_jackpot_balls", 0):,}{unit}</span></div>'
+                    
+                    # 総獲得球数（AI計算がある場合は併記）
+                    if result.get("total_jackpot_balls_from_ai") is not None:
+                        html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数（AI計算）</span><span class="stat-value positive">{result.get("total_jackpot_balls_from_ai", 0):,}{unit}</span></div>'
+                        if result.get("total_jackpot_balls_graph") is not None:
+                            diff = result.get("total_jackpot_balls_from_ai", 0) - result.get("total_jackpot_balls_graph", 0)
+                            if abs(diff) > 100:  # 差が100球以上の場合は警告
+                                html_content += f'<div class="stat-item"><span class="stat-label">📊 グラフ解析値</span><span class="stat-value">{result.get("total_jackpot_balls_graph", 0):,}{unit} (差分: {diff:+,})</span></div>'
+                    else:
+                        html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数</span><span class="stat-value positive">{result.get("total_jackpot_balls", 0):,}{unit}</span></div>'
                     
                     # 回転率データを追加
                     if rotation_html:
