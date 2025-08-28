@@ -900,6 +900,50 @@ def extract_site7_data(image):
         st.warning(f"OCRエラー: {str(e)}")
         return None
 
+# 機種別の大当たり出玉数データベース
+MACHINE_PAYOUT_DATA = {
+    "Re:ゼロから始める異世界生活 season2": {
+        "big_jackpot_balls": 1500,    # 10R
+        "middle_jackpot_balls": 750,   # 中（この機種は使用しない）
+        "small_jackpot_balls": 300     # 2R
+    },
+    # 今後追加される機種データ
+    # "機種名": {
+    #     "big_jackpot_balls": 大の出玉数,
+    #     "middle_jackpot_balls": 中の出玉数,
+    #     "small_jackpot_balls": 小の出玉数
+    # }
+}
+
+def get_machine_payouts(machine_name):
+    """機種名から大当たり出玉数を取得
+    
+    Args:
+        machine_name: 機種名
+        
+    Returns:
+        dict: 大当たり出玉数の辞書、見つからない場合はNone
+    """
+    if not machine_name:
+        return None
+    
+    # 正規化（空白や記号を除去）
+    normalized_name = machine_name.replace(" ", "").replace("　", "")
+    
+    # 部分一致で検索（略称や表記揺れに対応）
+    for key, data in MACHINE_PAYOUT_DATA.items():
+        normalized_key = key.replace(" ", "").replace("　", "")
+        if normalized_key in normalized_name or normalized_name in normalized_key:
+            return data
+    
+    # Re:ゼロの略称対応
+    if "リゼロ" in machine_name or "rezero" in machine_name.lower():
+        for key, data in MACHINE_PAYOUT_DATA.items():
+            if "Re:ゼロ" in key or "Re：ゼロ" in key:
+                return data
+    
+    return None
+
 # ヘルパー関数
 def get_unit():
     """現在の遊技種別に応じた単位を返す"""
@@ -2353,6 +2397,35 @@ if graph_files and st.session_state.get('start_analysis', False):
             # Claude APIデータがある場合、超中小の回数から計算
             if ocr_data and st.session_state.game_type == 'パチンコ':
                 claude_data = ocr_data.get('claude_analysis', {}).get('data', {}) if ocr_data.get('claude_analysis') else {}
+                
+                # 機種名が取得できた場合、自動的に出玉数を設定
+                if claude_data and claude_data.get('machine_name'):
+                    machine_name = claude_data['machine_name']
+                    machine_payouts = get_machine_payouts(machine_name)
+                    
+                    if machine_payouts:
+                        # デフォルト値のままの場合のみ更新
+                        default_big = 1500
+                        default_middle = 750
+                        default_small = 450
+                        
+                        current_big = st.session_state.settings.get('big_jackpot_balls', default_big)
+                        current_middle = st.session_state.settings.get('middle_jackpot_balls', default_middle)
+                        current_small = st.session_state.settings.get('small_jackpot_balls', default_small)
+                        
+                        # すべてデフォルト値の場合のみ自動更新
+                        if (current_big == default_big and 
+                            current_middle == default_middle and 
+                            current_small == default_small):
+                            
+                            # 機種別の値で更新
+                            st.session_state.settings['big_jackpot_balls'] = machine_payouts.get('big_jackpot_balls', default_big)
+                            st.session_state.settings['middle_jackpot_balls'] = machine_payouts.get('middle_jackpot_balls', default_middle)
+                            st.session_state.settings['small_jackpot_balls'] = machine_payouts.get('small_jackpot_balls', default_small)
+                            
+                            # デバッグ情報（開発中のみ）
+                            detail_text.text(f'🎯 機種「{machine_name}」の出玉数を自動設定しました')
+                
                 if claude_data and all(k in claude_data for k in ['big_jackpots', 'medium_jackpots', 'small_jackpots']):
                     # 超中小の回数が全て取得できている場合
                     big_count = claude_data.get('big_jackpots', 0) or 0
@@ -2958,26 +3031,29 @@ if 'analysis_results' in st.session_state:
                                             <span class="stat-value positive">{claude_data['first_jackpots']}回</span>
                                         </div>'''
                                     
-                                    # 大当たり内訳
+                                    # 大当たり内訳（出玉数も表示）
                                     if claude_data.get('big_jackpots') is not None:
+                                        big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
                                         html_content += f'''
                                         <div class="stat-item">
                                             <span class="stat-label">🔴 超</span>
-                                            <span class="stat-value">{claude_data['big_jackpots']}回</span>
+                                            <span class="stat-value">{claude_data['big_jackpots']}回 ({big_balls}玉/回)</span>
                                         </div>'''
                                     
                                     if claude_data.get('medium_jackpots') is not None:
+                                        middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
                                         html_content += f'''
                                         <div class="stat-item">
                                             <span class="stat-label">🟡 中</span>
-                                            <span class="stat-value">{claude_data['medium_jackpots']}回</span>
+                                            <span class="stat-value">{claude_data['medium_jackpots']}回 ({middle_balls}玉/回)</span>
                                         </div>'''
                                     
                                     if claude_data.get('small_jackpots') is not None:
+                                        small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
                                         html_content += f'''
                                         <div class="stat-item">
                                             <span class="stat-label">🔵 小</span>
-                                            <span class="stat-value">{claude_data['small_jackpots']}回</span>
+                                            <span class="stat-value">{claude_data['small_jackpots']}回 ({small_balls}玉/回)</span>
                                         </div>'''
                                     
                                     # 回転数情報
