@@ -1639,6 +1639,41 @@ if uploaded_files:
         else:
             graph_files.append(file)
     
+    # 出玉詳細画像から先に機種名を検出して自動設定
+    if detail_files and st.session_state.game_type == "パチンコ" and not st.session_state.get('payout_manually_changed', False):
+        # 最初の出玉詳細画像から機種名を取得
+        if st.session_state.get('claude_api_key'):
+            for detail_file in detail_files[:1]:  # 最初の1枚だけチェック
+                try:
+                    detail_file.seek(0)
+                    detail_img = Image.open(detail_file)
+                    processed_detail = preprocess_detail_image(detail_img)
+                    
+                    # 機種名検出のための簡易解析
+                    api_result = analyze_with_claude(
+                        processed_detail,
+                        st.session_state.claude_api_key,
+                        st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
+                    )
+                    
+                    if api_result and api_result.get('success'):
+                        claude_data = api_result.get('data', {})
+                        machine_name = claude_data.get('machine_name')
+                        
+                        if machine_name and not st.session_state.get('auto_payout_applied', False):
+                            machine_payouts = get_machine_payouts(machine_name)
+                            if machine_payouts:
+                                # 自動設定を適用
+                                st.session_state.settings['big_jackpot_balls'] = machine_payouts.get('big_jackpot_balls', 1500)
+                                st.session_state.settings['middle_jackpot_balls'] = machine_payouts.get('middle_jackpot_balls', 750)
+                                st.session_state.settings['small_jackpot_balls'] = machine_payouts.get('small_jackpot_balls', 450)
+                                st.session_state.auto_payout_applied = True
+                                st.info(f'🎯 機種「{machine_name}」を検出しました。出玉数を自動設定しました。')
+                                detail_file.seek(0)  # ファイルポインタをリセット
+                                break
+                except:
+                    pass  # エラーは無視して続行
+    
     # 分類結果を表示
     col1, col2 = st.columns(2)
     with col1:
@@ -1712,6 +1747,10 @@ if st.session_state.game_type == "パチンコ":
     st.markdown("##### 🎰 大当たり払い出し球数")
     col1, col2, col3 = st.columns(3)
     
+    # ユーザーが手動で変更したかを追跡するキーを初期化
+    if 'payout_manually_changed' not in st.session_state:
+        st.session_state.payout_manually_changed = False
+    
     with col1:
         big_balls = st.number_input(
             "超（大）",
@@ -1719,7 +1758,9 @@ if st.session_state.game_type == "パチンコ":
             max_value=3000,
             value=st.session_state.settings.get('big_jackpot_balls', 1500),
             step=50,
-            help="超（大）の1回あたりの払い出し球数"
+            help="超（大）の1回あたりの払い出し球数",
+            key="big_jackpot_input",
+            on_change=lambda: setattr(st.session_state, 'payout_manually_changed', True)
         )
         st.session_state.settings['big_jackpot_balls'] = big_balls
     
@@ -1730,7 +1771,9 @@ if st.session_state.game_type == "パチンコ":
             max_value=2000,
             value=st.session_state.settings.get('middle_jackpot_balls', 750),
             step=50,
-            help="中の1回あたりの払い出し球数"
+            help="中の1回あたりの払い出し球数",
+            key="middle_jackpot_input",
+            on_change=lambda: setattr(st.session_state, 'payout_manually_changed', True)
         )
         st.session_state.settings['middle_jackpot_balls'] = middle_balls
     
@@ -1741,9 +1784,23 @@ if st.session_state.game_type == "パチンコ":
             max_value=1000,
             value=st.session_state.settings.get('small_jackpot_balls', 450),
             step=50,
-            help="小の1回あたりの払い出し球数"
+            help="小の1回あたりの払い出し球数",
+            key="small_jackpot_input",
+            on_change=lambda: setattr(st.session_state, 'payout_manually_changed', True)
         )
         st.session_state.settings['small_jackpot_balls'] = small_balls
+    
+    # デフォルトに戻すボタン
+    if st.button("🔄 デフォルト値に戻す", use_container_width=False):
+        st.session_state.settings['big_jackpot_balls'] = 1500
+        st.session_state.settings['middle_jackpot_balls'] = 750
+        st.session_state.settings['small_jackpot_balls'] = 450
+        st.session_state['big_jackpot_input'] = 1500
+        st.session_state['middle_jackpot_input'] = 750
+        st.session_state['small_jackpot_input'] = 450
+        st.session_state.payout_manually_changed = False
+        st.session_state.auto_payout_applied = False
+        st.rerun()
 
 if graph_files or detail_files:
     # すべてのファイルを統合してから重複チェック
@@ -2714,33 +2771,40 @@ if graph_files and st.session_state.get('start_analysis', False):
                         if claude_result.get('machine_number'):
                             claude_result['normalized_machine_number'] = normalize_machine_number(claude_result['machine_number'])
                         
-                        # 機種名が取得できた場合、自動的に出玉数を設定（ここで設定を更新）
-                        if claude_result.get('machine_name') and st.session_state.game_type == 'パチンコ':
+                        # デバッグ用: 機種名が取得できたらログ出力
+                        if claude_result.get('machine_name'):
                             machine_name = claude_result['machine_name']
-                            machine_payouts = get_machine_payouts(machine_name)
+                            st.write(f"🔍 機種名検出: 「{machine_name}」")
                             
+                            # 超中小の数値をデバッグ表示
+                            st.write(f"📊 超中小の回数取得:")
+                            st.write(f"  - 超: {claude_result.get('big_jackpots', 0)}回")
+                            st.write(f"  - 中: {claude_result.get('medium_jackpots', 0)}回")
+                            st.write(f"  - 小: {claude_result.get('small_jackpots', 0)}回")
+                            
+                            # 機種別の払い出し球数を取得
+                            machine_payouts = get_machine_payouts(machine_name)
                             if machine_payouts:
-                                # デフォルト値のままの場合のみ更新
-                                default_big = 1500
-                                default_middle = 750
-                                default_small = 450
+                                st.write(f"✅ 機種データ発見:")
+                                st.write(f"  - 超: {machine_payouts.get('big_jackpot_balls', 1500)}玉/回")
+                                st.write(f"  - 中: {machine_payouts.get('middle_jackpot_balls', 750)}玉/回")
+                                st.write(f"  - 小: {machine_payouts.get('small_jackpot_balls', 450)}玉/回")
                                 
-                                current_big = st.session_state.settings.get('big_jackpot_balls', default_big)
-                                current_middle = st.session_state.settings.get('middle_jackpot_balls', default_middle)
-                                current_small = st.session_state.settings.get('small_jackpot_balls', default_small)
+                                # 機種固有の払い出し球数をClaudeデータに追加
+                                claude_result['machine_payouts'] = machine_payouts
                                 
-                                # すべてデフォルト値の場合のみ自動更新
-                                if (current_big == default_big and 
-                                    current_middle == default_middle and 
-                                    current_small == default_small):
-                                    
-                                    # 機種別の値で更新（即座に反映）
-                                    st.session_state.settings['big_jackpot_balls'] = machine_payouts.get('big_jackpot_balls', default_big)
-                                    st.session_state.settings['middle_jackpot_balls'] = machine_payouts.get('middle_jackpot_balls', default_middle)
-                                    st.session_state.settings['small_jackpot_balls'] = machine_payouts.get('small_jackpot_balls', default_small)
-                                    
-                                    # 通知
-                                    st.info(f'🎯 機種「{machine_name}」の出玉数を自動設定しました（超:{machine_payouts.get("big_jackpot_balls", default_big)}玉、中:{machine_payouts.get("middle_jackpot_balls", default_middle)}玉、小:{machine_payouts.get("small_jackpot_balls", default_small)}玉）')
+                                # 総払い出し球数を計算
+                                total_payout = 0
+                                if claude_result.get('big_jackpots'):
+                                    total_payout += claude_result['big_jackpots'] * machine_payouts.get('big_jackpot_balls', 1500)
+                                if claude_result.get('medium_jackpots'):
+                                    total_payout += claude_result['medium_jackpots'] * machine_payouts.get('middle_jackpot_balls', 750)
+                                if claude_result.get('small_jackpots'):
+                                    total_payout += claude_result['small_jackpots'] * machine_payouts.get('small_jackpot_balls', 450)
+                                
+                                st.success(f"💰 総払い出し球数（AI計算）: {total_payout:,}玉")
+                            else:
+                                st.warning(f"❌ 機種「{machine_name}」のデータが見つかりません。デフォルト値を使用します。")
                 except Exception as e:
                     st.warning(f"⚠️ {detail_file.name} のClaude解析でエラー: {str(e)}")
             
@@ -3031,9 +3095,34 @@ if 'analysis_results' in st.session_state:
                                             <span class="stat-value positive">{claude_data['first_jackpots']}回</span>
                                         </div>'''
                                     
+                                    # 機種別の払い出し球数を取得（保存済みまたは新規取得）
+                                    if claude_data.get('machine_payouts'):
+                                        # すでに保存されている機種固有の値を使用
+                                        machine_payouts = claude_data['machine_payouts']
+                                        big_balls = machine_payouts.get('big_jackpot_balls', 1500)
+                                        middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
+                                        small_balls = machine_payouts.get('small_jackpot_balls', 450)
+                                    elif claude_data.get('machine_name'):
+                                        # 機種名から払い出し球数を取得
+                                        machine_name = claude_data['machine_name']
+                                        machine_payouts = get_machine_payouts(machine_name)
+                                        if machine_payouts:
+                                            big_balls = machine_payouts.get('big_jackpot_balls', 1500)
+                                            middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
+                                            small_balls = machine_payouts.get('small_jackpot_balls', 450)
+                                        else:
+                                            # 機種データが見つからない場合はユーザー設定を使用
+                                            big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
+                                            middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
+                                            small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                                    else:
+                                        # 機種名が不明な場合はユーザー設定を使用
+                                        big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
+                                        middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
+                                        small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                                    
                                     # 大当たり内訳（出玉数も表示）
                                     if claude_data.get('big_jackpots') is not None:
-                                        big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
                                         html_content += f'''
                                         <div class="stat-item">
                                             <span class="stat-label">🔴 超</span>
@@ -3041,7 +3130,6 @@ if 'analysis_results' in st.session_state:
                                         </div>'''
                                     
                                     if claude_data.get('medium_jackpots') is not None:
-                                        middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
                                         html_content += f'''
                                         <div class="stat-item">
                                             <span class="stat-label">🟡 中</span>
@@ -3049,7 +3137,6 @@ if 'analysis_results' in st.session_state:
                                         </div>'''
                                     
                                     if claude_data.get('small_jackpots') is not None:
-                                        small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
                                         html_content += f'''
                                         <div class="stat-item">
                                             <span class="stat-label">🔵 小</span>
@@ -3099,6 +3186,35 @@ if 'analysis_results' in st.session_state:
                                             <span class="stat-label">🎱 初回特賞スタート</span>
                                             <span class="stat-value">{claude_data['initial_ball_starts']}回</span>
                                         </div>'''
+                                    
+                                    # 総払い出し球数をAIから計算
+                                    total_payout_from_ai = 0
+                                    if claude_data.get('big_jackpots') is not None:
+                                        total_payout_from_ai += claude_data['big_jackpots'] * big_balls
+                                    if claude_data.get('medium_jackpots') is not None:
+                                        total_payout_from_ai += claude_data['medium_jackpots'] * middle_balls
+                                    if claude_data.get('small_jackpots') is not None:
+                                        total_payout_from_ai += claude_data['small_jackpots'] * small_balls
+                                    
+                                    if total_payout_from_ai > 0:
+                                        html_content += f'''
+                                        <div class="stat-item" style="background-color: #fff3cd; margin-top: 10px; padding: 10px; border-radius: 5px;">
+                                            <span class="stat-label" style="font-weight: bold;">💰 総払い出し球数（AI計算）</span>
+                                            <span class="stat-value positive" style="font-size: 1.2em;">{total_payout_from_ai:,}玉</span>
+                                        </div>'''
+                                        
+                                        # 機種情報を表示
+                                        if claude_data.get('machine_name'):
+                                            if claude_data.get('machine_payouts'):
+                                                html_content += f'''
+                                                <div class="stat-item" style="font-size: 0.9em; color: #666;">
+                                                    <span>🎯 機種「{claude_data['machine_name']}」の設定値で計算</span>
+                                                </div>'''
+                                            else:
+                                                html_content += f'''
+                                                <div class="stat-item" style="font-size: 0.9em; color: #666;">
+                                                    <span>⚠️ 機種「{claude_data['machine_name']}」（デフォルト値で計算）</span>
+                                                </div>'''
                                     
                                     html_content += '</div>'
                                     
