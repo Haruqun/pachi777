@@ -2398,34 +2398,6 @@ if graph_files and st.session_state.get('start_analysis', False):
             if ocr_data and st.session_state.game_type == 'パチンコ':
                 claude_data = ocr_data.get('claude_analysis', {}).get('data', {}) if ocr_data.get('claude_analysis') else {}
                 
-                # 機種名が取得できた場合、自動的に出玉数を設定
-                if claude_data and claude_data.get('machine_name'):
-                    machine_name = claude_data['machine_name']
-                    machine_payouts = get_machine_payouts(machine_name)
-                    
-                    if machine_payouts:
-                        # デフォルト値のままの場合のみ更新
-                        default_big = 1500
-                        default_middle = 750
-                        default_small = 450
-                        
-                        current_big = st.session_state.settings.get('big_jackpot_balls', default_big)
-                        current_middle = st.session_state.settings.get('middle_jackpot_balls', default_middle)
-                        current_small = st.session_state.settings.get('small_jackpot_balls', default_small)
-                        
-                        # すべてデフォルト値の場合のみ自動更新
-                        if (current_big == default_big and 
-                            current_middle == default_middle and 
-                            current_small == default_small):
-                            
-                            # 機種別の値で更新
-                            st.session_state.settings['big_jackpot_balls'] = machine_payouts.get('big_jackpot_balls', default_big)
-                            st.session_state.settings['middle_jackpot_balls'] = machine_payouts.get('middle_jackpot_balls', default_middle)
-                            st.session_state.settings['small_jackpot_balls'] = machine_payouts.get('small_jackpot_balls', default_small)
-                            
-                            # デバッグ情報（開発中のみ）
-                            detail_text.text(f'🎯 機種「{machine_name}」の出玉数を自動設定しました')
-                
                 if claude_data and all(k in claude_data for k in ['big_jackpots', 'medium_jackpots', 'small_jackpots']):
                     # 超中小の回数が全て取得できている場合
                     big_count = claude_data.get('big_jackpots', 0) or 0
@@ -2741,6 +2713,34 @@ if graph_files and st.session_state.get('start_analysis', False):
                         # 台番号を正規化
                         if claude_result.get('machine_number'):
                             claude_result['normalized_machine_number'] = normalize_machine_number(claude_result['machine_number'])
+                        
+                        # 機種名が取得できた場合、自動的に出玉数を設定（ここで設定を更新）
+                        if claude_result.get('machine_name') and st.session_state.game_type == 'パチンコ':
+                            machine_name = claude_result['machine_name']
+                            machine_payouts = get_machine_payouts(machine_name)
+                            
+                            if machine_payouts:
+                                # デフォルト値のままの場合のみ更新
+                                default_big = 1500
+                                default_middle = 750
+                                default_small = 450
+                                
+                                current_big = st.session_state.settings.get('big_jackpot_balls', default_big)
+                                current_middle = st.session_state.settings.get('middle_jackpot_balls', default_middle)
+                                current_small = st.session_state.settings.get('small_jackpot_balls', default_small)
+                                
+                                # すべてデフォルト値の場合のみ自動更新
+                                if (current_big == default_big and 
+                                    current_middle == default_middle and 
+                                    current_small == default_small):
+                                    
+                                    # 機種別の値で更新（即座に反映）
+                                    st.session_state.settings['big_jackpot_balls'] = machine_payouts.get('big_jackpot_balls', default_big)
+                                    st.session_state.settings['middle_jackpot_balls'] = machine_payouts.get('middle_jackpot_balls', default_middle)
+                                    st.session_state.settings['small_jackpot_balls'] = machine_payouts.get('small_jackpot_balls', default_small)
+                                    
+                                    # 通知
+                                    st.info(f'🎯 機種「{machine_name}」の出玉数を自動設定しました（超:{machine_payouts.get("big_jackpot_balls", default_big)}玉、中:{machine_payouts.get("middle_jackpot_balls", default_middle)}玉、小:{machine_payouts.get("small_jackpot_balls", default_small)}玉）')
                 except Exception as e:
                     st.warning(f"⚠️ {detail_file.name} のClaude解析でエラー: {str(e)}")
             
