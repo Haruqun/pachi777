@@ -2829,7 +2829,16 @@ if graph_files and st.session_state.get('start_analysis', False):
         # ペアを探す
         paired = False
         for detail in detail_analysis_results:
-            detail_machine_num = detail.get('claude_data', {}).get('normalized_machine_number')
+            # detailが辞書であることを確認
+            if isinstance(detail, dict):
+                claude_data = detail.get('claude_data', {})
+                if isinstance(claude_data, dict):
+                    detail_machine_num = claude_data.get('normalized_machine_number')
+                else:
+                    detail_machine_num = None
+            else:
+                detail_machine_num = None
+            
             if machine_num and detail_machine_num and machine_num == detail_machine_num:
                 # ペアリング成功
                 paired_results.append({
