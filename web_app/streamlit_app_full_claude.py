@@ -1478,8 +1478,12 @@ with st.sidebar:
             "Claude APIキー",
             value=st.session_state.get('claude_api_key', ''),
             type="password",
-            help="Anthropic社のClaude APIキーを入力してください"
+            help="Anthropic社のClaude APIキーを入力してください（sk-ant-で始まる文字列）"
         )
+        
+        # APIキーの形式をチェック
+        if api_key and not api_key.startswith('sk-ant-'):
+            st.warning("⚠️ APIキーは通常 'sk-ant-' で始まります。形式を確認してください。")
         
         # モデル選択
         model = st.selectbox(
@@ -1489,41 +1493,64 @@ with st.sidebar:
             help="使用するClaudeモデルを選択（Haiku 3.5が最も高速・安価）"
         )
         
-        if st.button("APIキーを保存", type="primary"):
-            if api_key:
-                st.session_state.claude_api_key = api_key
-                st.session_state.claude_model = model
-                
-                # 専用のデータベースに保存
-                try:
-                    conn = sqlite3.connect('apikey.db')
-                    cursor = conn.cursor()
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("APIキーを保存", type="primary", use_container_width=True):
+                if api_key:
+                    st.session_state.claude_api_key = api_key
+                    st.session_state.claude_model = model
                     
-                    # テーブルが存在しない場合は作成
-                    cursor.execute('''
-                        CREATE TABLE IF NOT EXISTS api_keys (
-                            id INTEGER PRIMARY KEY,
-                            key_name TEXT UNIQUE,
-                            api_key TEXT,
-                            model TEXT,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )
-                    ''')
-                    
-                    # APIキーを保存または更新
-                    cursor.execute('''
-                        INSERT OR REPLACE INTO api_keys (key_name, api_key, model)
-                        VALUES (?, ?, ?)
-                    ''', ('claude_api', api_key, model))
-                    
-                    conn.commit()
-                    conn.close()
-                    
-                    st.success("✅ APIキーを保存しました")
-                except Exception as e:
-                    st.error(f"❌ 保存エラー: {str(e)}")
-            else:
-                st.error("❌ APIキーを入力してください")
+                    # 専用のデータベースに保存
+                    try:
+                        conn = sqlite3.connect('apikey.db')
+                        cursor = conn.cursor()
+                        
+                        # テーブルが存在しない場合は作成
+                        cursor.execute('''
+                            CREATE TABLE IF NOT EXISTS api_keys (
+                                id INTEGER PRIMARY KEY,
+                                key_name TEXT UNIQUE,
+                                api_key TEXT,
+                                model TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        ''')
+                        
+                        # APIキーを保存または更新
+                        cursor.execute('''
+                            INSERT OR REPLACE INTO api_keys (key_name, api_key, model)
+                            VALUES (?, ?, ?)
+                        ''', ('claude_api', api_key, model))
+                        
+                        conn.commit()
+                        conn.close()
+                        
+                        st.success("✅ APIキーを保存しました")
+                    except Exception as e:
+                        st.error(f"❌ 保存エラー: {str(e)}")
+                else:
+                    st.error("❌ APIキーを入力してください")
+        
+        with col2:
+            if st.button("🧪 APIキーをテスト", type="secondary", use_container_width=True):
+                if api_key:
+                    with st.spinner("APIキーをテスト中..."):
+                        try:
+                            import anthropic
+                            client = anthropic.Anthropic(api_key=api_key)
+                            # 簡単なテストメッセージを送信
+                            response = client.messages.create(
+                                model=model,
+                                max_tokens=10,
+                                messages=[{"role": "user", "content": "Hi"}]
+                            )
+                            st.success("✅ APIキーは有効です！")
+                        except anthropic.AuthenticationError:
+                            st.error("❌ APIキーが無効です。正しいキーを入力してください。")
+                        except Exception as e:
+                            st.error(f"❌ エラー: {str(e)}")
+                else:
+                    st.error("❌ APIキーを入力してください")
         
         # 現在の設定状況
         if st.session_state.get('claude_api_key'):
