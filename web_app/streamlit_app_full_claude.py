@@ -292,6 +292,10 @@ JSON形式で結果を返してください。数値は単位なしの数字の�
         # Claude API エンドポイント
         url = "https://api.anthropic.com/v1/messages"
         
+        # APIキーのデバッグ（先頭10文字のみ表示）
+        if st.session_state.get('show_ocr_debug', False):
+            st.write(f"🔑 APIキー使用中: {api_key[:10]}..." if api_key and len(api_key) > 10 else "APIキーなし")
+        
         # リクエストヘッダー
         headers = {
             "x-api-key": api_key,
@@ -1536,17 +1540,29 @@ with st.sidebar:
                 if api_key:
                     with st.spinner("APIキーをテスト中..."):
                         try:
-                            import anthropic
-                            client = anthropic.Anthropic(api_key=api_key)
-                            # 簡単なテストメッセージを送信
-                            response = client.messages.create(
-                                model=model,
-                                max_tokens=10,
-                                messages=[{"role": "user", "content": "Hi"}]
-                            )
-                            st.success("✅ APIキーは有効です！")
-                        except anthropic.AuthenticationError:
-                            st.error("❌ APIキーが無効です。正しいキーを入力してください。")
+                            # HTTP APIを使ってテスト
+                            import requests
+                            test_url = "https://api.anthropic.com/v1/messages"
+                            test_headers = {
+                                "x-api-key": api_key,
+                                "anthropic-version": "2023-06-01",
+                                "content-type": "application/json"
+                            }
+                            test_data = {
+                                "model": model,
+                                "max_tokens": 10,
+                                "messages": [{"role": "user", "content": "Hi"}]
+                            }
+                            
+                            response = requests.post(test_url, headers=test_headers, json=test_data)
+                            
+                            if response.status_code == 200:
+                                st.success("✅ APIキーは有効です！")
+                            elif response.status_code == 401:
+                                st.error("❌ APIキーが無効です。正しいキーを入力してください。")
+                                st.info("💡 ヒント: APIキーは 'sk-ant-' で始まる文字列です。")
+                            else:
+                                st.error(f"❌ エラー ({response.status_code}): {response.text}")
                         except Exception as e:
                             st.error(f"❌ エラー: {str(e)}")
                 else:
