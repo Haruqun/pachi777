@@ -2393,7 +2393,13 @@ if graph_files and st.session_state.get('start_analysis', False):
             # 統計情報を計算
             max_val_original = max(graph_values)
             min_val_original = min(graph_values)
-            current_val_original = graph_values[-1] if graph_values else 0
+            
+            # 現在値を複数の方法で検証して精度向上
+            if len(graph_values) >= 5:
+                # 最後の5点の中央値（外れ値除去）
+                current_val_original = np.median(graph_values[-5:])
+            else:
+                current_val_original = graph_values[-1] if graph_values else 0
             
             # インデックスを保存
             max_idx = graph_values.index(max_val_original)
@@ -2429,10 +2435,16 @@ if graph_files and st.session_state.get('start_analysis', False):
             if max_val < 0:
                 max_val = 0
 
-            # 初当たり値を探す（production版と同じロジック）
+            # 初当たり値を探す（改善版）
             first_hit_val = 0
             first_hit_x = None
-            min_payout = 100 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 20  # 最低払い出し単位数
+            # 機種や設定により動的に閾値を調整
+            game_type = st.session_state.get('game_type', 'パチンコ')
+            if game_type == 'パチンコ':
+                # 小当たりの払い出し球数を基準に（通常300-450球）
+                min_payout = st.session_state.settings.get('small_jackpot_balls', 450) * 0.8  # 80%を閾値に
+            else:
+                min_payout = 20  # パチスロは20枚
             
             # 初当たり検出デバッグ情報
             first_hit_debug_info = {
@@ -2872,6 +2884,11 @@ if graph_files and st.session_state.get('start_analysis', False):
     
     if detail_files:
         status_text.text(f'出玉詳細画像を処理中...')
+        
+        # APIキーチェック（最初に1回だけ）
+        if not st.session_state.get('claude_api_key') and detail_files:
+            st.warning("⚠️ Claude APIキーが設定されていません。出玉詳細の自動解析はスキップされます。")
+        
         for idx, detail_file in enumerate(detail_files):
             detail_text.text(f'📷 {detail_file.name} の詳細画像を処理中...')
             detail_file.seek(0)
@@ -2966,7 +2983,13 @@ if graph_files and st.session_state.get('start_analysis', False):
                             if machine_payout_data:
                                 claude_result['machine_payouts'] = machine_payout_data
                 except Exception as e:
-                    st.warning(f"⚠️ {detail_file.name} のClaude解析でエラー: {str(e)}")
+                    error_msg = str(e)
+                    if "401" in error_msg or "Unauthorized" in error_msg:
+                        st.error(f"❌ APIキーエラー: APIキーが無効または期限切れです。設定を確認してください。")
+                    elif "429" in error_msg:
+                        st.warning(f"⚠️ APIレート制限: しばらく待ってから再試行してください。")
+                    else:
+                        st.warning(f"⚠️ {detail_file.name} のClaude解析でエラー: {error_msg}")
             
             detail_analysis_results.append({
                 'name': detail_file.name,
