@@ -2527,13 +2527,19 @@ if graph_files and st.session_state.get('start_analysis', False):
                     
                     # 機種名から払い出し球数を取得（機種固有の設定がある場合）
                     machine_name = claude_data.get('machine_name', '')
-                    if machine_name and machine_name in MACHINE_PAYOUTS:
-                        machine_payouts = MACHINE_PAYOUTS[machine_name]
-                        big_balls = machine_payouts.get('big_jackpot_balls', 1500)
-                        middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
-                        small_balls = machine_payouts.get('small_jackpot_balls', 450)
+                    if machine_name:
+                        machine_payouts = get_machine_payouts(machine_name)
+                        if machine_payouts:
+                            big_balls = machine_payouts.get('big_jackpot_balls', 1500)
+                            middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
+                            small_balls = machine_payouts.get('small_jackpot_balls', 450)
+                        else:
+                            # 機種データが見つからない場合はユーザー設定を使用
+                            big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
+                            middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
+                            small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
                     else:
-                        # 機種データが見つからない場合はユーザー設定を使用
+                        # 機種名がない場合はユーザー設定を使用
                         big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
                         middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
                         small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
@@ -4065,20 +4071,21 @@ if 'analysis_results' in st.session_state:
             # 台番号入力フィールドの変更を反映するため、常に最新のdfを使用
             # （上記のデータフレーム作成時にセッションステートから台番号を取得済み）
             
-            # セッションステートにデータフレームを保存（初回のみ）
-            if 'edited_df' not in st.session_state:
+            # セッションステートにデータフレームを保存
+            # 新しいデータが追加された場合（行数が増えた場合）は更新
+            if 'edited_df' not in st.session_state or len(df) > len(st.session_state.edited_df):
                 st.session_state.edited_df = df.copy()
             else:
-                # 台番号の更新を反映
+                # 既存データの台番号の更新を反映
                 for idx in range(len(df)):
                     if idx < len(st.session_state.edited_df):
                         st.session_state.edited_df.at[idx, '台番号'] = df.at[idx, '台番号']
             
-            # 一時的な編集用データフレーム（セッションステートとは別に管理）
-            if 'temp_df' not in st.session_state:
+            # 一時的な編集用データフレーム
+            if 'temp_df' not in st.session_state or len(df) > len(st.session_state.temp_df):
                 st.session_state.temp_df = st.session_state.edited_df.copy()
             else:
-                # 台番号の更新を反映
+                # 既存データの台番号の更新を反映
                 for idx in range(len(df)):
                     if idx < len(st.session_state.temp_df):
                         st.session_state.temp_df.at[idx, '台番号'] = df.at[idx, '台番号']
