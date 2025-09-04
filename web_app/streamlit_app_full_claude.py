@@ -1737,6 +1737,9 @@ if uploaded_files:
                                 st.session_state.settings['small_jackpot_balls'] = machine_payouts.get('small_jackpot_balls', 450)
                                 st.session_state.auto_payout_applied = True
                                 st.info(f'🎯 機種「{machine_name}」を検出しました。出玉数を自動設定しました。')
+                                st.write(f"  - 超: {machine_payouts.get('big_jackpot_balls', 1500)}玉/回")
+                                st.write(f"  - 中: {machine_payouts.get('middle_jackpot_balls', 750)}玉/回")
+                                st.write(f"  - 小: {machine_payouts.get('small_jackpot_balls', 450)}玉/回")
                                 detail_file.seek(0)  # ファイルポインタをリセット
                                 break
                 except:
@@ -2907,9 +2910,10 @@ if graph_files and st.session_state.get('start_analysis', False):
                                 machine_payout_data = get_machine_payouts(machine_name)
                                 if machine_payout_data:
                                     st.success(f"✅ 機種「{machine_name}」のデータを取得しました")
-                                    st.write(f"  - 超: {machine_payout_data.get('big_jackpot_balls', 1500)}玉/回")
-                                    st.write(f"  - 中: {machine_payout_data.get('middle_jackpot_balls', 750)}玉/回")
-                                    st.write(f"  - 小: {machine_payout_data.get('small_jackpot_balls', 450)}玉/回")
+                                    st.write("**📊 機種別払い出し球数設定:**")
+                                    st.write(f"  - 🔴 超（10R）: {machine_payout_data.get('big_jackpot_balls', 1500)}玉/回")
+                                    st.write(f"  - 🟡 中（5R）: {machine_payout_data.get('middle_jackpot_balls', 750)}玉/回")
+                                    st.write(f"  - 🔵 小（2-3R）: {machine_payout_data.get('small_jackpot_balls', 450)}玉/回")
                                 else:
                                     st.warning(f"❌ 機種「{machine_name}」のデータが見つかりません。デフォルト値を使用します。")
                                     # デフォルト値を設定
