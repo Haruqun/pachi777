@@ -2550,6 +2550,15 @@ if graph_files and st.session_state.get('start_analysis', False):
                     middle_count = claude_data.get('medium_jackpots', 0) or 0
                     small_count = claude_data.get('small_jackpots', 0) or 0
                     
+                    # 異常値チェック（1日の大当たり回数として現実的な範囲）
+                    total_jackpots = big_count + middle_count + small_count
+                    if total_jackpots > 50:  # 1日50回以上は異常
+                        # 異常値の場合はグラフから推定
+                        print(f"警告: 異常な大当たり回数を検出 (超:{big_count}, 中:{middle_count}, 小:{small_count})")
+                        big_count = 0
+                        middle_count = 0
+                        small_count = 0
+                    
                     # 機種名から払い出し球数を取得（機種固有の設定がある場合）
                     machine_name = claude_data.get('machine_name', '')
                     if machine_name:
@@ -2855,6 +2864,9 @@ if graph_files and st.session_state.get('start_analysis', False):
     
     # 出玉詳細画像の処理
     detail_analysis_results = []
+    machine_payout_data = None  # 機種別払い出し球数を一度だけ取得
+    detected_machine_name = None  # 検出した機種名を保存
+    
     if detail_files:
         status_text.text(f'出玉詳細画像を処理中...')
         for idx, detail_file in enumerate(detail_files):
@@ -2882,40 +2894,61 @@ if graph_files and st.session_state.get('start_analysis', False):
                         if claude_result.get('machine_number'):
                             claude_result['normalized_machine_number'] = normalize_machine_number(claude_result['machine_number'])
                         
-                        # デバッグ用: 機種名が取得できたらログ出力
+                        # 機種名が取得でき、まだ機種データを取得していない場合のみ処理
                         if claude_result.get('machine_name'):
                             machine_name = claude_result['machine_name']
-                            st.write(f"🔍 機種名検出: 「{machine_name}」")
                             
-                            # 超中小の数値をデバッグ表示
-                            st.write(f"📊 超中小の回数取得:")
-                            st.write(f"  - 超: {claude_result.get('big_jackpots', 0)}回")
-                            st.write(f"  - 中: {claude_result.get('medium_jackpots', 0)}回")
-                            st.write(f"  - 小: {claude_result.get('small_jackpots', 0)}回")
+                            # 最初の1回だけ機種データを取得
+                            if machine_payout_data is None:
+                                st.write(f"🔍 機種名検出: 「{machine_name}」")
+                                detected_machine_name = machine_name
+                                
+                                # 機種別の払い出し球数を取得
+                                machine_payout_data = get_machine_payouts(machine_name)
+                                if machine_payout_data:
+                                    st.success(f"✅ 機種「{machine_name}」のデータを取得しました")
+                                    st.write(f"  - 超: {machine_payout_data.get('big_jackpot_balls', 1500)}玉/回")
+                                    st.write(f"  - 中: {machine_payout_data.get('middle_jackpot_balls', 750)}玉/回")
+                                    st.write(f"  - 小: {machine_payout_data.get('small_jackpot_balls', 450)}玉/回")
+                                else:
+                                    st.warning(f"❌ 機種「{machine_name}」のデータが見つかりません。デフォルト値を使用します。")
+                                    # デフォルト値を設定
+                                    machine_payout_data = {
+                                        'big_jackpot_balls': st.session_state.settings.get('big_jackpot_balls', 1500),
+                                        'middle_jackpot_balls': st.session_state.settings.get('middle_jackpot_balls', 750),
+                                        'small_jackpot_balls': st.session_state.settings.get('small_jackpot_balls', 450)
+                                    }
                             
-                            # 機種別の払い出し球数を取得
-                            machine_payouts = get_machine_payouts(machine_name)
-                            if machine_payouts:
-                                st.write(f"✅ 機種データ発見:")
-                                st.write(f"  - 超: {machine_payouts.get('big_jackpot_balls', 1500)}玉/回")
-                                st.write(f"  - 中: {machine_payouts.get('middle_jackpot_balls', 750)}玉/回")
-                                st.write(f"  - 小: {machine_payouts.get('small_jackpot_balls', 450)}玉/回")
+                            # 各画像の超中小回数を表示（デバッグ用）
+                            if idx == 0:  # 最初の画像のみ詳細表示
+                                st.write(f"📊 {detail_file.name} の超中小回数:")
+                                big_j = claude_result.get('big_jackpots')
+                                medium_j = claude_result.get('medium_jackpots')
+                                small_j = claude_result.get('small_jackpots')
                                 
-                                # 機種固有の払い出し球数をClaudeデータに追加
-                                claude_result['machine_payouts'] = machine_payouts
+                                # 値がNoneの場合は「未検出」と表示
+                                big_display = f"{big_j}回" if big_j is not None else "未検出"
+                                medium_display = f"{medium_j}回" if medium_j is not None else "未検出"
+                                small_display = f"{small_j}回" if small_j is not None else "未検出"
                                 
-                                # 総払い出し球数を計算
-                                total_payout = 0
-                                if claude_result.get('big_jackpots'):
-                                    total_payout += claude_result['big_jackpots'] * machine_payouts.get('big_jackpot_balls', 1500)
-                                if claude_result.get('medium_jackpots'):
-                                    total_payout += claude_result['medium_jackpots'] * machine_payouts.get('middle_jackpot_balls', 750)
-                                if claude_result.get('small_jackpots'):
-                                    total_payout += claude_result['small_jackpots'] * machine_payouts.get('small_jackpot_balls', 450)
+                                st.write(f"  - 超: {big_display}")
+                                st.write(f"  - 中: {medium_display}")
+                                st.write(f"  - 小: {small_display}")
+                            
+                            # 機種データが取得済みの場合、各画像のClaude結果に追加
+                            if machine_payout_data:
+                                claude_result['machine_payouts'] = machine_payout_data
                                 
-                                st.success(f"💰 総払い出し球数（AI計算）: {total_payout:,}玉")
-                            else:
-                                st.warning(f"❌ 機種「{machine_name}」のデータが見つかりません。デフォルト値を使用します。")
+                                # 総払い出し球数を計算（各台ごと）
+                                big_count = claude_result.get('big_jackpots', 0) or 0
+                                medium_count = claude_result.get('medium_jackpots', 0) or 0
+                                small_count = claude_result.get('small_jackpots', 0) or 0
+                                
+                                total_payout = (
+                                    big_count * machine_payout_data.get('big_jackpot_balls', 1500) +
+                                    medium_count * machine_payout_data.get('middle_jackpot_balls', 750) +
+                                    small_count * machine_payout_data.get('small_jackpot_balls', 450)
+                                )
                 except Exception as e:
                     st.warning(f"⚠️ {detail_file.name} のClaude解析でエラー: {str(e)}")
             
