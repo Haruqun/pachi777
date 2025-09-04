@@ -2033,7 +2033,28 @@ elif st.session_state.uploaded_file_names:
     
     # クリアボタン
     if st.button("🗑️ ファイル情報をクリア", use_container_width=True):
+        # ファイル名をクリア
         st.session_state.uploaded_file_names = []
+        # 編集中のデータフレームもクリア
+        if 'edited_df' in st.session_state:
+            del st.session_state.edited_df
+        if 'temp_df' in st.session_state:
+            del st.session_state.temp_df
+        # 解析結果もクリア
+        if 'analysis_results' in st.session_state:
+            del st.session_state.analysis_results
+        if 'detail_analysis_results' in st.session_state:
+            del st.session_state.detail_analysis_results
+        if 'paired_results' in st.session_state:
+            del st.session_state.paired_results
+        if 'unpaired_graphs' in st.session_state:
+            del st.session_state.unpaired_graphs
+        if 'unpaired_details' in st.session_state:
+            del st.session_state.unpaired_details
+        # 台番号入力フィールドのクリア
+        for key in list(st.session_state.keys()):
+            if key.startswith('machine_input_'):
+                del st.session_state[key]
         st.rerun()
 
 # 解析を実行
@@ -2565,7 +2586,15 @@ if graph_files and st.session_state.get('start_analysis', False):
             # AI計算が利用可能な場合はそれを優先
             if total_jackpot_balls_from_ai is not None:
                 total_jackpot_balls_graph = total_jackpot_balls  # グラフから計算した値を保持
-                total_jackpot_balls = total_jackpot_balls_from_ai  # AI計算値を使用
+                # 総獲得玉数 = 総払い出し球数 - 現在値
+                # ※総払い出し球数はAI計算値、現在値はグラフから取得
+                if current_val >= 0:
+                    total_jackpot_balls = total_jackpot_balls_from_ai - current_val
+                else:
+                    total_jackpot_balls = total_jackpot_balls_from_ai + abs(current_val)
+            else:
+                # AIデータがない場合は従来のグラフ計算値を使用
+                total_jackpot_balls = total_jackpot_balls
                 
             # 平均獲得球数を計算
             avg_jackpot_balls = total_jackpot_balls / jackpot_count if jackpot_count > 0 else 0
@@ -3372,14 +3401,41 @@ if 'analysis_results' in st.session_state:
                         rotation_rate_2_calculated = False
                         if result.get('claude_analysis') and result['claude_analysis'].get('success'):
                             claude_data = result['claude_analysis'].get('data', {})
-                            # 通常回転数と総獲得玉数から回転率②を計算
+                            # 通常回転数と使用球数から回転率②を計算
                             if claude_data.get('normal_rotations'):
                                 normal_rotations = claude_data['normal_rotations']
-                                # 通常時の使用玉数 = 初当たり玉数 + 総獲得玉数
-                                total_jackpot_balls = result.get('total_jackpot_balls', 0)
-                                first_hit_balls = abs(result.get('first_hit_val') or 0)
-                                normal_balls = first_hit_balls + total_jackpot_balls
-                                if normal_balls > 0:
+                                
+                                # 使用球数の合計を正しく計算
+                                # AIから総払い出し球数を取得（優先）
+                                if claude_data.get('machine_payouts'):
+                                    # 機種別の払い出し球数で計算
+                                    machine_payouts = claude_data['machine_payouts']
+                                    big_balls = machine_payouts.get('big_jackpot_balls', 1500)
+                                    middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
+                                    small_balls = machine_payouts.get('small_jackpot_balls', 450)
+                                    
+                                    total_payout = 0
+                                    if claude_data.get('big_jackpots'):
+                                        total_payout += claude_data['big_jackpots'] * big_balls
+                                    if claude_data.get('medium_jackpots'):
+                                        total_payout += claude_data['medium_jackpots'] * middle_balls
+                                    if claude_data.get('small_jackpots'):
+                                        total_payout += claude_data['small_jackpots'] * small_balls
+                                else:
+                                    # デフォルト値で計算
+                                    total_payout = result.get('total_jackpot_balls', 0)
+                                
+                                # グラフデータから最低値と現在値を取得
+                                min_val = abs(result.get('min_val', 0))
+                                current_val = result.get('current_val', 0)
+                                
+                                # 通常時の使用球数合計 = 最大投資額 + 総払い出し球数 - 現在値
+                                if current_val >= 0:
+                                    normal_balls = min_val + total_payout - current_val
+                                else:
+                                    normal_balls = min_val + total_payout + abs(current_val)
+                                
+                                if normal_balls > 0 and normal_rotations > 0:
                                     rotation_rate_2 = (normal_rotations / normal_balls) * 250
                                     warning = " ⚠️" if rotation_rate_2 < 10 or rotation_rate_2 > 30 else ""
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{rotation_rate_2:.1f}回/千円{warning}</span></div>'
@@ -4111,29 +4167,44 @@ if 'analysis_results' in st.session_state:
                                 calc_df.at[idx, '回転率①'] = '-'
                         
                         # 回転率②を計算
-                        # 通常回転数と総獲得球数、現在値、最高値、最低値から計算
+                        # 通常回転数と使用球数から計算
                         if '通常回転数' in calc_df.columns:
                             if pd.notna(calc_df.at[idx, '通常回転数']):
                                 normal_spins = calc_df.at[idx, '通常回転数']
                                 
-                                # 通常時の使用玉数を計算
-                                # 総獲得球数 - 現在値 - 初当たり球数（絶対値）
+                                # 通常時の使用玉数を正しく計算
+                                # 使用球数 = 最低値（最大投資） + 総払い出し球数 - 現在値
                                 normal_balls = 0
+                                
+                                # 最低値（最大投資額）を取得
+                                min_val = abs(calc_df.at[idx, '最低値']) if pd.notna(calc_df.at[idx, '最低値']) else 0
+                                current_val = calc_df.at[idx, '現在値'] if pd.notna(calc_df.at[idx, '現在値']) else 0
+                                
+                                # 総払い出し球数を計算（総獲得球数がある場合はそれから逆算）
                                 if '総獲得球数' in calc_df.columns and pd.notna(calc_df.at[idx, '総獲得球数']):
                                     total_gained = calc_df.at[idx, '総獲得球数']
-                                    current_val = calc_df.at[idx, '現在値'] if pd.notna(calc_df.at[idx, '現在値']) else 0
-                                    first_hit_val = abs(calc_df.at[idx, '初当たり球数']) if pd.notna(calc_df.at[idx, '初当たり球数']) else 0
-                                    
-                                    # 通常時使用玉数 = 総獲得球数 - 現在値 + 初当たり使用玉数
-                                    normal_balls = total_gained - current_val + first_hit_val
-                                    
-                                    if normal_balls > 0 and normal_spins > 0:
-                                        # パチンコの場合は250玉/千円、パチスロの場合は50枚/千円
-                                        unit_per_1000yen = 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
-                                        rate2 = round((normal_spins / normal_balls) * unit_per_1000yen, 1)
-                                        calc_df.at[idx, '回転率②'] = f"{rate2:.1f}"
+                                    # 総払い出し球数 = 総獲得球数 + 現在値
+                                    if current_val >= 0:
+                                        total_payout = total_gained + current_val
                                     else:
-                                        calc_df.at[idx, '回転率②'] = '-'
+                                        total_payout = total_gained - abs(current_val)
+                                else:
+                                    # 総獲得球数がない場合はデフォルト
+                                    total_payout = 0
+                                
+                                # 使用球数 = 最大投資額 + 総払い出し球数 - 現在値
+                                if current_val >= 0:
+                                    normal_balls = min_val + total_payout - current_val
+                                else:
+                                    normal_balls = min_val + total_payout + abs(current_val)
+                                
+                                if normal_balls > 0 and normal_spins > 0:
+                                    # パチンコの場合は250玉/千円、パチスロの場合は50枚/千円
+                                    unit_per_1000yen = 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
+                                    rate2 = round((normal_spins / normal_balls) * unit_per_1000yen, 1)
+                                    calc_df.at[idx, '回転率②'] = f"{rate2:.1f}"
+                                else:
+                                    calc_df.at[idx, '回転率②'] = '-'
                     
                     # 計算結果をセッションステートに保存
                     st.session_state.edited_df = calc_df.copy()
