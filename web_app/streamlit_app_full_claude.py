@@ -3136,7 +3136,21 @@ if 'analysis_results' in st.session_state:
     # ペアリングされた結果を先に追加
     for paired in paired_results:
         result = paired['graph'].copy()  # グラフデータをコピー
-        detail_data = paired['detail']['claude_data'] if paired['detail'].get('claude_data') else {}
+        detail = paired['detail']
+        detail_data = detail.get('claude_data', {}) if detail else {}
+        
+        # 出玉詳細画像データを追加
+        if detail and detail.get('name'):
+            # 詳細画像ファイルを探して処理済み画像を作成
+            for detail_file in detail_files:
+                if detail_file.name == detail['name']:
+                    try:
+                        detail_file.seek(0)
+                        detail_img = Image.open(detail_file)
+                        result['detail_image_processed'] = preprocess_detail_image(detail_img)
+                        break
+                    except:
+                        pass
         
         # 既存のClaude分析データを上書き（ペアリングされた詳細データで）
         if detail_data:
@@ -3206,11 +3220,14 @@ if 'analysis_results' in st.session_state:
                     # 解析結果画像
                     st.image(result['overlay_image'], use_column_width=True)
 
-                    # 出玉詳細画像（もしあれば）
-                    if result.get('detail_image_processed'):
-                        st.markdown("### 📊 出玉詳細画像（オプション）")
+                    # 出玉詳細画像（ペアリング済みの場合表示）
+                    if result.get('detail_image_processed') is not None:
+                        st.markdown("### 📊 ペアリングされた出玉詳細画像")
                         st.image(result['detail_image_processed'], use_column_width=True)
-                        st.caption("黒枠検出 + overlay.png + 50%切り抜き適用済み")
+                        if result.get('is_paired'):
+                            st.caption("✅ この詳細画像のデータを使用して計算しています")
+                        else:
+                            st.caption("黒枠検出 + overlay.png + 50%切り抜き適用済み")
                     
                     # 元画像を折りたたみ可能に
                     with st.expander("📷 元画像を表示"):
