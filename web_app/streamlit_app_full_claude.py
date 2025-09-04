@@ -4031,11 +4031,18 @@ if 'analysis_results' in st.session_state:
                 # OCRデータを追加（OCRスキップモードでない場合のみ）
                 if not st.session_state.get('skip_ocr', False) and result.get('ocr_data'):
                     ocr = result['ocr_data']
+                    # Claude APIのデータがある場合は優先
+                    current_start = ''
+                    if claude_data.get('current_rotations') is not None:
+                        current_start = claude_data['current_rotations']
+                    elif ocr.get('current_start'):
+                        current_start = ocr.get('current_start', '')
+                    
                     row.update({
                         '累計スタート': ocr.get('total_start', ''),
                         '大当り回数（OCR）': ocr.get('jackpot_count', ''),  # 列名を変更
                         '初当り回数': ocr.get('first_hit_count', ''),
-                        '現在スタート': ocr.get('current_start', ''),
+                        '現在スタート': current_start,
                         '大当り確率': ocr.get('jackpot_probability', ''),
                         '最高出玉': ocr.get('max_payout', '')
                     })
