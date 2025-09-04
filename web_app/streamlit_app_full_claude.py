@@ -2516,8 +2516,8 @@ if graph_files and st.session_state.get('start_analysis', False):
             total_jackpot_balls_from_ai = None  # AI計算による総獲得球数
             
             # Claude APIデータがある場合、超中小の回数から計算
-            if ocr_data and st.session_state.game_type == 'パチンコ':
-                claude_data = ocr_data.get('claude_analysis', {}).get('data', {}) if ocr_data.get('claude_analysis') else {}
+            if claude_analysis_result and claude_analysis_result.get('success') and st.session_state.game_type == 'パチンコ':
+                claude_data = claude_analysis_result.get('data', {})
                 
                 if claude_data and all(k in claude_data for k in ['big_jackpots', 'medium_jackpots', 'small_jackpots']):
                     # 超中小の回数が全て取得できている場合
@@ -2525,10 +2525,18 @@ if graph_files and st.session_state.get('start_analysis', False):
                     middle_count = claude_data.get('medium_jackpots', 0) or 0
                     small_count = claude_data.get('small_jackpots', 0) or 0
                     
-                    # 払い出し球数設定を取得
-                    big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
-                    middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
-                    small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                    # 機種名から払い出し球数を取得（機種固有の設定がある場合）
+                    machine_name = claude_data.get('machine_name', '')
+                    if machine_name and machine_name in MACHINE_PAYOUTS:
+                        machine_payouts = MACHINE_PAYOUTS[machine_name]
+                        big_balls = machine_payouts.get('big_jackpot_balls', 1500)
+                        middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
+                        small_balls = machine_payouts.get('small_jackpot_balls', 450)
+                    else:
+                        # 機種データが見つからない場合はユーザー設定を使用
+                        big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
+                        middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
+                        small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
                     
                     # AI計算による総獲得球数
                     total_jackpot_balls_from_ai = (
@@ -3029,17 +3037,18 @@ if 'analysis_results' in st.session_state:
     st.markdown("### 📊 解析結果一覧")
     
     # ペアリング状況を表示
-    if paired_results or unpaired_graphs or unpaired_details:
+    if paired_results or unpaired_graphs:
         col1, col2, col3 = st.columns(3)
         with col1:
             if paired_results:
                 st.success(f"🔗 ペアリング成功: {len(paired_results)}組")
         with col2:
             if unpaired_graphs:
-                st.info(f"📊 単独グラフ: {len(unpaired_graphs)}枚")
+                st.info(f"📊 グラフのみ: {len(unpaired_graphs)}枚")
         with col3:
-            if unpaired_details:
-                st.info(f"📋 単独詳細: {len(unpaired_details)}枚")
+            # ペアリングされなかった詳細画像は表示しない（お客様要望）
+            if unpaired_details and st.session_state.get('show_unpaired_details', False):
+                st.info(f"📋 単独詳細: {len(unpaired_details)}枚（非表示）")
     
     # すべての結果を統合して表示用リストを作成
     all_results = []
@@ -4034,6 +4043,16 @@ if 'analysis_results' in st.session_state:
             
             # データエディタで編集可能にする
             st.markdown("#### 📝 データ編集")
+            
+            # 並び替え機能を追加
+            col_sort1, col_sort2 = st.columns([1, 3])
+            with col_sort1:
+                sort_option = st.selectbox(
+                    "並び順",
+                    ["アップロード順", "台番号順", "回転率①順", "回転率②順"],
+                    key="sort_option"
+                )
+            
             st.info("""
             💡 表内のセルをクリックして直接編集できます。
             
@@ -4064,8 +4083,31 @@ if 'analysis_results' in st.session_state:
                     if idx < len(st.session_state.temp_df):
                         st.session_state.temp_df.at[idx, '台番号'] = df.at[idx, '台番号']
             
-            # データエディタ（直接DataFrameを編集）
-            display_df = st.session_state.temp_df
+            # 並び替え処理を適用
+            display_df = st.session_state.temp_df.copy()
+            
+            if sort_option == "台番号順":
+                # 台番号を数値として解釈できる場合は数値順、できない場合は文字列順
+                try:
+                    display_df['台番号_sort'] = display_df['台番号'].apply(lambda x: int(x) if str(x).isdigit() else float('inf'))
+                    display_df = display_df.sort_values('台番号_sort').drop('台番号_sort', axis=1)
+                except:
+                    display_df = display_df.sort_values('台番号')
+            elif sort_option == "回転率①順":
+                # 回転率①を数値に変換してソート（警告記号を除去）
+                if '回転率①' in display_df.columns:
+                    display_df['回転率①_sort'] = display_df['回転率①'].apply(
+                        lambda x: float(str(x).replace(' ⚠️', '')) if str(x) != '-' and str(x) != '' else -1
+                    )
+                    display_df = display_df.sort_values('回転率①_sort', ascending=False).drop('回転率①_sort', axis=1)
+            elif sort_option == "回転率②順":
+                # 回転率②を数値に変換してソート（警告記号を除去）
+                if '回転率②' in display_df.columns:
+                    display_df['回転率②_sort'] = display_df['回転率②'].apply(
+                        lambda x: float(str(x).replace(' ⚠️', '')) if str(x) != '-' and str(x) != '' else -1
+                    )
+                    display_df = display_df.sort_values('回転率②_sort', ascending=False).drop('回転率②_sort', axis=1)
+            # アップロード順の場合はソートしない（元の順序を維持）
             
             edited_df = st.data_editor(
                 display_df,
