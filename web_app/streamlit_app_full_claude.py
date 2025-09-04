@@ -908,8 +908,23 @@ def extract_site7_data(image):
 MACHINE_PAYOUT_DATA = {
     "Re:ゼロから始める異世界生活 season2": {
         "big_jackpot_balls": 1500,    # 10R
-        "middle_jackpot_balls": 750,   # 中（この機種は使用しない）
+        "middle_jackpot_balls": 750,   # 5R（使用頻度低）
         "small_jackpot_balls": 300     # 2R
+    },
+    "エヴァンゲリオン": {
+        "big_jackpot_balls": 1500,    # 10R
+        "middle_jackpot_balls": 750,   # 5R
+        "small_jackpot_balls": 450     # 3R
+    },
+    "北斗の拳": {
+        "big_jackpot_balls": 1500,    # 10R
+        "middle_jackpot_balls": 900,   # 6R
+        "small_jackpot_balls": 450     # 3R
+    },
+    "海物語": {
+        "big_jackpot_balls": 1500,    # 10R
+        "middle_jackpot_balls": 750,   # 5R
+        "small_jackpot_balls": 450     # 3R
     },
     # 今後追加される機種データ
     # "機種名": {
@@ -931,19 +946,26 @@ def get_machine_payouts(machine_name):
     if not machine_name:
         return None
     
-    # 正規化（空白や記号を除去）
-    normalized_name = machine_name.replace(" ", "").replace("　", "")
+    # 正規化（空白、記号、型番を除去）
+    # M13, L1などの型番を除去
+    import re
+    normalized_name = re.sub(r'\s+[A-Z]\d+$', '', machine_name)  # 末尾の型番を除去
+    normalized_name = normalized_name.replace(" ", "").replace("　", "").replace(":", "").replace("：", "")
     
     # 部分一致で検索（略称や表記揺れに対応）
     for key, data in MACHINE_PAYOUT_DATA.items():
-        normalized_key = key.replace(" ", "").replace("　", "")
-        if normalized_key in normalized_name or normalized_name in normalized_key:
+        normalized_key = key.replace(" ", "").replace("　", "").replace(":", "").replace("：", "")
+        # より柔軟なマッチング
+        if normalized_key in normalized_name:
+            return data
+        # season2のようなバリエーションも考慮
+        if 'season2' in normalized_key.lower() and 'season2' in normalized_name.lower():
             return data
     
     # Re:ゼロの略称対応
     if "リゼロ" in machine_name or "rezero" in machine_name.lower():
         for key, data in MACHINE_PAYOUT_DATA.items():
-            if "Re:ゼロ" in key or "Re：ゼロ" in key:
+            if "Re:ゼロ" in key or "Re：ゼロ" in key or "Reゼロ" in key:
                 return data
     
     return None
@@ -1024,7 +1046,10 @@ if 'csv_columns' not in st.session_state:
         '総獲得球数',
         '回転率①',
         '回転率②',
-        '通常回転数'
+        '通常回転数',
+        '超回数',
+        '中回数',
+        '小回数'
     ]
 
 # 遊技種別の初期化
@@ -3931,6 +3956,19 @@ if 'analysis_results' in st.session_state:
                     '色': result['dominant_color']
                 }
                 
+                # Claude APIから超中小の回数を追加
+                if result.get('claude_analysis') and result['claude_analysis'].get('success'):
+                    claude_data = result['claude_analysis'].get('data', {})
+                    row['超回数'] = claude_data.get('big_jackpots', '')
+                    row['中回数'] = claude_data.get('medium_jackpots', '')
+                    row['小回数'] = claude_data.get('small_jackpots', '')
+                    row['機種名'] = claude_data.get('machine_name', '')
+                else:
+                    row['超回数'] = ''
+                    row['中回数'] = ''
+                    row['小回数'] = ''
+                    row['機種名'] = ''
+                
                 # 回転率データを追加
                 # Claude AIからデータを取得（なければグラフから）
                 claude_data = result.get('claude_analysis', {}).get('data', {}) if result.get('claude_analysis') and result['claude_analysis'].get('success') else {}
@@ -4454,7 +4492,8 @@ with st.expander("📊 CSV表示項目の設定", expanded=False):
         f'総獲得{unit}数', '大当り回数（グラフ）', '色', '回転率①', '回転率②',
         '通常回転数', f'初当り使用{unit}',
         '累計スタート', '大当り回数（OCR）', '初当り回数',
-        '現在スタート', '大当り確率', f'最高出{unit}'
+        '現在スタート', '大当り確率', f'最高出{unit}',
+        '機種名', '超回数', '中回数', '小回数'
     ]
     
     # パチスロ用の追加カラム
