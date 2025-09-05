@@ -3584,7 +3584,7 @@ if 'analysis_results' in st.session_state:
                                         html_content += f'''
                                         <div class="stat-item">
                                             <span class="stat-label">💰 総払い出し球数（AI計算）</span>
-                                            <span class="stat-value positive">{total_payout_from_ai:,}玉</span>
+                                            <span class="stat-value">{total_payout_from_ai:,}玉</span>
                                         </div>'''
                                         
                                         
