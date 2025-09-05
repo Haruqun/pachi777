@@ -3705,25 +3705,35 @@ if 'analysis_results' in st.session_state:
                             if claude_data.get('normal_rotations'):
                                 normal_rotations = claude_data['normal_rotations']
                                 
-                                # 使用球数の合計を正しく計算
-                                # AIから総払い出し球数を取得（優先）
+                                # 使用球数の合計を正しく計算（Excelデータと同じロジック）
+                                # 総払い出し球数を計算
+                                total_payout = 0
+                                
+                                # 機種別の払い出し球数を取得
                                 if claude_data.get('machine_payouts'):
-                                    # 機種別の払い出し球数で計算
                                     machine_payouts = claude_data['machine_payouts']
                                     big_balls = machine_payouts.get('big_jackpot_balls', 1500)
                                     middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
                                     small_balls = machine_payouts.get('small_jackpot_balls', 450)
-                                    
-                                    total_payout = 0
-                                    if claude_data.get('big_jackpots'):
-                                        total_payout += claude_data['big_jackpots'] * big_balls
-                                    if claude_data.get('medium_jackpots'):
-                                        total_payout += claude_data['medium_jackpots'] * middle_balls
-                                    if claude_data.get('small_jackpots'):
-                                        total_payout += claude_data['small_jackpots'] * small_balls
                                 else:
-                                    # デフォルト値で計算
-                                    total_payout = result.get('total_jackpot_balls', 0)
+                                    # デフォルト値を使用
+                                    big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
+                                    middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
+                                    small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                                
+                                # 超中小の内訳がない場合、total_jackpotsから推定
+                                if (claude_data.get('big_jackpots') is None and 
+                                    claude_data.get('medium_jackpots') is None and 
+                                    claude_data.get('small_jackpots') is None):
+                                    # total_jackpotsがある場合、すべて超として扱う
+                                    total_jackpots = claude_data.get('total_jackpots', 0)
+                                    total_payout = total_jackpots * big_balls
+                                else:
+                                    # 個別の値が取得できている場合はそれを使用
+                                    big_j = claude_data.get('big_jackpots', 0) or 0
+                                    medium_j = claude_data.get('medium_jackpots', 0) or 0
+                                    small_j = claude_data.get('small_jackpots', 0) or 0
+                                    total_payout = big_j * big_balls + medium_j * middle_balls + small_j * small_balls
                                 
                                 # グラフデータから最低値と現在値を取得
                                 min_val = abs(result.get('min_val', 0))
