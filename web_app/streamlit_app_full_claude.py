@@ -3494,7 +3494,7 @@ if 'analysis_results' in st.session_state:
                                     
                                     # 大当たり内訳（出玉数も表示） - 常に表示
                                     # 超
-                                    big_j = claude_data.get('big_jackpots', 0) if claude_data.get('big_jackpots') is not None else 0
+                                    big_j = claude_data.get('big_jackpots') if claude_data.get('big_jackpots') is not None else 0
                                     html_content += f'''
                                     <div class="stat-item">
                                         <span class="stat-label">🔴 超</span>
@@ -3502,7 +3502,7 @@ if 'analysis_results' in st.session_state:
                                     </div>'''
                                     
                                     # 中
-                                    medium_j = claude_data.get('medium_jackpots', 0) if claude_data.get('medium_jackpots') is not None else 0
+                                    medium_j = claude_data.get('medium_jackpots') if claude_data.get('medium_jackpots') is not None else 0
                                     html_content += f'''
                                     <div class="stat-item">
                                         <span class="stat-label">🟡 中</span>
@@ -3510,7 +3510,7 @@ if 'analysis_results' in st.session_state:
                                     </div>'''
                                     
                                     # 小
-                                    small_j = claude_data.get('small_jackpots', 0) if claude_data.get('small_jackpots') is not None else 0
+                                    small_j = claude_data.get('small_jackpots') if claude_data.get('small_jackpots') is not None else 0
                                     html_content += f'''
                                     <div class="stat-item">
                                         <span class="stat-label">🔵 小</span>
@@ -3582,9 +3582,9 @@ if 'analysis_results' in st.session_state:
                                     
                                     if total_payout_from_ai > 0:
                                         html_content += f'''
-                                        <div class="stat-item" style="background-color: #fff3cd; margin-top: 10px; padding: 10px; border-radius: 5px;">
-                                            <span class="stat-label" style="font-weight: bold;">💰 総払い出し球数（AI計算）</span>
-                                            <span class="stat-value positive" style="font-size: 1.2em;">{total_payout_from_ai:,}玉</span>
+                                        <div class="stat-item">
+                                            <span class="stat-label">💰 総払い出し球数（AI計算）</span>
+                                            <span class="stat-value positive">{total_payout_from_ai:,}玉</span>
                                         </div>'''
                                         
                                         
@@ -3831,6 +3831,9 @@ if 'analysis_results' in st.session_state:
                     # HTMLコンテンツを組み立て
                     html_content = f"""
                     <div class="stat-card">
+                        <div style="font-size: 1.1em; font-weight: bold; color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e0e0e0;">
+                            📊 グラフ解析結果
+                        </div>
                         <div class="stat-item">
                             <span class="stat-label">🎯 現在値</span>
                             <span class="stat-value {get_value_class(result['current_val'])}">{result['current_val']:,}{unit}</span>
@@ -4348,7 +4351,7 @@ if 'analysis_results' in st.session_state:
                         '累計スタート': ocr.get('total_start', ''),
                         '大当り回数（OCR）': ocr.get('jackpot_count', ''),  # 列名を変更
                         '初当り回数': ocr.get('first_hit_count', ''),
-                        '現在スタート': current_start,
+                        '現在回転数': current_start,
                         '大当り確率': ocr.get('jackpot_probability', ''),
                         '最高出玉': ocr.get('max_payout', '')
                     })
@@ -4805,7 +4808,7 @@ with st.expander("📊 CSV表示項目の設定", expanded=False):
         f'総獲得{unit}数', '大当り回数（グラフ）', '色', '回転率①', '回転率②',
         '通常回転数', f'初当り使用{unit}',
         '累計スタート', '大当り回数（OCR）', '初当り回数',
-        '現在スタート', '大当り確率', f'最高出{unit}',
+        '現在回転数', '大当り確率', f'最高出{unit}',
         '機種名', '超回数', '中回数', '小回数'
     ]
     
