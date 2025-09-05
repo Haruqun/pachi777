@@ -3405,12 +3405,12 @@ if 'analysis_results' in st.session_state:
 
                     # 出玉詳細画像（ペアリング済みの場合表示）
                     if result.get('detail_image_processed') is not None:
-                        st.markdown("### 📊 ペアリングされた出玉詳細画像")
-                        st.image(result['detail_image_processed'], use_column_width=True)
-                        if result.get('is_paired'):
-                            st.caption("✅ この詳細画像のデータを使用して計算しています")
-                        else:
-                            st.caption("黒枠検出 + overlay.png + 50%切り抜き適用済み")
+                        with st.expander("📊 ペアリングされた出玉詳細画像", expanded=False):
+                            st.image(result['detail_image_processed'], use_column_width=True)
+                            if result.get('is_paired'):
+                                st.caption("✅ この詳細画像のデータを使用して計算しています")
+                            else:
+                                st.caption("黒枠検出 + overlay.png + 50%切り抜き適用済み")
                     
                     # 元画像を折りたたみ可能に
                     with st.expander("📷 元画像を表示"):
