@@ -3671,6 +3671,10 @@ if 'analysis_results' in st.session_state:
                     rotation_html = ""
                     rotation_detail = ""
                     normal_usage_html = ""  # 通常時使用球数の表示用
+                    # デフォルト値をセット
+                    result['display_rotation_rate_1'] = '-'
+                    result['display_rotation_rate_2'] = '-'
+                    result['display_normal_balls'] = 0
                     if st.session_state.game_type == 'パチンコ':
                         # Claude AIから初回特賞スタートを取得して回転率①を計算
                         rotation_rate_1_calculated = False
@@ -3685,6 +3689,8 @@ if 'analysis_results' in st.session_state:
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
                                     rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {first_hit_balls}{unit}使用</div>'
                                     rotation_rate_1_calculated = True
+                                    # 結果に保存
+                                    result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
                         
                         # AI取得できなかった場合は従来のグラフから取得
                         if not rotation_rate_1_calculated and result.get('rotation_metrics'):
@@ -3693,8 +3699,11 @@ if 'analysis_results' in st.session_state:
                                 if metrics['rotation_rate_1'] > 0:
                                     warning = " ⚠️" if metrics['rotation_rate_1'] < 10 or metrics['rotation_rate_1'] > 35 else ""
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{metrics["rotation_rate_1"]:.1f}回/千円{warning}</span></div>'
+                                    # 結果に保存
+                                    result['display_rotation_rate_1'] = f"{metrics['rotation_rate_1']:.1f}{warning}"
                                 else:
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
+                                    result['display_rotation_rate_1'] = '-'
                                 rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}{unit}使用</div>'
                             
                         # 回転率②の計算 - Claude AIから通常回転数を取得
@@ -3768,6 +3777,9 @@ if 'analysis_results' in st.session_state:
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{rotation_rate_2:.1f}回/千円{warning}</span></div>'
                                     rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {normal_rotations}回転 ÷ {normal_balls}{unit}使用</div>'
                                     rotation_rate_2_calculated = True
+                                    # 結果に保存
+                                    result['display_rotation_rate_2'] = f"{rotation_rate_2:.1f}{warning}"
+                                    result['display_normal_balls'] = int(normal_balls)
                                     
                                     # 通常時使用球数のHTML準備
                                     normal_usage_html = f'''<div class="stat-item">
@@ -3797,8 +3809,11 @@ if 'analysis_results' in st.session_state:
                                     # 異常値チェック（現実的な範囲: 10-30回/千円）
                                     warning = " ⚠️" if metrics['rotation_rate_2'] < 10 or metrics['rotation_rate_2'] > 30 else ""
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{metrics["rotation_rate_2"]:.1f}回/千円{warning}</span></div>'
+                                    # 結果に保存
+                                    result['display_rotation_rate_2'] = f"{metrics['rotation_rate_2']:.1f}{warning}"
                                 else:
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
+                                    result['display_rotation_rate_2'] = '-'
                                 # デバッグ情報（通常時）
                                 rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {metrics["normal_decline_spins"]}回転 ÷ {metrics["normal_decline_balls"]}{unit}使用</div>'
                         
@@ -4292,88 +4307,21 @@ if 'analysis_results' in st.session_state:
                     row['小回数'] = ''
                     row['機種名'] = ''
                 
-                # 回転率データを追加
-                # Claude AIからデータを取得（なければグラフから）
-                claude_data = result.get('claude_analysis', {}).get('data', {}) if result.get('claude_analysis') and result['claude_analysis'].get('success') else {}
+                # 回転率データを追加（表示時に計算した値をそのまま使用）
+                # 回転率①（表示時の値を使用）
+                row['回転率①'] = result.get('display_rotation_rate_1', '-')
                 
-                # 回転率①の計算（初回特賞スタートベース）
-                if claude_data.get('initial_ball_starts') and result.get('first_hit_val'):
-                    initial_ball_starts = claude_data['initial_ball_starts']
-                    first_hit_balls = abs(result.get('first_hit_val') or 0)
-                    if first_hit_balls > 0:
-                        rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
-                        warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
-                        row['回転率①'] = f"{rotation_rate_1:.1f}{warning}"
-                    else:
-                        row['回転率①'] = '-'
-                elif result.get('rotation_metrics'):
-                    metrics = result['rotation_metrics']
-                    if metrics.get('rotation_rate_1', 0) > 0:
-                        warning = " ⚠️" if metrics['rotation_rate_1'] < 10 or metrics['rotation_rate_1'] > 35 else ""
-                        row['回転率①'] = f"{metrics['rotation_rate_1']:.1f}{warning}"
-                    else:
-                        row['回転率①'] = '-'
-                else:
-                    row['回転率①'] = '-'
-                
-                # 回転率②の計算（通常回転数ベース）- 上部表示と同じロジックを使用
-                if claude_data.get('normal_rotations'):
-                    normal_rotations = claude_data['normal_rotations']
-                    
-                    # 通常時使用球数の計算
-                    normal_balls = 0
-                    # グラフベースの計算を優先
-                    if st.session_state.get('use_graph_normal_usage', False) and result.get('graph_normal_usage'):
-                        normal_balls = result['graph_normal_usage']
-                    else:
-                        # 従来の計算: 最低値（最大投資） + 総払い出し - 現在値
-                        min_val = abs(result.get('min_val', 0))
-                        current_val = result.get('current_val', 0)
-                        
-                        # 総払い出し球数（超中小の内訳から計算）
-                        total_payout = 0
-                        if (claude_data.get('big_jackpots') is None and 
-                            claude_data.get('medium_jackpots') is None and 
-                            claude_data.get('small_jackpots') is None):
-                            total_jackpots = claude_data.get('total_jackpots', 0)
-                            # デフォルト値を使用
-                            big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
-                            total_payout = total_jackpots * big_balls
-                        else:
-                            big_j = claude_data.get('big_jackpots', 0) or 0
-                            medium_j = claude_data.get('medium_jackpots', 0) or 0
-                            small_j = claude_data.get('small_jackpots', 0) or 0
-                            big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
-                            middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
-                            small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
-                            total_payout = big_j * big_balls + medium_j * middle_balls + small_j * small_balls
-                        
-                        if current_val >= 0:
-                            normal_balls = min_val + total_payout - current_val
-                        else:
-                            normal_balls = min_val + total_payout + abs(current_val)
-                    
-                    if normal_balls > 0 and normal_rotations > 0:
-                        rotation_rate_2 = (normal_rotations / normal_balls) * 250
-                        warning = " ⚠️" if rotation_rate_2 < 10 or rotation_rate_2 > 30 else ""
-                        row['回転率②'] = f"{rotation_rate_2:.1f}{warning}"
-                    else:
-                        row['回転率②'] = '-'
-                elif result.get('rotation_metrics'):
-                    metrics = result['rotation_metrics']
-                    if metrics.get('rotation_rate_2', 0) > 0:
-                        warning = " ⚠️" if metrics['rotation_rate_2'] < 10 or metrics['rotation_rate_2'] > 30 else ""
-                        row['回転率②'] = f"{metrics['rotation_rate_2']:.1f}{warning}"
-                    else:
-                        row['回転率②'] = '-'
-                else:
-                    row['回転率②'] = '-'
+                # 回転率②（表示時の値を使用）
+                row['回転率②'] = result.get('display_rotation_rate_2', '-')
                 
                 # 初当り使用玉
                 if result.get('rotation_metrics'):
                     row['初当り使用玉'] = result['rotation_metrics']['first_hit_balls'] if result['rotation_metrics'].get('first_hit_balls', 0) > 0 else '-'
                 else:
                     row['初当り使用玉'] = '-'
+                
+                # 通常時使用球数（表示時の値を使用）
+                row['通常時使用球数'] = result.get('display_normal_balls', 0)
                 
                 # 通常回転数を追加
                 if claude_data.get('normal_rotations'):
@@ -4851,7 +4799,7 @@ with st.expander("📊 CSV表示項目の設定", expanded=False):
         '画像名', '台番号', '最高値', '最低値', '現在値',
         f'初当たり{unit}数', '初当たり回転数', '収支（円）',
         f'総獲得{unit}数', '大当り回数（グラフ）', '色', '回転率①', '回転率②',
-        '通常回転数', f'初当り使用{unit}',
+        '通常回転数', f'初当り使用{unit}', f'通常時使用{unit}数',
         '累計スタート', '大当り回数（OCR）', '初当り回数',
         '現在回転数', '大当り確率', f'最高出{unit}',
         '機種名', '超回数', '中回数', '小回数'
