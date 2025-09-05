@@ -3441,164 +3441,164 @@ if 'analysis_results' in st.session_state:
                                         <span class="stat-label">📅 日付</span>
                                         <span class="stat-value">{claude_data['date']}</span>
                                     </div>'''
+                                
+                                # 台番号
+                                if claude_data.get('machine_number'):
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🎯 台番号</span>
+                                        <span class="stat-value">{claude_data['machine_number']}</span>
+                                    </div>'''
+                                
+                                # 大当たり情報（確率表示なし）
+                                if claude_data.get('total_jackpots') is not None:
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🎯 大当り回数</span>
+                                        <span class="stat-value positive">{claude_data['total_jackpots']}回</span>
+                                    </div>'''
+                                
+                                if claude_data.get('first_jackpots') is not None:
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🎯 初当り回数</span>
+                                        <span class="stat-value positive">{claude_data['first_jackpots']}回</span>
+                                    </div>'''
                                     
-                                    # 台番号
-                                    if claude_data.get('machine_number'):
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">🎯 台番号</span>
-                                            <span class="stat-value">{claude_data['machine_number']}</span>
-                                        </div>'''
+                                # 機種別の払い出し球数を取得
+                                machine_payouts = None
+                                
+                                # デバッグ: 払い出し球数データを確認
+                                if st.session_state.get('show_ocr_debug', False):
+                                    st.write("🔍 **払い出し球数デバッグ情報:**")
+                                    st.write(f"  - machine_payouts: {claude_data.get('machine_payouts')}")
+                                
+                                # claude_dataに保存されているものを確認
+                                if claude_data.get('machine_payouts'):
+                                    machine_payouts = claude_data['machine_payouts']
+                                # 機種名から取得を試みる
+                                elif claude_data.get('machine_name'):
+                                    machine_name = claude_data['machine_name']
+                                    machine_payouts = get_machine_payouts(machine_name)
+                                
+                                # 機種データが取得できた場合はその値を使用
+                                if machine_payouts:
+                                    big_balls = machine_payouts.get('big_jackpot_balls', 1500)
+                                    middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
+                                    small_balls = machine_payouts.get('small_jackpot_balls', 450)
+                                else:
+                                    # 機種データが見つからない場合はユーザー設定を使用
+                                    big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
+                                    middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
+                                    small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
                                     
-                                    # 大当たり情報（確率表示なし）
-                                    if claude_data.get('total_jackpots') is not None:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">🎯 大当り回数</span>
-                                            <span class="stat-value positive">{claude_data['total_jackpots']}回</span>
-                                        </div>'''
+                                # 大当たり内訳（出玉数も表示） - 常に表示
+                                # 超中小の内訳がない場合、total_jackpotsから推定
+                                if (claude_data.get('big_jackpots') is None and 
+                                    claude_data.get('medium_jackpots') is None and 
+                                    claude_data.get('small_jackpots') is None):
+                                    # total_jackpotsがある場合、すべて超として扱う
+                                    total_jackpots = claude_data.get('total_jackpots', 0)
+                                    big_j = total_jackpots
+                                    medium_j = 0
+                                    small_j = 0
+                                else:
+                                    # 個別の値が取得できている場合はそれを使用
+                                    big_j = claude_data.get('big_jackpots') if claude_data.get('big_jackpots') is not None else 0
+                                    medium_j = claude_data.get('medium_jackpots') if claude_data.get('medium_jackpots') is not None else 0
+                                    small_j = claude_data.get('small_jackpots') if claude_data.get('small_jackpots') is not None else 0
                                     
-                                    if claude_data.get('first_jackpots') is not None:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">🎯 初当り回数</span>
-                                            <span class="stat-value positive">{claude_data['first_jackpots']}回</span>
-                                        </div>'''
+                                # 超
+                                html_content += f'''
+                                <div class="stat-item">
+                                    <span class="stat-label">🔴 超</span>
+                                    <span class="stat-value">{big_j}回 ({big_balls}玉/回)</span>
+                                </div>'''
+                                
+                                # 中
+                                html_content += f'''
+                                <div class="stat-item">
+                                    <span class="stat-label">🟡 中</span>
+                                    <span class="stat-value">{medium_j}回 ({middle_balls}玉/回)</span>
+                                </div>'''
+                                
+                                # 小
+                                html_content += f'''
+                                <div class="stat-item">
+                                    <span class="stat-label">🔵 小</span>
+                                    <span class="stat-value">{small_j}回 ({small_balls}玉/回)</span>
+                                </div>'''
                                     
-                                    # 機種別の払い出し球数を取得
-                                    machine_payouts = None
-                                    
-                                    # デバッグ: 払い出し球数データを確認
-                                    if st.session_state.get('show_ocr_debug', False):
-                                        st.write("🔍 **払い出し球数デバッグ情報:**")
-                                        st.write(f"  - machine_payouts: {claude_data.get('machine_payouts')}")
-                                    
-                                    # claude_dataに保存されているものを確認
-                                    if claude_data.get('machine_payouts'):
-                                        machine_payouts = claude_data['machine_payouts']
-                                    # 機種名から取得を試みる
-                                    elif claude_data.get('machine_name'):
-                                        machine_name = claude_data['machine_name']
-                                        machine_payouts = get_machine_payouts(machine_name)
-                                    
-                                    # 機種データが取得できた場合はその値を使用
-                                    if machine_payouts:
-                                        big_balls = machine_payouts.get('big_jackpot_balls', 1500)
-                                        middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
-                                        small_balls = machine_payouts.get('small_jackpot_balls', 450)
-                                    else:
-                                        # 機種データが見つからない場合はユーザー設定を使用
-                                        big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
-                                        middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
-                                        small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
-                                    
-                                    # 大当たり内訳（出玉数も表示） - 常に表示
-                                    # 超中小の内訳がない場合、total_jackpotsから推定
+                                # デバッグ情報（OCRデバッグモードで表示）
+                                if st.session_state.get('show_ocr_debug', False):
                                     if (claude_data.get('big_jackpots') is None and 
                                         claude_data.get('medium_jackpots') is None and 
                                         claude_data.get('small_jackpots') is None):
-                                        # total_jackpotsがある場合、すべて超として扱う
-                                        total_jackpots = claude_data.get('total_jackpots', 0)
-                                        big_j = total_jackpots
-                                        medium_j = 0
-                                        small_j = 0
-                                    else:
-                                        # 個別の値が取得できている場合はそれを使用
-                                        big_j = claude_data.get('big_jackpots') if claude_data.get('big_jackpots') is not None else 0
-                                        medium_j = claude_data.get('medium_jackpots') if claude_data.get('medium_jackpots') is not None else 0
-                                        small_j = claude_data.get('small_jackpots') if claude_data.get('small_jackpots') is not None else 0
+                                        html_content += f'''
+                                        <div class="stat-item" style="font-size: 0.85em; color: #ff6b6b;">
+                                            <span>⚠️ 超中小データ未取得</span>
+                                        </div>'''
                                     
-                                    # 超
+                                # 回転数情報
+                                if claude_data.get('total_rotations') is not None:
                                     html_content += f'''
                                     <div class="stat-item">
-                                        <span class="stat-label">🔴 超</span>
-                                        <span class="stat-value">{big_j}回 ({big_balls}玉/回)</span>
+                                        <span class="stat-label">📊 累計スタート</span>
+                                        <span class="stat-value">{claude_data['total_rotations']:,}回</span>
                                     </div>'''
-                                    
-                                    # 中
+                                
+                                if claude_data.get('normal_rotations') is not None:
                                     html_content += f'''
                                     <div class="stat-item">
-                                        <span class="stat-label">🟡 中</span>
-                                        <span class="stat-value">{medium_j}回 ({middle_balls}玉/回)</span>
+                                        <span class="stat-label">🔄 通常回転数</span>
+                                        <span class="stat-value">{claude_data['normal_rotations']:,}回</span>
                                     </div>'''
-                                    
-                                    # 小
+                                
+                                if claude_data.get('chance_rotations') is not None:
                                     html_content += f'''
                                     <div class="stat-item">
-                                        <span class="stat-label">🔵 小</span>
-                                        <span class="stat-value">{small_j}回 ({small_balls}玉/回)</span>
+                                        <span class="stat-label">🎊 チャンス中回転数</span>
+                                        <span class="stat-value">{claude_data['chance_rotations']:,}回</span>
+                                    </div>'''
+                                
+                                if claude_data.get('current_rotations') is not None:
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">⏰ 現在回転数</span>
+                                        <span class="stat-value">{claude_data['current_rotations']}回</span>
                                     </div>'''
                                     
-                                    # デバッグ情報（OCRデバッグモードで表示）
-                                    if st.session_state.get('show_ocr_debug', False):
-                                        if (claude_data.get('big_jackpots') is None and 
-                                            claude_data.get('medium_jackpots') is None and 
-                                            claude_data.get('small_jackpots') is None):
-                                            html_content += f'''
-                                            <div class="stat-item" style="font-size: 0.85em; color: #ff6b6b;">
-                                                <span>⚠️ 超中小データ未取得</span>
-                                            </div>'''
+                                # その他情報
+                                if claude_data.get('max_balls') is not None:
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">💰 最高出玉</span>
+                                        <span class="stat-value positive">{claude_data['max_balls']:,}玉</span>
+                                    </div>'''
+                                
+                                if claude_data.get('initial_ball_starts') is not None:
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🎱 初回特賞スタート</span>
+                                        <span class="stat-value">{claude_data['initial_ball_starts']}回</span>
+                                    </div>'''
                                     
-                                    # 回転数情報
-                                    if claude_data.get('total_rotations') is not None:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">📊 累計スタート</span>
-                                            <span class="stat-value">{claude_data['total_rotations']:,}回</span>
-                                        </div>'''
-                                    
-                                    if claude_data.get('normal_rotations') is not None:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">🔄 通常回転数</span>
-                                            <span class="stat-value">{claude_data['normal_rotations']:,}回</span>
-                                        </div>'''
-                                    
-                                    if claude_data.get('chance_rotations') is not None:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">🎊 チャンス中回転数</span>
-                                            <span class="stat-value">{claude_data['chance_rotations']:,}回</span>
-                                        </div>'''
-                                    
-                                    if claude_data.get('current_rotations') is not None:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">⏰ 現在回転数</span>
-                                            <span class="stat-value">{claude_data['current_rotations']}回</span>
-                                        </div>'''
-                                    
-                                    # その他情報
-                                    if claude_data.get('max_balls') is not None:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">💰 最高出玉</span>
-                                            <span class="stat-value positive">{claude_data['max_balls']:,}玉</span>
-                                        </div>'''
-                                    
-                                    if claude_data.get('initial_ball_starts') is not None:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">🎱 初回特賞スタート</span>
-                                            <span class="stat-value">{claude_data['initial_ball_starts']}回</span>
-                                        </div>'''
-                                    
-                                    # 総払い出し球数をAIから計算
-                                    total_payout_from_ai = 0
-                                    # 超中小の内訳を使用した計算（上記で設定したbig_j, medium_j, small_jを使用）
-                                    total_payout_from_ai = big_j * big_balls + medium_j * middle_balls + small_j * small_balls
-                                    
-                                    if total_payout_from_ai > 0:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">💰 総払い出し球数（AI計算）</span>
-                                            <span class="stat-value">{total_payout_from_ai:,}玉</span>
-                                        </div>'''
-                                    
-                                    html_content += '</div>'
-                                    
-                                    # HTMLを表示
-                                    st.markdown(html_content, unsafe_allow_html=True)
+                                # 総払い出し球数をAIから計算
+                                total_payout_from_ai = 0
+                                # 超中小の内訳を使用した計算（上記で設定したbig_j, medium_j, small_jを使用）
+                                total_payout_from_ai = big_j * big_balls + medium_j * middle_balls + small_j * small_balls
+                                
+                                if total_payout_from_ai > 0:
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">💰 総払い出し球数（AI計算）</span>
+                                        <span class="stat-value">{total_payout_from_ai:,}玉</span>
+                                    </div>'''
+                                
+                                html_content += '</div>'
+                                
+                                # HTMLを表示
+                                st.markdown(html_content, unsafe_allow_html=True)
                                 else:
                                     # テキスト形式で結果が返された場合
                                     st.markdown("**解析結果（テキスト）**")
