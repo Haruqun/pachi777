@@ -3597,8 +3597,8 @@ if 'analysis_results' in st.session_state:
                                 
                                 html_content += '</div>'
                                 
-                                # HTMLを表示
-                                st.markdown(html_content, unsafe_allow_html=True)
+                                    # HTMLを表示
+                                    st.markdown(html_content, unsafe_allow_html=True)
                                 else:
                                     # テキスト形式で結果が返された場合
                                     st.markdown("**解析結果（テキスト）**")
