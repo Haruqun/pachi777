@@ -3402,6 +3402,14 @@ if 'analysis_results' in st.session_state:
                                     # 機種別の払い出し球数を取得
                                     machine_payouts = None
                                     
+                                    # デバッグ: Claude APIから取得したデータを確認
+                                    if st.session_state.get('show_ocr_debug', False):
+                                        st.write("🔍 **払い出し球数デバッグ情報:**")
+                                        st.write(f"  - big_jackpot_balls: {claude_data.get('big_jackpot_balls')}")
+                                        st.write(f"  - middle_jackpot_balls: {claude_data.get('middle_jackpot_balls')}")
+                                        st.write(f"  - small_jackpot_balls: {claude_data.get('small_jackpot_balls')}")
+                                        st.write(f"  - machine_payouts: {claude_data.get('machine_payouts')}")
+                                    
                                     # まずClaude APIから取得した払い出し球数をチェック
                                     if claude_data.get('big_jackpot_balls') is not None:
                                         # Claude APIから直接取得した値を優先
@@ -3513,7 +3521,8 @@ if 'analysis_results' in st.session_state:
                                         
                                         # 機種情報を表示
                                         if claude_data.get('machine_name'):
-                                            if claude_data.get('machine_payouts'):
+                                            # Claude APIから直接取得した値があるか、machine_payoutsがあるかチェック
+                                            if claude_data.get('big_jackpot_balls') is not None or claude_data.get('machine_payouts'):
                                                 html_content += f'''
                                                 <div class="stat-item" style="font-size: 0.9em; color: #666;">
                                                     <span>🎯 機種「{claude_data['machine_name']}」の設定値で計算</span>
