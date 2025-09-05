@@ -978,6 +978,29 @@ def extract_site7_data(image):
         st.warning(f"OCRエラー: {str(e)}")
         return None
 
+def calculate_normal_usage_from_graph(graph_values):
+    """グラフの下降部分から通常時の使用球数を計算
+    
+    Args:
+        graph_values: グラフの値リスト
+    
+    Returns:
+        int: 通常時使用球数
+    """
+    if not graph_values or len(graph_values) < 2:
+        return 0
+    
+    normal_usage = 0
+    noise_threshold = 10  # 10玉以下の変動はノイズとして無視
+    
+    for i in range(len(graph_values) - 1):
+        change = graph_values[i + 1] - graph_values[i]
+        # 下降している場合（通常遊技での消費）
+        if change < -noise_threshold:
+            normal_usage += abs(change)
+    
+    return int(normal_usage)
+
 # 機種別の大当たり出玉数データベース
 MACHINE_PAYOUT_DATA = {
     "Re:ゼロから始める異世界生活 season2": {
@@ -1129,6 +1152,10 @@ if 'csv_columns' not in st.session_state:
 # 遊技種別の初期化
 if 'game_type' not in st.session_state:
     st.session_state.game_type = 'パチンコ'  # デフォルトはパチンコ
+
+# 通常時使用球数の計算方法（テスト用）
+if 'use_graph_calculation' not in st.session_state:
+    st.session_state.use_graph_calculation = False  # デフォルトは従来の方法
 
 # Claude APIキーの初期化（専用データベースから読み込み）
 if 'claude_api_key' not in st.session_state:
@@ -1708,6 +1735,35 @@ with st.sidebar:
         st.markdown("### 🎯 Claude API")
         st.warning("⚠️ 未設定")
         st.caption("管理者ログイン後、APIキーを設定してください")
+    
+    # 実験的機能セクション（管理者のみ）
+    if st.session_state.get('is_admin', False):
+        st.markdown("---")
+        st.markdown("### 🧪 実験的機能")
+        
+        # 通常時使用球数の計算方法切り替え
+        use_graph_calc = st.checkbox(
+            "グラフ解析による通常時使用球数計算",
+            value=st.session_state.get('use_graph_calculation', False),
+            help="グラフの下降部分のみを積算して通常時使用球数を計算します。より正確な回転率が期待できます。"
+        )
+        
+        if use_graph_calc != st.session_state.get('use_graph_calculation', False):
+            st.session_state.use_graph_calculation = use_graph_calc
+            if use_graph_calc:
+                st.success("✨ グラフ解析による計算有効")
+            else:
+                st.info("📊 従来の計算方法")
+        
+        # OCRデバッグモード
+        show_ocr_debug = st.checkbox(
+            "詳細デバッグ情報を表示",
+            value=st.session_state.get('show_ocr_debug', False),
+            help="OCR処理や計算の詳細情報を表示します"
+        )
+        
+        if show_ocr_debug != st.session_state.get('show_ocr_debug', False):
+            st.session_state.show_ocr_debug = show_ocr_debug
     
     # デバッグセクション（管理者のみ）
     if st.session_state.get('is_admin', False):
@@ -3518,6 +3574,28 @@ if 'analysis_results' in st.session_state:
                                             <span class="stat-value positive" style="font-size: 1.2em;">{total_payout_from_ai:,}玉</span>
                                         </div>'''
                                         
+                                        # 通常時使用球数を追加（回転率②が計算されている場合）
+                                        if 'normal_balls' in locals() and normal_balls > 0:
+                                            html_content += f'''
+                                            <div class="stat-item" style="background-color: #e8f4f8; margin-top: 10px; padding: 10px; border-radius: 5px;">
+                                                <span class="stat-label" style="font-weight: bold;">🎮 通常時使用球数</span>
+                                                <span class="stat-value" style="font-size: 1.1em;">{int(normal_balls):,}玉</span>
+                                            </div>'''
+                                            
+                                            # デバッグモードで新旧の値を比較表示
+                                            if st.session_state.get('show_ocr_debug', False) and st.session_state.get('use_graph_calculation', False):
+                                                if 'normal_balls_old' in locals():
+                                                    html_content += f'''
+                                                    <div class="stat-item" style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                                        <span>📊 グラフ解析: {int(normal_balls):,}玉</span>
+                                                    </div>
+                                                    <div class="stat-item" style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                                        <span>📈 従来計算: {int(normal_balls_old):,}玉</span>
+                                                    </div>
+                                                    <div class="stat-item" style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                                        <span>📐 差分: {int(abs(normal_balls - normal_balls_old)):,}玉</span>
+                                                    </div>'''
+                                        
                                         # 機種情報を表示
                                         if claude_data.get('machine_name'):
                                             # machine_payoutsがあるかチェック
@@ -3664,11 +3742,28 @@ if 'analysis_results' in st.session_state:
                                 min_val = abs(result.get('min_val', 0))
                                 current_val = result.get('current_val', 0)
                                 
-                                # 通常時の使用球数合計 = 最大投資額 + 総払い出し球数 - 現在値
-                                if current_val >= 0:
-                                    normal_balls = min_val + total_payout - current_val
+                                # 通常時使用球数の計算（テストモードで切り替え）
+                                normal_balls_graph = 0  # グラフ解析による値
+                                normal_balls_old = 0    # 従来の計算値
+                                
+                                if st.session_state.get('use_graph_calculation', False) and 'analysis_data' in locals():
+                                    # 新方式：グラフの下降部分から計算
+                                    graph_values = [p[1] for p in analysis_data.get('data_points', [])]
+                                    normal_balls_graph = calculate_normal_usage_from_graph(graph_values)
+                                    normal_balls = normal_balls_graph
+                                    
+                                    # デバッグ用に従来の値も計算
+                                    if current_val >= 0:
+                                        normal_balls_old = min_val + total_payout - current_val
+                                    else:
+                                        normal_balls_old = min_val + total_payout + abs(current_val)
                                 else:
-                                    normal_balls = min_val + total_payout + abs(current_val)
+                                    # 従来の方式
+                                    if current_val >= 0:
+                                        normal_balls = min_val + total_payout - current_val
+                                    else:
+                                        normal_balls = min_val + total_payout + abs(current_val)
+                                    normal_balls_old = normal_balls
                                 
                                 if normal_balls > 0 and normal_rotations > 0:
                                     rotation_rate_2 = (normal_rotations / normal_balls) * 250
