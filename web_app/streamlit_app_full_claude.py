@@ -3492,27 +3492,40 @@ if 'analysis_results' in st.session_state:
                                         middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
                                         small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
                                     
-                                    # 大当たり内訳（出玉数も表示）
-                                    if claude_data.get('big_jackpots') is not None:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">🔴 超</span>
-                                            <span class="stat-value">{claude_data['big_jackpots']}回 ({big_balls}玉/回)</span>
-                                        </div>'''
+                                    # 大当たり内訳（出玉数も表示） - 常に表示
+                                    # 超
+                                    big_j = claude_data.get('big_jackpots', 0) if claude_data.get('big_jackpots') is not None else 0
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🔴 超</span>
+                                        <span class="stat-value">{big_j}回 ({big_balls}玉/回)</span>
+                                    </div>'''
                                     
-                                    if claude_data.get('medium_jackpots') is not None:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">🟡 中</span>
-                                            <span class="stat-value">{claude_data['medium_jackpots']}回 ({middle_balls}玉/回)</span>
-                                        </div>'''
+                                    # 中
+                                    medium_j = claude_data.get('medium_jackpots', 0) if claude_data.get('medium_jackpots') is not None else 0
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🟡 中</span>
+                                        <span class="stat-value">{medium_j}回 ({middle_balls}玉/回)</span>
+                                    </div>'''
                                     
-                                    if claude_data.get('small_jackpots') is not None:
-                                        html_content += f'''
-                                        <div class="stat-item">
-                                            <span class="stat-label">🔵 小</span>
-                                            <span class="stat-value">{claude_data['small_jackpots']}回 ({small_balls}玉/回)</span>
-                                        </div>'''
+                                    # 小
+                                    small_j = claude_data.get('small_jackpots', 0) if claude_data.get('small_jackpots') is not None else 0
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🔵 小</span>
+                                        <span class="stat-value">{small_j}回 ({small_balls}玉/回)</span>
+                                    </div>'''
+                                    
+                                    # デバッグ情報（OCRデバッグモードで表示）
+                                    if st.session_state.get('show_ocr_debug', False):
+                                        if (claude_data.get('big_jackpots') is None and 
+                                            claude_data.get('medium_jackpots') is None and 
+                                            claude_data.get('small_jackpots') is None):
+                                            html_content += f'''
+                                            <div class="stat-item" style="font-size: 0.85em; color: #ff6b6b;">
+                                                <span>⚠️ 超中小データ未取得</span>
+                                            </div>'''
                                     
                                     # 回転数情報
                                     if claude_data.get('total_rotations') is not None:
@@ -3574,27 +3587,6 @@ if 'analysis_results' in st.session_state:
                                             <span class="stat-value positive" style="font-size: 1.2em;">{total_payout_from_ai:,}玉</span>
                                         </div>'''
                                         
-                                        # 通常時使用球数を追加（回転率②が計算されている場合）
-                                        if 'normal_balls' in locals() and normal_balls > 0:
-                                            html_content += f'''
-                                            <div class="stat-item" style="background-color: #e8f4f8; margin-top: 10px; padding: 10px; border-radius: 5px;">
-                                                <span class="stat-label" style="font-weight: bold;">🎮 通常時使用球数</span>
-                                                <span class="stat-value" style="font-size: 1.1em;">{int(normal_balls):,}玉</span>
-                                            </div>'''
-                                            
-                                            # デバッグモードで新旧の値を比較表示
-                                            if st.session_state.get('show_ocr_debug', False) and st.session_state.get('use_graph_calculation', False):
-                                                if 'normal_balls_old' in locals():
-                                                    html_content += f'''
-                                                    <div class="stat-item" style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                                        <span>📊 グラフ解析: {int(normal_balls):,}玉</span>
-                                                    </div>
-                                                    <div class="stat-item" style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                                        <span>📈 従来計算: {int(normal_balls_old):,}玉</span>
-                                                    </div>
-                                                    <div class="stat-item" style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                                        <span>📐 差分: {int(abs(normal_balls - normal_balls_old)):,}玉</span>
-                                                    </div>'''
                                         
                                         # 機種情報を表示
                                         if claude_data.get('machine_name'):
@@ -3684,6 +3676,7 @@ if 'analysis_results' in st.session_state:
                     # 回転率データの準備（パチンコのみ）
                     rotation_html = ""
                     rotation_detail = ""
+                    normal_usage_html = ""  # 通常時使用球数の表示用
                     if st.session_state.game_type == 'パチンコ':
                         # Claude AIから初回特賞スタートを取得して回転率①を計算
                         rotation_rate_1_calculated = False
@@ -3771,6 +3764,26 @@ if 'analysis_results' in st.session_state:
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{rotation_rate_2:.1f}回/千円{warning}</span></div>'
                                     rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {normal_rotations}回転 ÷ {normal_balls}{unit}使用</div>'
                                     rotation_rate_2_calculated = True
+                                    
+                                    # 通常時使用球数のHTML準備
+                                    normal_usage_html = f'''<div class="stat-item">
+                                        <span class="stat-label">🎮 通常時使用球数</span>
+                                        <span class="stat-value">{int(normal_balls):,}{unit}</span>
+                                    </div>'''
+                                    
+                                    # デバッグモードで新旧の値を比較表示
+                                    if st.session_state.get('show_ocr_debug', False) and st.session_state.get('use_graph_calculation', False):
+                                        if 'normal_balls_old' in locals():
+                                            normal_usage_html += f'''
+                                            <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                                <span>📊 グラフ解析: {int(normal_balls):,}{unit}</span>
+                                            </div>
+                                            <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                                <span>📈 従来計算: {int(normal_balls_old):,}{unit}</span>
+                                            </div>
+                                            <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                                <span>📐 差分: {int(abs(normal_balls - normal_balls_old)):,}{unit}</span>
+                                            </div>'''
                         
                         # AI取得できなかった場合は従来のグラフから取得
                         if not rotation_rate_2_calculated and result.get('rotation_metrics'):
@@ -3874,6 +3887,9 @@ if 'analysis_results' in st.session_state:
                     if rotation_detail:
                         html_content += rotation_detail
                     
+                    # 通常時使用球数を追加
+                    if normal_usage_html:
+                        html_content += normal_usage_html
                     
                     if correction_info:
                         html_content += correction_info
