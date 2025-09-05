@@ -3493,8 +3493,22 @@ if 'analysis_results' in st.session_state:
                                         small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
                                     
                                     # 大当たり内訳（出玉数も表示） - 常に表示
+                                    # 超中小の内訳がない場合、total_jackpotsから推定
+                                    if (claude_data.get('big_jackpots') is None and 
+                                        claude_data.get('medium_jackpots') is None and 
+                                        claude_data.get('small_jackpots') is None):
+                                        # total_jackpotsがある場合、すべて超として扱う
+                                        total_jackpots = claude_data.get('total_jackpots', 0)
+                                        big_j = total_jackpots
+                                        medium_j = 0
+                                        small_j = 0
+                                    else:
+                                        # 個別の値が取得できている場合はそれを使用
+                                        big_j = claude_data.get('big_jackpots') if claude_data.get('big_jackpots') is not None else 0
+                                        medium_j = claude_data.get('medium_jackpots') if claude_data.get('medium_jackpots') is not None else 0
+                                        small_j = claude_data.get('small_jackpots') if claude_data.get('small_jackpots') is not None else 0
+                                    
                                     # 超
-                                    big_j = claude_data.get('big_jackpots') if claude_data.get('big_jackpots') is not None else 0
                                     html_content += f'''
                                     <div class="stat-item">
                                         <span class="stat-label">🔴 超</span>
@@ -3502,7 +3516,6 @@ if 'analysis_results' in st.session_state:
                                     </div>'''
                                     
                                     # 中
-                                    medium_j = claude_data.get('medium_jackpots') if claude_data.get('medium_jackpots') is not None else 0
                                     html_content += f'''
                                     <div class="stat-item">
                                         <span class="stat-label">🟡 中</span>
@@ -3510,7 +3523,6 @@ if 'analysis_results' in st.session_state:
                                     </div>'''
                                     
                                     # 小
-                                    small_j = claude_data.get('small_jackpots') if claude_data.get('small_jackpots') is not None else 0
                                     html_content += f'''
                                     <div class="stat-item">
                                         <span class="stat-label">🔵 小</span>
@@ -3573,12 +3585,8 @@ if 'analysis_results' in st.session_state:
                                     
                                     # 総払い出し球数をAIから計算
                                     total_payout_from_ai = 0
-                                    if claude_data.get('big_jackpots') is not None:
-                                        total_payout_from_ai += claude_data['big_jackpots'] * big_balls
-                                    if claude_data.get('medium_jackpots') is not None:
-                                        total_payout_from_ai += claude_data['medium_jackpots'] * middle_balls
-                                    if claude_data.get('small_jackpots') is not None:
-                                        total_payout_from_ai += claude_data['small_jackpots'] * small_balls
+                                    # 超中小の内訳を使用した計算（上記で設定したbig_j, medium_j, small_jを使用）
+                                    total_payout_from_ai = big_j * big_balls + medium_j * middle_balls + small_j * small_balls
                                     
                                     if total_payout_from_ai > 0:
                                         html_content += f'''
@@ -3619,31 +3627,32 @@ if 'analysis_results' in st.session_state:
                             # APIキーが設定されていない場合のメッセージ
                             with st.expander("🤖 Claude AI解析"):
                                 st.info("Claude APIキーが設定されていません。管理者ログインしてAPIキーを設定してください。")
-                        # 統計情報をカード風に表示
+                        # 統計情報をカード風に表示（site7データと同じデザイン）
                         st.markdown("""
                 <style>
                 .stat-card {
-                    background-color: #f0f2f6;
+                    background-color: #e8f4f8;
                     padding: 15px;
                     border-radius: 10px;
                     margin-top: 10px;
+                    border: 1px solid #bee5eb;
                 }
                 .stat-item {
                     display: flex;
                     justify-content: space-between;
                     padding: 5px 0;
-                    border-bottom: 1px solid #e0e0e0;
+                    border-bottom: 1px solid #d1ecf1;
                 }
                 .stat-item:last-child {
                     border-bottom: none;
                 }
                 .stat-label {
-                    color: #666;
+                    color: #0c5460;
                     font-weight: 500;
                 }
                 .stat-value {
                     font-weight: bold;
-                    color: #333;
+                    color: #0c5460;
                 }
                 .stat-value.positive {
                     color: #28a745;
@@ -3831,7 +3840,7 @@ if 'analysis_results' in st.session_state:
                     # HTMLコンテンツを組み立て
                     html_content = f"""
                     <div class="stat-card">
-                        <div style="font-size: 1.1em; font-weight: bold; color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e0e0e0;">
+                        <div style="font-size: 1.1em; font-weight: bold; color: #17a2b8; margin-bottom: 10px;">
                             📊 グラフ解析結果
                         </div>
                         <div class="stat-item">
@@ -4268,9 +4277,19 @@ if 'analysis_results' in st.session_state:
                 # Claude APIから超中小の回数を追加
                 if result.get('claude_analysis') and result['claude_analysis'].get('success'):
                     claude_data = result['claude_analysis'].get('data', {})
-                    row['超回数'] = claude_data.get('big_jackpots', '')
-                    row['中回数'] = claude_data.get('medium_jackpots', '')
-                    row['小回数'] = claude_data.get('small_jackpots', '')
+                    # 超中小の内訳がない場合、total_jackpotsから推定
+                    if (claude_data.get('big_jackpots') is None and 
+                        claude_data.get('medium_jackpots') is None and 
+                        claude_data.get('small_jackpots') is None):
+                        # total_jackpotsがある場合、すべて超として扱う
+                        total_jackpots = claude_data.get('total_jackpots', 0)
+                        row['超回数'] = total_jackpots
+                        row['中回数'] = 0
+                        row['小回数'] = 0
+                    else:
+                        row['超回数'] = claude_data.get('big_jackpots', '')
+                        row['中回数'] = claude_data.get('medium_jackpots', '')
+                        row['小回数'] = claude_data.get('small_jackpots', '')
                     row['機種名'] = claude_data.get('machine_name', '')
                 else:
                     row['超回数'] = ''
