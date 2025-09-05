@@ -3594,21 +3594,6 @@ if 'analysis_results' in st.session_state:
                                             <span class="stat-label">💰 総払い出し球数（AI計算）</span>
                                             <span class="stat-value">{total_payout_from_ai:,}玉</span>
                                         </div>'''
-                                        
-                                        
-                                        # 機種情報を表示
-                                        if claude_data.get('machine_name'):
-                                            # machine_payoutsがあるかチェック
-                                            if claude_data.get('machine_payouts'):
-                                                html_content += f'''
-                                                <div class="stat-item" style="font-size: 0.9em; color: #666;">
-                                                    <span>🎯 機種「{claude_data['machine_name']}」の設定値で計算</span>
-                                                </div>'''
-                                            else:
-                                                html_content += f'''
-                                                <div class="stat-item" style="font-size: 0.9em; color: #666;">
-                                                    <span>⚠️ 機種「{claude_data['machine_name']}」（デフォルト値で計算）</span>
-                                                </div>'''
                                     
                                     html_content += '</div>'
                                     
@@ -4321,13 +4306,44 @@ if 'analysis_results' in st.session_state:
                 else:
                     row['回転率①'] = '-'
                 
-                # 回転率②の計算（通常回転数ベース）
+                # 回転率②の計算（通常回転数ベース）- 上部表示と同じロジックを使用
                 if claude_data.get('normal_rotations'):
                     normal_rotations = claude_data['normal_rotations']
-                    total_jackpot_balls = result.get('total_jackpot_balls', 0)
-                    first_hit_balls = abs(result.get('first_hit_val') or 0)
-                    normal_balls = first_hit_balls + total_jackpot_balls
-                    if normal_balls > 0:
+                    
+                    # 通常時使用球数の計算
+                    normal_balls = 0
+                    # グラフベースの計算を優先
+                    if st.session_state.get('use_graph_normal_usage', False) and result.get('graph_normal_usage'):
+                        normal_balls = result['graph_normal_usage']
+                    else:
+                        # 従来の計算: 最低値（最大投資） + 総払い出し - 現在値
+                        min_val = abs(result.get('min_val', 0))
+                        current_val = result.get('current_val', 0)
+                        
+                        # 総払い出し球数（超中小の内訳から計算）
+                        total_payout = 0
+                        if (claude_data.get('big_jackpots') is None and 
+                            claude_data.get('medium_jackpots') is None and 
+                            claude_data.get('small_jackpots') is None):
+                            total_jackpots = claude_data.get('total_jackpots', 0)
+                            # デフォルト値を使用
+                            big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
+                            total_payout = total_jackpots * big_balls
+                        else:
+                            big_j = claude_data.get('big_jackpots', 0) or 0
+                            medium_j = claude_data.get('medium_jackpots', 0) or 0
+                            small_j = claude_data.get('small_jackpots', 0) or 0
+                            big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
+                            middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
+                            small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                            total_payout = big_j * big_balls + medium_j * middle_balls + small_j * small_balls
+                        
+                        if current_val >= 0:
+                            normal_balls = min_val + total_payout - current_val
+                        else:
+                            normal_balls = min_val + total_payout + abs(current_val)
+                    
+                    if normal_balls > 0 and normal_rotations > 0:
                         rotation_rate_2 = (normal_rotations / normal_balls) * 250
                         warning = " ⚠️" if rotation_rate_2 < 10 or rotation_rate_2 > 30 else ""
                         row['回転率②'] = f"{rotation_rate_2:.1f}{warning}"
