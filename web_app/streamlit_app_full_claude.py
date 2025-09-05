@@ -3595,8 +3595,8 @@ if 'analysis_results' in st.session_state:
                                         <span class="stat-value">{total_payout_from_ai:,}玉</span>
                                     </div>'''
                                 
-                                html_content += '</div>'
-                                
+                                    html_content += '</div>'
+                                    
                                     # HTMLを表示
                                     st.markdown(html_content, unsafe_allow_html=True)
                                 else:
