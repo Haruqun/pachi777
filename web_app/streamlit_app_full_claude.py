@@ -255,7 +255,7 @@ def get_machine_payout_from_claude(machine_name, api_key, model="claude-3-5-haik
 {{
     "big_jackpot_balls": 1500,
     "middle_jackpot_balls": 750,
-    "small_jackpot_balls": 450
+    "small_jackpot_balls": 300
 }}
 を返してください。"""
 
@@ -1004,24 +1004,24 @@ def calculate_normal_usage_from_graph(graph_values):
 # 機種別の大当たり出玉数データベース
 MACHINE_PAYOUT_DATA = {
     "Re:ゼロから始める異世界生活 season2": {
-        "big_jackpot_balls": 1500,    # 10R
-        "middle_jackpot_balls": 750,   # 5R（使用頻度低）
-        "small_jackpot_balls": 300     # 2R
+        "big_jackpot_balls": 1400,    # 10R
+        "middle_jackpot_balls": 980,   # 7R
+        "small_jackpot_balls": 420     # 3R
     },
     "エヴァンゲリオン": {
         "big_jackpot_balls": 1500,    # 10R
         "middle_jackpot_balls": 750,   # 5R
-        "small_jackpot_balls": 450     # 3R
+        "small_jackpot_balls": 300     # 3R
     },
     "北斗の拳": {
         "big_jackpot_balls": 1500,    # 10R
         "middle_jackpot_balls": 900,   # 6R
-        "small_jackpot_balls": 450     # 3R
+        "small_jackpot_balls": 300     # 3R
     },
     "海物語": {
         "big_jackpot_balls": 1500,    # 10R
         "middle_jackpot_balls": 750,   # 5R
-        "small_jackpot_balls": 450     # 3R
+        "small_jackpot_balls": 300     # 3R
     },
     # 今後追加される機種データ
     # "機種名": {
@@ -1097,7 +1097,7 @@ default_settings = {
     # 超中小の払い出し球数
     'big_jackpot_balls': 1500,   # 超（大）の払い出し球数
     'middle_jackpot_balls': 750,  # 中の払い出し球数
-    'small_jackpot_balls': 450    # 小の払い出し球数
+    'small_jackpot_balls': 300    # 小の払い出し球数
 }
 
 # セッションステートの初期化（エキスパンダーより前に行う）
@@ -1864,12 +1864,12 @@ if uploaded_files:
                                 # 自動設定を適用
                                 st.session_state.settings['big_jackpot_balls'] = machine_payouts.get('big_jackpot_balls', 1500)
                                 st.session_state.settings['middle_jackpot_balls'] = machine_payouts.get('middle_jackpot_balls', 750)
-                                st.session_state.settings['small_jackpot_balls'] = machine_payouts.get('small_jackpot_balls', 450)
+                                st.session_state.settings['small_jackpot_balls'] = machine_payouts.get('small_jackpot_balls', 300)
                                 st.session_state.auto_payout_applied = True
                                 st.info(f'🎯 機種「{machine_name}」を検出しました。出玉数を自動設定しました。')
                                 st.write(f"  - 超: {machine_payouts.get('big_jackpot_balls', 1500)}玉/回")
                                 st.write(f"  - 中: {machine_payouts.get('middle_jackpot_balls', 750)}玉/回")
-                                st.write(f"  - 小: {machine_payouts.get('small_jackpot_balls', 450)}玉/回")
+                                st.write(f"  - 小: {machine_payouts.get('small_jackpot_balls', 300)}玉/回")
                                 detail_file.seek(0)  # ファイルポインタをリセット
                                 break
                 except:
@@ -1983,7 +1983,7 @@ if st.session_state.game_type == "パチンコ":
             "小",
             min_value=100,
             max_value=1000,
-            value=st.session_state.settings.get('small_jackpot_balls', 450),
+            value=st.session_state.settings.get('small_jackpot_balls', 300),
             step=50,
             help="小の1回あたりの払い出し球数",
             key="small_jackpot_input",
@@ -1995,10 +1995,10 @@ if st.session_state.game_type == "パチンコ":
     if st.button("🔄 デフォルト値に戻す", use_container_width=False):
         st.session_state.settings['big_jackpot_balls'] = 1500
         st.session_state.settings['middle_jackpot_balls'] = 750
-        st.session_state.settings['small_jackpot_balls'] = 450
+        st.session_state.settings['small_jackpot_balls'] = 300
         st.session_state['big_jackpot_input'] = 1500
         st.session_state['middle_jackpot_input'] = 750
-        st.session_state['small_jackpot_input'] = 450
+        st.session_state['small_jackpot_input'] = 300
         st.session_state.payout_manually_changed = False
         st.session_state.auto_payout_applied = False
         st.rerun()
@@ -2572,7 +2572,7 @@ if graph_files and st.session_state.get('start_analysis', False):
             game_type = st.session_state.get('game_type', 'パチンコ')
             if game_type == 'パチンコ':
                 # 小当たりの払い出し球数を基準に（通常300-450球）
-                min_payout = st.session_state.settings.get('small_jackpot_balls', 450) * 0.8  # 80%を閾値に
+                min_payout = st.session_state.settings.get('small_jackpot_balls', 300) * 0.8  # 80%を閾値に
             else:
                 min_payout = 20  # パチスロは20枚
             
@@ -2711,17 +2711,17 @@ if graph_files and st.session_state.get('start_analysis', False):
                         if machine_payouts:
                             big_balls = machine_payouts.get('big_jackpot_balls', 1500)
                             middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
-                            small_balls = machine_payouts.get('small_jackpot_balls', 450)
+                            small_balls = machine_payouts.get('small_jackpot_balls', 300)
                         else:
                             # 機種データが見つからない場合はユーザー設定を使用
                             big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
                             middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
-                            small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                            small_balls = st.session_state.settings.get('small_jackpot_balls', 300)
                     else:
                         # 機種名がない場合はユーザー設定を使用
                         big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
                         middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
-                        small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                        small_balls = st.session_state.settings.get('small_jackpot_balls', 300)
                     
                     # AI計算による総獲得球数
                     total_jackpot_balls_from_ai = (
@@ -3066,7 +3066,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                                     st.write("**📊 機種別払い出し球数設定:**")
                                     st.write(f"  - 🔴 超（10R）: {machine_payout_data.get('big_jackpot_balls', 1500)}玉/回")
                                     st.write(f"  - 🟡 中（5R）: {machine_payout_data.get('middle_jackpot_balls', 750)}玉/回")
-                                    st.write(f"  - 🔵 小（2-3R）: {machine_payout_data.get('small_jackpot_balls', 450)}玉/回")
+                                    st.write(f"  - 🔵 小（2-3R）: {machine_payout_data.get('small_jackpot_balls', 300)}玉/回")
                                 else:
                                     # フォールバック：ハードコードされた機種データまたはデフォルト値
                                     machine_payout_data = get_machine_payouts(machine_name)
@@ -3075,14 +3075,14 @@ if graph_files and st.session_state.get('start_analysis', False):
                                         st.write("**📊 機種別払い出し球数設定:**")
                                         st.write(f"  - 🔴 超（10R）: {machine_payout_data.get('big_jackpot_balls', 1500)}玉/回")
                                         st.write(f"  - 🟡 中（5R）: {machine_payout_data.get('middle_jackpot_balls', 750)}玉/回")
-                                        st.write(f"  - 🔵 小（2-3R）: {machine_payout_data.get('small_jackpot_balls', 450)}玉/回")
+                                        st.write(f"  - 🔵 小（2-3R）: {machine_payout_data.get('small_jackpot_balls', 300)}玉/回")
                                     else:
                                         st.warning(f"⚠️ 機種「{machine_name}」の詳細データが取得できませんでした。デフォルト値を使用します。")
                                         # デフォルト値を設定
                                         machine_payout_data = {
                                             'big_jackpot_balls': st.session_state.settings.get('big_jackpot_balls', 1500),
                                             'middle_jackpot_balls': st.session_state.settings.get('middle_jackpot_balls', 750),
-                                            'small_jackpot_balls': st.session_state.settings.get('small_jackpot_balls', 450)
+                                            'small_jackpot_balls': st.session_state.settings.get('small_jackpot_balls', 300)
                                         }
                                         st.write("**📊 デフォルト払い出し球数設定:**")
                                         st.write(f"  - 🔴 超（10R）: {machine_payout_data['big_jackpot_balls']}玉/回")
@@ -3099,7 +3099,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                             if machine_payout_data:
                                 big_balls_per = machine_payout_data.get('big_jackpot_balls', 1500)
                                 medium_balls_per = machine_payout_data.get('middle_jackpot_balls', 750)
-                                small_balls_per = machine_payout_data.get('small_jackpot_balls', 450)
+                                small_balls_per = machine_payout_data.get('small_jackpot_balls', 300)
                                 
                                 big_total = big_j * big_balls_per
                                 medium_total = medium_j * medium_balls_per
@@ -3485,12 +3485,12 @@ if 'analysis_results' in st.session_state:
                                     if machine_payouts:
                                         big_balls = machine_payouts.get('big_jackpot_balls', 1500)
                                         middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
-                                        small_balls = machine_payouts.get('small_jackpot_balls', 450)
+                                        small_balls = machine_payouts.get('small_jackpot_balls', 300)
                                     else:
                                         # 機種データが見つからない場合はユーザー設定を使用
                                         big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
                                         middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
-                                        small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                                        small_balls = st.session_state.settings.get('small_jackpot_balls', 300)
                                     
                                     # 大当たり内訳（出玉数も表示）
                                     if claude_data.get('big_jackpots') is not None:
@@ -3725,7 +3725,7 @@ if 'analysis_results' in st.session_state:
                                     machine_payouts = claude_data['machine_payouts']
                                     big_balls = machine_payouts.get('big_jackpot_balls', 1500)
                                     middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
-                                    small_balls = machine_payouts.get('small_jackpot_balls', 450)
+                                    small_balls = machine_payouts.get('small_jackpot_balls', 300)
                                     
                                     total_payout = 0
                                     if claude_data.get('big_jackpots'):
