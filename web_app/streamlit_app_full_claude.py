@@ -28,6 +28,14 @@ st.set_page_config(
     layout="wide"
 )
 
+# セッション状態の初期化を確実に行う
+if 'initialized' not in st.session_state:
+    st.session_state.initialized = True
+    # 基本的なセッション状態の初期化
+    st.session_state.uploaded_file_names = []
+    st.session_state.start_analysis = False
+    st.session_state.analysis_done = False
+    
 # グローバル変数でパスワードを管理（アプリ再起動まで有効）
 if 'GLOBAL_USER_PASSWORD' not in st.session_state:
     # アプリ全体で共有されるグローバル変数を初期化
@@ -1067,6 +1075,108 @@ def get_machine_payouts(machine_name):
     
     return None
 
+
+def get_prioritized_data(result):
+    """出玉詳細データとグラフデータから優先度に基づいてデータを取得する
+    
+    優先ルール：
+    1. 出玉詳細データ（Claude API）が存在する場合は必ず優先
+    2. 出玉詳細データがない項目のみグラフデータを使用
+    
+    Args:
+        result: 解析結果の辞書（グラフデータとClaude APIデータを含む）
+        
+    Returns:
+        優先度に基づいて選択されたデータの辞書
+    """
+    prioritized = {}
+    
+    # Claude API データの取得
+    claude_data = None
+    if result.get('claude_analysis') and result['claude_analysis'].get('success'):
+        claude_data = result['claude_analysis'].get('data', {})
+    
+    # 1. 台番号
+    if claude_data and claude_data.get('machine_number'):
+        prioritized['machine_number'] = claude_data['machine_number']
+    elif result.get('ocr_data') and result['ocr_data'].get('machine_number'):
+        prioritized['machine_number'] = result['ocr_data']['machine_number']
+    else:
+        prioritized['machine_number'] = result.get('name', '').rsplit('.', 1)[0]
+    
+    # 2. 機種名
+    if claude_data and claude_data.get('machine_name'):
+        prioritized['machine_name'] = claude_data['machine_name']
+    else:
+        prioritized['machine_name'] = None
+    
+    # 3. 日付
+    if claude_data and claude_data.get('date'):
+        prioritized['date'] = claude_data['date']
+    else:
+        prioritized['date'] = None
+    
+    # 4. 大当たり回数関連
+    if claude_data and claude_data.get('total_jackpots') is not None:
+        prioritized['total_jackpots'] = claude_data['total_jackpots']
+        prioritized['first_jackpots'] = claude_data.get('first_jackpots', 0)
+        prioritized['big_jackpots'] = claude_data.get('big_jackpots')
+        prioritized['medium_jackpots'] = claude_data.get('medium_jackpots')
+        prioritized['small_jackpots'] = claude_data.get('small_jackpots')
+    else:
+        # グラフデータから取得
+        prioritized['total_jackpots'] = result.get('jackpot_count', 0)
+        prioritized['first_jackpots'] = (result.get('ocr_data') or {}).get('first_hit_count', 0)
+        prioritized['big_jackpots'] = None
+        prioritized['medium_jackpots'] = None
+        prioritized['small_jackpots'] = None
+    
+    # 5. 回転数関連
+    if claude_data and claude_data.get('total_rotations') is not None:
+        prioritized['total_rotations'] = claude_data['total_rotations']
+        prioritized['normal_rotations'] = claude_data.get('normal_rotations', 0)
+        prioritized['chance_rotations'] = claude_data.get('chance_rotations', 0)
+        prioritized['current_rotations'] = claude_data.get('current_rotations', 0)
+    else:
+        # グラフデータから取得
+        ocr_data = result.get('ocr_data') or {}
+        prioritized['total_rotations'] = ocr_data.get('total_start')
+        prioritized['normal_rotations'] = None
+        prioritized['chance_rotations'] = None
+        prioritized['current_rotations'] = ocr_data.get('current_start')
+    
+    # 6. 初回特賞スタート
+    if claude_data and claude_data.get('initial_ball_starts') is not None:
+        prioritized['initial_ball_starts'] = claude_data['initial_ball_starts']
+    else:
+        # グラフから計算した初当たり回転数を使用
+        metrics = result.get('rotation_metrics') or {}
+        prioritized['initial_ball_starts'] = metrics.get('first_hit_spins', 0)
+    
+    # 7. 最高出玉
+    if claude_data and claude_data.get('max_balls') is not None:
+        prioritized['max_balls'] = claude_data['max_balls']
+    else:
+        # グラフデータから取得
+        prioritized['max_balls'] = result.get('max_val', 0)
+    
+    # 8. 現在値
+    # グラフから取得（Claude APIには通常ない）
+    prioritized['current_val'] = result.get('current_val', 0)
+    prioritized['min_val'] = result.get('min_val', 0)
+    prioritized['max_val'] = result.get('max_val', 0)
+    
+    # 9. 初当たり値（グラフ専用）
+    prioritized['first_hit_val'] = result.get('first_hit_val')
+    
+    # 10. 機種別払い出し球数
+    if claude_data and claude_data.get('machine_payouts'):
+        prioritized['machine_payouts'] = claude_data['machine_payouts']
+    else:
+        prioritized['machine_payouts'] = None
+    
+    return prioritized
+
 # ヘルパー関数
 def get_unit():
     """現在の遊技種別に応じた単位を返す"""
@@ -1819,23 +1929,27 @@ if uploaded_files:
     black_pixel_threshold = st.session_state.get('black_pixel_threshold', 50)
     
     for file in uploaded_files:
-        file.seek(0)
-        img = Image.open(file)
-        black_ratio = calculate_black_ratio(img, black_threshold=black_pixel_threshold)
-        
-        # デバッグ情報を保存
-        debug_data.append({
-            'name': file.name,
-            'ratio': black_ratio,
-            'type': '出玉詳細' if black_ratio >= detail_threshold else 'グラフ'
-        })
-        
-        # 分類
-        file.seek(0)  # ファイルポインタをリセット
-        if black_ratio >= detail_threshold:
-            detail_files.append(file)
-        else:
-            graph_files.append(file)
+        try:
+            file.seek(0)
+            img = Image.open(file)
+            black_ratio = calculate_black_ratio(img, black_threshold=black_pixel_threshold)
+            
+            # デバッグ情報を保存
+            debug_data.append({
+                'name': file.name,
+                'ratio': black_ratio,
+                'type': '出玉詳細' if black_ratio >= detail_threshold else 'グラフ'
+            })
+            
+            # 分類
+            file.seek(0)  # ファイルポインタをリセット
+            if black_ratio >= detail_threshold:
+                detail_files.append(file)
+            else:
+                graph_files.append(file)
+        except Exception as e:
+            st.error(f"⚠️ {file.name} の処理中にエラー: {str(e)}")
+            continue
     
     # 出玉詳細画像から先に機種名を検出して自動設定
     if detail_files and st.session_state.game_type == "パチンコ" and not st.session_state.get('payout_manually_changed', False):
@@ -2163,13 +2277,20 @@ if graph_files or detail_files:
     st.caption("設定を確認したら、解析ボタンをクリックしてください")
     
     if st.button("🚀 解析を開始", type="primary", use_container_width=True):
-        st.session_state.start_analysis = True
-        st.session_state.skip_ocr = skip_ocr
-        st.session_state.show_ocr_debug = show_ocr_debug
-        # データエディタのセッションステートをリセット
-        if 'edited_df' in st.session_state:
-            del st.session_state.edited_df
-        st.rerun()
+        try:
+            st.session_state.start_analysis = True
+            st.session_state.skip_ocr = skip_ocr
+            st.session_state.show_ocr_debug = show_ocr_debug
+            # データエディタのセッションステートをリセット
+            if 'edited_df' in st.session_state:
+                del st.session_state.edited_df
+            # セッション状態が確実に保存されるよう小さな遅延を追加
+            time.sleep(0.1)
+            st.rerun()
+        except Exception as e:
+            st.error(f"⚠️ 解析開始時にエラーが発生しました: {str(e)}")
+            # エラーが発生しても続行できるようにする
+            st.session_state.start_analysis = True
     
     # プログレスバー（解析中のみ表示）
     if st.session_state.get('start_analysis', False) and uploaded_files:
@@ -2209,10 +2330,19 @@ elif st.session_state.uploaded_file_names:
             del st.session_state.unpaired_graphs
         if 'unpaired_details' in st.session_state:
             del st.session_state.unpaired_details
+        # 追加: ペアリング情報もクリア
+        if 'machine_payout_data' in st.session_state:
+            del st.session_state.machine_payout_data
+        if 'display_normal_balls' in st.session_state:
+            del st.session_state.display_normal_balls
         # 台番号入力フィールドのクリア
         for key in list(st.session_state.keys()):
             if key.startswith('machine_input_'):
                 del st.session_state[key]
+        # 解析状態をリセット
+        st.session_state.start_analysis = False
+        # セッション状態が確実に更新されるよう小さな遅延を追加
+        time.sleep(0.1)
         st.rerun()
 
 # 解析を実行
@@ -2781,6 +2911,8 @@ if graph_files and st.session_state.get('start_analysis', False):
                 total_jackpot_balls_graph = total_jackpot_balls  # グラフから計算した値を保持
                 # 総獲得玉数 = 総払い出し球数 - 現在値
                 # ※総払い出し球数はAI計算値、現在値はグラフから取得
+                # 現在値が+の場合：総獲得 = 総払い出し - 現在値
+                # 現在値が-の場合：総獲得 = 総払い出し + |現在値|
                 if current_val >= 0:
                     total_jackpot_balls = total_jackpot_balls_from_ai - current_val
                 else:
@@ -3676,169 +3808,134 @@ if 'analysis_results' in st.session_state:
                     result['display_rotation_rate_2'] = '-'
                     result['display_normal_balls'] = 0
                     if st.session_state.game_type == 'パチンコ':
-                        # Claude AIから初回特賞スタートを取得して回転率①を計算
+                        # 優先度に基づいてデータを取得
+                        prioritized_data = get_prioritized_data(result)
+                        
+                        # 回転率①の計算
                         rotation_rate_1_calculated = False
-                        if result.get('claude_analysis') and result['claude_analysis'].get('success'):
-                            claude_data = result['claude_analysis'].get('data', {})
-                            if claude_data.get('initial_ball_starts') and result.get('first_hit_val'):
-                                initial_ball_starts = claude_data['initial_ball_starts']
-                                first_hit_balls = abs(result.get('first_hit_val') or 0)
-                                if first_hit_balls > 0:
-                                    rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
-                                    warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
-                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
-                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {first_hit_balls}{unit}使用</div>'
-                                    rotation_rate_1_calculated = True
-                                    # 結果に保存
-                                    result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
+                        initial_ball_starts = prioritized_data.get('initial_ball_starts', 0)
+                        first_hit_balls = abs(prioritized_data.get('first_hit_val') or 0)
                         
-                        # AI取得できなかった場合は従来のグラフから取得
-                        if not rotation_rate_1_calculated and result.get('rotation_metrics'):
-                            metrics = result['rotation_metrics']
-                            if metrics.get('rotation_rate_1', 0) >= 0:
-                                if metrics['rotation_rate_1'] > 0:
-                                    warning = " ⚠️" if metrics['rotation_rate_1'] < 10 or metrics['rotation_rate_1'] > 35 else ""
-                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{metrics["rotation_rate_1"]:.1f}回/千円{warning}</span></div>'
-                                    # 結果に保存
-                                    result['display_rotation_rate_1'] = f"{metrics['rotation_rate_1']:.1f}{warning}"
-                                else:
-                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
-                                    result['display_rotation_rate_1'] = '-'
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {metrics["first_hit_spins"]}回転 ÷ {metrics["first_hit_balls"]}{unit}使用</div>'
+                        if initial_ball_starts > 0 and first_hit_balls > 0:
+                            rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
+                            warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
+                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
+                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {first_hit_balls}{unit}使用</div>'
+                            rotation_rate_1_calculated = True
+                            # 結果に保存
+                            result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
+                        else:
+                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
+                            result['display_rotation_rate_1'] = '-'
                             
-                        # 回転率②の計算 - Claude AIから通常回転数を取得
+                        # 回転率②の計算
                         rotation_rate_2_calculated = False
-                        if result.get('claude_analysis') and result['claude_analysis'].get('success'):
-                            claude_data = result['claude_analysis'].get('data', {})
-                            # 通常回転数と使用球数から回転率②を計算
-                            if claude_data.get('normal_rotations'):
-                                normal_rotations = claude_data['normal_rotations']
-                                
-                                # 使用球数の合計を正しく計算（Excelデータと同じロジック）
-                                # 総払い出し球数を計算
-                                total_payout = 0
-                                
-                                # 機種別の払い出し球数を取得
-                                if claude_data.get('machine_payouts'):
-                                    machine_payouts = claude_data['machine_payouts']
-                                    big_balls = machine_payouts.get('big_jackpot_balls', 1500)
-                                    middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
-                                    small_balls = machine_payouts.get('small_jackpot_balls', 450)
-                                else:
-                                    # デフォルト値を使用
-                                    big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
-                                    middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
-                                    small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
-                                
-                                # 超中小の内訳がない場合、total_jackpotsから推定
-                                if (claude_data.get('big_jackpots') is None and 
-                                    claude_data.get('medium_jackpots') is None and 
-                                    claude_data.get('small_jackpots') is None):
-                                    # total_jackpotsがある場合、すべて超として扱う
-                                    total_jackpots = claude_data.get('total_jackpots', 0)
-                                    total_payout = total_jackpots * big_balls
-                                else:
-                                    # 個別の値が取得できている場合はそれを使用
-                                    big_j = claude_data.get('big_jackpots', 0) or 0
-                                    medium_j = claude_data.get('medium_jackpots', 0) or 0
-                                    small_j = claude_data.get('small_jackpots', 0) or 0
-                                    total_payout = big_j * big_balls + medium_j * middle_balls + small_j * small_balls
-                                
-                                # グラフデータから最低値と現在値を取得
-                                min_val = abs(result.get('min_val', 0))
-                                current_val = result.get('current_val', 0)
-                                
-                                # 通常時使用球数の計算（テストモードで切り替え）
-                                normal_balls_graph = 0  # グラフ解析による値
-                                normal_balls_old = 0    # 従来の計算値
-                                
-                                if st.session_state.get('use_graph_calculation', False) and 'analysis_data' in locals():
-                                    # 新方式：グラフの下降部分から計算
-                                    graph_values = [p[1] for p in analysis_data.get('data_points', [])]
-                                    normal_balls_graph = calculate_normal_usage_from_graph(graph_values)
-                                    normal_balls = normal_balls_graph
-                                    
-                                    # デバッグ用に従来の値も計算
-                                    if current_val >= 0:
-                                        normal_balls_old = min_val + total_payout - current_val
-                                    else:
-                                        normal_balls_old = min_val + total_payout + abs(current_val)
-                                else:
-                                    # 従来の方式
-                                    if current_val >= 0:
-                                        normal_balls = min_val + total_payout - current_val
-                                    else:
-                                        normal_balls = min_val + total_payout + abs(current_val)
-                                    normal_balls_old = normal_balls
-                                
-                                if normal_balls > 0 and normal_rotations > 0:
-                                    rotation_rate_2 = (normal_rotations / normal_balls) * 250
-                                    warning = " ⚠️" if rotation_rate_2 < 10 or rotation_rate_2 > 30 else ""
-                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{rotation_rate_2:.1f}回/千円{warning}</span></div>'
-                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {normal_rotations}回転 ÷ {normal_balls}{unit}使用</div>'
-                                    rotation_rate_2_calculated = True
-                                    # 結果に保存
-                                    result['display_rotation_rate_2'] = f"{rotation_rate_2:.1f}{warning}"
-                                    result['display_normal_balls'] = int(normal_balls)
-                                    
-                                    # 通常時使用球数のHTML準備
-                                    normal_usage_html = f'''<div class="stat-item">
-                                        <span class="stat-label">🎮 通常時使用球数</span>
-                                        <span class="stat-value">{int(normal_balls):,}{unit}</span>
-                                    </div>'''
-                                    
-                                    # デバッグモードで新旧の値を比較表示
-                                    if st.session_state.get('show_ocr_debug', False) and st.session_state.get('use_graph_calculation', False):
-                                        if 'normal_balls_old' in locals():
-                                            normal_usage_html += f'''
-                                            <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                                <span>📊 グラフ解析: {int(normal_balls):,}{unit}</span>
-                                            </div>
-                                            <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                                <span>📈 従来計算: {int(normal_balls_old):,}{unit}</span>
-                                            </div>
-                                            <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                                <span>📐 差分: {int(abs(normal_balls - normal_balls_old)):,}{unit}</span>
-                                            </div>'''
+                        normal_rotations = prioritized_data.get('normal_rotations')
                         
-                        # AI取得できなかった場合は従来のグラフから取得
-                        if not rotation_rate_2_calculated and result.get('rotation_metrics'):
-                            metrics = result['rotation_metrics']
-                            if metrics.get('rotation_rate_2', 0) >= 0:
-                                if metrics['rotation_rate_2'] > 0:
-                                    # 異常値チェック（現実的な範囲: 10-30回/千円）
-                                    warning = " ⚠️" if metrics['rotation_rate_2'] < 10 or metrics['rotation_rate_2'] > 30 else ""
-                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{metrics["rotation_rate_2"]:.1f}回/千円{warning}</span></div>'
-                                    # 結果に保存
-                                    result['display_rotation_rate_2'] = f"{metrics['rotation_rate_2']:.1f}{warning}"
+                        if normal_rotations and normal_rotations > 0:
+                            # 総払い出し球数を計算
+                            total_payout = 0
+                            
+                            # 機種別の払い出し球数を取得
+                            if prioritized_data.get('machine_payouts'):
+                                machine_payouts = prioritized_data['machine_payouts']
+                                big_balls = machine_payouts.get('big_jackpot_balls', 1500)
+                                middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
+                                small_balls = machine_payouts.get('small_jackpot_balls', 450)
+                            else:
+                                # デフォルト値を使用
+                                big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
+                                middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
+                                small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                            
+                            # 超中小の内訳を使用
+                            if (prioritized_data.get('big_jackpots') is None and 
+                                prioritized_data.get('medium_jackpots') is None and 
+                                prioritized_data.get('small_jackpots') is None):
+                                # total_jackpotsがある場合、すべて超として扱う
+                                total_jackpots = prioritized_data.get('total_jackpots', 0)
+                                total_payout = total_jackpots * big_balls
+                            else:
+                                # 個別の値が取得できている場合はそれを使用
+                                big_j = prioritized_data.get('big_jackpots', 0) or 0
+                                medium_j = prioritized_data.get('medium_jackpots', 0) or 0
+                                small_j = prioritized_data.get('small_jackpots', 0) or 0
+                                total_payout = big_j * big_balls + medium_j * middle_balls + small_j * small_balls
+                            
+                            # グラフデータから最低値と現在値を取得
+                            min_val = abs(prioritized_data.get('min_val', 0))
+                            current_val = prioritized_data.get('current_val', 0)
+                            
+                            # 通常時使用球数の計算（テストモードで切り替え）
+                            normal_balls_graph = 0  # グラフ解析による値
+                            normal_balls_old = 0    # 従来の計算値
+                            
+                            if st.session_state.get('use_graph_calculation', False) and 'analysis_data' in locals():
+                                # 新方式：グラフの下降部分から計算
+                                graph_values = [p[1] for p in analysis_data.get('data_points', [])]
+                                normal_balls_graph = calculate_normal_usage_from_graph(graph_values)
+                                normal_balls = normal_balls_graph
+                                
+                                # デバッグ用に従来の値も計算
+                                if current_val >= 0:
+                                    normal_balls_old = min_val + total_payout - current_val
                                 else:
-                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
-                                    result['display_rotation_rate_2'] = '-'
-                                # デバッグ情報（通常時）
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {metrics["normal_decline_spins"]}回転 ÷ {metrics["normal_decline_balls"]}{unit}使用</div>'
+                                    normal_balls_old = min_val + total_payout + abs(current_val)
+                            else:
+                                # 従来の方式
+                                if current_val >= 0:
+                                    normal_balls = min_val + total_payout - current_val
+                                else:
+                                    normal_balls = min_val + total_payout + abs(current_val)
+                                normal_balls_old = normal_balls
+                            
+                            if normal_balls > 0:
+                                rotation_rate_2 = (normal_rotations / normal_balls) * 250
+                                warning = " ⚠️" if rotation_rate_2 < 10 or rotation_rate_2 > 30 else ""
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{rotation_rate_2:.1f}回/千円{warning}</span></div>'
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {normal_rotations}回転 ÷ {normal_balls}{unit}使用</div>'
+                                rotation_rate_2_calculated = True
+                                # 結果に保存
+                                result['display_rotation_rate_2'] = f"{rotation_rate_2:.1f}{warning}"
+                                result['display_normal_balls'] = int(normal_balls)
+                                
+                                # 通常時使用球数のHTML準備
+                                normal_usage_html = f'''<div class="stat-item">
+                                    <span class="stat-label">🎮 通常時使用球数</span>
+                                    <span class="stat-value">{int(normal_balls):,}{unit}</span>
+                                </div>'''
+                                
+                                # デバッグモードで新旧の値を比較表示
+                                if st.session_state.get('show_ocr_debug', False) and st.session_state.get('use_graph_calculation', False):
+                                    if 'normal_balls_old' in locals():
+                                        normal_usage_html += f'''
+                                        <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                            <span>📊 グラフ解析: {int(normal_balls):,}{unit}</span>
+                                        </div>
+                                        <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                            <span>📈 従来計算: {int(normal_balls_old):,}{unit}</span>
+                                        </div>
+                                        <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                            <span>📐 差分: {int(abs(normal_balls - normal_balls_old)):,}{unit}</span>
+                                        </div>'''
+                        
+                        if not rotation_rate_2_calculated:
+                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
+                            result['display_rotation_rate_2'] = '-'
                         
                     
                     # 初当たり関連のHTMLを条件分岐で生成
                     first_hit_html = ""
                     if st.session_state.game_type == 'パチンコ':
-                        # Claude AIから初回特賞スタートを初当たり回転数として取得（なければグラフから）
-                        first_hit_spins = 0
-                        if result.get('claude_analysis') and result['claude_analysis'].get('success'):
-                            claude_data = result['claude_analysis'].get('data', {})
-                            # 初回特賞スタートを初当たり回転数として使用
-                            if claude_data.get('initial_ball_starts'):
-                                first_hit_spins = claude_data['initial_ball_starts']
-                        
-                        if first_hit_spins == 0:
-                            # AI取得できなかった場合はグラフから取得
-                            first_hit_spins = (result.get('rotation_metrics') or {}).get('first_hit_spins', 0) if result.get('first_hit_val') is not None else 0
+                        # 優先度に基づいてデータを取得（既に上で取得済み）
+                        first_hit_spins = prioritized_data.get('initial_ball_starts', 0)
                         
                         first_hit_html = f'<div class="stat-item"><span class="stat-label">🎰 初当たり{unit}数</span><span class="stat-value {first_hit_class}">{first_hit_text}</span></div>'
                         first_hit_html += f'<div class="stat-item"><span class="stat-label">🎲 初当たり回転数</span><span class="stat-value">{first_hit_spins:,}回</span></div>'
                     
-                    # 大当り回数の計算
+                    # 大当り回数の計算（優先度に基づく）
                     if st.session_state.game_type == 'パチンコ':
-                        jackpot_count = (result.get('ocr_data') or {}).get('first_hit_count') or result.get('jackpot_count') or 0
+                        jackpot_count = prioritized_data.get('first_jackpots', 0)
                         jackpot_label = "初当たり回数"
                     else:
                         ocr_data = result.get('ocr_data') or {}
@@ -4266,46 +4363,37 @@ if 'analysis_results' in st.session_state:
                     else:
                         machine_number = result.get('ocr_data', {}).get('machine_number', result['name'])
                 
+                # 優先度に基づいてデータを取得
+                prioritized_data = get_prioritized_data(result)
+                
                 row = {
                     '画像名': result['name'],  # 画像名を追加
                     '台番号': machine_number,
-                    '最高値': result['max_val'],
-                    '最低値': result['min_val'],
-                    '現在値': result['current_val'],
-                    '初当たり球数': result['first_hit_val'] if result['first_hit_val'] is not None else None,
-                    # Claude AIから初回特賞スタートを初当たり回転数として取得
-                    '初当たり回転数': (
-                        result.get('claude_analysis', {}).get('data', {}).get('initial_ball_starts', 0) or
-                        (result.get('rotation_metrics') or {}).get('first_hit_spins', 0)
-                    ) if result.get('first_hit_val') is not None else 0,
-                    '収支（円）': int(result['current_val'] * st.session_state.settings.get('exchange_rate', 3.57145)),
+                    '最高値': prioritized_data['max_val'],
+                    '最低値': prioritized_data['min_val'],
+                    '現在値': prioritized_data['current_val'],
+                    '初当たり球数': prioritized_data['first_hit_val'] if prioritized_data['first_hit_val'] is not None else None,
+                    '初当たり回転数': prioritized_data.get('initial_ball_starts', 0) if prioritized_data.get('first_hit_val') is not None else 0,
+                    '収支（円）': int(prioritized_data['current_val'] * st.session_state.settings.get('exchange_rate', 3.57145)),
                     '総獲得球数': result.get('total_jackpot_balls', 0),
                     '大当り回数（グラフ）': result.get('jackpot_count', 0),  # 列名を変更
                     '色': result['dominant_color']
                 }
                 
-                # Claude APIから超中小の回数を追加
-                if result.get('claude_analysis') and result['claude_analysis'].get('success'):
-                    claude_data = result['claude_analysis'].get('data', {})
-                    # 超中小の内訳がない場合、total_jackpotsから推定
-                    if (claude_data.get('big_jackpots') is None and 
-                        claude_data.get('medium_jackpots') is None and 
-                        claude_data.get('small_jackpots') is None):
-                        # total_jackpotsがある場合、すべて超として扱う
-                        total_jackpots = claude_data.get('total_jackpots', 0)
-                        row['超回数'] = total_jackpots
-                        row['中回数'] = 0
-                        row['小回数'] = 0
-                    else:
-                        row['超回数'] = claude_data.get('big_jackpots', '')
-                        row['中回数'] = claude_data.get('medium_jackpots', '')
-                        row['小回数'] = claude_data.get('small_jackpots', '')
-                    row['機種名'] = claude_data.get('machine_name', '')
+                # 超中小の回数を追加（優先度に基づく）
+                if (prioritized_data.get('big_jackpots') is None and 
+                    prioritized_data.get('medium_jackpots') is None and 
+                    prioritized_data.get('small_jackpots') is None):
+                    # total_jackpotsがある場合、すべて超として扱う
+                    total_jackpots = prioritized_data.get('total_jackpots', 0)
+                    row['超回数'] = total_jackpots
+                    row['中回数'] = 0
+                    row['小回数'] = 0
                 else:
-                    row['超回数'] = ''
-                    row['中回数'] = ''
-                    row['小回数'] = ''
-                    row['機種名'] = ''
+                    row['超回数'] = prioritized_data.get('big_jackpots', '')
+                    row['中回数'] = prioritized_data.get('medium_jackpots', '')
+                    row['小回数'] = prioritized_data.get('small_jackpots', '')
+                row['機種名'] = prioritized_data.get('machine_name', '')
                 
                 # 回転率データを追加（表示時に計算した値をそのまま使用）
                 # 回転率①（表示時の値を使用）
@@ -4323,27 +4411,19 @@ if 'analysis_results' in st.session_state:
                 # 通常時使用球数（表示時の値を使用）
                 row['通常時使用球数'] = result.get('display_normal_balls', 0)
                 
-                # 通常回転数を追加
-                if claude_data.get('normal_rotations'):
-                    row['通常回転数'] = claude_data['normal_rotations']
-                elif result.get('rotation_metrics') and 'normal_decline_spins' in result['rotation_metrics']:
-                    row['通常回転数'] = result['rotation_metrics']['normal_decline_spins'] if result['rotation_metrics']['normal_decline_spins'] > 0 else 0
-                else:
-                    row['通常回転数'] = 0
+                # 通常回転数を追加（優先度に基づく）
+                row['通常回転数'] = prioritized_data.get('normal_rotations', 0) or 0
+                
                 # OCRデータを追加（OCRスキップモードでない場合のみ）
                 if not st.session_state.get('skip_ocr', False) and result.get('ocr_data'):
                     ocr = result['ocr_data']
-                    # Claude APIのデータがある場合は優先
-                    current_start = ''
-                    if claude_data.get('current_rotations') is not None:
-                        current_start = claude_data['current_rotations']
-                    elif ocr.get('current_start'):
-                        current_start = ocr.get('current_start', '')
+                    # 現在回転数（OCRのcurrent_startを使用）
+                    current_start = ocr.get('current_start', '')
                     
                     row.update({
-                        '累計スタート': ocr.get('total_start', ''),
+                        '累計スタート': prioritized_data.get('total_rotations', '') or ocr.get('total_start', ''),
                         '大当り回数（OCR）': ocr.get('jackpot_count', ''),  # 列名を変更
-                        '初当り回数': ocr.get('first_hit_count', ''),
+                        '初当り回数': prioritized_data.get('first_jackpots', '') or ocr.get('first_hit_count', ''),
                         '現在回転数': current_start,
                         '大当り確率': ocr.get('jackpot_probability', ''),
                         '最高出玉': ocr.get('max_payout', '')
@@ -4442,11 +4522,26 @@ if 'analysis_results' in st.session_state:
             
             if sort_option == "台番号順":
                 # 台番号を数値として解釈できる場合は数値順、できない場合は文字列順
+                def parse_machine_number(x):
+                    if pd.isna(x) or x == '':
+                        return float('inf')
+                    # 文字列から数字部分を抽出
+                    import re
+                    numbers = re.findall(r'\d+', str(x))
+                    if numbers:
+                        return int(numbers[0])
+                    return float('inf')
+                
                 try:
-                    display_df['台番号_sort'] = display_df['台番号'].apply(lambda x: int(x) if str(x).isdigit() else float('inf'))
+                    display_df['台番号_sort'] = display_df['台番号'].apply(parse_machine_number)
                     display_df = display_df.sort_values('台番号_sort').drop('台番号_sort', axis=1)
-                except:
-                    display_df = display_df.sort_values('台番号')
+                except Exception as e:
+                    st.warning(f"台番号ソートに失敗しました: {str(e)}")
+                    # フォールバックとして文字列ソート
+                    try:
+                        display_df = display_df.sort_values('台番号')
+                    except:
+                        pass
             elif sort_option == "回転率①順":
                 # 回転率①を数値に変換してソート（警告記号を除去）
                 if '回転率①' in display_df.columns:
@@ -4540,32 +4635,33 @@ if 'analysis_results' in st.session_state:
             
             with col1:
                 if st.button("🔄 再計算", type="primary", use_container_width=True):
-                    # 現在の交換レートを取得
-                    exchange_rate = st.session_state.settings.get('exchange_rate', 3.57145)
-                    
-                    # 編集されたデータを取得（edited_dfが最新の編集内容を持っている）
-                    calc_df = edited_df.copy()
-                    
-                    # 各行について計算
-                    for idx in range(len(calc_df)):
-                        # 収支（円）を現在値から計算
-                        if pd.notna(calc_df.at[idx, '現在値']):
-                            calc_df.at[idx, '収支（円）'] = int(calc_df.at[idx, '現在値'] * exchange_rate)
+                    try:
+                        # 現在の交換レートを取得
+                        exchange_rate = st.session_state.settings.get('exchange_rate', 3.57145)
                         
-                        # 回転率①を計算
-                        if pd.notna(calc_df.at[idx, '初当たり回転数']) and pd.notna(calc_df.at[idx, '初当たり球数']):
-                            spins = calc_df.at[idx, '初当たり回転数']
-                            balls = abs(calc_df.at[idx, '初当たり球数'])  # 絶対値を使用
+                        # 編集されたデータを取得（edited_dfが最新の編集内容を持っている）
+                        calc_df = edited_df.copy()
+                        
+                        # 各行について計算
+                        for idx in range(len(calc_df)):
+                            # 収支（円）を現在値から計算
+                            if pd.notna(calc_df.at[idx, '現在値']):
+                                calc_df.at[idx, '収支（円）'] = int(calc_df.at[idx, '現在値'] * exchange_rate)
+                            
+                            # 回転率①を計算
+                            if pd.notna(calc_df.at[idx, '初当たり回転数']) and pd.notna(calc_df.at[idx, '初当たり球数']):
+                                spins = calc_df.at[idx, '初当たり回転数']
+                                balls = abs(calc_df.at[idx, '初当たり球数'])  # 絶対値を使用
                             if balls > 0:
                                 rate1 = round((spins / balls) * 250, 1)
                                 calc_df.at[idx, '回転率①'] = f"{rate1:.1f}"
                             else:
                                 calc_df.at[idx, '回転率①'] = '-'
-                        
-                        # 回転率②を計算
-                        # 通常回転数と使用球数から計算
-                        if '通常回転数' in calc_df.columns:
-                            if pd.notna(calc_df.at[idx, '通常回転数']):
+                            
+                            # 回転率②を計算
+                            # 通常回転数と使用球数から計算
+                            if '通常回転数' in calc_df.columns:
+                                if pd.notna(calc_df.at[idx, '通常回転数']):
                                 normal_spins = calc_df.at[idx, '通常回転数']
                                 
                                 # 通常時の使用玉数を正しく計算
@@ -4601,13 +4697,18 @@ if 'analysis_results' in st.session_state:
                                     calc_df.at[idx, '回転率②'] = f"{rate2:.1f}"
                                 else:
                                     calc_df.at[idx, '回転率②'] = '-'
-                    
-                    # 計算結果をセッションステートに保存
-                    st.session_state.edited_df = calc_df.copy()
-                    st.session_state.temp_df = calc_df.copy()
-                    st.success("✅ 再計算が完了しました")
-                    # 画面を再描画
-                    st.rerun()
+                        
+                        # 計算結果をセッションステートに保存
+                        st.session_state.edited_df = calc_df.copy()
+                        st.session_state.temp_df = calc_df.copy()
+                        st.success("✅ 再計算が完了しました")
+                        # 画面を再描画
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"⚠️ 再計算中にエラーが発生しました: {str(e)}")
+                        # エラーが発生しても編集したデータは保持
+                        if 'edited_df' not in st.session_state:
+                            st.session_state.edited_df = edited_df.copy()
             
             with col2:
                 # 編集されたデータを使用
