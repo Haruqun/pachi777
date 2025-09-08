@@ -4662,41 +4662,41 @@ if 'analysis_results' in st.session_state:
                             # 通常回転数と使用球数から計算
                             if '通常回転数' in calc_df.columns:
                                 if pd.notna(calc_df.at[idx, '通常回転数']):
-                                normal_spins = calc_df.at[idx, '通常回転数']
-                                
-                                # 通常時の使用玉数を正しく計算
-                                # 使用球数 = 最低値（最大投資） + 総払い出し球数 - 現在値
-                                normal_balls = 0
-                                
-                                # 最低値（最大投資額）を取得
-                                min_val = abs(calc_df.at[idx, '最低値']) if pd.notna(calc_df.at[idx, '最低値']) else 0
-                                current_val = calc_df.at[idx, '現在値'] if pd.notna(calc_df.at[idx, '現在値']) else 0
-                                
-                                # 総払い出し球数を計算（総獲得球数がある場合はそれから逆算）
-                                if '総獲得球数' in calc_df.columns and pd.notna(calc_df.at[idx, '総獲得球数']):
-                                    total_gained = calc_df.at[idx, '総獲得球数']
-                                    # 総払い出し球数 = 総獲得球数 + 現在値
-                                    if current_val >= 0:
-                                        total_payout = total_gained + current_val
+                                    normal_spins = calc_df.at[idx, '通常回転数']
+                                    
+                                    # 通常時の使用玉数を正しく計算
+                                    # 使用球数 = 最低値（最大投資） + 総払い出し球数 - 現在値
+                                    normal_balls = 0
+                                    
+                                    # 最低値（最大投資額）を取得
+                                    min_val = abs(calc_df.at[idx, '最低値']) if pd.notna(calc_df.at[idx, '最低値']) else 0
+                                    current_val = calc_df.at[idx, '現在値'] if pd.notna(calc_df.at[idx, '現在値']) else 0
+                                    
+                                    # 総払い出し球数を計算（総獲得球数がある場合はそれから逆算）
+                                    if '総獲得球数' in calc_df.columns and pd.notna(calc_df.at[idx, '総獲得球数']):
+                                        total_gained = calc_df.at[idx, '総獲得球数']
+                                        # 総払い出し球数 = 総獲得球数 + 現在値
+                                        if current_val >= 0:
+                                            total_payout = total_gained + current_val
+                                        else:
+                                            total_payout = total_gained - abs(current_val)
                                     else:
-                                        total_payout = total_gained - abs(current_val)
-                                else:
-                                    # 総獲得球数がない場合はデフォルト
-                                    total_payout = 0
-                                
-                                # 使用球数 = 最大投資額 + 総払い出し球数 - 現在値
-                                if current_val >= 0:
-                                    normal_balls = min_val + total_payout - current_val
-                                else:
-                                    normal_balls = min_val + total_payout + abs(current_val)
-                                
-                                if normal_balls > 0 and normal_spins > 0:
-                                    # パチンコの場合は250玉/千円、パチスロの場合は50枚/千円
-                                    unit_per_1000yen = 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
-                                    rate2 = round((normal_spins / normal_balls) * unit_per_1000yen, 1)
-                                    calc_df.at[idx, '回転率②'] = f"{rate2:.1f}"
-                                else:
-                                    calc_df.at[idx, '回転率②'] = '-'
+                                        # 総獲得球数がない場合はデフォルト
+                                        total_payout = 0
+                                    
+                                    # 使用球数 = 最大投資額 + 総払い出し球数 - 現在値
+                                    if current_val >= 0:
+                                        normal_balls = min_val + total_payout - current_val
+                                    else:
+                                        normal_balls = min_val + total_payout + abs(current_val)
+                                    
+                                    if normal_balls > 0 and normal_spins > 0:
+                                        # パチンコの場合は250玉/千円、パチスロの場合は50枚/千円
+                                        unit_per_1000yen = 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
+                                        rate2 = round((normal_spins / normal_balls) * unit_per_1000yen, 1)
+                                        calc_df.at[idx, '回転率②'] = f"{rate2:.1f}"
+                                    else:
+                                        calc_df.at[idx, '回転率②'] = '-'
                         
                         # 計算結果をセッションステートに保存
                         st.session_state.edited_df = calc_df.copy()
