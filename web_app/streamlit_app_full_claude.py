@@ -4478,13 +4478,24 @@ if 'analysis_results' in st.session_state:
             st.markdown("#### 📝 データ編集")
             
             # 並び替え機能を追加
-            col_sort1, col_sort2 = st.columns([1, 3])
+            col_sort1, col_sort2, col_sort3 = st.columns([1, 1, 2])
             with col_sort1:
                 sort_option = st.selectbox(
                     "並び順",
                     ["アップロード順", "台番号順", "回転率①順", "回転率②順"],
                     key="sort_option"
                 )
+            
+            with col_sort2:
+                # アップロード順以外の場合のみ昇順・降順を選択
+                if sort_option != "アップロード順":
+                    sort_order = st.selectbox(
+                        "順序",
+                        ["昇順", "降順"],
+                        key="sort_order"
+                    )
+                else:
+                    sort_order = "昇順"  # デフォルト
             
             st.info("""
             💡 表内のセルをクリックして直接編集できます。
@@ -4524,22 +4535,22 @@ if 'analysis_results' in st.session_state:
                 # 台番号を数値として解釈できる場合は数値順、できない場合は文字列順
                 def parse_machine_number(x):
                     if pd.isna(x) or x == '':
-                        return float('inf')
+                        return float('inf') if sort_order == "昇順" else float('-inf')
                     # 文字列から数字部分を抽出
                     import re
                     numbers = re.findall(r'\d+', str(x))
                     if numbers:
                         return int(numbers[0])
-                    return float('inf')
+                    return float('inf') if sort_order == "昇順" else float('-inf')
                 
                 try:
                     display_df['台番号_sort'] = display_df['台番号'].apply(parse_machine_number)
-                    display_df = display_df.sort_values('台番号_sort').drop('台番号_sort', axis=1)
+                    display_df = display_df.sort_values('台番号_sort', ascending=(sort_order == "昇順")).drop('台番号_sort', axis=1)
                 except Exception as e:
                     st.warning(f"台番号ソートに失敗しました: {str(e)}")
                     # フォールバックとして文字列ソート
                     try:
-                        display_df = display_df.sort_values('台番号')
+                        display_df = display_df.sort_values('台番号', ascending=(sort_order == "昇順"))
                     except:
                         pass
             elif sort_option == "回転率①順":
@@ -4548,14 +4559,16 @@ if 'analysis_results' in st.session_state:
                     display_df['回転率①_sort'] = display_df['回転率①'].apply(
                         lambda x: float(str(x).replace(' ⚠️', '')) if str(x) != '-' and str(x) != '' else -1
                     )
-                    display_df = display_df.sort_values('回転率①_sort', ascending=False).drop('回転率①_sort', axis=1)
+                    # 回転率の場合、通常は降順（高い順）がデフォルト
+                    display_df = display_df.sort_values('回転率①_sort', ascending=(sort_order == "昇順")).drop('回転率①_sort', axis=1)
             elif sort_option == "回転率②順":
                 # 回転率②を数値に変換してソート（警告記号を除去）
                 if '回転率②' in display_df.columns:
                     display_df['回転率②_sort'] = display_df['回転率②'].apply(
                         lambda x: float(str(x).replace(' ⚠️', '')) if str(x) != '-' and str(x) != '' else -1
                     )
-                    display_df = display_df.sort_values('回転率②_sort', ascending=False).drop('回転率②_sort', axis=1)
+                    # 回転率の場合、通常は降順（高い順）がデフォルト
+                    display_df = display_df.sort_values('回転率②_sort', ascending=(sort_order == "昇順")).drop('回転率②_sort', axis=1)
             # アップロード順の場合はソートしない（元の順序を維持）
             
             edited_df = st.data_editor(
