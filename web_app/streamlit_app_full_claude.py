@@ -326,6 +326,7 @@ def get_machine_payout_from_claude(machine_name, api_key, model="claude-3-5-haik
         return None
         
     except Exception as e:
+        log_error('Machine Payout API Error', str(e), {'function': 'get_machine_payout_from_claude', 'machine_name': machine_name})
         st.warning(f"機種別払い出し球数の取得に失敗しました: {str(e)}")
         return None
 
@@ -2700,11 +2701,16 @@ if graph_files and st.session_state.get('start_analysis', False):
         detail_text.text(f'📊 {uploaded_file.name} のグラフデータを解析中...')
         
         # アナライザーのインスタンスを再利用
-        if 'analyzer_instance' not in st.session_state:
-            st.session_state.analyzer_instance = WebCompatibleAnalyzer()
-        elif st.session_state.analyzer_instance is None:
-            st.session_state.analyzer_instance = WebCompatibleAnalyzer()
-        analyzer = st.session_state.analyzer_instance
+        try:
+            if 'analyzer_instance' not in st.session_state:
+                st.session_state.analyzer_instance = WebCompatibleAnalyzer()
+            elif st.session_state.analyzer_instance is None:
+                st.session_state.analyzer_instance = WebCompatibleAnalyzer()
+            analyzer = st.session_state.analyzer_instance
+        except Exception as e:
+            log_error('Analyzer Initialization Error', str(e), {'function': 'main_process', 'stage': 'analyzer_init'})
+            detail_col.error(f"⚠️ アナライザーの初期化に失敗しました: {str(e)}")
+            continue
         
         # グリッドラインなしの画像を使用
         analysis_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
