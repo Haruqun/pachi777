@@ -20,6 +20,8 @@ import time
 import hashlib
 import secrets
 import sqlite3
+import concurrent.futures
+from functools import lru_cache
 
 # ページ設定
 st.set_page_config(
@@ -35,6 +37,8 @@ if 'initialized' not in st.session_state:
     st.session_state.uploaded_file_names = []
     st.session_state.start_analysis = False
     st.session_state.analysis_done = False
+    # アナライザーインスタンスをキャッシュ
+    st.session_state.analyzer_instance = None
     
 # グローバル変数でパスワードを管理（アプリ再起動まで有効）
 if 'GLOBAL_USER_PASSWORD' not in st.session_state:
@@ -50,6 +54,18 @@ if 'GLOBAL_USER_PASSWORD' not in st.session_state:
 # ========== 出玉詳細画像処理用の関数群 ==========
 # デフォルト画像幅（標準サイズ）
 DEFAULT_IMAGE_WIDTH = 400
+
+# キャッシュ関数
+@st.cache_data(ttl=3600)  # 1時間キャッシュ
+def analyze_graph_cached(image_hash, settings_hash):
+    """グラフ解析結果をキャッシュするダミー関数
+    実際の処理は外部で実行され、結果を保存するために使用
+    """
+    return None
+
+def get_image_hash(image_array):
+    """画像配列のハッシュ値を生成"""
+    return hashlib.md5(image_array.tobytes()).hexdigest()
 
 def resize_to_default_width(image, target_width=DEFAULT_IMAGE_WIDTH):
     """画像を指定幅にリサイズ（アスペクト比保持）
@@ -2222,8 +2238,7 @@ if graph_files or detail_files:
                     st.session_state.current_preset_name = preset_name
                     
                     st.success(f"✅ '{preset_name}' の設定を適用しました")
-                    time.sleep(0.5)
-                    st.rerun()
+                    # st.rerun()を削除し、設定は次の操作時に反映
     else:
         # 5個以上の場合は複数行に分ける
         num_rows = (len(preset_names) + 3) // 4  # 4列で何行必要か
@@ -2249,8 +2264,7 @@ if graph_files or detail_files:
                             st.session_state.current_preset_name = preset_name
                             
                             st.success(f"✅ '{preset_name}' の設定を適用しました")
-                            time.sleep(0.5)
-                            st.rerun()
+                            # st.rerun()を削除し、設定は次の操作時に反映
     
     # 調整設定の案内テキスト
     st.info("⚙️ 詳細な調整設定は、ページ下部の「画像解析の調整設定」セクションにあります。")
@@ -2588,8 +2602,10 @@ if graph_files and st.session_state.get('start_analysis', False):
         # 解析を自動実行
         detail_text.text(f'📊 {uploaded_file.name} のグラフデータを解析中...')
         
-        # アナライザーを初期化
-        analyzer = WebCompatibleAnalyzer()
+        # アナライザーのインスタンスを再利用
+        if st.session_state.analyzer_instance is None:
+            st.session_state.analyzer_instance = WebCompatibleAnalyzer()
+        analyzer = st.session_state.analyzer_instance
         
         # グリッドラインなしの画像を使用
         analysis_img = img_array[int(top):int(bottom), int(left):int(right)].copy()
