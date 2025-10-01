@@ -4786,9 +4786,11 @@ if 'analysis_results' in st.session_state:
                             if pd.notna(calc_df.at[idx, '初当たり回転数']) and pd.notna(calc_df.at[idx, '初当たり球数']):
                                 spins = calc_df.at[idx, '初当たり回転数']
                                 balls = abs(calc_df.at[idx, '初当たり球数'])  # 絶対値を使用
-                            if balls > 0:
-                                rate1 = round((spins / balls) * 250, 1)
-                                calc_df.at[idx, '回転率①'] = f"{rate1:.1f}"
+                                if balls > 0:
+                                    rate1 = round((spins / balls) * 250, 1)
+                                    calc_df.at[idx, '回転率①'] = f"{rate1:.1f}"
+                                else:
+                                    calc_df.at[idx, '回転率①'] = '-'
                             else:
                                 calc_df.at[idx, '回転率①'] = '-'
                             
@@ -4839,6 +4841,7 @@ if 'analysis_results' in st.session_state:
                         # 画面を再描画
                         st.rerun()
                     except Exception as e:
+                        log_error('Recalculation Error', str(e), {'function': 'recalculate_button', 'stage': 'data_recalculation'})
                         st.error(f"⚠️ 再計算中にエラーが発生しました: {str(e)}")
                         # エラーが発生しても編集したデータは保持
                         if 'edited_df' not in st.session_state:
