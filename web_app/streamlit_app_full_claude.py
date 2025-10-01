@@ -256,79 +256,10 @@ def preprocess_detail_image(image):
     return processed
 # ========== 出玉詳細画像処理用の関数群ここまで ==========
 
-def get_machine_payout_from_claude(machine_name, api_key, model="claude-3-5-haiku-20241022"):
-    """Claude APIを使って機種別の払い出し球数を取得する
-    
-    Args:
-        machine_name: 機種名
-        api_key: Claude APIキー
-        model: 使用するClaudeモデル
-        
-    Returns:
-        払い出し球数の辞書 または None
-    """
-    import requests
-    
-    try:
-        prompt = f"""パチンコ機種「{machine_name}」の大当たりラウンド別の払い出し球数を教えてください。
-
-以下のJSON形式で回答してください：
-{{
-    "big_jackpot_balls": [10Rまたは15Rの払い出し球数],
-    "middle_jackpot_balls": [5R〜8Rの払い出し球数],
-    "small_jackpot_balls": [2R〜4Rの払い出し球数]
-}}
-
-正確な値がわからない場合は、一般的なパチンコ機のデフォルト値として：
-{{
-    "big_jackpot_balls": 1500,
-    "middle_jackpot_balls": 750,
-    "small_jackpot_balls": 450
-}}
-を返してください。"""
-
-        url = "https://api.anthropic.com/v1/messages"
-        
-        headers = {
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
-        }
-        
-        data = {
-            "model": model,
-            "max_tokens": 500,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        }
-        
-        response = requests.post(url, headers=headers, json=data, timeout=10)
-        
-        if response.status_code == 200:
-            response_data = response.json()
-            result_text = response_data['content'][0]['text']
-            
-            import re
-            import json
-            
-            # JSONを抽出
-            json_match = re.search(r'\{[\s\S]*\}', result_text)
-            if json_match:
-                try:
-                    payout_data = json.loads(json_match.group())
-                    return payout_data
-                except json.JSONDecodeError:
-                    return None
-        return None
-        
-    except Exception as e:
-        log_error('Machine Payout API Error', str(e), {'function': 'get_machine_payout_from_claude', 'machine_name': machine_name})
-        st.warning(f"機種別払い出し球数の取得に失敗しました: {str(e)}")
-        return None
+# この関数は廃止されました - 超中小の払い出し球数は手動設定のみとなります
+# def get_machine_payout_from_claude(machine_name, api_key, model="claude-3-5-haiku-20241022"):
+#     """Claude APIを使って機種別の払い出し球数を取得する（廃止）"""
+#     pass
 
 def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
     """Claude APIを使って出玉詳細画像を解析する（HTTP API版）
@@ -3301,46 +3232,30 @@ if graph_files and st.session_state.get('start_analysis', False):
                         if claude_result.get('machine_name'):
                             machine_name = claude_result['machine_name']
                             
-                            # 最初の1回だけ機種データを取得
+                            # 最初の1回だけ機種データを設定
                             if machine_payout_data is None:
                                 st.write(f"🔍 機種名検出: 「{machine_name}」")
                                 detected_machine_name = machine_name
                                 
-                                # Claude APIを使って機種別の払い出し球数を取得
-                                st.write("📡 機種別払い出し球数を取得中...")
-                                machine_payout_data = get_machine_payout_from_claude(
-                                    machine_name,
-                                    st.session_state.claude_api_key,
-                                    st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
-                                )
-                                
+                                # ハードコードされた機種データまたはデフォルト値を使用
+                                machine_payout_data = get_machine_payouts(machine_name)
                                 if machine_payout_data:
-                                    st.success(f"✅ 機種「{machine_name}」の払い出し球数をAIから取得しました")
+                                    st.info(f"📋 機種「{machine_name}」の既知のデータを使用します")
                                     st.write("**📊 機種別払い出し球数設定:**")
                                     st.write(f"  - 🔴 超（10R）: {machine_payout_data.get('big_jackpot_balls', 1500)}玉/回")
                                     st.write(f"  - 🟡 中（5R）: {machine_payout_data.get('middle_jackpot_balls', 750)}玉/回")
                                     st.write(f"  - 🔵 小（2-3R）: {machine_payout_data.get('small_jackpot_balls', 450)}玉/回")
                                 else:
-                                    # フォールバック：ハードコードされた機種データまたはデフォルト値
-                                    machine_payout_data = get_machine_payouts(machine_name)
-                                    if machine_payout_data:
-                                        st.info(f"📋 機種「{machine_name}」の既知のデータを使用します")
-                                        st.write("**📊 機種別払い出し球数設定:**")
-                                        st.write(f"  - 🔴 超（10R）: {machine_payout_data.get('big_jackpot_balls', 1500)}玉/回")
-                                        st.write(f"  - 🟡 中（5R）: {machine_payout_data.get('middle_jackpot_balls', 750)}玉/回")
-                                        st.write(f"  - 🔵 小（2-3R）: {machine_payout_data.get('small_jackpot_balls', 450)}玉/回")
-                                    else:
-                                        st.warning(f"⚠️ 機種「{machine_name}」の詳細データが取得できませんでした。デフォルト値を使用します。")
-                                        # デフォルト値を設定
-                                        machine_payout_data = {
-                                            'big_jackpot_balls': st.session_state.settings.get('big_jackpot_balls', 1500),
-                                            'middle_jackpot_balls': st.session_state.settings.get('middle_jackpot_balls', 750),
-                                            'small_jackpot_balls': st.session_state.settings.get('small_jackpot_balls', 450)
-                                        }
-                                        st.write("**📊 デフォルト払い出し球数設定:**")
-                                        st.write(f"  - 🔴 超（10R）: {machine_payout_data['big_jackpot_balls']}玉/回")
-                                        st.write(f"  - 🟡 中（5R）: {machine_payout_data['middle_jackpot_balls']}玉/回")
-                                        st.write(f"  - 🔵 小（2-3R）: {machine_payout_data['small_jackpot_balls']}玉/回")
+                                    # 手動設定された値を使用
+                                    machine_payout_data = {
+                                        'big_jackpot_balls': st.session_state.settings.get('big_jackpot_balls', 1500),
+                                        'middle_jackpot_balls': st.session_state.settings.get('middle_jackpot_balls', 750),
+                                        'small_jackpot_balls': st.session_state.settings.get('small_jackpot_balls', 450)
+                                    }
+                                    st.write("**📊 手動設定の払い出し球数を使用:**")
+                                    st.write(f"  - 🔴 超（10R）: {machine_payout_data['big_jackpot_balls']}玉/回")
+                                    st.write(f"  - 🟡 中（5R）: {machine_payout_data['middle_jackpot_balls']}玉/回")
+                                    st.write(f"  - 🔵 小（2-3R）: {machine_payout_data['small_jackpot_balls']}玉/回")
                             
                             # 各画像の超中小回数と払い出し球数を表示
                             st.write(f"📊 **{detail_file.name}** の解析結果:")
@@ -5407,6 +5322,45 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             )
             # セッションステートに保存
             st.session_state.settings['zero_line_adjustment'] = zero_line_adjustment
+            
+            # 払い出し球数の手動設定
+            st.markdown("### 🎰 払い出し球数設定")
+            st.caption("大当たりラウンド別の払い出し球数を設定できます")
+            
+            payout_col1, payout_col2, payout_col3 = st.columns(3)
+            
+            with payout_col1:
+                big_jackpot_balls = st.number_input(
+                    "🔴 超（10R）払い出し球数",
+                    min_value=0,
+                    max_value=3000,
+                    value=st.session_state.settings.get('big_jackpot_balls', 1500),
+                    step=10,
+                    help="10ラウンド大当たりの払い出し球数"
+                )
+                st.session_state.settings['big_jackpot_balls'] = big_jackpot_balls
+            
+            with payout_col2:
+                middle_jackpot_balls = st.number_input(
+                    "🟡 中（5R）払い出し球数",
+                    min_value=0,
+                    max_value=2000,
+                    value=st.session_state.settings.get('middle_jackpot_balls', 750),
+                    step=10,
+                    help="5ラウンド大当たりの払い出し球数"
+                )
+                st.session_state.settings['middle_jackpot_balls'] = middle_jackpot_balls
+            
+            with payout_col3:
+                small_jackpot_balls = st.number_input(
+                    "🔵 小（2-3R）払い出し球数",
+                    min_value=0,
+                    max_value=1000,
+                    value=st.session_state.settings.get('small_jackpot_balls', 450),
+                    step=10,
+                    help="2-3ラウンド大当たりの払い出し球数"
+                )
+                st.session_state.settings['small_jackpot_balls'] = small_jackpot_balls
             
             # STEP 4: 最大値アライメント機能を統合
             if test_images:
