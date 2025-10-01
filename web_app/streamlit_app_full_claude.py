@@ -4779,11 +4779,12 @@ if 'analysis_results' in st.session_state:
                         # 各行について計算
                         for idx in range(len(calc_df)):
                             # 収支（円）を現在値から計算
-                            if pd.notna(calc_df.at[idx, '現在値']):
+                            if '現在値' in calc_df.columns and pd.notna(calc_df.at[idx, '現在値']):
                                 calc_df.at[idx, '収支（円）'] = int(calc_df.at[idx, '現在値'] * exchange_rate)
                             
                             # 回転率①を計算
-                            if pd.notna(calc_df.at[idx, '初当たり回転数']) and pd.notna(calc_df.at[idx, '初当たり球数']):
+                            if ('初当たり回転数' in calc_df.columns and pd.notna(calc_df.at[idx, '初当たり回転数']) and
+                                '初当たり球数' in calc_df.columns and pd.notna(calc_df.at[idx, '初当たり球数'])):
                                 spins = calc_df.at[idx, '初当たり回転数']
                                 balls = abs(calc_df.at[idx, '初当たり球数'])  # 絶対値を使用
                                 if balls > 0:
@@ -4805,8 +4806,15 @@ if 'analysis_results' in st.session_state:
                                     normal_balls = 0
                                     
                                     # 最低値（最大投資額）を取得
-                                    min_val = abs(calc_df.at[idx, '最低値']) if pd.notna(calc_df.at[idx, '最低値']) else 0
-                                    current_val = calc_df.at[idx, '現在値'] if pd.notna(calc_df.at[idx, '現在値']) else 0
+                                    if '最低値' in calc_df.columns and pd.notna(calc_df.at[idx, '最低値']):
+                                        min_val = abs(calc_df.at[idx, '最低値'])
+                                    else:
+                                        min_val = 0
+                                    
+                                    if '現在値' in calc_df.columns and pd.notna(calc_df.at[idx, '現在値']):
+                                        current_val = calc_df.at[idx, '現在値']
+                                    else:
+                                        current_val = 0
                                     
                                     # 総払い出し球数を計算（総獲得球数がある場合はそれから逆算）
                                     if '総獲得球数' in calc_df.columns and pd.notna(calc_df.at[idx, '総獲得球数']):
