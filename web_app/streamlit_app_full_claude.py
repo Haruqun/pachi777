@@ -22,6 +22,8 @@ import secrets
 import sqlite3
 import concurrent.futures
 from functools import lru_cache
+import traceback
+import os
 
 # ページ設定
 st.set_page_config(
@@ -39,6 +41,8 @@ if 'initialized' not in st.session_state:
     st.session_state.analysis_done = False
     # アナライザーインスタンスをキャッシュ
     st.session_state.analyzer_instance = None
+    # エラーログ
+    st.session_state.error_logs = []
     
 # グローバル変数でパスワードを管理（アプリ再起動まで有効）
 if 'GLOBAL_USER_PASSWORD' not in st.session_state:
@@ -476,6 +480,7 @@ JSON形式で結果を返してください。数値は単位なしの数字の�
             'raw_text': None
         }
     except Exception as e:
+        log_error('Claude API Error', str(e), {'function': 'analyze_with_claude', 'image_type': 'detail_analysis'})
         return {
             'success': False,
             'error': str(e),
@@ -1193,6 +1198,59 @@ def get_prioritized_data(result):
     
     return prioritized
 
+# エラーログ関数
+def log_error(error_type, error_message, error_details=None):
+    """エラーログを記録する"""
+    error_log = {
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'type': error_type,
+        'message': error_message,
+        'details': error_details,
+        'traceback': traceback.format_exc()
+    }
+    
+    if 'error_logs' not in st.session_state:
+        st.session_state.error_logs = []
+    
+    st.session_state.error_logs.append(error_log)
+    
+    # ログファイルにも保存（オプション）
+    try:
+        log_dir = "error_logs"
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        log_filename = os.path.join(log_dir, f"error_log_{datetime.now().strftime('%Y%m%d')}.json")
+        
+        # 既存のログを読み込む
+        existing_logs = []
+        if os.path.exists(log_filename):
+            try:
+                with open(log_filename, 'r', encoding='utf-8') as f:
+                    existing_logs = json.load(f)
+            except:
+                existing_logs = []
+        
+        # 新しいログを追加
+        existing_logs.append(error_log)
+        
+        # ファイルに保存
+        with open(log_filename, 'w', encoding='utf-8') as f:
+            json.dump(existing_logs, f, ensure_ascii=False, indent=2)
+    except:
+        pass  # ファイル保存のエラーは無視
+
+def get_error_logs():
+    """エラーログを取得する"""
+    if 'error_logs' not in st.session_state:
+        return []
+    return st.session_state.error_logs
+
+def clear_error_logs():
+    """エラーログをクリアする"""
+    if 'error_logs' in st.session_state:
+        st.session_state.error_logs = []
+
 # ヘルパー関数
 def get_unit():
     """現在の遊技種別に応じた単位を返す"""
@@ -1890,6 +1948,45 @@ with st.sidebar:
         
         if show_ocr_debug != st.session_state.get('show_ocr_debug', False):
             st.session_state.show_ocr_debug = show_ocr_debug
+        
+        # エラーログセクション
+        st.markdown("---")
+        st.markdown("### 📋 エラーログ")
+        
+        error_logs = get_error_logs()
+        if error_logs:
+            st.warning(f"🚨 {len(error_logs)}件のエラーが記録されています")
+            
+            # エラーログ表示
+            if st.checkbox("エラーログを表示", value=False):
+                for i, error in enumerate(reversed(error_logs[-10:])):  # 最新10件を表示
+                    with st.expander(f"[{error['timestamp']}] {error['type']}", expanded=False):
+                        st.error(f"**エラーメッセージ:** {error['message']}")
+                        if error.get('details'):
+                            st.info(f"**詳細情報:** {error['details']}")
+                        if st.checkbox(f"トレースバックを表示 (#{i})", value=False, key=f"trace_{i}"):
+                            st.code(error['traceback'], language="python")
+            
+            # エラーログクリアボタン
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🗑️ ログをクリア", type="secondary"):
+                    clear_error_logs()
+                    st.success("✅ エラーログをクリアしました")
+                    st.rerun()
+            
+            with col2:
+                # エラーログダウンロードボタン
+                if st.button("💾 ログをダウンロード"):
+                    log_data = json.dumps(error_logs, ensure_ascii=False, indent=2)
+                    st.download_button(
+                        label="📥 JSONファイルをダウンロード",
+                        data=log_data,
+                        file_name=f"error_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                        mime="application/json"
+                    )
+        else:
+            st.success("✅ エラーログはありません")
     
     # デバッグセクション（管理者のみ）
     if st.session_state.get('is_admin', False):
