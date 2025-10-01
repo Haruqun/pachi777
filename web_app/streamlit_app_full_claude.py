@@ -256,10 +256,6 @@ def preprocess_detail_image(image):
     return processed
 # ========== 出玉詳細画像処理用の関数群ここまで ==========
 
-# この関数は廃止されました - 超中小の払い出し球数は手動設定のみとなります
-# def get_machine_payout_from_claude(machine_name, api_key, model="claude-3-5-haiku-20241022"):
-#     """Claude APIを使って機種別の払い出し球数を取得する（廃止）"""
-#     pass
 
 def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
     """Claude APIを使って出玉詳細画像を解析する（HTTP API版）
