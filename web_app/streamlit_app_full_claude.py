@@ -2603,7 +2603,7 @@ if graph_files and st.session_state.get('start_analysis', False):
         detail_text.text(f'📊 {uploaded_file.name} のグラフデータを解析中...')
         
         # アナライザーのインスタンスを再利用
-        if st.session_state.analyzer_instance is None:
+        if 'analyzer_instance' not in st.session_state or st.session_state.analyzer_instance is None:
             st.session_state.analyzer_instance = WebCompatibleAnalyzer()
         analyzer = st.session_state.analyzer_instance
         
