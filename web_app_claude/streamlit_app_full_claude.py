@@ -12,6 +12,9 @@ from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 import io
 from web_analyzer import WebCompatibleAnalyzer
 from modules.image_processor import detect_orange_bar, detect_zero_line, crop_graph_area
+from modules.claude_api import analyze_with_claude
+from modules.error_handler import log_error, get_error_logs, clear_error_logs
+from modules.ocr_processor import preprocess_detail_image, enhance_image_for_ocr, extract_site7_data, extract_machine_number_from_orange_bar
 import platform
 import pytesseract
 import re
@@ -63,25 +66,7 @@ DEFAULT_IMAGE_WIDTH = 400
 # キャッシュ関数
 @st.cache_data(ttl=3600)  # 1時間キャッシュ
 def analyze_graph_cached(image_hash, settings_hash):
-    """グラフ解析結果をキャッシュするダミー関数
-    実際の処理は外部で実行され、結果を保存するために使用
-    """
-    return None
-
-def get_image_hash(image_array):
-    """画像配列のハッシュ値を生成"""
-    return hashlib.md5(image_array.tobytes()).hexdigest()
-
-def resize_to_default_width(image, target_width=DEFAULT_IMAGE_WIDTH):
-    """画像を指定幅にリサイズ（アスペクト比保持）
-    
-    Args:
-        image: PIL Image
-        target_width: 目標の横幅（デフォルト400px）
-    
-    Returns:
-        リサイズされたPIL Image
-    """
+    """グラフ解析結果をキャッシュするダミー関数"""
     width, height = image.size
     if width != target_width:
         ratio = target_width / width
@@ -90,14 +75,7 @@ def resize_to_default_width(image, target_width=DEFAULT_IMAGE_WIDTH):
     return image
 
 def normalize_machine_number(number_str):
-    """台番号を正規化（0005→5, 5番台→5など）
-    
-    Args:
-        number_str: 台番号の文字列
-        
-    Returns:
-        int: 正規化された台番号（数値）、抽出できない場合はNone
-    """
+    """台番号を正規化（0005→5, 5番台→5など）"""
     if not number_str:
         return None
     
@@ -112,15 +90,7 @@ def normalize_machine_number(number_str):
     return None
 
 def calculate_black_ratio(image, black_threshold=50):
-    """画像内の黒色の割合を計算する
-    
-    Args:
-        image: PIL Image
-        black_threshold: 黒色と判定する画素値の閾値（デフォルト: 50）
-        
-    Returns:
-        float: 黒色の割合（0.0-1.0）
-    """
+    """画像内の黒色の割合を計算する"""
     # numpyに変換
     img_array = np.array(image)
     
@@ -139,16 +109,7 @@ def calculate_black_ratio(image, black_threshold=50):
     return black_ratio
 
 def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False):
-    """黒枠を検出してoverlay.pngを重ねる、オプションで上半分を切り抜く
-    
-    Args:
-        image: 入力画像（PIL Image）
-        overlay_mask: Trueの場合、overlay.pngを重ねる
-        crop_upper_half: Trueの場合、黒枠の50%線で上半分を切り抜く
-        
-    Returns:
-        処理済み画像（PIL Image）
-    """
+    """黒枠を検出してoverlay.pngを重ねる、オプションで上半分を切り抜く"""
     import os
     
     # OpenCV形式に変換
@@ -239,765 +200,10 @@ def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False
     
     return overlay
 
-def preprocess_detail_image(image):
-    """出玉詳細画像の前処理
-    
-    Args:
-        image: PIL Image
-        
-    Returns:
-        処理済み画像（PIL Image）
-    """
-    # 標準幅にリサイズ
-    image = resize_to_default_width(image)
-    
-    # 黒枠検出、overlay.png適用、上半分切り抜き
-    processed = detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=True)
-    
-    return processed
-# ========== 出玉詳細画像処理用の関数群ここまで ==========
 
-
-def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
-    """Claude APIを使って出玉詳細画像を解析する（HTTP API版）
-    
-    Args:
-        image: PIL Image形式の画像
-        api_key: Claude APIキー
-        model: 使用するClaudeモデル
-        request_payout_data: 機種別払い出し球数データを取得するか（初回のみTrue）
-        
-    Returns:
-        解析結果の辞書
-    """
-    import base64
-    from io import BytesIO
-    import requests
-    
-    try:
-        # 画像をbase64エンコード
-        buffered = BytesIO()
-        image.save(buffered, format="PNG")
-        img_base64 = base64.b64encode(buffered.getvalue()).decode()
-        
-        # プロンプトを作成（払い出し球数は別途取得するので含めない）
-        prompt = """この画像はパチンコ台の出玉詳細情報です。画像に表示されている以下の情報を正確に抽出してください：
-
-1. 台番号（数字のみ）
-2. 機種名（完全な名前）
-3. 日付（表示形式のまま）
-4. 大当り回数（括弧内の確率分母も含む）
-5. 初当り回数（括弧内の確率分母も含む）
-6. 通常（通常回転数）
-7. チャンス中の数値（大当たり中の回転数）
-8. 累計スタート（総回転数）
-9. スタート（現在の回転数）
-10. 超/中/小の各回数
-11. 最高出玉
-12. 初回特賞スタート
-
-JSON形式で結果を返してください。数値は単位なしの数字のみで返してください。
-表示されていない項目はnullとしてください。
-推測や計算は行わず、画像に表示されている値のみを返してください。
-
-例：
-{
-    "machine_number": "0008",
-    "machine_name": "Re：ゼロから始める異世界生活 season2 M13",
-    "date": "8/27",
-    "total_jackpots": 20,
-    "total_jackpot_probability": 115,
-    "first_jackpots": 7,
-    "first_jackpot_probability": 214,
-    "normal_rotations": 1500,
-    "chance_rotations": 818,
-    "total_rotations": 2318,
-    "current_rotations": 39,
-    "big_jackpots": 18,
-    "medium_jackpots": 0,
-    "small_jackpots": 2,
-    "max_balls": 16380,
-    "initial_ball_starts": 14
-}"""
-        
-        # Claude API エンドポイント
-        url = "https://api.anthropic.com/v1/messages"
-        
-        # APIキーのデバッグ（先頭10文字のみ表示）
-        if st.session_state.get('show_ocr_debug', False):
-            st.write(f"🔑 APIキー使用中: {api_key[:10]}..." if api_key and len(api_key) > 10 else "APIキーなし")
-        
-        # リクエストヘッダー
-        headers = {
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
-        }
-        
-        # リクエストボディ
-        data = {
-            "model": model,
-            "max_tokens": 2000,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/png",
-                                "data": img_base64
-                            }
-                        },
-                        {
-                            "type": "text",
-                            "text": prompt
-                        }
-                    ]
-                }
-            ]
-        }
-        
-        # APIリクエストを送信
-        response = requests.post(url, headers=headers, json=data, timeout=30)
-        
-        if response.status_code == 200:
-            response_data = response.json()
-            result_text = response_data['content'][0]['text']
-            
-            # JSONを解析
-            import re
-            
-            # JSONブロックを抽出
-            json_match = re.search(r'\{[\s\S]*\}', result_text)
-            if json_match:
-                try:
-                    result_dict = json.loads(json_match.group())
-                    return {
-                        'success': True,
-                        'data': result_dict,
-                        'raw_text': result_text
-                    }
-                except json.JSONDecodeError:
-                    # JSON解析に失敗した場合はテキストとして返す
-                    return {
-                        'success': True,
-                        'data': None,
-                        'raw_text': result_text
-                    }
-            else:
-                return {
-                    'success': True,
-                    'data': None,
-                    'raw_text': result_text
-                }
-        else:
-            error_msg = f"API Error: {response.status_code} - {response.text}"
-            return {
-                'success': False,
-                'error': error_msg,
-                'data': None,
-                'raw_text': None
-            }
-            
-    except requests.exceptions.Timeout:
-        return {
-            'success': False,
-            'error': "APIリクエストがタイムアウトしました",
-            'data': None,
-            'raw_text': None
-        }
-    except Exception as e:
-        log_error('Claude API Error', str(e), {'function': 'analyze_with_claude', 'image_type': 'detail_analysis'})
-        return {
-            'success': False,
-            'error': str(e),
-            'data': None,
-            'raw_text': None
-        }
-
-def extract_machine_number_from_orange_bar(image):
-    """オレンジバー付近から台番号を抽出"""
-    try:
-        height, width = image.shape[:2]
-        
-        # HSV色空間に変換してオレンジバーを検出
-        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-        
-        # オレンジ色の範囲を定義（site7のオレンジバー用）
-        orange_lower = np.array([10, 100, 100])
-        orange_upper = np.array([25, 255, 255])
-        
-        # オレンジ色のマスクを作成
-        orange_mask = cv2.inRange(hsv, orange_lower, orange_upper)
-        
-        # オレンジバーがある行を検出（上部300ピクセル内）
-        orange_bar_y = -1
-        for y in range(min(300, height)):
-            # この行のオレンジピクセルの割合を計算
-            orange_ratio = np.sum(orange_mask[y, :]) / (width * 255)
-            if orange_ratio > 0.7:  # 70%以上がオレンジ色
-                orange_bar_y = y
-                break
-        
-        if orange_bar_y == -1:
-            # オレンジバーが見つからない場合は従来の方法
-            # 上部150ピクセルを切り出し
-            top_region = image[0:min(150, height//8), :]
-        else:
-            # オレンジバーが見つかった場合、その領域を切り出し
-            # オレンジバーの高さを検出
-            bar_height = 0
-            for y in range(orange_bar_y, min(orange_bar_y + 100, height)):
-                orange_ratio = np.sum(orange_mask[y, :]) / (width * 255)
-                if orange_ratio > 0.7:
-                    bar_height += 1
-                else:
-                    break
-            
-            # オレンジバー領域を切り出し
-            top_region = image[orange_bar_y:orange_bar_y + bar_height, :]
-            
-            # オレンジバー内の白文字を抽出するため、RGB値で白色を検出
-            # 白文字のマスクを作成（RGB全てが200以上）
-            white_mask = cv2.inRange(top_region, np.array([200, 200, 200]), np.array([255, 255, 255]))
-            
-            # 白文字部分を黒背景に白文字として抽出
-            result = np.zeros_like(white_mask)
-            result[white_mask > 0] = 255
-            
-            # OCRで台番号を読み取り
-            try:
-                # 横長の画像なのでPSM 7（単一テキスト行）を使用
-                text = pytesseract.image_to_string(result, lang='jpn', config='--psm 7')
-                
-                # 台番号パターンを探す（「2308番台」のような形式）
-                match = re.search(r'(\d{1,4})\s*番台', text)
-                if match:
-                    return f"{match.group(1)}番台"
-                
-                # 数字だけ探す
-                numbers = re.findall(r'\d{4}', text)
-                if numbers:
-                    # 4桁の数字を台番号として扱う
-                    return f"{numbers[0]}番台"
-            except:
-                pass
-        
-        # 従来の方法も試す
-        # グレースケール変換
-        gray_top = cv2.cvtColor(top_region, cv2.COLOR_RGB2GRAY)
-        
-        # 複数の二値化方法を試す
-        results = []
-        
-        # 白文字を抽出（背景が暗い場合）
-        _, binary1 = cv2.threshold(gray_top, 180, 255, cv2.THRESH_BINARY)
-        
-        # 黒文字を抽出（背景が明るい場合）
-        _, binary2 = cv2.threshold(gray_top, 80, 255, cv2.THRESH_BINARY_INV)
-        
-        # 適応的二値化
-        binary3 = cv2.adaptiveThreshold(gray_top, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                       cv2.THRESH_BINARY, 11, 2)
-        
-        # 各二値化画像でOCRを実行
-        for binary in [binary1, binary2, binary3]:
-            try:
-                # 複数のOCR設定を試す
-                for config in [r'--oem 3 --psm 8', r'--oem 3 --psm 7', r'--oem 3 --psm 11', r'--oem 3 --psm 6']:
-                    text = pytesseract.image_to_string(binary, lang='jpn', config=config)
-                    # 台番号のパターンを探す
-                    # 「1番」「1番台」「台1」「No.1」など
-                    patterns = [
-                        r'(\d{1,4})\s*番(?:台)?',
-                        r'台\s*(\d{1,4})',
-                        r'No\.\s*(\d{1,4})',
-                        r'№\s*(\d{1,4})',
-                        r'^(\d{1,4})$'
-                    ]
-                    for pattern in patterns:
-                        matches = re.findall(pattern, text, re.MULTILINE)
-                        for match in matches:
-                            if match.isdigit():
-                                num_val = int(match)
-                                if 1 <= num_val <= 9999:
-                                    results.append(match)
-            except:
-                continue
-        
-        # 方法2: オレンジバーを探してその中から台番号を探す
-        # HSV色空間に変換
-        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-        
-        # オレンジ色の範囲（HSV）- より広い範囲に調整
-        orange_lower = np.array([5, 50, 50])
-        orange_upper = np.array([35, 255, 255])
-        
-        # オレンジ色のマスクを作成
-        orange_mask = cv2.inRange(hsv, orange_lower, orange_upper)
-        
-        # オレンジバーのY座標を検出
-        orange_y_coords = []
-        
-        # 画像の上部1/3を検索（オレンジバーは通常上部にある）
-        for y in range(height // 3):
-            if np.sum(orange_mask[y, :]) > width * 0.2 * 255:  # 閾値を下げる
-                orange_y_coords.append(y)
-        
-        if orange_y_coords:
-            # オレンジバーの範囲を特定
-            orange_top = min(orange_y_coords)
-            orange_bottom = max(orange_y_coords)
-            
-            # オレンジバー内の画像を切り出し（バー内のみ）
-            orange_region = image[orange_top:orange_bottom + 1, :]
-        
-        # 複数の前処理方法を試す
-        results = []
-        
-        # 方法1: グレースケール + 適応的二値化
-        gray_region = cv2.cvtColor(orange_region, cv2.COLOR_RGB2GRAY)
-        binary1 = cv2.adaptiveThreshold(gray_region, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                       cv2.THRESH_BINARY, 11, 2)
-        
-        # 方法2: 白色の抽出（RGB）
-        lower_white = np.array([200, 200, 200])
-        upper_white = np.array([255, 255, 255])
-        white_mask = cv2.inRange(orange_region, lower_white, upper_white)
-        
-        # 方法3: 固定閾値での二値化
-        _, binary3 = cv2.threshold(gray_region, 180, 255, cv2.THRESH_BINARY)
-        
-        # 各方法でOCRを実行
-        configs = [
-            r'--oem 3 --psm 8',   # 単一行
-            r'--oem 3 --psm 7',   # 単一テキスト行
-            r'--oem 3 --psm 13',  # 生のライン
-        ]
-        
-        for binary in [binary1, white_mask, binary3]:
-            for config in configs:
-                try:
-                    text = pytesseract.image_to_string(binary, lang='jpn', config=config)
-                    # 数字を探す
-                    numbers = re.findall(r'\d+', text)
-                    for num in numbers:
-                        if 1 <= len(num) <= 4 and num.isdigit():
-                            # 妥当な台番号の範囲（1-9999）
-                            num_val = int(num)
-                            if 1 <= num_val <= 9999:
-                                results.append(num)
-                except:
-                    continue
-        
-        # 最も頻出する番号を選択
-        if results:
-            from collections import Counter
-            most_common = Counter(results).most_common(1)
-            if most_common:
-                return f"{most_common[0][0]}番台"
-        
-        return None
-        
-    except Exception as e:
-        return None
-
-def enhance_image_for_ocr(image):
-    """OCR精度向上のための画像前処理"""
-    # PILイメージに変換
-    if isinstance(image, np.ndarray):
-        pil_image = Image.fromarray(image)
-    else:
-        pil_image = image
-    
-    # 画像を2倍に拡大（OCR精度向上）
-    width, height = pil_image.size
-    pil_image = pil_image.resize((width * 2, height * 2), Image.Resampling.LANCZOS)
-    
-    # コントラスト強調
-    enhancer = ImageEnhance.Contrast(pil_image)
-    pil_image = enhancer.enhance(1.5)
-    
-    # シャープネス強調
-    enhancer = ImageEnhance.Sharpness(pil_image)
-    pil_image = enhancer.enhance(2.0)
-    
-    # numpy配列に戻す
-    enhanced = np.array(pil_image)
-    
-    # グレースケールに変換
-    if len(enhanced.shape) == 3:
-        enhanced = cv2.cvtColor(enhanced, cv2.COLOR_RGB2GRAY)
-    
-    # ノイズ除去（メディアンフィルタ）
-    enhanced = cv2.medianBlur(enhanced, 3)
-    
-    # uint8型を確実にする
-    enhanced = enhanced.astype(np.uint8)
-    
-    return enhanced
-
-def extract_site7_data(image):
-    """site7の画像からOCRでデータを抽出"""
-    try:
-        # 処理時間計測用
-        ocr_timings = {} if st.session_state.get('show_ocr_debug', False) else None
-        start_time = time.time()
-        
-        # オレンジバーから台番号を抽出（デフォルトでスキップ）
-        machine_number = None
-        if len(image.shape) == 3 and st.session_state.get('extract_machine_from_orange', False):  # 明示的に有効化した場合のみ
-            if ocr_timings is not None:
-                orange_start = time.time()
-            machine_number = extract_machine_number_from_orange_bar(image)
-            if ocr_timings is not None:
-                ocr_timings['オレンジバー処理'] = f"{time.time() - orange_start:.2f}秒"
-        
-        # 画像の高さと幅を取得
-        height, width = image.shape[:2] if len(image.shape) >= 2 else (0, 0)
-        
-        # 抽出したいデータのパターン定義
-        data = {
-            'machine_number': machine_number,  # オレンジバーから抽出した台番号
-            'total_start': None,
-            'jackpot_count': None,
-            'first_hit_count': None,
-            'current_start': None,
-            'jackpot_probability': None,
-            'max_payout': None,
-            'max_value': None,  # 最大値（グラフの最高到達値）
-            # パチスロ用追加フィールド
-            'total_games': None,  # 累計ゲーム数
-            'bb_count': None,  # BB回数
-            'bb_probability': None,  # BB確率
-            'rb_count': None,  # RB回数
-            'rb_probability': None,  # RB確率
-            'art_count': None,  # ART回数
-            'composite_probability': None,  # 合成確率
-            'ocr_text': "",  # OCRテキストも保存
-            'orange_bar_detected': machine_number is not None,  # デバッグ用
-            'enhanced_image': None,  # デバッグ用
-            'ocr_timings': ocr_timings  # 処理時間情報
-        }
-        
-        # 画像前処理
-        if ocr_timings is not None:
-            enhance_start = time.time()
-        enhanced_image = enhance_image_for_ocr(image)
-        if ocr_timings is not None:
-            ocr_timings['画像前処理'] = f"{time.time() - enhance_start:.2f}秒"
-        
-        # OCR実行
-        if ocr_timings is not None:
-            ocr_start = time.time()
-        text = pytesseract.image_to_string(enhanced_image, lang='jpn')
-        if ocr_timings is not None:
-            ocr_timings['OCR実行'] = f"{time.time() - ocr_start:.2f}秒"
-        
-        data['ocr_text'] = text  # シンプルに全体OCRテキストのみ保存
-        
-        if st.session_state.get('show_ocr_debug', False):
-            data['enhanced_image'] = enhanced_image
-        
-        # 台番号がオレンジバーから取得できなかった場合、全体テキストから探す
-        if not data['machine_number']:
-            machine_patterns = [
-                r'【(\d{1,4})番台】',  # 【123番台】形式
-                r'(\d{1,4})\s*番台',   # 123番台 形式
-                r'(\d{1,4})番\s*台',   # 123番 台 形式（スペースあり）
-                r'台番号\s*[:：]?\s*(\d{1,4})',  # 台番号：123 形式
-                r'(\d{1,4})台',        # 123台 形式
-                r'No\.\s*(\d{1,4})',   # No.123 形式
-                r'№\s*(\d{1,4})',     # №123 形式
-                r'^(\d{1,4})$',        # 行頭の数字のみ
-            ]
-        
-            for pattern in machine_patterns:
-                machine_match = re.search(pattern, text)
-                if machine_match:
-                    data['machine_number'] = f"{machine_match.group(1)}番台"
-                    break
-        
-        # 見つからない場合は行ごとに探す
-        if not data['machine_number']:
-            lines = text.split('\n')
-            for line in lines:
-                if '番台' in line:
-                    # 番台を含む行全体を保存
-                    cleaned_line = line.strip()
-                    if cleaned_line and len(cleaned_line) < 20:  # 短い行のみ（ノイズ除外）
-                        data['machine_number'] = cleaned_line
-                        break
-        
-        
-        # 数値データの抽出（全体テキストから）
-        # OCR結果の後処理（よくある誤認識の補正）
-        # 0とO、1とl、8とBなどの置換
-        text_corrected = text
-        text_corrected = re.sub(r'[Oo０〇](?=\d|\s|$)', '0', text_corrected)  # OやOを0に
-        text_corrected = re.sub(r'(?<=\d)[lI](?=\d)', '1', text_corrected)  # lやIを1に
-        text_corrected = re.sub(r'(?<=\d)B(?=\d)', '8', text_corrected)  # Bを8に
-        
-        # 累計スタート
-        start_patterns = [
-            r'累計スタート\s*(\d{3,4})',
-            r'(\d{3,4})\s*スタート',
-            r'累計\s*(\d{3,4})',
-            r'START\s*(\d{3,4})',
-        ]
-        for pattern in start_patterns:
-            start_match = re.search(pattern, text_corrected)
-            if start_match:
-                data['total_start'] = start_match.group(1)
-                break
-        
-        # 大当り回数
-        jackpot_patterns = [
-            r'大当り回数\s*(\d+)\s*回',
-            r'(\d+)\s*回\s*大当り',
-            r'大当り回数\s*(\d+)',
-            r'大当り\s*(\d+)\s*回',
-            r'BONUS\s*(\d+)',
-        ]
-        for pattern in jackpot_patterns:
-            jackpot_match = re.search(pattern, text_corrected)
-            if jackpot_match:
-                data['jackpot_count'] = jackpot_match.group(1)
-                break
-        
-        # 初当り回数
-        first_hit_match = re.search(r'初当り回数\s*(\d+)', text)
-        if not first_hit_match:
-            first_hit_match = re.search(r'(\d+)\s*回.*初当り', text)
-        if first_hit_match:
-            data['first_hit_count'] = first_hit_match.group(1)
-        
-        # 現在のスタート
-        current_start_match = re.search(r'スタート\s*(\d{2,3})(?!\d)', text)
-        if current_start_match:
-            data['current_start'] = current_start_match.group(1)
-        
-        # 大当り確率
-        prob_patterns = [
-            r'大当り確率\s*1[7/](\d{2,3})',  # "17161"のような誤認識にも対応
-            r'大当り確率\s*1/(\d{2,3})',
-            r'1/(\d{2,4})',
-        ]
-        for pattern in prob_patterns:
-            prob_match = re.search(pattern, text_corrected)
-            if prob_match:
-                probability = prob_match.group(1)
-                # "7161"のような場合は先頭の"7"を除去して"161"にする
-                if len(probability) == 4 and probability.startswith('7'):
-                    probability = probability[1:]
-                data['jackpot_probability'] = f"1/{probability}"
-                break
-        
-        # 最高出玉
-        max_payout_patterns = [
-            r'最高出玉\s*(\d{3,5})',
-            r'(\d{3,5})\s*最高',
-            r'出玉\s*(\d{3,5})'
-            # 最後の手段のパターンを削除（誤検出を防ぐため）
-        ]
-        
-        for pattern in max_payout_patterns:
-            max_payout_match = re.search(pattern, text)
-            if max_payout_match:
-                value = int(max_payout_match.group(1))
-                # 妥当な範囲の値かチェック（100-99999）
-                if 100 <= value <= 99999:
-                    data['max_payout'] = str(value)
-                    break
-        
-        # 最大値（グラフの最高到達値）
-        max_value_patterns = [
-            r'最大値\s*[:：]\s*(\d{3,5})',  # 最大値 : 21570
-            r'最大値\s*(\d{3,5})',         # 最大値 21570
-            r'最大\s*[:：]\s*(\d{3,5})',   # 最大 : 21570
-            r'MAX\s*[:：]\s*(\d{3,5})',    # MAX : 21570
-        ]
-        
-        for pattern in max_value_patterns:
-            max_value_match = re.search(pattern, text)
-            if max_value_match:
-                value = int(max_value_match.group(1))
-                # 妥当な範囲（100-99999）かチェック
-                if 100 <= value <= 99999:
-                    data['max_value'] = str(value)
-                    break
-        
-        # パチスロ用データの抽出（game_typeがパチスロの場合のみ）
-        if st.session_state.get('game_type', 'パチンコ') == 'パチスロ':
-            # 累計ゲーム数
-            game_patterns = [
-                r'累計ゲーム\s*(\d{3,5})回',
-                r'累計ゲーム\s*(\d{3,5})',
-                r'(\d{3,5})\s*ゲーム',
-                r'総ゲーム数\s*(\d{3,5})'
-            ]
-            for pattern in game_patterns:
-                game_match = re.search(pattern, text_corrected)
-                if game_match:
-                    data['total_games'] = game_match.group(1)
-                    break
-            
-            # BB回数とBB確率
-            bb_count_patterns = [
-                r'BB回数\s*(\d+)回',
-                r'BB\s*(\d+)回',
-                r'BB回数\s*(\d+)',
-                r'ビッグ\s*(\d+)回'
-            ]
-            for pattern in bb_count_patterns:
-                bb_match = re.search(pattern, text_corrected)
-                if bb_match:
-                    data['bb_count'] = bb_match.group(1)
-                    break
-            
-            bb_prob_patterns = [
-                r'BB確率\s*1[/7](\d{2,4})',
-                r'BB確率\s*1/(\d{2,4})',
-                r'BB\s*1[/7](\d{2,4})'
-            ]
-            for pattern in bb_prob_patterns:
-                bb_prob_match = re.search(pattern, text_corrected)
-                if bb_prob_match:
-                    prob = bb_prob_match.group(1)
-                    if len(prob) == 4 and prob.startswith('7'):
-                        prob = prob[1:]
-                    data['bb_probability'] = f"1/{prob}"
-                    break
-            
-            # RB回数とRB確率
-            rb_count_patterns = [
-                r'RB回数\s*(\d+)回',
-                r'RB\s*(\d+)回',
-                r'RB回数\s*(\d+)',
-                r'レギュラー\s*(\d+)回'
-            ]
-            for pattern in rb_count_patterns:
-                rb_match = re.search(pattern, text_corrected)
-                if rb_match:
-                    data['rb_count'] = rb_match.group(1)
-                    break
-            
-            rb_prob_patterns = [
-                r'RB確率\s*1[/7](\d{2,4})',
-                r'RB確率\s*1/(\d{2,4})',
-                r'RB\s*1[/7](\d{2,4})'
-            ]
-            for pattern in rb_prob_patterns:
-                rb_prob_match = re.search(pattern, text_corrected)
-                if rb_prob_match:
-                    prob = rb_prob_match.group(1)
-                    if len(prob) == 4 and prob.startswith('7'):
-                        prob = prob[1:]
-                    data['rb_probability'] = f"1/{prob}"
-                    break
-            
-            # ART回数
-            art_patterns = [
-                r'ART回数\s*(\d+)回',
-                r'ART\s*(\d+)回',
-                r'AT回数\s*(\d+)回',
-                r'AT\s*(\d+)回',
-                r'ART回数\s*(\d+)'
-            ]
-            for pattern in art_patterns:
-                art_match = re.search(pattern, text_corrected)
-                if art_match:
-                    data['art_count'] = art_match.group(1)
-                    break
-            
-            # 合成確率
-            composite_patterns = [
-                r'合成確率\s*1[/7](\d{2,4})',
-                r'合成確率\s*1/(\d{2,4})',
-                r'合成\s*1[/7](\d{2,4})'
-            ]
-            for pattern in composite_patterns:
-                comp_match = re.search(pattern, text_corrected)
-                if comp_match:
-                    prob = comp_match.group(1)
-                    if len(prob) == 4 and prob.startswith('7'):
-                        prob = prob[1:]
-                    data['composite_probability'] = f"1/{prob}"
-                    break
-        
-        # 合計処理時間を記録
-        if ocr_timings is not None:
-            ocr_timings['合計処理時間'] = f"{time.time() - start_time:.2f}秒"
-        
-        return data
-    except Exception as e:
-        st.warning(f"OCRエラー: {str(e)}")
-        return None
-
-def calculate_normal_usage_from_graph(graph_values):
-    """グラフの下降部分から通常時の使用球数を計算
-    
-    Args:
-        graph_values: グラフの値リスト
-    
-    Returns:
-        int: 通常時使用球数
-    """
-    if not graph_values or len(graph_values) < 2:
-        return 0
-    
-    normal_usage = 0
-    noise_threshold = 10  # 10玉以下の変動はノイズとして無視
-    
-    for i in range(len(graph_values) - 1):
-        change = graph_values[i + 1] - graph_values[i]
-        # 下降している場合（通常遊技での消費）
-        if change < -noise_threshold:
-            normal_usage += abs(change)
-    
-    return int(normal_usage)
-
-# 機種別の大当たり出玉数データベース
-MACHINE_PAYOUT_DATA = {
-    "Re:ゼロから始める異世界生活 season2": {
-        "big_jackpot_balls": 1500,    # 10R
-        "middle_jackpot_balls": 750,   # 5R（使用頻度低）
-        "small_jackpot_balls": 300     # 2R
-    },
-    "エヴァンゲリオン": {
-        "big_jackpot_balls": 1500,    # 10R
-        "middle_jackpot_balls": 750,   # 5R
-        "small_jackpot_balls": 450     # 3R
-    },
-    "北斗の拳": {
-        "big_jackpot_balls": 1500,    # 10R
-        "middle_jackpot_balls": 900,   # 6R
-        "small_jackpot_balls": 450     # 3R
-    },
-    "海物語": {
-        "big_jackpot_balls": 1500,    # 10R
-        "middle_jackpot_balls": 750,   # 5R
-        "small_jackpot_balls": 450     # 3R
-    },
-    # 今後追加される機種データ
-    # "機種名": {
-    #     "big_jackpot_balls": 大の出玉数,
-    #     "middle_jackpot_balls": 中の出玉数,
-    #     "small_jackpot_balls": 小の出玉数
-    # }
-}
 
 def get_machine_payouts(machine_name):
-    """機種名から大当たり出玉数を取得
-    
-    Args:
-        machine_name: 機種名
-        
-    Returns:
-        dict: 大当たり出玉数の辞書、見つからない場合はNone
-    """
+    """機種名から大当たり出玉数を取得"""
     if not machine_name:
         return None
     
@@ -1027,18 +233,7 @@ def get_machine_payouts(machine_name):
 
 
 def get_prioritized_data(result):
-    """出玉詳細データとグラフデータから優先度に基づいてデータを取得する
-    
-    優先ルール：
-    1. 出玉詳細データ（Claude API）が存在する場合は必ず優先
-    2. 出玉詳細データがない項目のみグラフデータを使用
-    
-    Args:
-        result: 解析結果の辞書（グラフデータとClaude APIデータを含む）
-        
-    Returns:
-        優先度に基づいて選択されたデータの辞書
-    """
+    """出玉詳細データとグラフデータから優先度に基づいてデータを取得する"""
     prioritized = {}
     
     # Claude API データの取得
@@ -1128,58 +323,6 @@ def get_prioritized_data(result):
     return prioritized
 
 # エラーログ関数
-def log_error(error_type, error_message, error_details=None):
-    """エラーログを記録する"""
-    error_log = {
-        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'type': error_type,
-        'message': error_message,
-        'details': error_details,
-        'traceback': traceback.format_exc()
-    }
-    
-    if 'error_logs' not in st.session_state:
-        st.session_state.error_logs = []
-    
-    st.session_state.error_logs.append(error_log)
-    
-    # ログファイルにも保存（オプション）
-    try:
-        log_dir = "error_logs"
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        
-        log_filename = os.path.join(log_dir, f"error_log_{datetime.now().strftime('%Y%m%d')}.json")
-        
-        # 既存のログを読み込む
-        existing_logs = []
-        if os.path.exists(log_filename):
-            try:
-                with open(log_filename, 'r', encoding='utf-8') as f:
-                    existing_logs = json.load(f)
-            except:
-                existing_logs = []
-        
-        # 新しいログを追加
-        existing_logs.append(error_log)
-        
-        # ファイルに保存
-        with open(log_filename, 'w', encoding='utf-8') as f:
-            json.dump(existing_logs, f, ensure_ascii=False, indent=2)
-    except:
-        pass  # ファイル保存のエラーは無視
-
-def get_error_logs():
-    """エラーログを取得する"""
-    if 'error_logs' not in st.session_state:
-        return []
-    return st.session_state.error_logs
-
-def clear_error_logs():
-    """エラーログをクリアする"""
-    if 'error_logs' in st.session_state:
-        st.session_state.error_logs = []
-
 # ヘルパー関数
 def get_unit():
     """現在の遊技種別に応じた単位を返す"""
@@ -1917,7 +1060,7 @@ with st.sidebar:
         else:
             st.success("✅ エラーログはありません")
     
-    # デバッグセクション（管理者のみ）
+
     if st.session_state.get('is_admin', False):
         st.markdown("---")
         st.markdown("### 🔍 デバッグ: 画像分類闾値")
@@ -1964,7 +1107,7 @@ if uploaded_files:
     # 黒色割合で画像を分類
     detail_threshold = st.session_state.get('detail_image_threshold', 0.3)
     
-    # デバッグ表示用のデータ
+
     debug_data = []
     
     # 黒色判定の閾値を取得
@@ -1976,7 +1119,7 @@ if uploaded_files:
             img = Image.open(file)
             black_ratio = calculate_black_ratio(img, black_threshold=black_pixel_threshold)
             
-            # デバッグ情報を保存
+
             debug_data.append({
                 'name': file.name,
                 'ratio': black_ratio,
@@ -2040,7 +1183,7 @@ if uploaded_files:
         if detail_files:
             st.success(f"📋 出玉詳細画像: {len(detail_files)}枚")
     
-    # デバッグ情報表示（管理者のみ）
+
     if st.session_state.get('is_admin', False) and st.checkbox("🔍 デバッグ: 黒色割合を表示", key="show_debug"):
         st.markdown("#### 画像別黒色割合")
         for data in debug_data:
@@ -2227,7 +1370,7 @@ if graph_files or detail_files:
         3. 調整後は新しいプリセットとして保存
         """)
     
-    # デバッグ情報（一時的）
+
     if st.checkbox("🐛 デバッグ情報を表示", value=False):
         st.write(f"saved_presets の内容: {st.session_state.saved_presets}")
         st.write(f"データベースパス: {db_path}")
@@ -2647,7 +1790,7 @@ if graph_files and st.session_state.get('start_analysis', False):
         # グラフデータを抽出
         graph_data_points, dominant_color, _, graph_info = analyzer.extract_graph_data(analysis_img)
         
-        # デバッグ情報を無効化（必要に応じて有効化可能）
+
         # if uploaded_file.name in ["IMG_0165.PNG", "IMG_0174.PNG", "IMG_0177.PNG"]:
         #     st.write(f"🔍 デバッグ情報 - {uploaded_file.name}")
         #     st.write(f"- ゼロライン位置（切り抜き内）: {zero_line_in_crop}px")
@@ -2803,7 +1946,7 @@ if graph_files and st.session_state.get('start_analysis', False):
             if first_hit_val > 0:
                 first_hit_val = 0
             
-            # デバッグ情報に最終結果を設定
+
             first_hit_debug_info['detected_position'] = first_hit_x
             first_hit_debug_info['detected_value'] = first_hit_val if first_hit_x is not None else None
             
@@ -3488,7 +2631,7 @@ if 'analysis_results' in st.session_state:
     # analysis_resultsを更新して既存のコードで表示
     analysis_results = all_results
     
-    # デバッグ情報（一時的）
+
     if not analysis_results:
         st.warning("⚠️ 表示する解析結果がありません")
         st.info(f"デバッグ情報: paired={len(paired_results)}, unpaired_graphs={len(unpaired_graphs)}, unpaired_details={len(unpaired_details)}")
@@ -3606,7 +2749,7 @@ if 'analysis_results' in st.session_state:
                                 # 機種別の払い出し球数を取得
                                 machine_payouts = None
                                 
-                                # デバッグ: 払い出し球数データを確認
+
                                 if st.session_state.get('show_ocr_debug', False):
                                     st.write("🔍 **払い出し球数デバッグ情報:**")
                                     st.write(f"  - machine_payouts: {claude_data.get('machine_payouts')}")
@@ -3667,7 +2810,7 @@ if 'analysis_results' in st.session_state:
                                     <span class="stat-value">{small_j}回 ({small_balls}玉/回)</span>
                                 </div>'''
                                     
-                                # デバッグ情報（OCRデバッグモードで表示）
+
                                 if st.session_state.get('show_ocr_debug', False):
                                     if (claude_data.get('big_jackpots') is None and 
                                         claude_data.get('medium_jackpots') is None and 
@@ -3882,7 +3025,7 @@ if 'analysis_results' in st.session_state:
                                 normal_balls_graph = calculate_normal_usage_from_graph(graph_values)
                                 normal_balls = normal_balls_graph
                                 
-                                # デバッグ用に従来の値も計算
+
                                 if current_val >= 0:
                                     normal_balls_old = min_val + total_payout - current_val
                                 else:
@@ -3911,7 +3054,7 @@ if 'analysis_results' in st.session_state:
                                     <span class="stat-value">{int(normal_balls):,}{unit}</span>
                                 </div>'''
                                 
-                                # デバッグモードで新旧の値を比較表示
+
                                 if st.session_state.get('show_ocr_debug', False) and st.session_state.get('use_graph_calculation', False):
                                     if 'normal_balls_old' in locals():
                                         normal_usage_html += f'''
