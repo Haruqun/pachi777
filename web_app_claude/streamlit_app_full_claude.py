@@ -2592,7 +2592,7 @@ if 'analysis_results' in st.session_state:
                                 if result['claude_analysis']:
                                     with st.expander("🤖 Claude AI解析結果（エラー）", expanded=False):
                                         st.error(f"解析エラー: {result['claude_analysis'].get('error', '不明なエラー')}")
-                        elif result.get('detail_image_processed') and not st.session_state.get('claude_api_key'):
+                        elif result and result.get('detail_image_processed') and not st.session_state.get('claude_api_key'):
                             # APIキーが設定されていない場合のメッセージ
                             with st.expander("🤖 Claude AI解析"):
                                 st.info("Claude APIキーが設定されていません。管理者ログインしてAPIキーを設定してください。")

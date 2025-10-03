@@ -20,14 +20,19 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
             'raw_text': None
         }
     
+    # NumPy配列をPIL Imageに変換
+    import numpy as np
+    if isinstance(image, np.ndarray):
+        image = Image.fromarray(image)
+
     # 画像をbase64エンコード
     buffered = io.BytesIO()
-    
+
     # 画像が大きすぎる場合はリサイズ
     max_size = 1024
     if image.width > max_size or image.height > max_size:
         image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-    
+
     image.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
     
