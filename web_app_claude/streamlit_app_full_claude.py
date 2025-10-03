@@ -141,6 +141,10 @@ if 'game_type' not in st.session_state:
 if 'claude_errors' not in st.session_state:
     st.session_state.claude_errors = []
 
+# 解析開始時にエラーをクリア（重複防止）
+if 'analysis_started' not in st.session_state:
+    st.session_state.analysis_started = False
+
 # 通常時使用球数の計算方法（テスト用）
 if 'use_graph_calculation' not in st.session_state:
     st.session_state.use_graph_calculation = False  # デフォルトは従来の方法
@@ -824,11 +828,13 @@ if uploaded_files:
                             # エラーがある場合は表示
                             if api_result and not api_result.get('success'):
                                 error_msg = api_result.get('error', 'Unknown error')
-                                full_error_msg = f"❌ Claude API エラー (アップロード時): {error_msg}"
+                                file_name = uploaded_files[idx].name if idx < len(uploaded_files) else 'unknown'
+                                full_error_msg = f"❌ {file_name}: {error_msg}"
                                 st.error(full_error_msg)
-                                # エラーをセッションステートに保存
-                                if full_error_msg not in st.session_state.claude_errors:
-                                    st.session_state.claude_errors.append(full_error_msg)
+                                # エラーをセッションステートに保存（重複チェックを改善）
+                                # 同じファイルのエラーを更新
+                                st.session_state.claude_errors = [e for e in st.session_state.claude_errors if not e.startswith(f"❌ {file_name}:")]
+                                st.session_state.claude_errors.append(full_error_msg)
                                 # エラーログ出力
                                 from modules.error_handler import log_error
                                 log_error('Claude API Error at upload', error_msg, {
@@ -837,11 +843,13 @@ if uploaded_files:
                                     'file': uploaded_files[idx].name if idx < len(uploaded_files) else 'unknown'
                                 })
                     except Exception as e:
-                        full_error_msg = f"❌ AI分析エラー (アップロード時): {str(e)}"
+                        file_name = uploaded_files[idx].name if idx < len(uploaded_files) else 'unknown'
+                        full_error_msg = f"❌ {file_name}: AI分析エラー - {str(e)}"
                         st.error(full_error_msg)
-                        # エラーをセッションステートに保存
-                        if full_error_msg not in st.session_state.claude_errors:
-                            st.session_state.claude_errors.append(full_error_msg)
+                        # エラーをセッションステートに保存（重複チェックを改善）
+                        # 同じファイルのエラーを更新
+                        st.session_state.claude_errors = [e for e in st.session_state.claude_errors if not e.startswith(f"❌ {file_name}:")]
+                        st.session_state.claude_errors.append(full_error_msg)
                         from modules.error_handler import log_error
                         log_error('Exception during Claude analysis', str(e), {
                             'location': 'file_upload_section',
@@ -1156,6 +1164,9 @@ if graph_files or detail_files:
     st.caption("設定を確認したら、解析ボタンをクリックしてください")
     
     if st.button("🚀 解析を開始", type="primary", use_container_width=True):
+        # 解析開始時にエラーをクリア
+        st.session_state.claude_errors = []
+        st.session_state.analysis_started = True
         try:
             st.session_state.start_analysis = True
             st.session_state.skip_ocr = skip_ocr
@@ -1364,11 +1375,13 @@ if graph_files and st.session_state.get('start_analysis', False):
                             error_msg = claude_analysis_result.get("error", "不明なエラー")
                             detail_text.text(f'⚠️ Claude API解析エラー: {error_msg}')
                             print(f"Claude解析エラー: {error_msg}")
-                            full_error_msg = f"❌ Claude API解析エラー (解析実行時): {error_msg}"
+                            img_name = img_file.name if hasattr(img_file, 'name') else f"Image_{idx}"
+                            full_error_msg = f"❌ {img_name}: Claude API解析エラー - {error_msg}"
                             st.error(full_error_msg)
-                            # エラーをセッションステートに保存
-                            if full_error_msg not in st.session_state.claude_errors:
-                                st.session_state.claude_errors.append(full_error_msg)
+                            # エラーをセッションステートに保存（重複チェックを改善）
+                            # 同じファイルのエラーを更新
+                            st.session_state.claude_errors = [e for e in st.session_state.claude_errors if not e.startswith(f"❌ {img_name}:")]
+                            st.session_state.claude_errors.append(full_error_msg)
 
                             # エラーログを記録
                             from modules.error_handler import log_error
@@ -1381,11 +1394,13 @@ if graph_files and st.session_state.get('start_analysis', False):
                     except Exception as e:
                         detail_text.text(f'⚠️ Claude API解析エラー: {str(e)}')
                         print(f"Claude API呼び出しエラー: {str(e)}")
-                        full_error_msg = f"❌ Claude API呼び出しエラー (解析実行時): {str(e)}"
+                        img_name = img_file.name if hasattr(img_file, 'name') else f"Image_{idx}"
+                        full_error_msg = f"❌ {img_name}: Claude API呼び出しエラー - {str(e)}"
                         st.error(full_error_msg)
-                        # エラーをセッションステートに保存
-                        if full_error_msg not in st.session_state.claude_errors:
-                            st.session_state.claude_errors.append(full_error_msg)
+                        # エラーをセッションステートに保存（重複チェックを改善）
+                        # 同じファイルのエラーを更新
+                        st.session_state.claude_errors = [e for e in st.session_state.claude_errors if not e.startswith(f"❌ {img_name}:")]
+                        st.session_state.claude_errors.append(full_error_msg)
                         claude_analysis_result = {'success': False, 'error': str(e)}
 
                         # 例外ログを記録
@@ -2211,10 +2226,41 @@ if st.session_state.get('claude_errors'):
         for error_msg in st.session_state.claude_errors:
             st.error(error_msg)
 
-        # エラーをクリアするボタン
-        if st.button("🗑️ エラーをクリア", key="clear_claude_errors"):
-            st.session_state.claude_errors = []
-            st.rerun()
+        # エラーログのダウンロードと管理ボタン
+        col1, col2 = st.columns(2)
+        with col1:
+            # エラーログをダウンロード
+            if st.button("💾 エラーログを保存", key="save_error_log"):
+                import json
+                from datetime import datetime
+
+                # エラーログとセッション中のログを取得
+                from modules.error_handler import get_error_logs
+                session_logs = get_error_logs()
+
+                error_data = {
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'display_errors': st.session_state.claude_errors,
+                    'detailed_logs': session_logs
+                }
+
+                # JSONファイルとしてダウンロード
+                error_json = json.dumps(error_data, ensure_ascii=False, indent=2)
+                st.download_button(
+                    label="📥 エラーログをダウンロード",
+                    data=error_json,
+                    file_name=f"error_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    mime="application/json",
+                    key="download_error_log"
+                )
+
+        with col2:
+            # エラーをクリアするボタン
+            if st.button("🗑️ エラーをクリア", key="clear_claude_errors"):
+                st.session_state.claude_errors = []
+                from modules.error_handler import clear_error_logs
+                clear_error_logs()
+                st.rerun()
 
 # 解析結果を表示
 if 'analysis_results' in st.session_state:

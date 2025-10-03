@@ -21,7 +21,7 @@ def preprocess_detail_image(image):
         gray = image.copy()
     
     # ノイズ除去
-    denoised = cv2.fastNlDenoising(gray, None, 10, 7, 21)
+    denoised = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
     
     # コントラスト強調
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
