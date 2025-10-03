@@ -15,6 +15,30 @@ from modules.image_processor import detect_orange_bar, detect_zero_line, crop_gr
 from modules.claude_api import analyze_with_claude
 from modules.error_handler import log_error, get_error_logs, clear_error_logs
 from modules.ocr_processor import preprocess_detail_image, enhance_image_for_ocr, extract_site7_data, extract_machine_number_from_orange_bar
+from modules.config_manager import (
+    DEFAULT_SETTINGS, DEFAULT_IMAGE_WIDTH,
+    init_settings, get_settings, update_settings, reset_settings,
+    get_game_type, get_exchange_rate,
+    init_preset_system, load_preset, save_preset, delete_preset
+)
+from modules.database_manager import (
+    init_database, load_presets_from_db, save_preset_to_db, 
+    delete_preset_from_db, save_api_key, load_api_key, delete_api_key
+)
+from modules.graph_analyzer import (
+    calculate_black_ratio, detect_and_draw_black_frames,
+    get_graph_limit, get_unit, get_unit_per_1000yen,
+    detect_first_hit
+)
+from modules.machine_data import (
+    get_machine_payouts, MACHINE_PAYOUT_DATA
+)
+from modules.utils import (
+    normalize_machine_number, get_prioritized_data,
+    generate_image_hash, settings_to_hash,
+    format_number_with_unit, calculate_rotation_rate,
+    calculate_investment_from_balls
+)
 import platform
 import pytesseract
 import re
@@ -61,320 +85,24 @@ if 'GLOBAL_USER_PASSWORD' not in st.session_state:
 
 # ========== 出玉詳細画像処理用の関数群 ==========
 # デフォルト画像幅（標準サイズ）
-DEFAULT_IMAGE_WIDTH = 400
-
-# キャッシュ関数
-@st.cache_data(ttl=3600)  # 1時間キャッシュ
-def analyze_graph_cached(image_hash, settings_hash):
-    """グラフ解析結果をキャッシュするダミー関数"""
-    width, height = image.size
-    if width != target_width:
-        ratio = target_width / width
-        new_height = int(height * ratio)
-        return image.resize((target_width, new_height), Image.Resampling.LANCZOS)
-    return image
-
-def normalize_machine_number(number_str):
-    """台番号を正規化（0005→5, 5番台→5など）"""
-    if not number_str:
-        return None
-    
-    # 文字列から数字だけを抽出
-    numbers = re.findall(r'\d+', str(number_str))
-    if numbers:
-        # 最初の数字を整数に変換（先頭の0を除去）
-        try:
-            return int(numbers[0])
-        except:
-            return None
-    return None
-
-def calculate_black_ratio(image, black_threshold=50):
-    """画像内の黒色の割合を計算する"""
-    # numpyに変換
-    img_array = np.array(image)
-    
-    # RGB画像の場合
-    if len(img_array.shape) == 3:
-        # グレースケールに変換
-        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-    else:
-        gray = img_array
-    
-    # 黒色のピクセル数をカウント
-    black_pixels = np.sum(gray < black_threshold)
-    total_pixels = gray.shape[0] * gray.shape[1]
-    
-    black_ratio = black_pixels / total_pixels
-    return black_ratio
-
-def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False):
-    """黒枠を検出してoverlay.pngを重ねる、オプションで上半分を切り抜く"""
-    import os
-    
-    # OpenCV形式に変換
-    img_array = np.array(image)
-    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-    
-    # 黒い領域を検出（閾値処理）
-    # 黒い背景（値が低い）部分のみを検出
-    threshold = 30  # 黒とみなす最大値
-    black_mask = (gray < threshold).astype(np.uint8) * 255
-    
-    # ノイズ除去のための形態学処理
-    kernel = np.ones((5,5), np.uint8)
-    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_CLOSE, kernel)
-    black_mask = cv2.morphologyEx(black_mask, cv2.MORPH_OPEN, kernel)
-    
-    # 輪郭検出
-    contours, _ = cv2.findContours(black_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    # オーバーレイ用の画像
-    overlay = image.copy()
-    
-    # 面積でソートして大きい順に処理
-    sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    
-    # 黒枠の位置を保存
-    black_frame_rect = None
-    
-    # 最大の黒い領域を検出（描画はしない）
-    if sorted_contours:
-        contour = sorted_contours[0]  # 最大の領域のみ
-        x, y, w, h = cv2.boundingRect(contour)
-        
-        # 画像サイズに対して十分大きい場合のみ保存
-        img_height, img_width = img_array.shape[:2]
-        if w > img_width * 0.2 and h > img_height * 0.1:  # 閾値を緩める
-            # 黒枠の位置のみ保存
-            black_frame_rect = (x, y, w, h)
-    
-    # overlay.pngを重ねる
-    if overlay_mask and black_frame_rect:
-        try:
-            # overlay.pngの読み込み
-            overlay_path = "web_app/mask/overlay.png"
-            if os.path.exists(overlay_path):
-                mask_img = Image.open(overlay_path)
-                
-                # 画像サイズに応じてoverlay.pngをスケール調整
-                img_width = overlay.size[0]
-                # overlay.pngは元々800px幅の画像用なので、現在の画像幅に合わせてスケール
-                scale_ratio = img_width / 800.0  # 元のoverlay.pngは800px幅の画像用
-                if scale_ratio != 1.0:
-                    mask_w_scaled = int(mask_img.size[0] * scale_ratio)
-                    mask_h_scaled = int(mask_img.size[1] * scale_ratio)
-                    mask_img = mask_img.resize((mask_w_scaled, mask_h_scaled), Image.Resampling.LANCZOS)
-                
-                # 黒枠の左上を基準点とする
-                x, y, w, h = black_frame_rect
-                
-                # overlay.pngのサイズ
-                mask_w, mask_h = mask_img.size
-                
-                # overlay.pngの左上を黒枠の左上に合わせる
-                paste_x = x
-                paste_y = y
-                
-                # 画像の範囲内に収める
-                paste_x = max(0, paste_x)
-                paste_y = max(0, paste_y)
-                
-                # RGBAに変換してアルファブレンディング
-                overlay = overlay.convert('RGBA')
-                mask_img = mask_img.convert('RGBA')
-                
-                # 重ねる
-                overlay.paste(mask_img, (paste_x, paste_y), mask_img)
-                overlay = overlay.convert('RGB')
-                
-        except Exception as e:
-            print(f"Overlay.png読み込みエラー: {str(e)}")
-    
-    # 上半分を切り抜く処理
-    if crop_upper_half and black_frame_rect:
-        x, y, w, h = black_frame_rect
-        middle_y = y + h // 2
-        # 画像の一番上から50%線までを切り抜く
-        overlay = overlay.crop((0, 0, overlay.width, middle_y))
-    
-    return overlay
 
 
 
-def get_machine_payouts(machine_name):
-    """機種名から大当たり出玉数を取得"""
-    if not machine_name:
-        return None
-    
-    # 正規化（空白、記号、型番を除去）
-    # M13, L1などの型番を除去
-    import re
-    normalized_name = re.sub(r'\s+[A-Z]\d+$', '', machine_name)  # 末尾の型番を除去
-    normalized_name = normalized_name.replace(" ", "").replace("　", "").replace(":", "").replace("：", "")
-    
-    # 部分一致で検索（略称や表記揺れに対応）
-    for key, data in MACHINE_PAYOUT_DATA.items():
-        normalized_key = key.replace(" ", "").replace("　", "").replace(":", "").replace("：", "")
-        # より柔軟なマッチング
-        if normalized_key in normalized_name:
-            return data
-        # season2のようなバリエーションも考慮
-        if 'season2' in normalized_key.lower() and 'season2' in normalized_name.lower():
-            return data
-    
-    # Re:ゼロの略称対応
-    if "リゼロ" in machine_name or "rezero" in machine_name.lower():
-        for key, data in MACHINE_PAYOUT_DATA.items():
-            if "Re:ゼロ" in key or "Re：ゼロ" in key or "Reゼロ" in key:
-                return data
-    
-    return None
 
 
-def get_prioritized_data(result):
-    """出玉詳細データとグラフデータから優先度に基づいてデータを取得する"""
-    prioritized = {}
-    
-    # Claude API データの取得
-    claude_data = None
-    if result.get('claude_analysis') and result['claude_analysis'].get('success'):
-        claude_data = result['claude_analysis'].get('data', {})
-    
-    # 1. 台番号
-    if claude_data and claude_data.get('machine_number'):
-        prioritized['machine_number'] = claude_data['machine_number']
-    elif result.get('ocr_data') and result['ocr_data'].get('machine_number'):
-        prioritized['machine_number'] = result['ocr_data']['machine_number']
-    else:
-        prioritized['machine_number'] = result.get('name', '').rsplit('.', 1)[0]
-    
-    # 2. 機種名
-    if claude_data and claude_data.get('machine_name'):
-        prioritized['machine_name'] = claude_data['machine_name']
-    else:
-        prioritized['machine_name'] = None
-    
-    # 3. 日付
-    if claude_data and claude_data.get('date'):
-        prioritized['date'] = claude_data['date']
-    else:
-        prioritized['date'] = None
-    
-    # 4. 大当たり回数関連
-    if claude_data and claude_data.get('total_jackpots') is not None:
-        prioritized['total_jackpots'] = claude_data['total_jackpots']
-        prioritized['first_jackpots'] = claude_data.get('first_jackpots', 0)
-        prioritized['big_jackpots'] = claude_data.get('big_jackpots')
-        prioritized['medium_jackpots'] = claude_data.get('medium_jackpots')
-        prioritized['small_jackpots'] = claude_data.get('small_jackpots')
-    else:
-        # グラフデータから取得
-        prioritized['total_jackpots'] = result.get('jackpot_count', 0)
-        prioritized['first_jackpots'] = (result.get('ocr_data') or {}).get('first_hit_count', 0)
-        prioritized['big_jackpots'] = None
-        prioritized['medium_jackpots'] = None
-        prioritized['small_jackpots'] = None
-    
-    # 5. 回転数関連
-    if claude_data and claude_data.get('total_rotations') is not None:
-        prioritized['total_rotations'] = claude_data['total_rotations']
-        prioritized['normal_rotations'] = claude_data.get('normal_rotations', 0)
-        prioritized['chance_rotations'] = claude_data.get('chance_rotations', 0)
-        prioritized['current_rotations'] = claude_data.get('current_rotations', 0)
-    else:
-        # グラフデータから取得
-        ocr_data = result.get('ocr_data') or {}
-        prioritized['total_rotations'] = ocr_data.get('total_start')
-        prioritized['normal_rotations'] = None
-        prioritized['chance_rotations'] = None
-        prioritized['current_rotations'] = ocr_data.get('current_start')
-    
-    # 6. 初回特賞スタート
-    if claude_data and claude_data.get('initial_ball_starts') is not None:
-        prioritized['initial_ball_starts'] = claude_data['initial_ball_starts']
-    else:
-        # グラフから計算した初当たり回転数を使用
-        metrics = result.get('rotation_metrics') or {}
-        prioritized['initial_ball_starts'] = metrics.get('first_hit_spins', 0)
-    
-    # 7. 最高出玉
-    if claude_data and claude_data.get('max_balls') is not None:
-        prioritized['max_balls'] = claude_data['max_balls']
-    else:
-        # グラフデータから取得
-        prioritized['max_balls'] = result.get('max_val', 0)
-    
-    # 8. 現在値
-    # グラフから取得（Claude APIには通常ない）
-    prioritized['current_val'] = result.get('current_val', 0)
-    prioritized['min_val'] = result.get('min_val', 0)
-    prioritized['max_val'] = result.get('max_val', 0)
-    
-    # 9. 初当たり値（グラフ専用）
-    prioritized['first_hit_val'] = result.get('first_hit_val')
-    
-    # 10. 機種別払い出し球数
-    if claude_data and claude_data.get('machine_payouts'):
-        prioritized['machine_payouts'] = claude_data['machine_payouts']
-    else:
-        prioritized['machine_payouts'] = None
-    
-    return prioritized
 
-# エラーログ関数
-# ヘルパー関数
-def get_unit():
-    """現在の遊技種別に応じた単位を返す"""
-    return "玉" if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else "枚"
 
-def get_unit_per_1000yen():
-    """現在の遊技種別に応じた1000円あたりの単位数を返す"""
-    return 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
 
-def get_graph_limit():
-    """現在の遊技種別に応じたグラフの上下限を返す"""
-    return 30000 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 5000
+
+
 
 
 # デフォルト値
-default_settings = {
-    'search_start_offset': 50,
-    'search_end_offset': 500,
-    'crop_top': 246,
-    'crop_bottom': 280,
-    'left_margin': 120,
-    'right_margin': 120,
-    # グリッドライン調整値
-    'grid_30k_offset': 1,       # +30000ライン（最上部）
-    'grid_minus_30k_offset': -34, # -30000ライン（最下部）
-    'exchange_rate': 3.57145,    # 交換レート（円/玉）デフォルトは28玉交換
-    'zero_line_adjustment': 0,   # ゼロライン調整値
-    # 超中小の払い出し球数
-    'big_jackpot_balls': 1500,   # 超（大）の払い出し球数
-    'middle_jackpot_balls': 750,  # 中の払い出し球数
-    'small_jackpot_balls': 450    # 小の払い出し球数
-}
+# 設定を初期化
+init_settings()
 
-# セッションステートの初期化（エキスパンダーより前に行う）
-if 'settings' not in st.session_state:
-    st.session_state.settings = default_settings.copy()
-
-if 'saved_presets' not in st.session_state:
-    st.session_state.saved_presets = {}
-    # デフォルトプリセットを読み込み（存在する場合）
-    try:
-        import os
-        default_preset_path = os.path.join(os.path.dirname(__file__), '..', 'default_presets.json')
-        if os.path.exists(default_preset_path):
-            with open(default_preset_path, 'r', encoding='utf-8') as f:
-                default_data = json.load(f)
-                if 'presets' in default_data:
-                    st.session_state.saved_presets.update(default_data['presets'])
-    except Exception:
-        pass
-    # データベースから読み込みフラグを設定
-    st.session_state.force_reload_presets = True
+# プリセットシステムの初期化
+init_preset_system()
 
 if 'show_adjustment' not in st.session_state:
     st.session_state.show_adjustment = False
@@ -682,90 +410,14 @@ else:
             db_dir = os.path.dirname(__file__)
     db_path = os.path.join(db_dir, 'presets.db')
 
-# データベース接続とテーブル作成
-def init_database():
-    """データベースを初期化"""
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    
-    # プリセットテーブルを作成
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS presets (
-            name TEXT PRIMARY KEY,
-            settings TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-
 # データベースを初期化
 init_database()
-
-# プリセットを読み込み
-def load_presets_from_db():
-    """データベースからプリセットを読み込み"""
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute('SELECT name, settings FROM presets')
-        rows = cursor.fetchall()
-        conn.close()
-        
-        presets = {}
-        for name, settings_json in rows:
-            presets[name] = json.loads(settings_json)
-        
-        return presets
-    except Exception as e:
-        st.warning(f"プリセット読み込みエラー: {str(e)}")
-        return {}
 
 # セッションステートにプリセットを読み込み
 # リロード時も常に最新のプリセットを読み込む
 if 'saved_presets' not in st.session_state or st.session_state.get('force_reload_presets', False):
     st.session_state.saved_presets = load_presets_from_db()
     st.session_state.force_reload_presets = False
-
-# プリセットを保存
-def save_preset_to_db(name, settings):
-    """プリセットをデータベースに保存"""
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        settings_json = json.dumps(settings)
-        
-        # UPSERT操作（存在する場合は更新、なければ挿入）
-        cursor.execute('''
-            INSERT OR REPLACE INTO presets (name, settings, updated_at) 
-            VALUES (?, ?, CURRENT_TIMESTAMP)
-        ''', (name, settings_json))
-        
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        st.error(f"プリセットの保存に失敗しました: {str(e)}")
-        return False
-
-# プリセットを削除
-def delete_preset_from_db(name):
-    """プリセットをデータベースから削除"""
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('DELETE FROM presets WHERE name = ?', (name,))
-        
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        st.error(f"プリセットの削除に失敗しました: {str(e)}")
-        return False
 
 # 本番解析セクション
 st.markdown("---")
@@ -793,9 +445,9 @@ with col1:
         st.session_state.game_type = game_type
         # 遊技種別に応じてデフォルト値を変更
         if game_type == "パチンコ":
-            st.session_state.settings['exchange_rate'] = 3.57145  # 28玉交換
+            update_settings('exchange_rate', 3.57145)  # 28玉交換
         else:
-            st.session_state.settings['exchange_rate'] = 17.86  # 5.6枚交換
+            update_settings('exchange_rate', 17.86)  # 5.6枚交換
         st.rerun()
 
 with col2:
@@ -805,7 +457,7 @@ with col2:
 
 with col3:
     # 交換レート表示
-    rate = st.session_state.settings.get('exchange_rate', 3.57145 if st.session_state.game_type == "パチンコ" else 17.86)
+    rate = get_exchange_rate()
     st.info(f"💱 交換レート: {rate:.2f}円/{unit}")
 
 # 使い方ガイド
@@ -1161,9 +813,9 @@ if uploaded_files:
                             machine_payouts = get_machine_payouts(machine_name)
                             if machine_payouts:
                                 # 自動設定を適用
-                                st.session_state.settings['big_jackpot_balls'] = machine_payouts.get('big_jackpot_balls', 1500)
-                                st.session_state.settings['middle_jackpot_balls'] = machine_payouts.get('middle_jackpot_balls', 750)
-                                st.session_state.settings['small_jackpot_balls'] = machine_payouts.get('small_jackpot_balls', 450)
+                                update_settings('big_jackpot_balls', machine_payouts.get('big_jackpot_balls', 1500))
+                                update_settings('middle_jackpot_balls', machine_payouts.get('middle_jackpot_balls', 750))
+                                update_settings('small_jackpot_balls', machine_payouts.get('small_jackpot_balls', 450))
                                 st.session_state.auto_payout_applied = True
                                 st.info(f'🎯 機種「{machine_name}」を検出しました。出玉数を自動設定しました。')
                                 st.write(f"  - 超: {machine_payouts.get('big_jackpot_balls', 1500)}玉/回")
@@ -1227,7 +879,7 @@ if detail_files:
 st.markdown("### ⚙️ 解析設定")
 
 # 交換レート設定
-unit = get_unit()
+unit = get_unit(st.session_state.get('game_type', 'パチンコ'))
 default_rate = 3.57145 if st.session_state.game_type == "パチンコ" else 17.86
 help_text = "1玉あたりの交換レート（円）。28玉交換の場合は3.57145円/玉" if st.session_state.game_type == "パチンコ" else "1枚あたりの交換レート（円）。5.6枚交換の場合は17.86円/枚"
 
@@ -1235,12 +887,12 @@ exchange_rate = st.number_input(
     f"💱 交換レート（円/{unit}）",
     min_value=0.1,
     max_value=20.0,
-    value=st.session_state.settings.get('exchange_rate', default_rate),
+    value=get_settings().get('exchange_rate', default_rate),
     step=0.01,
     format="%.5f",
     help=help_text
 )
-st.session_state.settings['exchange_rate'] = exchange_rate
+update_settings('exchange_rate', exchange_rate)
 
 # パチンコの場合のみ超中小の払い出し球数設定を表示
 if st.session_state.game_type == "パチンコ":
@@ -1256,45 +908,45 @@ if st.session_state.game_type == "パチンコ":
             "超（大）",
             min_value=100,
             max_value=3000,
-            value=st.session_state.settings.get('big_jackpot_balls', 1500),
+            value=get_settings().get('big_jackpot_balls', 1500),
             step=50,
             help="超（大）の1回あたりの払い出し球数",
             key="big_jackpot_input",
             on_change=lambda: setattr(st.session_state, 'payout_manually_changed', True)
         )
-        st.session_state.settings['big_jackpot_balls'] = big_balls
+        update_settings('big_jackpot_balls', big_balls)
     
     with col2:
         middle_balls = st.number_input(
             "中",
             min_value=100,
             max_value=2000,
-            value=st.session_state.settings.get('middle_jackpot_balls', 750),
+            value=get_settings().get('middle_jackpot_balls', 750),
             step=50,
             help="中の1回あたりの払い出し球数",
             key="middle_jackpot_input",
             on_change=lambda: setattr(st.session_state, 'payout_manually_changed', True)
         )
-        st.session_state.settings['middle_jackpot_balls'] = middle_balls
+        update_settings('middle_jackpot_balls', middle_balls)
     
     with col3:
         small_balls = st.number_input(
             "小",
             min_value=100,
             max_value=1000,
-            value=st.session_state.settings.get('small_jackpot_balls', 450),
+            value=get_settings().get('small_jackpot_balls', 450),
             step=50,
             help="小の1回あたりの払い出し球数",
             key="small_jackpot_input",
             on_change=lambda: setattr(st.session_state, 'payout_manually_changed', True)
         )
-        st.session_state.settings['small_jackpot_balls'] = small_balls
+        update_settings('small_jackpot_balls', small_balls)
     
     # デフォルトに戻すボタン
     if st.button("🔄 デフォルト値に戻す", use_container_width=False):
-        st.session_state.settings['big_jackpot_balls'] = 1500
-        st.session_state.settings['middle_jackpot_balls'] = 750
-        st.session_state.settings['small_jackpot_balls'] = 450
+        update_settings('big_jackpot_balls', 1500)
+        update_settings('middle_jackpot_balls', 750)
+        update_settings('small_jackpot_balls', 450)
         st.session_state['big_jackpot_input'] = 1500
         st.session_state['middle_jackpot_input'] = 750
         st.session_state['small_jackpot_input'] = 450
@@ -1372,7 +1024,7 @@ if graph_files or detail_files:
     
 
     if st.checkbox("🐛 デバッグ情報を表示", value=False):
-        st.write(f"saved_presets の内容: {st.session_state.saved_presets}")
+        st.write(f"saved_presets の内容: {st.session_state.get('saved_presets', {})}")
         st.write(f"データベースパス: {db_path}")
         import os
         st.write(f"データベースファイル存在: {os.path.exists(db_path)}")
@@ -1385,7 +1037,7 @@ if graph_files or detail_files:
             st.write(f"データベース読み込みエラー: {str(e)}")
     
     # プリセット一覧
-    preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
+    preset_names = ["デフォルト"] + list(st.session_state.get('saved_presets', {}).keys())
     
     # プリセットボタンを横に並べる（調整セクションと同じスタイル）
     if len(preset_names) <= 4:
@@ -1395,11 +1047,11 @@ if graph_files or detail_files:
                 button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                 if st.button(f"📥 {preset_name}", use_container_width=True, key=f"analysis_preset_{preset_name}", type=button_type):
                     if preset_name == "デフォルト":
-                        st.session_state.settings = default_settings.copy()
+                        reset_settings()
                     else:
                         # 現在の遊技種別を保持
                         current_game_type = st.session_state.get('game_type', 'パチンコ')
-                        st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                        load_preset(preset_name)
                         # プリセットに遊技種別情報がある場合でも、現在選択されている遊技種別を優先
                         st.session_state.game_type = current_game_type
                     
@@ -1421,11 +1073,11 @@ if graph_files or detail_files:
                         button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                         if st.button(f"📥 {preset_name}", use_container_width=True, key=f"analysis_preset_{preset_name}", type=button_type):
                             if preset_name == "デフォルト":
-                                st.session_state.settings = default_settings.copy()
+                                reset_settings()
                             else:
                                 # 現在の遊技種別を保持
                                 current_game_type = st.session_state.get('game_type', 'パチンコ')
-                                st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                                load_preset(preset_name)
                                 # プリセットに遊技種別情報がある場合でも、現在選択されている遊技種別を優先
                                 st.session_state.game_type = current_game_type
                             
@@ -1540,7 +1192,7 @@ if graph_files and st.session_state.get('start_analysis', False):
     
     # 現在の設定値を表示
     with st.expander("🔧 使用中の設定値", expanded=False):
-        current_settings = st.session_state.get('settings', default_settings)
+        current_settings = get_settings()
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -1619,7 +1271,7 @@ if graph_files and st.session_state.get('start_analysis', False):
         gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
         
         # 設定値を使用（セッションステートから取得）
-        settings = st.session_state.get('settings', default_settings)
+        settings = get_settings()
         
         # ゼロラインを検出（共通関数使用）
         zero_line_y = detect_zero_line(
@@ -1691,7 +1343,7 @@ if graph_files and st.session_state.get('start_analysis', False):
         scale = 30000 / 246  # グリッドライン描画用のデフォルト値
         
         # グラフの上下限値を取得
-        graph_limit = get_graph_limit()
+        graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
         
         # グリッドライン描画（設定値を使用）
         # +上限ライン（最上部）
@@ -1773,7 +1425,7 @@ if graph_files and st.session_state.get('start_analysis', False):
         distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_line_in_crop
         
         # グラフの上下限値を取得
-        graph_limit = get_graph_limit()
+        graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
         
         # 通常の線形スケール計算
         if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
@@ -1846,7 +1498,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                 current_val = current_val_original
 
             # グラフの上下限値でクリップ
-            graph_limit = get_graph_limit()
+            graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
             
             # 最大値が上限を超える場合は上限にクリップ
             if max_val > graph_limit:
@@ -1861,94 +1513,14 @@ if graph_files and st.session_state.get('start_analysis', False):
                 max_val = 0
 
             # 初当たり値を探す（改善版）
-            first_hit_val = 0
-            first_hit_x = None
-            # 機種や設定により動的に閾値を調整
             game_type = st.session_state.get('game_type', 'パチンコ')
-            if game_type == 'パチンコ':
-                # 小当たりの払い出し球数を基準に（通常300-450球）
-                min_payout = st.session_state.settings.get('small_jackpot_balls', 450) * 0.8  # 80%を閾値に
-            else:
-                min_payout = 20  # パチスロは20枚
+            small_jackpot_balls = get_settings().get('small_jackpot_balls', 450)
             
-            # 初当たり検出デバッグ情報
-            first_hit_debug_info = {
-                'detected_position': None,
-                'detected_value': None,
-                'detection_method': None,
-                'candidates': []
-            }
-
-            # 方法1: 閾値以上の急激な増加を検出
-            for i in range(1, min(len(graph_values)-2, 150)):  # 最大150点まで探索
-                current_increase = graph_values[i+1] - graph_values[i]
-
-                # 閾値以上の増加を検出
-                if current_increase > min_payout:
-                    # 候補として記録
-                    if graph_values[i] < 0:
-                        first_hit_debug_info['candidates'].append({
-                            'position': i,
-                            'value': graph_values[i],
-                            'increase': current_increase,
-                            'next_point': graph_values[i+1] if i+1 < len(graph_values) else None,
-                            'reason': f'{current_increase:.0f}玉の上昇検出'
-                        })
-                    # 次の点も上昇または維持していることを確認（ノイズ除外）
-                    noise_threshold = 50 if st.session_state.game_type == 'パチンコ' else 10
-                    if graph_values[i+2] >= graph_values[i+1] - noise_threshold:
-                        # 初当たりは必ずマイナス値から
-                        if graph_values[i] < 0:
-                            # 補正なしで純粋な検出位置を使用
-                            first_hit_val = graph_values[i]
-                            first_hit_x = i
-                            first_hit_debug_info['detection_method'] = '方法1: 急激な増加検出'
-                            first_hit_debug_info['candidates'].append({
-                                'position': i,
-                                'value': graph_values[i],
-                                'increase': current_increase,
-                                'reason': f'{current_increase:.0f}玉の急上昇'
-                            })
-                            break
-
-            # 方法2: 減少傾向からの急上昇を検出
-            if first_hit_x is None:
-                window_size = 5
-                for i in range(window_size, len(graph_values)-1):
-                    # 過去の傾向を計算
-                    past_window = graph_values[max(0, i-window_size):i]
-                    if len(past_window) >= 2:
-                        avg_slope = (past_window[-1] - past_window[0]) / len(past_window)
-
-                        # 現在の変化
-                        current_change = graph_values[i+1] - graph_values[i]
-
-                        # 減少傾向からの急上昇
-                        if avg_slope <= 0 and current_change > min_payout:
-                            noise_threshold = 50 if st.session_state.game_type == 'パチンコ' else 10
-                            if i + 2 < len(graph_values) and graph_values[i+2] > graph_values[i+1] - noise_threshold:
-                                # 初当たりは必ずマイナス値
-                                if graph_values[i] < 0:
-                                    # 補正なしで純粋な検出位置を使用
-                                    first_hit_val = graph_values[i]
-                                    first_hit_x = i
-                                    first_hit_debug_info['detection_method'] = '方法2: 減少傾向からの急上昇'
-                                    first_hit_debug_info['candidates'].append({
-                                        'position': i,
-                                        'value': graph_values[i],
-                                        'slope': avg_slope,
-                                        'increase': current_change,
-                                        'reason': f'傾き{avg_slope:.1f}から{current_change:.0f}玉上昇'
-                                    })
-                                    break
-
-            # 初当たり値がプラスの場合は0を表示
-            if first_hit_val > 0:
-                first_hit_val = 0
-            
-
-            first_hit_debug_info['detected_position'] = first_hit_x
-            first_hit_debug_info['detected_value'] = first_hit_val if first_hit_x is not None else None
+            # モジュールの関数を使用して初当たりを検出
+            first_hit_result = detect_first_hit(graph_values, game_type, small_jackpot_balls)
+            first_hit_val = first_hit_result['first_hit_val']
+            first_hit_x = first_hit_result['first_hit_x']
+            first_hit_debug_info = first_hit_result['debug_info']
             
             # スケール情報を追加（1pxあたりの回転数と玉数）
             if 'analyzer' in locals() and hasattr(analyzer, 'scale'):
@@ -2009,14 +1581,14 @@ if graph_files and st.session_state.get('start_analysis', False):
                             small_balls = machine_payouts.get('small_jackpot_balls', 450)
                         else:
                             # 機種データが見つからない場合はユーザー設定を使用
-                            big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
-                            middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
-                            small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                            big_balls = get_settings().get('big_jackpot_balls', 1500)
+                            middle_balls = get_settings().get('middle_jackpot_balls', 750)
+                            small_balls = get_settings().get('small_jackpot_balls', 450)
                     else:
                         # 機種名がない場合はユーザー設定を使用
-                        big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
-                        middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
-                        small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                        big_balls = get_settings().get('big_jackpot_balls', 1500)
+                        middle_balls = get_settings().get('middle_jackpot_balls', 750)
+                        small_balls = get_settings().get('small_jackpot_balls', 450)
                     
                     # AI計算による総獲得球数
                     total_jackpot_balls_from_ai = (
@@ -2361,9 +1933,9 @@ if graph_files and st.session_state.get('start_analysis', False):
                                 else:
                                     # 手動設定された値を使用
                                     machine_payout_data = {
-                                        'big_jackpot_balls': st.session_state.settings.get('big_jackpot_balls', 1500),
-                                        'middle_jackpot_balls': st.session_state.settings.get('middle_jackpot_balls', 750),
-                                        'small_jackpot_balls': st.session_state.settings.get('small_jackpot_balls', 450)
+                                        'big_jackpot_balls': get_settings().get('big_jackpot_balls', 1500),
+                                        'middle_jackpot_balls': get_settings().get('middle_jackpot_balls', 750),
+                                        'small_jackpot_balls': get_settings().get('small_jackpot_balls', 450)
                                     }
                                     st.write("**📊 手動設定の払い出し球数を使用:**")
                                     st.write(f"  - 🔴 超（10R）: {machine_payout_data['big_jackpot_balls']}玉/回")
@@ -2769,9 +2341,9 @@ if 'analysis_results' in st.session_state:
                                     small_balls = machine_payouts.get('small_jackpot_balls', 450)
                                 else:
                                     # 機種データが見つからない場合はユーザー設定を使用
-                                    big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
-                                    middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
-                                    small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                                    big_balls = get_settings().get('big_jackpot_balls', 1500)
+                                    middle_balls = get_settings().get('middle_jackpot_balls', 750)
+                                    small_balls = get_settings().get('small_jackpot_balls', 450)
                                     
                                 # 大当たり内訳（出玉数も表示） - 常に表示
                                 # 超中小の内訳がない場合、total_jackpotsから推定
@@ -2941,7 +2513,7 @@ if 'analysis_results' in st.session_state:
                         else:
                             return "zero"
 
-                    unit = get_unit()
+                    unit = get_unit(st.session_state.get('game_type', 'パチンコ'))
                     first_hit_text = f"{result['first_hit_val']:,}{unit}" if result['first_hit_val'] is not None else "なし"
                     first_hit_class = get_value_class(result['first_hit_val']) if result['first_hit_val'] is not None else ""
 
@@ -2993,9 +2565,9 @@ if 'analysis_results' in st.session_state:
                                 small_balls = machine_payouts.get('small_jackpot_balls', 450)
                             else:
                                 # デフォルト値を使用
-                                big_balls = st.session_state.settings.get('big_jackpot_balls', 1500)
-                                middle_balls = st.session_state.settings.get('middle_jackpot_balls', 750)
-                                small_balls = st.session_state.settings.get('small_jackpot_balls', 450)
+                                big_balls = get_settings().get('big_jackpot_balls', 1500)
+                                middle_balls = get_settings().get('middle_jackpot_balls', 750)
+                                small_balls = get_settings().get('small_jackpot_balls', 450)
                             
                             # 超中小の内訳を使用
                             if (prioritized_data.get('big_jackpots') is None and 
@@ -3418,7 +2990,7 @@ if 'analysis_results' in st.session_state:
         if success_results:
             # 統計情報の計算
             total_balance = sum(r['current_val'] for r in success_results)
-            exchange_rate = st.session_state.settings.get('exchange_rate', 3.57145)
+            exchange_rate = get_settings().get('exchange_rate', 3.57145)
             total_balance_yen = int(total_balance * exchange_rate)
             avg_balance = total_balance / len(success_results)
             avg_balance_yen = int(avg_balance * exchange_rate)
@@ -3457,7 +3029,7 @@ if 'analysis_results' in st.session_state:
                 st.metric(
                     "🎯 現在の合計収支",
                     f"{total_balance_yen:+,}円",
-                    f"{total_balance:+,}{get_unit()}",
+                    f"{total_balance:+,}{get_unit(st.session_state.get('game_type', 'パチンコ'))}",
                     delta_color="normal"
                 )
 
@@ -3465,7 +3037,7 @@ if 'analysis_results' in st.session_state:
                 st.metric(
                     "📊 台平均収支",
                     f"{avg_balance_yen:+,.0f}円",
-                    f"{avg_balance:+,.0f}{get_unit()}",
+                    f"{avg_balance:+,.0f}{get_unit(st.session_state.get('game_type', 'パチンコ'))}",
                     delta_color="normal"
                 )
             
@@ -3481,7 +3053,7 @@ if 'analysis_results' in st.session_state:
                 )
             
             with col6:
-                unit = get_unit()
+                unit = get_unit(st.session_state.get('game_type', 'パチンコ'))
                 label = "総獲得球数" if st.session_state.game_type == "パチンコ" else "総獲得枚数"
                 st.metric(
                     label,
@@ -3493,7 +3065,7 @@ if 'analysis_results' in st.session_state:
                 st.metric(
                     "獲得金額換算",
                     f"{int(total_day_jackpot_balls * exchange_rate):,}円",
-                    f"@{exchange_rate:.3f}円/{get_unit()}"
+                    f"@{exchange_rate:.3f}円/{get_unit(st.session_state.get('game_type', 'パチンコ'))}"
                 )
 
         # データフレームを作成
@@ -3523,7 +3095,7 @@ if 'analysis_results' in st.session_state:
                     '現在値': prioritized_data['current_val'],
                     '初当たり球数': prioritized_data['first_hit_val'] if prioritized_data['first_hit_val'] is not None else None,
                     '初当たり回転数': prioritized_data.get('initial_ball_starts', 0) if prioritized_data.get('first_hit_val') is not None else 0,
-                    '収支（円）': int(prioritized_data['current_val'] * st.session_state.settings.get('exchange_rate', 3.57145)),
+                    '収支（円）': int(prioritized_data['current_val'] * get_settings().get('exchange_rate', 3.57145)),
                     '総獲得球数': result.get('total_jackpot_balls', 0),
                     '大当り回数（グラフ）': result.get('jackpot_count', 0),  # 列名を変更
                     '色': result['dominant_color']
@@ -3799,7 +3371,7 @@ if 'analysis_results' in st.session_state:
                 if st.button("🔄 再計算", type="primary", use_container_width=True):
                     try:
                         # 現在の交換レートを取得
-                        exchange_rate = st.session_state.settings.get('exchange_rate', 3.57145)
+                        exchange_rate = get_settings().get('exchange_rate', 3.57145)
                         
                         # 編集されたデータを取得（edited_dfが最新の編集内容を持っている）
                         calc_df = edited_df.copy()
@@ -4068,7 +3640,7 @@ with st.expander("📊 CSV表示項目の設定", expanded=False):
     st.caption("チェックを外した項目は表示されません。表が横に長くなりすぎる場合は不要な項目を非表示にできます。")
     
     # 全項目リスト（単位を動的に変更）
-    unit = get_unit()
+    unit = get_unit(st.session_state.get('game_type', 'パチンコ'))
     all_columns = [
         '画像名', '台番号', '最高値', '最低値', '現在値',
         f'初当たり{unit}数', '初当たり回転数', '収支（円）',
@@ -4259,7 +3831,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         """)
         
         # 保存されたプリセット一覧
-        preset_names = ["デフォルト"] + list(st.session_state.saved_presets.keys())
+        preset_names = ["デフォルト"] + list(st.session_state.get('saved_presets', {}).keys())
         
         # プリセットボタンを横に並べる
         if len(preset_names) <= 4:
@@ -4270,12 +3842,12 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                     if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
                         if preset_name == "デフォルト":
-                            st.session_state.settings = default_settings.copy()
+                            reset_settings()
                         else:
-                            st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                            load_preset(preset_name)
                             # プリセットに遊技種別情報がある場合は適用
-                            if 'game_type' in st.session_state.settings:
-                                st.session_state.game_type = st.session_state.settings['game_type']
+                            if 'game_type' in get_settings():
+                                st.session_state.game_type = get_settings()['game_type']
                         
                         # 現在のプリセット名を保存（編集モードで使用）
                         st.session_state.current_preset_name = preset_name
@@ -4297,12 +3869,12 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                             if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
                                 if preset_name == "デフォルト":
-                                    st.session_state.settings = default_settings.copy()
+                                    reset_settings()
                                 else:
-                                    st.session_state.settings = st.session_state.saved_presets[preset_name].copy()
+                                    load_preset(preset_name)
                                     # プリセットに遊技種別情報がある場合は適用
-                                    if 'game_type' in st.session_state.settings:
-                                        st.session_state.game_type = st.session_state.settings['game_type']
+                                    if 'game_type' in get_settings():
+                                        st.session_state.game_type = get_settings()['game_type']
                                 
                                 # 現在のプリセット名を保存（編雈モードで使用）
                                 st.session_state.current_preset_name = preset_name
@@ -4344,14 +3916,14 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             with col1:
                 search_start_offset = st.number_input(
                     "検索開始位置（オレンジバーから）",
-                    min_value=0, max_value=800, value=st.session_state.settings['search_start_offset'],
+                    min_value=0, max_value=800, value=get_settings()['search_start_offset'],
                     step=10, help="オレンジバーから何ピクセル下から検索を開始するか"
                 )
             
             with col2:
                 search_end_offset = st.number_input(
                     "検索終了位置（オレンジバーから）",
-                    min_value=100, max_value=1200, value=st.session_state.settings['search_end_offset'],
+                    min_value=100, max_value=1200, value=get_settings()['search_end_offset'],
                     step=50, help="オレンジバーから何ピクセル下まで検索するか"
                 )
             
@@ -4361,24 +3933,24 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             with col3:
                 crop_top = st.number_input(
                     "上方向の切り抜きサイズ",
-                    min_value=100, max_value=500, value=st.session_state.settings['crop_top'],
+                    min_value=100, max_value=500, value=get_settings()['crop_top'],
                     step=1, help="ゼロラインから上方向に何ピクセル切り抜くか"
                 )
                 crop_bottom = st.number_input(
                     "下方向の切り抜きサイズ",
-                    min_value=100, max_value=500, value=st.session_state.settings['crop_bottom'],
+                    min_value=100, max_value=500, value=get_settings()['crop_bottom'],
                     step=1, help="ゼロラインから下方向に何ピクセル切り抜くか"
                 )
             
             with col4:
                 left_margin = st.number_input(
                     "左側の余白",
-                    min_value=0, max_value=300, value=st.session_state.settings['left_margin'],
+                    min_value=0, max_value=300, value=get_settings()['left_margin'],
                     step=25, help="左側から何ピクセル除外するか"
                 )
                 right_margin = st.number_input(
                     "右側の余白",
-                    min_value=0, max_value=300, value=st.session_state.settings['right_margin'],
+                    min_value=0, max_value=300, value=get_settings()['right_margin'],
                     step=25, help="右側から何ピクセル除外するか"
                 )
             
@@ -4386,7 +3958,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             st.markdown("#### 📏 グリッドライン調整")
             st.markdown("##### ⚙️ 手動調整")
             # 遊技種別に応じた上下限値を取得
-            graph_limit = get_graph_limit()
+            graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
             st.caption(f"±{graph_limit:,}ラインの位置を微調整できます（単位：ピクセル）")
             
             grid_col1, grid_col2 = st.columns(2)
@@ -4394,14 +3966,14 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             with grid_col1:
                 grid_30k_offset = st.number_input(
                     f"+{graph_limit:,}ライン調整",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_30k_offset', 0),
+                    min_value=-1000, max_value=1000, value=get_settings().get('grid_30k_offset', 0),
                     step=1, help=f"上端の+{graph_limit:,}ラインの位置調整"
                 )
             
             with grid_col2:
                 grid_minus_30k_offset = st.number_input(
                     f"-{graph_limit:,}ライン調整",
-                    min_value=-1000, max_value=1000, value=st.session_state.settings.get('grid_minus_30k_offset', 0),
+                    min_value=-1000, max_value=1000, value=get_settings().get('grid_minus_30k_offset', 0),
                     step=1, help=f"下端の-{graph_limit:,}ラインの位置調整"
                 )
             
@@ -4414,13 +3986,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             zero_line_adjustment = st.number_input(
                 "ゼロライン位置調整",
                 min_value=-50, max_value=50, 
-                value=st.session_state.settings.get('zero_line_adjustment', 0),
+                value=get_settings().get('zero_line_adjustment', 0),
                 step=1, 
                 help="検出されたゼロラインを上下に調整（プラス値で下方向、マイナス値で上方向）",
                 key="zero_line_adjustment_main"
             )
             # セッションステートに保存
-            st.session_state.settings['zero_line_adjustment'] = zero_line_adjustment
+            update_settings('zero_line_adjustment', zero_line_adjustment)
             
             # 払い出し球数の手動設定
             st.markdown("### 🎰 払い出し球数設定")
@@ -4433,33 +4005,33 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     "🔴 超（10R）払い出し球数",
                     min_value=0,
                     max_value=3000,
-                    value=st.session_state.settings.get('big_jackpot_balls', 1500),
+                    value=get_settings().get('big_jackpot_balls', 1500),
                     step=10,
                     help="10ラウンド大当たりの払い出し球数"
                 )
-                st.session_state.settings['big_jackpot_balls'] = big_jackpot_balls
+                update_settings('big_jackpot_balls', big_jackpot_balls)
             
             with payout_col2:
                 middle_jackpot_balls = st.number_input(
                     "🟡 中（5R）払い出し球数",
                     min_value=0,
                     max_value=2000,
-                    value=st.session_state.settings.get('middle_jackpot_balls', 750),
+                    value=get_settings().get('middle_jackpot_balls', 750),
                     step=10,
                     help="5ラウンド大当たりの払い出し球数"
                 )
-                st.session_state.settings['middle_jackpot_balls'] = middle_jackpot_balls
+                update_settings('middle_jackpot_balls', middle_jackpot_balls)
             
             with payout_col3:
                 small_jackpot_balls = st.number_input(
                     "🔵 小（2-3R）払い出し球数",
                     min_value=0,
                     max_value=1000,
-                    value=st.session_state.settings.get('small_jackpot_balls', 450),
+                    value=get_settings().get('small_jackpot_balls', 450),
                     step=10,
                     help="2-3ラウンド大当たりの払い出し球数"
                 )
-                st.session_state.settings['small_jackpot_balls'] = small_jackpot_balls
+                update_settings('small_jackpot_balls', small_jackpot_balls)
             
             # STEP 4: 最大値アライメント機能を統合
             if test_images:
@@ -4533,7 +4105,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             align_zero_line_y = y
                     
                     # ゼロライン調整値を適用
-                    zero_line_adjustment = st.session_state.settings.get('zero_line_adjustment', 0)
+                    zero_line_adjustment = get_settings().get('zero_line_adjustment', 0)
                     align_zero_line_y += zero_line_adjustment
                     
                     # 切り抜き
@@ -4549,7 +4121,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     
                     # カスタム設定で解析
                     analyzer_align.zero_y = align_zero_in_crop
-                    graph_limit = get_graph_limit()
+                    graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
                     analyzer_align.scale = graph_limit / align_distance_to_plus_30k if align_distance_to_plus_30k > 0 else 122
                     
                     # 切り抜き画像で解析
@@ -4599,7 +4171,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     
                     if len(all_detections) > 1:
                         # 統計情報を表示
-                        unit = get_unit()
+                        unit = get_unit(st.session_state.get('game_type', 'パチンコ'))
                         detection_cols = st.columns(3)
                         with detection_cols[0]:
                             st.metric("検出平均値", f"{avg_detected_max:,}{unit}")
@@ -4620,7 +4192,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                             
                             with cols[i % cols_per_row]:
                                 st.markdown(f"**{detection['image_name']}**")
-                                unit = get_unit()
+                                unit = get_unit(st.session_state.get('game_type', 'パチンコ'))
                                 st.caption(f"検出値: {detection['detected_max']:,}{unit}")
                                 
                                 # プレビューボタン
@@ -4649,7 +4221,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     else:
                         # 単一画像の場合
                         detection = all_detections[0]
-                        unit = get_unit()
+                        unit = get_unit(st.session_state.get('game_type', 'パチンコ'))
                         st.info(f"🔍 検出値: **{detection['detected_max']:,}{unit}**")
                         
                         # セッションステートから値を取得（なければデフォルト値を使用）
@@ -4680,7 +4252,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                     new_scale = visual_max / actual_distance
                                     
                                     # 新しい上限ラインの位置を計算
-                                    graph_limit = get_graph_limit()
+                                    graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
                                     new_30k_distance = graph_limit / new_scale
                                     current_30k_distance = detection['zero_in_crop'] - current_settings_align['grid_30k_offset']
                                     adjustment_30k = int(current_30k_distance - new_30k_distance)
@@ -4710,7 +4282,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                 # st.info(f"平均補正率: **{avg_correction_factor:.2f}x** （{len(corrections)}枚の画像から計算）")  # 補正率表示を非表示化
                                 
                                 col_adj1, col_adj2 = st.columns(2)
-                                graph_limit = get_graph_limit()
+                                graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
                                 with col_adj1:
                                     st.info(f"**+{graph_limit:,}ライン:** {grid_30k_offset}px → {grid_30k_offset + avg_adjustment_30k}px (調整: {avg_adjustment_30k:+d}px)")
                                 with col_adj2:
@@ -4719,8 +4291,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                 # 自動適用ボタン
                                 if st.button("🔧 推奨値を自動適用", type="secondary", key="apply_max_alignment"):
                                     # セッションステートに新しい値を設定（現在の入力値に調整を加える）
-                                    st.session_state.settings['grid_30k_offset'] = grid_30k_offset + avg_adjustment_30k
-                                    st.session_state.settings['grid_minus_30k_offset'] = grid_minus_30k_offset + avg_adjustment_minus_30k
+                                    update_settings('grid_30k_offset', grid_30k_offset + avg_adjustment_30k)
+                                    update_settings('grid_minus_30k_offset', grid_minus_30k_offset + avg_adjustment_minus_30k)
                                     
                                     # 最初の画像の最大値位置を保存（非線形スケール用）
                                     if all_max_positions:
@@ -4792,7 +4364,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 zero_line_y = y
         
         # ゼロライン調整値を適用
-        zero_line_adjustment = st.session_state.settings.get('zero_line_adjustment', 0)
+        zero_line_adjustment = get_settings().get('zero_line_adjustment', 0)
         zero_line_y += zero_line_adjustment
         
         # 切り抜き
@@ -4964,7 +4536,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     
                     # 補正情報を表示
                     if actual_max_value and abs(correction_factor - 1.0) > 0.01:
-                        unit = get_unit()
+                        unit = get_unit(st.session_state.get('game_type', 'パチンコ'))
                         info_text = f"🔍 検出値: {int(max_val_detected):,}{unit} → 実際の値: {int(actual_max_value):,}{unit}"
                         st.info(info_text)
             
@@ -4990,14 +4562,14 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 'right_margin': right_margin,
                 'grid_30k_offset': grid_30k_offset,
                 'grid_minus_30k_offset': grid_minus_30k_offset,
-                'zero_line_adjustment': st.session_state.settings.get('zero_line_adjustment', 0),  # ゼロライン調整値を追加
+                'zero_line_adjustment': get_settings().get('zero_line_adjustment', 0),  # ゼロライン調整値を追加
                 'game_type': st.session_state.game_type  # 遊技種別を追加
             }
             return settings
     else:
         # test_imageがない場合、セッションステートから取得
         def save_settings():
-            settings = st.session_state.settings.copy()
+            settings = get_settings().copy()
             settings['game_type'] = st.session_state.game_type  # 遊技種別を追加
             return settings
     
@@ -5010,14 +4582,14 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     # 設定の保存の内容（test_imageの有無で配置を変更）
     def render_save_settings():
         # 既存のプリセットを編集する場合
-        if st.session_state.saved_presets:
+        if st.session_state.get('saved_presets', {}):
             edit_mode = st.checkbox("既存のプリセットを編集", key="edit_preset_mode")
             
             if edit_mode:
                 # 編集するプリセットを選択
                 selected_preset = st.selectbox(
                     "編集するプリセットを選択",
-                    ["新規作成"] + list(st.session_state.saved_presets.keys()),
+                    ["新規作成"] + list(st.session_state.get('saved_presets', {}).keys()),
                     key="edit_preset_select",
                     help="既存のプリセットを選択して設定を更新できます"
                 )
@@ -5068,7 +4640,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         
         with save_col1:
             # 編集モードかどうかでボタンのラベルを変更
-            save_button_label = "💾 プリセットを更新" if (st.session_state.saved_presets and 
+            save_button_label = "💾 プリセットを更新" if (st.session_state.get('saved_presets', {}) and 
                                                          'edit_preset_mode' in st.session_state and 
                                                          st.session_state.edit_preset_mode and 
                                                          'edit_preset_select' in st.session_state and
@@ -5084,9 +4656,11 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         settings['correction_factor'] = st.session_state.avg_correction_factor
                     
                     # プリセットに保存
-                    st.session_state.saved_presets[preset_name] = settings.copy()
+                    st.session_state.get('saved_presets', {})[preset_name] = settings.copy()
                     # 現在の設定も更新
-                    st.session_state.settings = settings
+                    # 現在の設定を更新
+                    for key, value in settings.items():
+                        update_settings(key, value)
                     
                     # データベースに保存
                     if save_preset_to_db(preset_name, settings):
@@ -5094,7 +4668,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         st.session_state.saved_presets = load_presets_from_db()
                         
                         # 編集モードかどうかでメッセージを変更
-                        if (st.session_state.saved_presets and 
+                        if (st.session_state.get('saved_presets', {}) and 
                             'edit_preset_mode' in st.session_state and 
                             st.session_state.edit_preset_mode and 
                             'edit_preset_select' in st.session_state and
@@ -5108,7 +4682,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         
         with save_col2:
             if st.button("🔄 デフォルトに戻す", use_container_width=True):
-                st.session_state.settings = default_settings.copy()
+                reset_settings()
                 st.rerun()
     
     # 設定の保存を描画（画像がある場合のみ）
@@ -5120,7 +4694,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
     if test_image:
         with main_col2:
             # プリセット削除
-            if st.session_state.saved_presets:
+            if st.session_state.get('saved_presets', {}):
                 st.markdown("### 🗑️ プリセットの削除")
                 
                 # 現在編集中のプリセットをデフォルトにする
@@ -5132,7 +4706,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     default_delete_preset = st.session_state.edit_preset_select
                 
                 # デフォルト値を見つける
-                preset_list = list(st.session_state.saved_presets.keys())
+                preset_list = list(st.session_state.get('saved_presets', {}).keys())
                 default_index = 0
                 if default_delete_preset and default_delete_preset in preset_list:
                     default_index = preset_list.index(default_delete_preset)
@@ -5148,7 +4722,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 # 削除ボタン
                 if st.button("🗑️ 削除", type="secondary", use_container_width=True):
                     if preset_to_delete:
-                        del st.session_state.saved_presets[preset_to_delete]
+                        del st.session_state.get('saved_presets', {})[preset_to_delete]
                         
                         # データベースから削除
                         if delete_preset_from_db(preset_to_delete):
@@ -5164,10 +4738,10 @@ with st.expander("📤 プリセットのエクスポート/インポート"):
     
     with col1:
         st.markdown("#### 📤 エクスポート")
-        if st.session_state.saved_presets:
+        if st.session_state.get('saved_presets', {}):
             # プリセットデータをJSON形式で表示
             preset_data = {
-                "presets": st.session_state.saved_presets,
+                "presets": st.session_state.get('saved_presets', {}),
                 "version": "2.1",
                 "exported_at": datetime.now().isoformat()
             }
@@ -5198,7 +4772,7 @@ with st.expander("📤 プリセットのエクスポート/インポート"):
                             # zero_line_adjustmentがない場合は0を設定
                             if 'zero_line_adjustment' not in preset:
                                 preset['zero_line_adjustment'] = 0
-                            st.session_state.saved_presets[name] = preset
+                            st.session_state.get('saved_presets', {})[name] = preset
                             # データベースにも保存
                             save_preset_to_db(name, preset)
                         st.success(f"✅ {len(imported['presets'])}個のプリセットをインポートしました")
