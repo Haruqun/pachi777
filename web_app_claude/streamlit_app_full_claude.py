@@ -806,12 +806,35 @@ if uploaded_files:
                     processed_detail = preprocess_detail_image(detail_img)
                     
                     # 機種名検出のための簡易解析
-                    api_result = analyze_with_claude(
-                        processed_detail,
-                        st.session_state.claude_api_key,
-                        st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
-                    )
-                    
+                    try:
+                        if not st.session_state.get('claude_api_key'):
+                            st.warning("⚠️ APIキーが設定されていません。Claude設定タブでAPIキーを設定してください。")
+                            api_result = None
+                        else:
+                            api_result = analyze_with_claude(
+                                processed_detail,
+                                st.session_state.claude_api_key,
+                                st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
+                            )
+
+                            # エラーがある場合は表示
+                            if api_result and not api_result.get('success'):
+                                error_msg = api_result.get('error', 'Unknown error')
+                                st.error(f"❌ Claude API エラー: {error_msg}")
+                                # エラーログ出力
+                                from modules.error_handler import log_error
+                                log_error('Claude API Error at upload', error_msg, {
+                                    'has_api_key': bool(st.session_state.get('claude_api_key')),
+                                    'model': st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
+                                })
+                    except Exception as e:
+                        st.error(f"❌ AI分析エラー: {str(e)}")
+                        from modules.error_handler import log_error
+                        log_error('Exception during Claude analysis', str(e), {
+                            'location': 'file_upload_section'
+                        })
+                        api_result = None
+
                     if api_result and api_result.get('success'):
                         claude_data = api_result.get('data', {})
                         machine_name = claude_data.get('machine_name')
@@ -1327,12 +1350,30 @@ if graph_files and st.session_state.get('start_analysis', False):
                             error_msg = claude_analysis_result.get("error", "不明なエラー")
                             detail_text.text(f'⚠️ Claude API解析エラー: {error_msg}')
                             print(f"Claude解析エラー: {error_msg}")
+                            st.error(f"❌ Claude API解析エラー: {error_msg}")
+
+                            # エラーログを記録
+                            from modules.error_handler import log_error
+                            log_error('Claude API Error during analysis', error_msg, {
+                                'location': 'analysis_section',
+                                'has_api_key': True,
+                                'model': st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
+                            })
                     except Exception as e:
                         detail_text.text(f'⚠️ Claude API解析エラー: {str(e)}')
                         print(f"Claude API呼び出しエラー: {str(e)}")
+                        st.error(f"❌ Claude API呼び出しエラー: {str(e)}")
                         claude_analysis_result = {'success': False, 'error': str(e)}
+
+                        # 例外ログを記録
+                        from modules.error_handler import log_error
+                        log_error('Exception during Claude API call', str(e), {
+                            'location': 'analysis_section',
+                            'has_api_key': bool(st.session_state.get('claude_api_key'))
+                        })
                 else:
                     print("Claude APIキーが設定されていません")
+                    st.warning("⚠️ Claude APIを使用するには、Claude設定タブでAPIキーを設定してください。")
                 
             except Exception as e:
                 print(f"出玉詳細画像処理エラー: {str(e)}")
