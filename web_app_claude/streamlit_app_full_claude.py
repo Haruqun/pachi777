@@ -556,7 +556,7 @@ with st.sidebar:
                         
                         # APIキーを保存または更新
                         cursor.execute('''
-                            INSERT OR REPLACE INTO api_keys (key_name, api_key, model)
+                            INSERT OR REPLACE INTO api_keys (key_name, encrypted_key, model)
                             VALUES (?, ?, ?)
                         ''', ('claude_api', api_key, model))
                         
