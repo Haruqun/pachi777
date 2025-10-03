@@ -10,6 +10,10 @@ import time
 
 def preprocess_detail_image(image):
     """出玉詳細画像の前処理"""
+    # PIL ImageをNumPy配列に変換
+    if hasattr(image, 'mode'):  # PIL Image の場合
+        image = np.array(image)
+
     # グレースケール変換
     if len(image.shape) == 3:
         gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
