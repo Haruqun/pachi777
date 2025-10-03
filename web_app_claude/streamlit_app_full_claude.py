@@ -157,13 +157,13 @@ if 'claude_api_key' not in st.session_state:
         
         # APIキーを読み込み
         cursor.execute('''
-            SELECT api_key, model FROM api_keys 
+            SELECT api_key, model FROM api_keys
             WHERE key_name = 'claude_api'
-            ORDER BY created_at DESC 
+            ORDER BY created_at DESC
             LIMIT 1
         ''')
         result = cursor.fetchone()
-        
+
         if result:
             st.session_state.claude_api_key = result[0]
             st.session_state.claude_model = result[1] if result[1] else 'claude-3-5-haiku-20241022'
@@ -548,13 +548,6 @@ with st.sidebar:
                     
                     # 専用のデータベースに保存
                     try:
-                        import base64
-                        import secrets
-
-                        # APIキーを暗号化
-                        key = secrets.token_urlsafe(32)
-                        encrypted = base64.b64encode(f"{key}:{api_key}".encode()).decode()
-
                         conn = sqlite3.connect('apikey.db')
                         cursor = conn.cursor()
 
@@ -563,7 +556,7 @@ with st.sidebar:
                             CREATE TABLE IF NOT EXISTS api_keys (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                                 key_name TEXT UNIQUE NOT NULL,
-                                encrypted_key TEXT NOT NULL,
+                                api_key TEXT NOT NULL,
                                 model TEXT,
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                             )
@@ -571,9 +564,9 @@ with st.sidebar:
 
                         # APIキーを保存または更新
                         cursor.execute('''
-                            INSERT OR REPLACE INTO api_keys (key_name, encrypted_key, model)
+                            INSERT OR REPLACE INTO api_keys (key_name, api_key, model)
                             VALUES (?, ?, ?)
-                        ''', ('claude_api', encrypted, model))
+                        ''', ('claude_api', api_key, model))
 
                         conn.commit()
                         conn.close()
@@ -2493,11 +2486,26 @@ if 'analysis_results' in st.session_state:
                                         <span class="stat-value">{claude_data['chance_rotations']:,}回</span>
                                     </div>'''
                                 
-                                if claude_data.get('current_rotations') is not None:
+                                # 回転数情報
+                                if claude_data.get('spin_count') is not None:
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🎲 累計スタート</span>
+                                        <span class="stat-value">{claude_data['spin_count']:,}回</span>
+                                    </div>'''
+
+                                if claude_data.get('normal_spins') is not None:
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🔄 通常回転数</span>
+                                        <span class="stat-value">{claude_data['normal_spins']:,}回</span>
+                                    </div>'''
+
+                                if claude_data.get('current_spins') is not None:
                                     html_content += f'''
                                     <div class="stat-item">
                                         <span class="stat-label">⏰ 現在回転数</span>
-                                        <span class="stat-value">{claude_data['current_rotations']}回</span>
+                                        <span class="stat-value">{claude_data['current_spins']}回</span>
                                     </div>'''
                                     
                                 # その他情報

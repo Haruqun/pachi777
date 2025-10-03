@@ -16,7 +16,7 @@ def init_database():
             CREATE TABLE IF NOT EXISTS api_keys (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 key_name TEXT UNIQUE NOT NULL,
-                encrypted_key TEXT NOT NULL,
+                api_key TEXT NOT NULL,
                 model TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -104,20 +104,15 @@ def delete_preset_from_db(name):
 
 
 def save_api_key(api_key, model):
-    """APIキーを暗号化して保存"""
+    """APIキーを保存"""
     try:
-        # 簡易的な暗号化（本番環境ではより強力な暗号化を推奨）
-        import base64
-        key = secrets.token_urlsafe(32)
-        encrypted = base64.b64encode(f"{key}:{api_key}".encode()).decode()
-        
         conn = sqlite3.connect('apikey.db')
         cursor = conn.cursor()
-        
+
         cursor.execute('''
-            INSERT OR REPLACE INTO api_keys (key_name, encrypted_key, model)
+            INSERT OR REPLACE INTO api_keys (key_name, api_key, model)
             VALUES ('claude_api', ?, ?)
-        ''', (encrypted, model))
+        ''', (api_key, model))
         
         conn.commit()
         conn.close()
@@ -133,21 +128,16 @@ def load_api_key():
     try:
         conn = sqlite3.connect('apikey.db')
         cursor = conn.cursor()
-        
-        cursor.execute("SELECT encrypted_key, model FROM api_keys WHERE key_name = 'claude_api'")
+
+        cursor.execute("SELECT api_key, model FROM api_keys WHERE key_name = 'claude_api'")
         result = cursor.fetchone()
-        
+
         conn.close()
-        
+
         if result:
-            encrypted_key, model = result
-            # 復号化
-            import base64
-            decoded = base64.b64decode(encrypted_key).decode()
-            if ':' in decoded:
-                _, api_key = decoded.split(':', 1)
-                return api_key, model
-        
+            api_key, model = result
+            return api_key, model
+
         return None, None
         
     except Exception:
