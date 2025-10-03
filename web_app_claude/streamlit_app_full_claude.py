@@ -540,29 +540,36 @@ with st.sidebar:
                     
                     # 専用のデータベースに保存
                     try:
+                        import base64
+                        import secrets
+
+                        # APIキーを暗号化
+                        key = secrets.token_urlsafe(32)
+                        encrypted = base64.b64encode(f"{key}:{api_key}".encode()).decode()
+
                         conn = sqlite3.connect('apikey.db')
                         cursor = conn.cursor()
-                        
+
                         # テーブルが存在しない場合は作成
                         cursor.execute('''
                             CREATE TABLE IF NOT EXISTS api_keys (
-                                id INTEGER PRIMARY KEY,
-                                key_name TEXT UNIQUE,
-                                api_key TEXT,
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                key_name TEXT UNIQUE NOT NULL,
+                                encrypted_key TEXT NOT NULL,
                                 model TEXT,
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                             )
                         ''')
-                        
+
                         # APIキーを保存または更新
                         cursor.execute('''
                             INSERT OR REPLACE INTO api_keys (key_name, encrypted_key, model)
                             VALUES (?, ?, ?)
-                        ''', ('claude_api', api_key, model))
-                        
+                        ''', ('claude_api', encrypted, model))
+
                         conn.commit()
                         conn.close()
-                        
+
                         st.success("✅ APIキーを保存しました")
                     except Exception as e:
                         st.error(f"❌ 保存エラー: {str(e)}")
