@@ -862,12 +862,9 @@ if uploaded_files:
                         machine_name = claude_data.get('machine_name')
                         
                         # 機種別払い出し球数の自動設定機能を削除
-                                st.info(f'🎯 機種「{machine_name}」を検出しました。出玉数を自動設定しました。')
-                                st.write(f"  - 超: {machine_payouts.get('big_jackpot_balls', 1500)}玉/回")
-                                st.write(f"  - 中: {machine_payouts.get('middle_jackpot_balls', 750)}玉/回")
-                                st.write(f"  - 小: {machine_payouts.get('small_jackpot_balls', 450)}玉/回")
-                                detail_file.seek(0)  # ファイルポインタをリセット
-                                break
+
+                    detail_file.seek(0)  # ファイルポインタをリセット
+                    break
                 except:
                     pass  # エラーは無視して続行
     
