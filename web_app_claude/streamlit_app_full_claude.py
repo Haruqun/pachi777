@@ -2912,16 +2912,6 @@ if 'analysis_results' in st.session_state:
                     # 総獲得球数（グラフ解析結果なのでグラフから計算した値のみ表示）
                     html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数</span><span class="stat-value positive">{result.get("total_jackpot_balls_graph", result.get("total_jackpot_balls", 0)):,}{unit}</span></div>'
                     
-                    # 回転率データを追加
-                    if rotation_html:
-                        html_content += rotation_html
-                    if rotation_detail:
-                        html_content += rotation_detail
-                    
-                    # 通常時使用球数を追加
-                    if normal_usage_html:
-                        html_content += normal_usage_html
-                    
                     if correction_info:
                         html_content += correction_info
                     
@@ -2929,6 +2919,28 @@ if 'analysis_results' in st.session_state:
                     html_content += '</div>'
                     
                     st.markdown(html_content, unsafe_allow_html=True)
+                    
+                    # 回転率データを別カードで表示（パチンコのみ）
+                    if st.session_state.game_type == 'パチンコ' and (rotation_html or normal_usage_html):
+                        rotation_card_content = f"""
+                        <div class="stat-card" style="margin-top: 10px;">
+                            <div style="font-size: 1.1em; font-weight: bold; color: #28a745; margin-bottom: 10px;">
+                                📊 回転率分析
+                            </div>
+                        """
+                        
+                        # 回転率データを追加
+                        if rotation_html:
+                            rotation_card_content += rotation_html
+                        if rotation_detail:
+                            rotation_card_content += rotation_detail
+                        
+                        # 通常時使用球数を追加
+                        if normal_usage_html:
+                            rotation_card_content += normal_usage_html
+                        
+                        rotation_card_content += '</div>'
+                        st.markdown(rotation_card_content, unsafe_allow_html=True)
 
                     # OCRデータがある場合は表示（すべてNoneでも構造は表示）
                     if result.get('ocr_data') is not None:
