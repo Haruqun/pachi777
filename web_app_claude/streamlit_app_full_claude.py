@@ -2492,7 +2492,12 @@ if 'analysis_results' in st.session_state:
                                         <span class="stat-value positive">{claude_data['max_balls']:,}玉</span>
                                     </div>'''
                                 
-                                # 初回特賞スタートはマスクで隠れているため削除
+                                if claude_data.get('initial_ball_starts') is not None:
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🎱 初回特賞スタート</span>
+                                        <span class="stat-value">{claude_data['initial_ball_starts']}回</span>
+                                    </div>'''
                                     
                                 # 総払い出し球数をAIから計算
                                 total_payout_from_ai = 0
