@@ -9,47 +9,29 @@ import time
 
 
 def preprocess_detail_image(image):
-    """出玉詳細画像の前処理"""
-    # PIL ImageをNumPy配列に変換
+    """出玉詳細画像の前処理（黒枠検出 + overlay.png + 50%切り抜き）"""
+    from modules.graph_analyzer import detect_and_draw_black_frames
+    
+    # PIL ImageをPIL Imageのまま処理
     if hasattr(image, 'mode'):  # PIL Image の場合
-        image = np.array(image)
-
-    # グレースケール変換
-    if len(image.shape) == 3:
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        # detect_and_draw_black_frames関数を呼び出し
+        # overlay_mask=True: overlay.pngを重ねる
+        # crop_upper_half=True: 上半分（50%）を切り抜く
+        processed_image = detect_and_draw_black_frames(
+            image, 
+            overlay_mask=True, 
+            crop_upper_half=True
+        )
+        return processed_image
     else:
-        gray = image.copy()
-    
-    # ノイズ除去
-    denoised = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
-    
-    # コントラスト強調
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-    enhanced = clahe.apply(denoised)
-    
-    # エッジ保護フィルタ
-    filtered = cv2.bilateralFilter(enhanced, 9, 75, 75)
-    
-    # シャープ化
-    kernel = np.array([[-1,-1,-1],
-                       [-1, 9,-1],
-                       [-1,-1,-1]], dtype=np.float32)
-    sharpened = cv2.filter2D(filtered, -1, kernel)
-    
-    # 二値化（適応的閾値）
-    binary = cv2.adaptiveThreshold(
-        sharpened, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY,
-        11, 2
-    )
-    
-    # モルフォロジー処理（ノイズ除去）
-    kernel = np.ones((2,2), np.uint8)
-    processed = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
-    processed = cv2.morphologyEx(processed, cv2.MORPH_OPEN, kernel)
-    
-    return processed
+        # NumPy配列の場合はPIL Imageに変換してから処理
+        pil_image = Image.fromarray(image)
+        processed_image = detect_and_draw_black_frames(
+            pil_image, 
+            overlay_mask=True, 
+            crop_upper_half=True
+        )
+        return processed_image
 
 
 def enhance_image_for_ocr(image):
