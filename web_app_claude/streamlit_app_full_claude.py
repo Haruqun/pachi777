@@ -2632,46 +2632,22 @@ if 'analysis_results' in st.session_state:
                                 middle_balls = get_settings().get('middle_jackpot_balls', 750)
                                 small_balls = get_settings().get('small_jackpot_balls', 450)
                             
-                            # 超中小の内訳を使用
-                            if (prioritized_data.get('big_jackpots') is None and 
-                                prioritized_data.get('medium_jackpots') is None and 
-                                prioritized_data.get('small_jackpots') is None):
-                                # total_jackpotsがある場合、すべて超として扱う
-                                total_jackpots = prioritized_data.get('total_jackpots', 0)
-                                total_payout = total_jackpots * big_balls
-                            else:
-                                # 個別の値が取得できている場合はそれを使用
-                                big_j = prioritized_data.get('big_jackpots', 0) or 0
-                                medium_j = prioritized_data.get('medium_jackpots', 0) or 0
-                                small_j = prioritized_data.get('small_jackpots', 0) or 0
-                                total_payout = big_j * big_balls + medium_j * middle_balls + small_j * small_balls
-                            
                             # グラフデータから最低値と現在値を取得
                             min_val = abs(prioritized_data.get('min_val', 0))
                             current_val = prioritized_data.get('current_val', 0)
                             
-                            # 通常時使用球数の計算（テストモードで切り替え）
-                            normal_balls_graph = 0  # グラフ解析による値
-                            normal_balls_old = 0    # 従来の計算値
+                            # 通常時使用球数の計算（グラフデータのみ使用）
+                            # 重要: Claude AIデータは使用せず、グラフ解析データのみを使用
+                            # グラフから計算した総獲得玉数を使用
+                            total_jackpot_balls_graph = result.get('total_jackpot_balls_graph', result.get('total_jackpot_balls', 0))
                             
-                            if st.session_state.get('use_graph_calculation', False) and 'analysis_data' in locals():
-                                # 新方式：グラフの下降部分から計算
-                                graph_values = [p[1] for p in analysis_data.get('data_points', [])]
-                                normal_balls_graph = calculate_normal_usage_from_graph(graph_values)
-                                normal_balls = normal_balls_graph
-                                
-
-                                if current_val >= 0:
-                                    normal_balls_old = min_val + total_payout - current_val
-                                else:
-                                    normal_balls_old = min_val + total_payout + abs(current_val)
+                            # 通常時使用球数 = |最低値| + 総獲得玉数 - 現在値
+                            # この計算式により、グラフの開始から現在までの全使用球数から
+                            # 大当たりで獲得した球数を除いた、通常時のみの使用球数を算出
+                            if current_val >= 0:
+                                normal_balls = min_val + total_jackpot_balls_graph - current_val
                             else:
-                                # 従来の方式
-                                if current_val >= 0:
-                                    normal_balls = min_val + total_payout - current_val
-                                else:
-                                    normal_balls = min_val + total_payout + abs(current_val)
-                                normal_balls_old = normal_balls
+                                normal_balls = min_val + total_jackpot_balls_graph + abs(current_val)
                             
                             if normal_balls > 0:
                                 rotation_rate_2 = (normal_rotations / normal_balls) * 250
