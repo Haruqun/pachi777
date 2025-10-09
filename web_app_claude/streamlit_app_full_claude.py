@@ -671,6 +671,29 @@ with st.sidebar:
             else:
                 st.info("📊 従来の計算方法")
         
+        # ペアリング方法の選択
+        st.markdown("### 🔗 ペアリング設定")
+        pairing_method = st.radio(
+            "グラフと出玉詳細画像のペアリング方法",
+            ["jackpot_match", "machine_number", "order"],
+            format_func=lambda x: {
+                "jackpot_match": "大当たり回数マッチング（推奨）",
+                "machine_number": "台番号マッチング",
+                "order": "アップロード順"
+            }.get(x, x),
+            index=0,  # デフォルトは大当たり回数マッチング
+            help="大当たり回数マッチング：大当たり回数や初当たり回数が一致する画像をペアリング\n台番号マッチング：台番号が一致する画像をペアリング\nアップロード順：同じ順番でアップロードした場合"
+        )
+        
+        if pairing_method != st.session_state.get('pairing_method', 'jackpot_match'):
+            st.session_state.pairing_method = pairing_method
+            if pairing_method == 'jackpot_match':
+                st.success("🎯 大当たり回数でペアリング")
+            elif pairing_method == 'machine_number':
+                st.info("🔢 台番号でペアリング")
+            else:
+                st.warning("📋 アップロード順でペアリング")
+        
         # OCRデバッグモード
         show_ocr_debug = st.checkbox(
             "詳細デバッグ情報を表示",
@@ -2037,50 +2060,145 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'claude_data': claude_result
             })
     
-    # 台番号でペアリング
+    # ペアリング処理
+    pairing_method = st.session_state.get('pairing_method', 'jackpot_match')  # デフォルトは大当たり回数マッチング
     paired_results = []
     unpaired_graphs = []
     unpaired_details = []
     
-    # グラフ結果に正規化した台番号を追加
-    for result in analysis_results:
-        machine_num = None
-        # OCRから台番号を取得
-        if result.get('ocr_data') and result['ocr_data'].get('machine_number'):
-            machine_num = normalize_machine_number(result['ocr_data']['machine_number'])
-        result['normalized_machine_number'] = machine_num
+    if pairing_method == 'jackpot_match':
+        # 大当たり回数でペアリング
+        # 詳細画像をコピーして使用済みを追跡
+        available_details = detail_analysis_results.copy()
         
-        # ペアを探す
-        paired = False
-        for detail in detail_analysis_results:
-            # detailが辞書であることを確認
-            if isinstance(detail, dict):
-                claude_data = detail.get('claude_data', {})
-                if isinstance(claude_data, dict):
-                    detail_machine_num = claude_data.get('normalized_machine_number')
-                else:
-                    detail_machine_num = None
-            else:
-                detail_machine_num = None
+        for result in analysis_results:
+            # グラフから大当たり回数を取得
+            graph_jackpot_count = result.get('jackpot_count', 0)  # グラフから検出した大当り回数
+            graph_first_hit = (result.get('ocr_data') or {}).get('first_hit_count', 0)  # OCRから初当たり回数
             
-            if machine_num and detail_machine_num and machine_num == detail_machine_num:
-                # ペアリング成功
+            # 最適なペアを探す
+            best_match = None
+            best_score = 0
+            
+            for detail in available_details:
+                if detail.get('claude_data'):
+                    # 詳細画像の大当たり回数
+                    detail_total = detail['claude_data'].get('total_jackpots', 0)
+                    detail_first = detail['claude_data'].get('first_jackpots', 0)
+                    
+                    # スコア計算（完全一致を優先）
+                    score = 0
+                    if graph_jackpot_count > 0 and graph_jackpot_count == detail_total:
+                        score += 100  # 大当たり回数が一致
+                    if graph_first_hit > 0 and graph_first_hit == detail_first:
+                        score += 50   # 初当たり回数が一致
+                    
+                    # 近似値もスコアリング（差が小さいほど高得点）
+                    if score == 0 and graph_jackpot_count > 0 and detail_total > 0:
+                        diff = abs(graph_jackpot_count - detail_total)
+                        if diff <= 2:  # 差が2以内なら候補
+                            score = 20 - diff * 5
+                    
+                    if score > best_score:
+                        best_score = score
+                        best_match = detail
+            
+            # ペアリング実行
+            if best_match and best_score >= 20:  # 閾値以上のスコアでペア成立
+                # 台番号の取得（表示用）
+                machine_num = None
+                if best_match.get('claude_data') and best_match['claude_data'].get('machine_number'):
+                    machine_num = normalize_machine_number(best_match['claude_data']['machine_number'])
+                elif result.get('ocr_data') and result['ocr_data'].get('machine_number'):
+                    machine_num = normalize_machine_number(result['ocr_data']['machine_number'])
+                
+                paired_results.append({
+                    'graph': result,
+                    'detail': best_match,
+                    'machine_number': machine_num or f"台{len(paired_results)+1}",
+                    'match_score': best_score
+                })
+                available_details.remove(best_match)
+            else:
+                unpaired_graphs.append(result)
+        
+        # 使用されなかった詳細画像
+        unpaired_details = available_details
+        
+    elif pairing_method == 'order':
+        # アップロード順でペアリング
+        for idx, result in enumerate(analysis_results):
+            if idx < len(detail_analysis_results):
+                detail = detail_analysis_results[idx]
+                
+                # 台番号の取得（表示用）
+                machine_num = None
+                # 詳細画像の台番号を優先（より正確）
+                if detail.get('claude_data') and detail['claude_data'].get('machine_number'):
+                    machine_num = normalize_machine_number(detail['claude_data']['machine_number'])
+                # 詳細画像から台番号が取れない場合はグラフから
+                elif result.get('ocr_data') and result['ocr_data'].get('machine_number'):
+                    machine_num = normalize_machine_number(result['ocr_data']['machine_number'])
+                # どちらからも取れない場合はインデックスベース
+                if not machine_num:
+                    machine_num = f"台{idx+1}"
+                
                 paired_results.append({
                     'graph': result,
                     'detail': detail,
                     'machine_number': machine_num
                 })
-                paired = True
-                detail['paired'] = True  # 使用済みフラグ
-                break
+                detail['paired'] = True
+            else:
+                unpaired_graphs.append(result)
         
-        if not paired:
-            unpaired_graphs.append(result)
+        # ペアリングされなかった詳細画像（グラフより詳細画像が多い場合）
+        for idx in range(len(analysis_results), len(detail_analysis_results)):
+            unpaired_details.append(detail_analysis_results[idx])
     
-    # ペアリングされなかった詳細画像
-    for detail in detail_analysis_results:
-        if not detail.get('paired'):
-            unpaired_details.append(detail)
+    else:
+        # 台番号でペアリング（従来の方法）
+        # グラフ結果に正規化した台番号を追加
+        for result in analysis_results:
+            machine_num = None
+            # OCRから台番号を取得
+            if result.get('ocr_data') and result['ocr_data'].get('machine_number'):
+                machine_num = normalize_machine_number(result['ocr_data']['machine_number'])
+            result['normalized_machine_number'] = machine_num
+            
+            # ペアを探す
+            paired = False
+            for detail in detail_analysis_results:
+                # detailが辞書であることを確認
+                if isinstance(detail, dict):
+                    claude_data = detail.get('claude_data', {})
+                    if isinstance(claude_data, dict):
+                        detail_machine_num = claude_data.get('normalized_machine_number')
+                        if not detail_machine_num and claude_data.get('machine_number'):
+                            detail_machine_num = normalize_machine_number(claude_data['machine_number'])
+                    else:
+                        detail_machine_num = None
+                else:
+                    detail_machine_num = None
+                
+                if machine_num and detail_machine_num and machine_num == detail_machine_num:
+                    # ペアリング成功
+                    paired_results.append({
+                        'graph': result,
+                        'detail': detail,
+                        'machine_number': machine_num
+                    })
+                    paired = True
+                    detail['paired'] = True  # 使用済みフラグ
+                    break
+            
+            if not paired:
+                unpaired_graphs.append(result)
+        
+        # ペアリングされなかった詳細画像
+        for detail in detail_analysis_results:
+            if not detail.get('paired'):
+                unpaired_details.append(detail)
     
     # プログレスバーを完了
     progress_bar.progress(1.0)
@@ -2720,16 +2838,14 @@ if 'analysis_results' in st.session_state:
                         first_hit_html = f'<div class="stat-item"><span class="stat-label">🎰 初当たり{unit}数</span><span class="stat-value {first_hit_class}">{first_hit_text}</span></div>'
                         first_hit_html += f'<div class="stat-item"><span class="stat-label">🎲 初当たり回転数</span><span class="stat-value">{first_hit_spins:,}回</span></div>'
                     
-                    # 大当り回数の計算（グラフ解析結果はOCRデータのみ使用）
+                    # 大当り回数の計算（グラフから検出した回数を使用）
                     if st.session_state.game_type == 'パチンコ':
-                        ocr_data = result.get('ocr_data') or {}
-                        jackpot_count = ocr_data.get('first_hit_count', 0)
-                        jackpot_label = "初当たり回数"
+                        # グラフから検出した大当たり回数を使用
+                        jackpot_count = result.get('jackpot_count', 0)
+                        jackpot_label = "大当り回数（グラフ）"
                     else:
-                        ocr_data = result.get('ocr_data') or {}
-                        bb_count = int(ocr_data.get('bb_count') or 0)
-                        rb_count = int(ocr_data.get('rb_count') or 0)
-                        jackpot_count = bb_count + rb_count if (bb_count or rb_count) else result.get('jackpot_count') or 0
+                        # パチスロの場合もグラフから検出
+                        jackpot_count = result.get('jackpot_count', 0)
                         jackpot_label = "大当り回数"
                     
                     # HTMLコンテンツを組み立て
@@ -2777,6 +2893,21 @@ if 'analysis_results' in st.session_state:
                     
                     # 残りの統計情報を追加
                     html_content += f'<div class="stat-item"><span class="stat-label">🎯 {jackpot_label}</span><span class="stat-value positive">{jackpot_count}回</span></div>'
+                    
+                    # 初当たり回数（OCRまたはClaude AIから取得）
+                    if st.session_state.game_type == 'パチンコ':
+                        first_hit_count = 0
+                        # Claude AIデータがある場合はそちらを優先
+                        if result.get('claude_analysis') and result['claude_analysis'].get('success'):
+                            claude_data = result['claude_analysis'].get('data', {})
+                            if claude_data.get('first_jackpots') is not None:
+                                first_hit_count = claude_data['first_jackpots']
+                        # Claude AIデータがない場合はOCRから
+                        elif result.get('ocr_data') and result['ocr_data'].get('first_hit_count'):
+                            first_hit_count = result['ocr_data']['first_hit_count']
+                        
+                        if first_hit_count > 0:
+                            html_content += f'<div class="stat-item"><span class="stat-label">🎰 初当たり回数</span><span class="stat-value positive">{first_hit_count}回</span></div>'
                     
                     # 総獲得球数（グラフ解析結果なのでグラフから計算した値のみ表示）
                     html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数</span><span class="stat-value positive">{result.get("total_jackpot_balls_graph", result.get("total_jackpot_balls", 0)):,}{unit}</span></div>'
