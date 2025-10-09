@@ -14,6 +14,9 @@ def preprocess_detail_image(image):
     
     # PIL ImageをPIL Imageのまま処理
     if hasattr(image, 'mode'):  # PIL Image の場合
+        # まず400px幅にリサイズ（元の実装と同じ）
+        image = resize_to_default_width(image)
+        
         # detect_and_draw_black_frames関数を呼び出し
         # overlay_mask=True: overlay.pngを重ねる
         # crop_upper_half=True: 上半分（50%）を切り抜く
@@ -26,12 +29,33 @@ def preprocess_detail_image(image):
     else:
         # NumPy配列の場合はPIL Imageに変換してから処理
         pil_image = Image.fromarray(image)
+        # まず400px幅にリサイズ（元の実装と同じ）
+        pil_image = resize_to_default_width(pil_image)
+        
         processed_image, debug_info = detect_and_draw_black_frames(
             pil_image, 
             overlay_mask=True, 
             crop_upper_half=True
         )
         return processed_image
+
+
+def resize_to_default_width(image, target_width=400):
+    """画像を指定幅にリサイズ（アスペクト比保持）
+    
+    Args:
+        image: PIL Image
+        target_width: 目標の横幅（デフォルト400px）
+    
+    Returns:
+        リサイズされたPIL Image
+    """
+    width, height = image.size
+    if width != target_width:
+        aspect_ratio = height / width
+        new_height = int(target_width * aspect_ratio)
+        return image.resize((target_width, new_height), Image.Resampling.LANCZOS)
+    return image
 
 
 def enhance_image_for_ocr(image):
