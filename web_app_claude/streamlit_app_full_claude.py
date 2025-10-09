@@ -1094,7 +1094,7 @@ if graph_files or detail_files:
                     st.session_state.current_preset_name = preset_name
                     
                     st.success(f"✅ '{preset_name}' の設定を適用しました")
-                    # st.rerun()を削除し、設定は次の操作時に反映
+                    st.rerun()
     else:
         # 5個以上の場合は複数行に分ける
         num_rows = (len(preset_names) + 3) // 4  # 4列で何行必要か
@@ -1120,7 +1120,7 @@ if graph_files or detail_files:
                             st.session_state.current_preset_name = preset_name
                             
                             st.success(f"✅ '{preset_name}' の設定を適用しました")
-                            # st.rerun()を削除し、設定は次の操作時に反映
+                            st.rerun()
     
     # 調整設定の案内テキスト
     st.info("⚙️ 詳細な調整設定は、ページ下部の「画像解析の調整設定」セクションにあります。")
