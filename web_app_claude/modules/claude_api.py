@@ -47,7 +47,7 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
 7. medium_jackpots: 中（5R）の回数  
 8. small_jackpots: 小（2-3R）の回数
 9. total_rotations: 累計スタート（総回転数）
-10. current_rotations: スタート（現在の回転数）
+10. normal_rotations: 通常（通常回転数）
 11. max_balls: 最高出玉
 12. initial_ball_starts: 初回特賞スタート
 

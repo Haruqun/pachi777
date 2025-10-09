@@ -2472,7 +2472,12 @@ if 'analysis_results' in st.session_state:
                                         <span class="stat-value">{claude_data['total_rotations']:,}回</span>
                                     </div>'''
                                 
-                                # 通常回転数とチャンス中回転数はマスクで隠れているため削除
+                                if claude_data.get('normal_rotations') is not None:
+                                    html_content += f'''
+                                    <div class="stat-item">
+                                        <span class="stat-label">🔄 通常回転数</span>
+                                        <span class="stat-value">{claude_data['normal_rotations']:,}回</span>
+                                    </div>'''
                                 
                                 # 回転数情報
                                 if claude_data.get('spin_count') is not None:
@@ -2489,12 +2494,7 @@ if 'analysis_results' in st.session_state:
                                         <span class="stat-value">{claude_data['normal_spins']:,}回</span>
                                     </div>'''
 
-                                if claude_data.get('current_spins') is not None:
-                                    html_content += f'''
-                                    <div class="stat-item">
-                                        <span class="stat-label">⏰ 現在回転数</span>
-                                        <span class="stat-value">{claude_data['current_spins']}回</span>
-                                    </div>'''
+                                # 現在回転数はマスクで隠れているため削除
                                     
                                 # その他情報
                                 if claude_data.get('max_balls') is not None:
@@ -3206,6 +3206,9 @@ if 'analysis_results' in st.session_state:
                 
                 # 通常時使用球数（表示時の値を使用）
                 row['通常時使用球数'] = result.get('display_normal_balls', 0)
+                
+                # 通常回転数を追加（優先度に基づく）
+                row['通常回転数'] = prioritized_data.get('normal_rotations', 0) or 0
                 
                 # OCRデータを追加（OCRスキップモードでない場合のみ）
                 if not st.session_state.get('skip_ocr', False) and result.get('ocr_data'):
