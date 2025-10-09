@@ -1699,20 +1699,8 @@ if graph_files and st.session_state.get('start_analysis', False):
                 else:
                     i += 1
             
-            # AI計算が利用可能な場合はそれを優先
-            if total_jackpot_balls_from_ai is not None:
-                total_jackpot_balls_graph = total_jackpot_balls  # グラフから計算した値を保持
-                # 総獲得玉数 = 総払い出し球数 - 現在値
-                # ※総払い出し球数はAI計算値、現在値はグラフから取得
-                # 現在値が+の場合：総獲得 = 総払い出し - 現在値
-                # 現在値が-の場合：総獲得 = 総払い出し + |現在値|
-                if current_val >= 0:
-                    total_jackpot_balls = total_jackpot_balls_from_ai - current_val
-                else:
-                    total_jackpot_balls = total_jackpot_balls_from_ai + abs(current_val)
-            else:
-                # AIデータがない場合は従来のグラフ計算値を使用
-                total_jackpot_balls = total_jackpot_balls
+            # グラフから計算した総獲得玉数を保持
+            total_jackpot_balls_graph = total_jackpot_balls
                 
             # 平均獲得球数を計算
             avg_jackpot_balls = total_jackpot_balls / jackpot_count if jackpot_count > 0 else 0
@@ -2718,15 +2706,17 @@ if 'analysis_results' in st.session_state:
                     # 初当たり関連のHTMLを条件分岐で生成
                     first_hit_html = ""
                     if st.session_state.game_type == 'パチンコ':
-                        # 優先度に基づいてデータを取得（既に上で取得済み）
-                        first_hit_spins = prioritized_data.get('initial_ball_starts', 0)
+                        # グラフ解析から計算された初当たり回転数を使用
+                        rotation_metrics = result.get('rotation_metrics') or {}
+                        first_hit_spins = rotation_metrics.get('first_hit_spins', 0)
                         
                         first_hit_html = f'<div class="stat-item"><span class="stat-label">🎰 初当たり{unit}数</span><span class="stat-value {first_hit_class}">{first_hit_text}</span></div>'
                         first_hit_html += f'<div class="stat-item"><span class="stat-label">🎲 初当たり回転数</span><span class="stat-value">{first_hit_spins:,}回</span></div>'
                     
-                    # 大当り回数の計算（優先度に基づく）
+                    # 大当り回数の計算（グラフ解析結果はOCRデータのみ使用）
                     if st.session_state.game_type == 'パチンコ':
-                        jackpot_count = prioritized_data.get('first_jackpots', 0)
+                        ocr_data = result.get('ocr_data') or {}
+                        jackpot_count = ocr_data.get('first_hit_count', 0)
                         jackpot_label = "初当たり回数"
                     else:
                         ocr_data = result.get('ocr_data') or {}
@@ -2781,15 +2771,8 @@ if 'analysis_results' in st.session_state:
                     # 残りの統計情報を追加
                     html_content += f'<div class="stat-item"><span class="stat-label">🎯 {jackpot_label}</span><span class="stat-value positive">{jackpot_count}回</span></div>'
                     
-                    # 総獲得球数（AI計算がある場合は併記）
-                    if result.get("total_jackpot_balls_from_ai") is not None:
-                        html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数（AI計算）</span><span class="stat-value positive">{result.get("total_jackpot_balls_from_ai", 0):,}{unit}</span></div>'
-                        if result.get("total_jackpot_balls_graph") is not None:
-                            diff = result.get("total_jackpot_balls_from_ai", 0) - result.get("total_jackpot_balls_graph", 0)
-                            if abs(diff) > 100:  # 差が100球以上の場合は警告
-                                html_content += f'<div class="stat-item"><span class="stat-label">📊 グラフ解析値</span><span class="stat-value">{result.get("total_jackpot_balls_graph", 0):,}{unit} (差分: {diff:+,})</span></div>'
-                    else:
-                        html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数</span><span class="stat-value positive">{result.get("total_jackpot_balls", 0):,}{unit}</span></div>'
+                    # 総獲得球数（グラフ解析結果なのでグラフから計算した値のみ表示）
+                    html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数</span><span class="stat-value positive">{result.get("total_jackpot_balls_graph", result.get("total_jackpot_balls", 0)):,}{unit}</span></div>'
                     
                     # 回転率データを追加
                     if rotation_html:
