@@ -133,11 +133,14 @@ def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False
             # overlay画像を読み込み
             overlay = Image.open(overlay_path).convert("RGBA")
             
-            # 黒枠のサイズに合わせてリサイズ
-            overlay_resized = overlay.resize(
-                (largest_frame['width'], largest_frame['height']), 
-                Image.Resampling.LANCZOS
-            )
+            # 画像幅に合わせてスケール（overlay.pngは800px幅の画像用）
+            scale_ratio = width / 800.0
+            if scale_ratio != 1.0:
+                overlay_w = int(overlay.size[0] * scale_ratio)
+                overlay_h = int(overlay.size[1] * scale_ratio)
+                overlay_resized = overlay.resize((overlay_w, overlay_h), Image.Resampling.LANCZOS)
+            else:
+                overlay_resized = overlay
             
             # PIL形式に変換
             result_pil = Image.fromarray(result)
@@ -156,6 +159,13 @@ def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False
             
         except Exception as e:
             st.error(f"オーバーレイ画像の処理中にエラー: {str(e)}")
+    
+    # 上半分を切り抜く（50%ライン）
+    if crop_upper_half and black_frames:
+        largest_frame = max(black_frames, key=lambda x: x['area'])
+        middle_y = largest_frame['y'] + largest_frame['height'] // 2
+        # 画像の一番上から50%線までを切り抜く
+        result = result[0:middle_y, :]
     
     # デバッグ情報を生成
     debug_info = {
