@@ -37,11 +37,6 @@ def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False
     # 画像のサイズを取得
     height, width = img_array.shape[:2]
     
-    # 上半分を切り抜く場合
-    if crop_upper_half:
-        img_array = img_array[:height//2, :]
-        height = height // 2
-    
     # RGB変換（もしBGRの場合）
     if len(img_array.shape) == 3:
         img_rgb = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB)
