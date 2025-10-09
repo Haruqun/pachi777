@@ -8,10 +8,13 @@ import secrets
 def init_database():
     """データベースを初期化"""
     try:
-        conn = sqlite3.connect('apikey.db')
+        # 統一されたデータベースファイルパス
+        db_path = get_db_path()
+        
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
-        # テーブルが存在しない場合は作成
+        # APIキーテーブル
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS api_keys (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,7 +25,7 @@ def init_database():
             )
         ''')
         
-        # presets テーブルも作成
+        # presets テーブル
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS presets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,14 +39,29 @@ def init_database():
         conn.commit()
         conn.close()
         
+        return db_path
+        
     except Exception as e:
         st.error(f"データベース初期化エラー: {str(e)}")
+        return None
+
+def get_db_path():
+    """統一されたデータベースパスを取得"""
+    import os
+    if 'STREAMLIT_CLOUD' in os.environ:
+        return '/tmp/pptown.db'
+    else:
+        db_dir = os.path.expanduser('~/.pachi777')
+        if not os.path.exists(db_dir):
+            os.makedirs(db_dir)
+        return os.path.join(db_dir, 'pptown.db')
 
 
 def load_presets_from_db():
     """データベースからプリセットを読み込み"""
     try:
-        conn = sqlite3.connect('apikey.db')
+        db_path = get_db_path()
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
         cursor.execute("SELECT name, settings FROM presets ORDER BY name")
@@ -67,7 +85,8 @@ def load_presets_from_db():
 def save_preset_to_db(name, settings):
     """プリセットをデータベースに保存"""
     try:
-        conn = sqlite3.connect('apikey.db')
+        db_path = get_db_path()
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
         settings_json = json.dumps(settings, ensure_ascii=False)
@@ -89,7 +108,8 @@ def save_preset_to_db(name, settings):
 def delete_preset_from_db(name):
     """プリセットをデータベースから削除"""
     try:
-        conn = sqlite3.connect('apikey.db')
+        db_path = get_db_path()
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
         cursor.execute("DELETE FROM presets WHERE name = ?", (name,))
@@ -106,7 +126,8 @@ def delete_preset_from_db(name):
 def save_api_key(api_key, model):
     """APIキーを保存"""
     try:
-        conn = sqlite3.connect('apikey.db')
+        db_path = get_db_path()
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
         cursor.execute('''
@@ -126,7 +147,8 @@ def save_api_key(api_key, model):
 def load_api_key():
     """保存されたAPIキーを読み込み"""
     try:
-        conn = sqlite3.connect('apikey.db')
+        db_path = get_db_path()
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
         cursor.execute("SELECT api_key, model FROM api_keys WHERE key_name = 'claude_api'")
@@ -147,7 +169,8 @@ def load_api_key():
 def delete_api_key():
     """APIキーを削除"""
     try:
-        conn = sqlite3.connect('apikey.db')
+        db_path = get_db_path()
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM api_keys WHERE key_name = 'claude_api'")
         conn.commit()
