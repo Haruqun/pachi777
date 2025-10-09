@@ -68,8 +68,8 @@ def get_prioritized_data(result):
     # 5. 回転数関連
     if claude_data and claude_data.get('total_rotations') is not None:
         prioritized['total_rotations'] = claude_data['total_rotations']
-        prioritized['normal_rotations'] = claude_data.get('normal_rotations', 0)
-        prioritized['chance_rotations'] = claude_data.get('chance_rotations', 0)
+        prioritized['normal_rotations'] = None  # マスクで隠れているため削除
+        prioritized['chance_rotations'] = None  # 使用していない
         prioritized['current_rotations'] = claude_data.get('current_rotations', 0)
     else:
         # グラフデータから取得

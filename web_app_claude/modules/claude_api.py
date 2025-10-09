@@ -38,22 +38,25 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
     
     prompt = """この画像から以下の情報を正確に抽出してJSON形式で返してください：
 
-1. machine_name: パチンコ機種名（例：「P戦国乙女」）
-2. big_jackpots: 超（10R）の回数
-3. medium_jackpots: 中（5R）の回数  
-4. small_jackpots: 小（2-3R）の回数
-5. total_jackpots: 大当り回数合計
-6. total_balls: 総払い出し球数
-7. spin_count: 累計スタート回数
-8. normal_spins: 通常時の累計回転数
-9. current_spins: 現在の回転数
+1. machine_number: 台番号（数字のみ）
+2. machine_name: パチンコ機種名（完全な名前）
+3. date: 日付（表示形式のまま）
+4. total_jackpots: 大当り回数合計
+5. first_jackpots: 初当り回数
+6. big_jackpots: 超（10R）の回数
+7. medium_jackpots: 中（5R）の回数  
+8. small_jackpots: 小（2-3R）の回数
+9. total_rotations: 累計スタート（総回転数）
+10. current_rotations: スタート（現在の回転数）
+11. max_balls: 最高出玉
+12. initial_ball_starts: 初回特賞スタート
 
 数値が読み取れない場合はnullを設定してください。
 
 重要：
-- 総払い出し球数は「総」と「玉」の間にある数値です
-- 超中小の個別回数も正確に読み取ってください
-- 「現在」と表示されている回転数をcurrent_spinsに設定してください"""
+- 画像に表示されている値のみを返してください
+- 推測や計算は行わないでください
+- 超中小の個別回数も正確に読み取ってください"""
     
     try:
         # HTTP APIを直接使用
