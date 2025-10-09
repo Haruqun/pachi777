@@ -92,9 +92,10 @@ def detect_and_draw_black_frames(image, overlay_mask=True, crop_upper_half=False
         # スクリプトのディレクトリから探す
         script_dir = os.path.dirname(os.path.abspath(__file__))
         possible_paths = [
-            os.path.join(script_dir, '..', '..', 'overlay.png'),
-            os.path.join(script_dir, '..', 'overlay.png'),
-            'overlay.png',
+            os.path.join(script_dir, '..', 'mask', 'overlay.png'),
+            os.path.join(script_dir, '..', '..', 'web_app_claude', 'mask', 'overlay.png'),
+            os.path.join(script_dir, '..', '..', 'web_app', 'mask', 'overlay.png'),
+            'web_app_claude/mask/overlay.png',
             '/tmp/overlay.png'
         ]
         
