@@ -17,7 +17,7 @@ def preprocess_detail_image(image):
         # detect_and_draw_black_frames関数を呼び出し
         # overlay_mask=True: overlay.pngを重ねる
         # crop_upper_half=True: 上半分（50%）を切り抜く
-        processed_image = detect_and_draw_black_frames(
+        processed_image, debug_info = detect_and_draw_black_frames(
             image, 
             overlay_mask=True, 
             crop_upper_half=True
@@ -26,7 +26,7 @@ def preprocess_detail_image(image):
     else:
         # NumPy配列の場合はPIL Imageに変換してから処理
         pil_image = Image.fromarray(image)
-        processed_image = detect_and_draw_black_frames(
+        processed_image, debug_info = detect_and_draw_black_frames(
             pil_image, 
             overlay_mask=True, 
             crop_upper_half=True
