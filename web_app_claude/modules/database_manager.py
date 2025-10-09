@@ -2,7 +2,6 @@
 import sqlite3
 import streamlit as st
 import json
-import secrets
 
 
 def init_database():
