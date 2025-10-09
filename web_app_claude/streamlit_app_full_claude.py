@@ -1656,6 +1656,7 @@ if graph_files and st.session_state.get('start_analysis', False):
             # グラフから総獲得球数を計算（従来の方法）
             jackpot_count = 0  # 大当り回数をカウント
             jackpot_details = []  # 各大当りの詳細情報
+            total_decline_balls = 0  # 通常時の使用球数（下降部分の累積）
             # 遊技種別に応じた閾値
             increase_threshold = 100 if st.session_state.game_type == 'パチンコ' else 20  # パチスロは20枚以上
             
@@ -1696,6 +1697,12 @@ if graph_files and st.session_state.get('start_analysis', False):
                     
                     # 次の検出開始点を更新
                     i = j
+                # 下降区間の検出（通常時の使用球数）
+                elif graph_values[i+1] < graph_values[i] - 10:  # 10玉以上の下降
+                    # この区間での使用球数
+                    balls_used = graph_values[i] - graph_values[i+1]
+                    total_decline_balls += balls_used
+                    i += 1
                 else:
                     i += 1
             
@@ -1895,6 +1902,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数（AI優先）
                 'total_jackpot_balls_from_ai': int(total_jackpot_balls_from_ai) if total_jackpot_balls_from_ai is not None else None,  # AI計算による総獲得球数
                 'total_jackpot_balls_graph': int(total_jackpot_balls_graph) if 'total_jackpot_balls_graph' in locals() else int(total_jackpot_balls),  # グラフから計算した総獲得球数
+                'total_decline_balls': int(total_decline_balls) if 'total_decline_balls' in locals() else 0,  # 通常時使用球数（下降部分の累積）
                 'jackpot_count': jackpot_count,  # 大当り回数（グラフから検出）
                 'avg_jackpot_balls': int(avg_jackpot_balls),  # 平均獲得球数
                 'jackpot_details': jackpot_details,  # 各大当りの詳細
@@ -2632,22 +2640,25 @@ if 'analysis_results' in st.session_state:
                                 middle_balls = get_settings().get('middle_jackpot_balls', 750)
                                 small_balls = get_settings().get('small_jackpot_balls', 450)
                             
-                            # グラフデータから最低値と現在値を取得
-                            min_val = abs(prioritized_data.get('min_val', 0))
-                            current_val = prioritized_data.get('current_val', 0)
-                            
                             # 通常時使用球数の計算（グラフデータのみ使用）
                             # 重要: Claude AIデータは使用せず、グラフ解析データのみを使用
-                            # グラフから計算した総獲得玉数を使用
-                            total_jackpot_balls_graph = result.get('total_jackpot_balls_graph', result.get('total_jackpot_balls', 0))
                             
-                            # 通常時使用球数 = |最低値| + 総獲得玉数 - 現在値
-                            # この計算式により、グラフの開始から現在までの全使用球数から
-                            # 大当たりで獲得した球数を除いた、通常時のみの使用球数を算出
-                            if current_val >= 0:
-                                normal_balls = min_val + total_jackpot_balls_graph - current_val
+                            # グラフ解析による計算方法を使用するかチェック
+                            if st.session_state.get('use_graph_calculation', False) and result.get('total_decline_balls', 0) > 0:
+                                # グラフの下降部分を累積した値を使用（より正確）
+                                normal_balls = result.get('total_decline_balls', 0)
                             else:
-                                normal_balls = min_val + total_jackpot_balls_graph + abs(current_val)
+                                # 従来の計算方法（簡易計算）
+                                # グラフデータから最低値と現在値を取得
+                                min_val = abs(prioritized_data.get('min_val', 0))
+                                current_val = prioritized_data.get('current_val', 0)
+                                total_jackpot_balls_graph = result.get('total_jackpot_balls_graph', result.get('total_jackpot_balls', 0))
+                                
+                                # 通常時使用球数 = |最低値| + 総獲得玉数 - 現在値
+                                if current_val >= 0:
+                                    normal_balls = min_val + total_jackpot_balls_graph - current_val
+                                else:
+                                    normal_balls = min_val + total_jackpot_balls_graph + abs(current_val)
                             
                             if normal_balls > 0:
                                 rotation_rate_2 = (normal_rotations / normal_balls) * 250
@@ -2666,18 +2677,33 @@ if 'analysis_results' in st.session_state:
                                 </div>'''
                                 
 
-                                if st.session_state.get('show_ocr_debug', False) and st.session_state.get('use_graph_calculation', False):
-                                    if 'normal_balls_old' in locals():
-                                        normal_usage_html += f'''
-                                        <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                            <span>📊 グラフ解析: {int(normal_balls):,}{unit}</span>
-                                        </div>
-                                        <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                            <span>📈 従来計算: {int(normal_balls_old):,}{unit}</span>
-                                        </div>
-                                        <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                            <span>📐 差分: {int(abs(normal_balls - normal_balls_old)):,}{unit}</span>
-                                        </div>'''
+                                if st.session_state.get('show_ocr_debug', False):
+                                    # 両方の計算方法で計算して比較
+                                    # 従来の計算方法
+                                    min_val_debug = abs(prioritized_data.get('min_val', 0))
+                                    current_val_debug = prioritized_data.get('current_val', 0)
+                                    total_jackpot_balls_graph_debug = result.get('total_jackpot_balls_graph', result.get('total_jackpot_balls', 0))
+                                    if current_val_debug >= 0:
+                                        normal_balls_old = min_val_debug + total_jackpot_balls_graph_debug - current_val_debug
+                                    else:
+                                        normal_balls_old = min_val_debug + total_jackpot_balls_graph_debug + abs(current_val_debug)
+                                    
+                                    # グラフ解析による計算
+                                    normal_balls_graph = result.get('total_decline_balls', 0)
+                                    
+                                    normal_usage_html += f'''
+                                    <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                        <span>📊 グラフ解析（下降累積）: {int(normal_balls_graph):,}{unit}</span>
+                                    </div>
+                                    <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                        <span>📈 従来計算（簡易式）: {int(normal_balls_old):,}{unit}</span>
+                                    </div>
+                                    <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                        <span>📐 差分: {int(abs(normal_balls_graph - normal_balls_old)):,}{unit}</span>
+                                    </div>
+                                    <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                        <span>🎯 使用中: {"グラフ解析" if st.session_state.get("use_graph_calculation", False) else "従来計算"}</span>
+                                    </div>'''
                         
                         if not rotation_rate_2_calculated:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
