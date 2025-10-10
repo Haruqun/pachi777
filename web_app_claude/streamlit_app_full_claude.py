@@ -2072,9 +2072,17 @@ if graph_files and st.session_state.get('start_analysis', False):
         available_details = detail_analysis_results.copy()
         
         for result in analysis_results:
-            # グラフから大当たり回数を取得
-            graph_jackpot_count = result.get('jackpot_count', 0)  # グラフから検出した大当り回数
-            graph_first_hit = (result.get('ocr_data') or {}).get('first_hit_count', 0)  # OCRから初当たり回数
+            # グラフから大当たり回数を取得（整数に変換）
+            try:
+                graph_jackpot_count = int(result.get('jackpot_count', 0) or 0)
+            except (ValueError, TypeError):
+                graph_jackpot_count = 0
+                
+            # OCRから初当たり回数を取得（整数に変換）
+            try:
+                graph_first_hit = int((result.get('ocr_data') or {}).get('first_hit_count', 0) or 0)
+            except (ValueError, TypeError):
+                graph_first_hit = 0
             
             # 最適なペアを探す
             best_match = None
@@ -2082,9 +2090,16 @@ if graph_files and st.session_state.get('start_analysis', False):
             
             for detail in available_details:
                 if detail.get('claude_data'):
-                    # 詳細画像の大当たり回数
-                    detail_total = detail['claude_data'].get('total_jackpots', 0)
-                    detail_first = detail['claude_data'].get('first_jackpots', 0)
+                    # 詳細画像の大当たり回数（文字列の可能性があるので整数に変換）
+                    try:
+                        detail_total = int(detail['claude_data'].get('total_jackpots', 0) or 0)
+                    except (ValueError, TypeError):
+                        detail_total = 0
+                    
+                    try:
+                        detail_first = int(detail['claude_data'].get('first_jackpots', 0) or 0)
+                    except (ValueError, TypeError):
+                        detail_first = 0
                     
                     # スコア計算（完全一致を優先）
                     score = 0
