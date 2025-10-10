@@ -2068,8 +2068,9 @@ if graph_files and st.session_state.get('start_analysis', False):
     
     if pairing_method == 'jackpot_match':
         # 大当たり回数でペアリング
-        # 詳細画像をコピーして使用済みを追跡
-        available_details = detail_analysis_results.copy()
+        # 使用済みフラグをクリア
+        for detail in detail_analysis_results:
+            detail['used'] = False
         
         for result in analysis_results:
             # グラフから大当たり回数を取得（整数に変換）
@@ -2088,8 +2089,8 @@ if graph_files and st.session_state.get('start_analysis', False):
             best_match = None
             best_score = 0
             
-            for detail in available_details:
-                if detail.get('claude_data'):
+            for detail in detail_analysis_results:
+                if not detail.get('used', False) and detail.get('claude_data'):
                     # 詳細画像の大当たり回数（文字列の可能性があるので整数に変換）
                     try:
                         detail_total = int(detail['claude_data'].get('total_jackpots', 0) or 0)
@@ -2133,12 +2134,12 @@ if graph_files and st.session_state.get('start_analysis', False):
                     'machine_number': machine_num or f"台{len(paired_results)+1}",
                     'match_score': best_score
                 })
-                available_details.remove(best_match)
+                best_match['used'] = True  # 使用済みフラグを設定
             else:
                 unpaired_graphs.append(result)
         
         # 使用されなかった詳細画像
-        unpaired_details = available_details
+        unpaired_details = [d for d in detail_analysis_results if not d.get('used', False)]
         
     elif pairing_method == 'order':
         # アップロード順でペアリング
@@ -2403,6 +2404,9 @@ if 'analysis_results' in st.session_state:
                 # 機種別払い出し球数の自動設定を削除
                 result['claude_analysis'] = {'success': True, 'data': detail_data}
         result['is_paired'] = True  # ペアリングフラグを追加
+        # マッチングスコアも追加
+        if paired.get('match_score'):
+            result['match_score'] = paired['match_score']
         all_results.append(result)
     
     # 単独のグラフ結果を追加
@@ -2473,6 +2477,9 @@ if 'analysis_results' in st.session_state:
                             st.image(result['detail_image_processed'], use_column_width=True)
                             if result.get('is_paired'):
                                 st.caption("✅ この詳細画像のデータを使用して計算しています")
+                                # デバッグモードでマッチングスコアを表示
+                                if st.session_state.get('show_ocr_debug', False) and result.get('match_score'):
+                                    st.caption(f"🎯 マッチングスコア: {result['match_score']}点")
                             else:
                                 st.caption("黒枠検出 + overlay.png + 50%切り抜き適用済み")
                     
