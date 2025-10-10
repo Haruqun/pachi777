@@ -82,6 +82,10 @@ def extract_site7_data(image):
     """site7の画像からOCRでデータを抽出"""
     ocr_timings = {} if st.session_state.get('show_ocr_debug', False) else None
     
+    # デバッグモードの場合、前回のオレンジバーOCRデバッグ情報をクリア
+    if st.session_state.get('show_ocr_debug', False):
+        st.session_state.orange_bar_ocr_debug = {}
+    
     # タイマースタート
     ocr_start_time = time.time() if ocr_timings is not None else None
     
@@ -174,6 +178,18 @@ def extract_machine_number_from_orange_bar(image):
         # 台番号領域を切り出し（左端から）
         number_region = image[orange_center-15:orange_center+15, 10:200]
         
+        # デバッグ用に切り出し領域の情報を保存
+        if st.session_state.get('show_ocr_debug', False):
+            if 'orange_bar_ocr_debug' not in st.session_state:
+                st.session_state.orange_bar_ocr_debug = {}
+            st.session_state.orange_bar_ocr_debug['crop_region'] = {
+                'y_start': orange_center - 15,
+                'y_end': orange_center + 15,
+                'x_start': 10,
+                'x_end': 200,
+                'orange_center': orange_center
+            }
+        
         if number_region.size == 0:
             return None
         
@@ -194,6 +210,17 @@ def extract_machine_number_from_orange_bar(image):
         config = '--psm 7 -c tessedit_char_whitelist=0123456789'
         text = pytesseract.image_to_string(enhanced, config=config)
         
+        # デバッグ情報を保存
+        if st.session_state.get('show_ocr_debug', False):
+            if 'orange_bar_ocr_debug' not in st.session_state:
+                st.session_state.orange_bar_ocr_debug = {}
+            st.session_state.orange_bar_ocr_debug = {
+                'raw_text': text,
+                'orange_found': orange_y_start is not None,
+                'orange_y_range': (orange_y_start, orange_y_end) if orange_y_start else None,
+                'number_region_shape': number_region.shape if number_region.size > 0 else None
+            }
+        
         # 数字を抽出
         numbers = re.findall(r'\d+', text)
         if numbers:
@@ -201,5 +228,9 @@ def extract_machine_number_from_orange_bar(image):
         
         return None
         
-    except Exception:
+    except Exception as e:
+        if st.session_state.get('show_ocr_debug', False):
+            st.session_state.orange_bar_ocr_debug = {
+                'error': str(e)
+            }
         return None

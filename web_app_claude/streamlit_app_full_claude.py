@@ -145,9 +145,6 @@ if 'claude_errors' not in st.session_state:
 if 'analysis_started' not in st.session_state:
     st.session_state.analysis_started = False
 
-# 通常時使用球数の計算方法（テスト用）
-if 'use_graph_calculation' not in st.session_state:
-    st.session_state.use_graph_calculation = False  # デフォルトは従来の方法
 
 # Claude APIキーの初期化（専用データベースから読み込み）
 if 'claude_api_key' not in st.session_state:
@@ -652,24 +649,6 @@ with st.sidebar:
         st.warning("⚠️ 未設定")
         st.caption("管理者ログイン後、APIキーを設定してください")
     
-    # 実験的機能セクション（管理者のみ）
-    if st.session_state.get('is_admin', False):
-        st.markdown("---")
-        st.markdown("### 🧪 実験的機能")
-        
-        # 通常時使用球数の計算方法切り替え
-        use_graph_calc = st.checkbox(
-            "グラフ解析による通常時使用球数計算",
-            value=st.session_state.get('use_graph_calculation', False),
-            help="グラフの下降部分のみを積算して通常時使用球数を計算します。より正確な回転率が期待できます。"
-        )
-        
-        if use_graph_calc != st.session_state.get('use_graph_calculation', False):
-            st.session_state.use_graph_calculation = use_graph_calc
-            if use_graph_calc:
-                st.success("✨ グラフ解析による計算有効")
-            else:
-                st.info("📊 従来の計算方法")
         
         # ペアリング方法の選択
         st.markdown("### 🔗 ペアリング設定")
@@ -2780,15 +2759,12 @@ if 'analysis_results' in st.session_state:
                                 middle_balls = get_settings().get('middle_jackpot_balls', 750)
                                 small_balls = get_settings().get('small_jackpot_balls', 450)
                             
-                            # 通常時使用球数の計算（グラフデータのみ使用）
-                            # 重要: Claude AIデータは使用せず、グラフ解析データのみを使用
-                            
-                            # グラフ解析による計算方法を使用するかチェック
-                            if st.session_state.get('use_graph_calculation', False) and result.get('total_decline_balls', 0) > 0:
+                            # 通常時使用球数の計算（グラフ下降累積を優先）
+                            if result.get('total_decline_balls', 0) > 0:
                                 # グラフの下降部分を累積した値を使用（より正確）
                                 normal_balls = result.get('total_decline_balls', 0)
                             else:
-                                # 従来の計算方法（簡易計算）
+                                # フォールバック：簡易計算
                                 # グラフデータから最低値と現在値を取得
                                 min_val = abs(prioritized_data.get('min_val', 0))
                                 current_val = prioritized_data.get('current_val', 0)
@@ -2818,32 +2794,19 @@ if 'analysis_results' in st.session_state:
                                 
 
                                 if st.session_state.get('show_ocr_debug', False):
-                                    # 両方の計算方法で計算して比較
-                                    # 従来の計算方法
-                                    min_val_debug = abs(prioritized_data.get('min_val', 0))
-                                    current_val_debug = prioritized_data.get('current_val', 0)
-                                    total_jackpot_balls_graph_debug = result.get('total_jackpot_balls_graph', result.get('total_jackpot_balls', 0))
-                                    if current_val_debug >= 0:
-                                        normal_balls_old = min_val_debug + total_jackpot_balls_graph_debug - current_val_debug
-                                    else:
-                                        normal_balls_old = min_val_debug + total_jackpot_balls_graph_debug + abs(current_val_debug)
-                                    
-                                    # グラフ解析による計算
+                                    # グラフ解析による計算値を表示
                                     normal_balls_graph = result.get('total_decline_balls', 0)
                                     
-                                    normal_usage_html += f'''
-                                    <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                        <span>📊 グラフ解析（下降累積）: {int(normal_balls_graph):,}{unit}</span>
-                                    </div>
-                                    <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                        <span>📈 従来計算（簡易式）: {int(normal_balls_old):,}{unit}</span>
-                                    </div>
-                                    <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                        <span>📐 差分: {int(abs(normal_balls_graph - normal_balls_old)):,}{unit}</span>
-                                    </div>
-                                    <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                        <span>🎯 使用中: {"グラフ解析" if st.session_state.get("use_graph_calculation", False) else "従来計算"}</span>
-                                    </div>'''
+                                    if normal_balls_graph > 0:
+                                        normal_usage_html += f'''
+                                        <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                            <span>📊 グラフ下降累積により計算: {int(normal_balls_graph):,}{unit}</span>
+                                        </div>'''
+                                    else:
+                                        normal_usage_html += f'''
+                                        <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                            <span>📈 簡易計算を使用（グラフ下降データなし）</span>
+                                        </div>'''
                         
                         if not rotation_rate_2_calculated:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
@@ -3059,29 +3022,56 @@ if 'analysis_results' in st.session_state:
                         st.markdown(ocr_html, unsafe_allow_html=True)
                         
                         # OCRデバッグ情報を表示
-                        if st.session_state.get('show_ocr_debug', False) and result.get('ocr_data'):
-                            with st.expander("🔍 OCRデバッグ情報"):
-                                # OCRテキスト結果
-                                if result['ocr_data'].get('ocr_text'):
-                                    st.markdown("#### OCRで読み取ったテキスト")
-                                    st.text_area("OCR結果", result['ocr_data']['ocr_text'], height=200, disabled=True)
+                        if st.session_state.get('show_ocr_debug', False):
+                            with st.expander("🔍 OCRデバッグ情報", expanded=True):
+                                # 全体OCRテキスト結果
+                                if result.get('ocr_data'):
+                                    st.markdown("#### 📝 全体OCRで読み取ったテキスト")
+                                    ocr_text = result['ocr_data'].get('ocr_raw_text') or result['ocr_data'].get('ocr_text', '読み取れませんでした')
+                                    st.text_area("OCR結果", ocr_text, height=200, disabled=True)
+                                    
+                                    # 抽出されたデータ
+                                    st.markdown("#### 📊 抽出されたデータ")
+                                    ocr_debug_data = {
+                                        '台番号': result['ocr_data'].get('machine_number', '未検出'),
+                                        '累計スタート': result['ocr_data'].get('total_start', '未検出'),
+                                        '大当り回数': result['ocr_data'].get('jackpot_count', '未検出'),
+                                        '初当り回数': result['ocr_data'].get('first_hit_count', '未検出'),
+                                        '現在スタート': result['ocr_data'].get('current_start', '未検出'),
+                                        '大当り確率': result['ocr_data'].get('jackpot_probability', '未検出'),
+                                        '最高出玉': result['ocr_data'].get('max_payout', '未検出')
+                                    }
+                                    for key, value in ocr_debug_data.items():
+                                        st.write(f"- **{key}**: {value}")
                                 
-                                # 抽出されたデータ
-                                st.markdown("#### 抽出されたデータ")
-                                ocr_debug_data = {
-                                    '台番号': result['ocr_data'].get('machine_number', '未検出'),
-                                    '累計スタート': result['ocr_data'].get('total_start', '未検出'),
-                                    '大当り回数': result['ocr_data'].get('jackpot_count', '未検出'),
-                                    '初当り回数': result['ocr_data'].get('first_hit_count', '未検出'),
-                                    '現在スタート': result['ocr_data'].get('current_start', '未検出'),
-                                    '大当り確率': result['ocr_data'].get('jackpot_probability', '未検出'),
-                                    '最高出玉': result['ocr_data'].get('max_payout', '未検出')
-                                }
-                                for key, value in ocr_debug_data.items():
-                                    st.write(f"- **{key}**: {value}")
+                                # オレンジバーOCRデバッグ情報
+                                if hasattr(st.session_state, 'orange_bar_ocr_debug') and st.session_state.orange_bar_ocr_debug:
+                                    st.markdown("#### 🟠 オレンジバーOCR (台番号抽出)")
+                                    orange_debug = st.session_state.orange_bar_ocr_debug
+                                    
+                                    if orange_debug.get('error'):
+                                        st.error(f"エラー: {orange_debug['error']}")
+                                    else:
+                                        st.write(f"- **オレンジ領域検出**: {'✅ 成功' if orange_debug.get('orange_found') else '❌ 失敗'}")
+                                        if orange_debug.get('orange_y_range'):
+                                            st.write(f"- **オレンジ領域Y座標**: {orange_debug['orange_y_range'][0]}〜{orange_debug['orange_y_range'][1]}px")
+                                        if orange_debug.get('crop_region'):
+                                            crop = orange_debug['crop_region']
+                                            st.write(f"- **切り出し領域**: Y: {crop['y_start']}〜{crop['y_end']}px, X: {crop['x_start']}〜{crop['x_end']}px")
+                                            st.write(f"- **オレンジ中心Y**: {crop['orange_center']}px")
+                                        if orange_debug.get('number_region_shape'):
+                                            st.write(f"- **台番号領域サイズ**: {orange_debug['number_region_shape']}")
+                                        if orange_debug.get('raw_text') is not None:
+                                            st.write(f"- **OCRで読み取った文字**: `{orange_debug['raw_text']}`")
+                                            if not orange_debug['raw_text'].strip():
+                                                st.warning("⚠️ 台番号領域から文字が読み取れませんでした")
+                                                st.info("💡 **考えられる原因**:\n"
+                                                       "- オレンジバーの位置が想定と異なる\n"
+                                                       "- 台番号の文字が小さすぎる/薄すぎる\n"
+                                                       "- 画像の解像度が低い")
                                 
                                 # 処理時間情報を表示
-                                if result['ocr_data'].get('ocr_timings'):
+                                if result.get('ocr_data') and result['ocr_data'].get('ocr_timings'):
                                     st.markdown("#### ⏱️ 処理時間")
                                     timing_data = result['ocr_data']['ocr_timings']
                                     for key, value in timing_data.items():
@@ -3705,11 +3695,11 @@ if 'analysis_results' in st.session_state:
                 
                 **回転率②（通常時全体）**
                 - 通常時の総回転数 ÷ (総消費玉数 ÷ 250)
-                - 累計スタート数から大当たり中の回転数を除いて計算
+                - グラフの下降部分を累積して使用球数を計算（より正確）
                 - 全体を通しての釘の状態を反映
                 
                 ※ 1000円 = 250玉として計算
-                ※ 回転率②は最低値（最大投資額）を基準に計算
+                ※ グラフ下降累積により精密に計算
                 """)
             
             # データ出力フォーム（簡易版）
