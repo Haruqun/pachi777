@@ -654,20 +654,23 @@ with st.sidebar:
         st.markdown("### 🔗 ペアリング設定")
         pairing_method = st.radio(
             "グラフと出玉詳細画像のペアリング方法",
-            ["jackpot_match", "machine_number", "order"],
+            ["machine_total_match", "jackpot_match", "machine_number", "order"],
             format_func=lambda x: {
-                "jackpot_match": "大当たり回数マッチング（推奨）",
+                "machine_total_match": "台番号＋累計スタート（最も正確）",
+                "jackpot_match": "大当たり回数マッチング",
                 "machine_number": "台番号マッチング",
                 "order": "アップロード順"
             }.get(x, x),
-            index=0,  # デフォルトは大当たり回数マッチング
-            help="大当たり回数マッチング：大当たり回数や初当たり回数が一致する画像をペアリング\n台番号マッチング：台番号が一致する画像をペアリング\nアップロード順：同じ順番でアップロードした場合"
+            index=0,  # デフォルトは台番号＋累計スタート
+            help="台番号＋累計スタート：台番号と累計スタートが両方一致する画像をペアリング（最も正確）\n大当たり回数マッチング：大当たり回数や初当たり回数が一致する画像をペアリング\n台番号マッチング：台番号が一致する画像をペアリング\nアップロード順：同じ順番でアップロードした場合"
         )
         
-        if pairing_method != st.session_state.get('pairing_method', 'jackpot_match'):
+        if pairing_method != st.session_state.get('pairing_method', 'machine_total_match'):
             st.session_state.pairing_method = pairing_method
-            if pairing_method == 'jackpot_match':
-                st.success("🎯 大当たり回数でペアリング")
+            if pairing_method == 'machine_total_match':
+                st.success("✅ 台番号＋累計スタートでペアリング（最も正確）")
+            elif pairing_method == 'jackpot_match':
+                st.info("🎯 大当たり回数でペアリング")
             elif pairing_method == 'machine_number':
                 st.info("🔢 台番号でペアリング")
             else:
@@ -1334,74 +1337,9 @@ if graph_files and st.session_state.get('start_analysis', False):
         }
         cropped_img, top, bottom, left, right = crop_graph_area(img_array, zero_line_y, crop_settings)
         
-        # 出玉詳細画像の処理（もしあれば）
+        # 出玉詳細画像の処理（注：詳細画像の処理は後でまとめて実行されるため、ここでは行わない）
         detail_image_processed = None
         claude_analysis_result = None
-        if detail_files and idx < len(detail_files):
-            try:
-                detail_text.text(f'📊 出玉詳細画像を処理中...')
-                detail_image = Image.open(detail_files[idx])
-                detail_image_processed = preprocess_detail_image(detail_image)
-                detail_text.text(f'✅ 出玉詳細画像処理完了')
-                
-                # Claude APIで解析（APIキーが設定されている場合）
-                if st.session_state.get('claude_api_key'):
-                    detail_text.text(f'🤖 Claude APIで解析中...')
-                    try:
-                        claude_analysis_result = analyze_with_claude(
-                            detail_image_processed,
-                            st.session_state.claude_api_key,
-                            st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
-                        )
-                        if claude_analysis_result['success']:
-                            detail_text.text(f'✅ Claude API解析完了')
-                            print(f"Claude解析成功: {claude_analysis_result.get('data')}")
-                        else:
-                            error_msg = claude_analysis_result.get("error", "不明なエラー")
-                            detail_text.text(f'⚠️ Claude API解析エラー: {error_msg}')
-                            print(f"Claude解析エラー: {error_msg}")
-                            img_name = img_file.name if hasattr(img_file, 'name') else f"Image_{idx}"
-                            full_error_msg = f"❌ {img_name}: Claude API解析エラー - {error_msg}"
-                            st.error(full_error_msg)
-                            # エラーをセッションステートに保存（重複チェックを改善）
-                            # 同じファイルのエラーを更新
-                            st.session_state.claude_errors = [e for e in st.session_state.claude_errors if not e.startswith(f"❌ {img_name}:")]
-                            st.session_state.claude_errors.append(full_error_msg)
-
-                            # エラーログを記録
-                            from modules.error_handler import log_error
-                            log_error('Claude API Error during analysis', error_msg, {
-                                'location': 'analysis_section',
-                                'has_api_key': True,
-                                'model': st.session_state.get('claude_model', 'claude-3-5-haiku-20241022'),
-                                'file_index': idx
-                            })
-                    except Exception as e:
-                        detail_text.text(f'⚠️ Claude API解析エラー: {str(e)}')
-                        print(f"Claude API呼び出しエラー: {str(e)}")
-                        img_name = img_file.name if hasattr(img_file, 'name') else f"Image_{idx}"
-                        full_error_msg = f"❌ {img_name}: Claude API呼び出しエラー - {str(e)}"
-                        st.error(full_error_msg)
-                        # エラーをセッションステートに保存（重複チェックを改善）
-                        # 同じファイルのエラーを更新
-                        st.session_state.claude_errors = [e for e in st.session_state.claude_errors if not e.startswith(f"❌ {img_name}:")]
-                        st.session_state.claude_errors.append(full_error_msg)
-                        claude_analysis_result = {'success': False, 'error': str(e)}
-
-                        # 例外ログを記録
-                        from modules.error_handler import log_error
-                        log_error('Exception during Claude API call', str(e), {
-                            'location': 'analysis_section',
-                            'has_api_key': bool(st.session_state.get('claude_api_key')),
-                            'file_index': idx
-                        })
-                else:
-                    print("Claude APIキーが設定されていません")
-                    st.warning("⚠️ Claude APIを使用するには、Claude設定タブでAPIキーを設定してください。")
-                
-            except Exception as e:
-                print(f"出玉詳細画像処理エラー: {str(e)}")
-                detail_text.text(f'⚠️ 出玉詳細画像処理エラー')
         
         # グリッドラインを追加
         # 切り抜き画像の高さは493px（246+247）
@@ -1913,7 +1851,8 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'ocr_text': ocr_data.get('ocr_text') if ocr_data else None,  # OCRテキストを追加
                 'correction_factor': correction_factor,  # 補正係数を追加
                 'rotation_metrics': rotation_metrics,  # 回転率データを追加
-                'first_hit_debug': first_hit_debug_info  # 初当たり検出デバッグ情報を追加
+                'first_hit_debug': first_hit_debug_info,  # 初当たり検出デバッグ情報を追加
+                'graph_values': graph_values  # グラフの生データを追加（回転率①計算用）
             })
         else:
             # 解析失敗時
@@ -2040,12 +1979,77 @@ if graph_files and st.session_state.get('start_analysis', False):
             })
     
     # ペアリング処理
-    pairing_method = st.session_state.get('pairing_method', 'jackpot_match')  # デフォルトは大当たり回数マッチング
+    pairing_method = st.session_state.get('pairing_method', 'machine_total_match')  # デフォルトは台番号＋累計スタート
     paired_results = []
     unpaired_graphs = []
     unpaired_details = []
     
-    if pairing_method == 'jackpot_match':
+    if pairing_method == 'machine_total_match':
+        # 台番号＋累計スタートでペアリング
+        # 使用済みフラグをクリア
+        for detail in detail_analysis_results:
+            detail['used'] = False
+        
+        for result in analysis_results:
+            # グラフから台番号と累計スタートを取得
+            graph_machine_num = None
+            graph_total_start = None
+            
+            if result.get('ocr_data'):
+                graph_machine_num = result['ocr_data'].get('machine_number')
+                graph_total_start = result['ocr_data'].get('total_start')
+            
+            # 最適なペアを探す
+            best_match = None
+            
+            for detail in detail_analysis_results:
+                if not detail.get('used', False) and detail.get('claude_data'):
+                    claude_data = detail['claude_data']
+                    detail_machine_num = claude_data.get('machine_number')
+                    detail_total_start = claude_data.get('total_rotations')
+                    
+                    # 台番号と累計スタートが両方一致する場合
+                    if (graph_machine_num and detail_machine_num and 
+                        graph_total_start and detail_total_start and
+                        normalize_machine_number(str(graph_machine_num)) == normalize_machine_number(str(detail_machine_num)) and
+                        str(graph_total_start) == str(detail_total_start)):
+                        best_match = detail
+                        break
+            
+            # ペアリング実行
+            if best_match:
+                machine_num = normalize_machine_number(str(graph_machine_num))
+                paired_results.append({
+                    'graph': result,
+                    'detail': best_match,
+                    'machine_number': machine_num,
+                    'match_type': 'perfect_match',  # 完全一致
+                    'match_info': f'台番号: {machine_num}, 累計スタート: {graph_total_start}'
+                })
+                best_match['used'] = True
+                
+                # デバッグ情報
+                if st.session_state.get('show_ocr_debug', False):
+                    st.success(f"✅ ペアリング成功: {result['name']} ⟷ {best_match['name']}")
+                    st.caption(f"  台番号: {machine_num}, 累計スタート: {graph_total_start}")
+            else:
+                unpaired_graphs.append(result)
+                
+                # デバッグ情報
+                if st.session_state.get('show_ocr_debug', False):
+                    st.warning(f"⚠️ ペアリング失敗: {result['name']}")
+                    st.caption(f"  グラフ - 台番号: {graph_machine_num or '未検出'}, 累計スタート: {graph_total_start or '未検出'}")
+                    # 詳細画像側のデータも表示
+                    for detail in detail_analysis_results:
+                        if detail.get('claude_data'):
+                            detail_machine = detail['claude_data'].get('machine_number')
+                            detail_total = detail['claude_data'].get('total_rotations')
+                            st.caption(f"  詳細画像 {detail['name']} - 台番号: {detail_machine or '未検出'}, 累計スタート: {detail_total or '未検出'}")
+        
+        # 使用されなかった詳細画像
+        unpaired_details = [d for d in detail_analysis_results if not d.get('used', False)]
+        
+    elif pairing_method == 'jackpot_match':
         # 大当たり回数でペアリング
         # 使用済みフラグをクリア
         for detail in detail_analysis_results:
@@ -2383,9 +2387,13 @@ if 'analysis_results' in st.session_state:
                 # 機種別払い出し球数の自動設定を削除
                 result['claude_analysis'] = {'success': True, 'data': detail_data}
         result['is_paired'] = True  # ペアリングフラグを追加
-        # マッチングスコアも追加
+        # マッチング情報を追加
         if paired.get('match_score'):
             result['match_score'] = paired['match_score']
+        if paired.get('match_type'):
+            result['match_type'] = paired['match_type']
+        if paired.get('match_info'):
+            result['match_info'] = paired['match_info']
         all_results.append(result)
     
     # 単独のグラフ結果を追加
@@ -2456,9 +2464,12 @@ if 'analysis_results' in st.session_state:
                             st.image(result['detail_image_processed'], use_column_width=True)
                             if result.get('is_paired'):
                                 st.caption("✅ この詳細画像のデータを使用して計算しています")
-                                # デバッグモードでマッチングスコアを表示
-                                if st.session_state.get('show_ocr_debug', False) and result.get('match_score'):
-                                    st.caption(f"🎯 マッチングスコア: {result['match_score']}点")
+                                # デバッグモードでマッチング情報を表示
+                                if st.session_state.get('show_ocr_debug', False):
+                                    if result.get('match_type') == 'perfect_match':
+                                        st.caption(f"✅ 完全一致ペアリング: {result.get('match_info', '')}")
+                                    elif result.get('match_score'):
+                                        st.caption(f"🎯 マッチングスコア: {result['match_score']}点")
                             else:
                                 st.caption("黒枠検出 + overlay.png + 50%切り抜き適用済み")
                     
@@ -2724,17 +2735,72 @@ if 'analysis_results' in st.session_state:
                         
                         # 回転率①の計算
                         rotation_rate_1_calculated = False
-                        initial_ball_starts = prioritized_data.get('initial_ball_starts', 0)
-                        first_hit_balls = abs(prioritized_data.get('first_hit_val') or 0)
+                        initial_ball_starts = prioritized_data.get('initial_ball_starts', 0)  # AI取得の初当たり回転数
                         
-                        if initial_ball_starts > 0 and first_hit_balls > 0:
-                            rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
-                            warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
-                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
-                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {first_hit_balls}{unit}使用</div>'
-                            rotation_rate_1_calculated = True
-                            # 結果に保存
-                            result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
+                        # AI取得の初当たり回転数がある場合、その時点での使用球数を計算
+                        if initial_ball_starts > 0:
+                            # rotation_metricsにスケール情報があるか確認
+                            rotation_metrics = result.get('rotation_metrics') or {}
+                            spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
+                            
+                            # グラフデータと回転数の対応関係を計算
+                            if spins_per_pixel > 0 and result.get('graph_values'):
+                                # AI回転数に対応するグラフ上のx位置を計算
+                                target_x_position = initial_ball_starts / spins_per_pixel
+                                target_x_index = int(target_x_position)
+                                
+                                # グラフデータから該当位置の値を取得
+                                graph_values = result.get('graph_values', [])
+                                if 0 <= target_x_index < len(graph_values):
+                                    # その時点での最低値を探す（使用球数）
+                                    min_val_at_target = 0
+                                    for i in range(min(target_x_index + 1, len(graph_values))):
+                                        if graph_values[i] < min_val_at_target:
+                                            min_val_at_target = graph_values[i]
+                                    
+                                    first_hit_balls = abs(min_val_at_target)
+                                    
+                                    # デバッグ情報を表示
+                                    if st.session_state.get('show_ocr_debug', False):
+                                        st.write(f"🔍 回転率①計算デバッグ - {result['name']}")
+                                        st.write(f"- AI初当たり回転数: {initial_ball_starts}回")
+                                        st.write(f"- 1ピクセルあたりの回転数: {spins_per_pixel:.2f}回/px")
+                                        st.write(f"- 目標X位置: {target_x_position:.1f}px (index: {target_x_index})")
+                                        st.write(f"- グラフデータ長: {len(graph_values)}点")
+                                        st.write(f"- 該当位置での最低値: {min_val_at_target}{unit}")
+                                        st.write(f"- 使用球数: {first_hit_balls}{unit}")
+                                    
+                                    if first_hit_balls > 0:
+                                        rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
+                                        warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
+                                        rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
+                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {first_hit_balls}{unit}使用</div>'
+                                        rotation_rate_1_calculated = True
+                                        # 結果に保存
+                                        result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
+                                    else:
+                                        rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
+                                        result['display_rotation_rate_1'] = '-'
+                                else:
+                                    # デバッグ情報
+                                    if st.session_state.get('show_ocr_debug', False):
+                                        st.write(f"⚠️ 回転率①計算エラー - {result['name']}")
+                                        st.write(f"- target_x_index ({target_x_index}) が範囲外 (0-{len(graph_values)-1})")
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
+                                    result['display_rotation_rate_1'] = '-'
+                            else:
+                                # フォールバック：グラフの初当たり位置での使用球数を使用
+                                first_hit_balls = abs(prioritized_data.get('first_hit_val') or 0)
+                                if first_hit_balls > 0:
+                                    rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
+                                    warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {first_hit_balls}{unit}使用</div>'
+                                    rotation_rate_1_calculated = True
+                                    result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
+                                else:
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
+                                    result['display_rotation_rate_1'] = '-'
                         else:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
                             result['display_rotation_rate_1'] = '-'
