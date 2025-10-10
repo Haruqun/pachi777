@@ -1889,16 +1889,32 @@ if graph_files and st.session_state.get('start_analysis', False):
             claude_result = None
             if st.session_state.get('claude_api_key'):
                 try:
+                    # 画像読み込み
+                    detail_text.text(f'📷 {detail_file.name} の画像を読み込み中...')
                     detail_img = Image.open(detail_file)
+                    
                     # 前処理を適用
+                    detail_text.text(f'📷 {detail_file.name} の前処理中（黒枠検出・overlay合成）...')
+                    import time
+                    preprocess_start = time.time()
                     processed_detail = preprocess_detail_image(detail_img)
+                    preprocess_time = time.time() - preprocess_start
                     
                     # Claude APIで解析
+                    detail_text.text(f'📷 {detail_file.name} をClaude APIで解析中...')
+                    api_start = time.time()
                     api_result = analyze_with_claude(
                         processed_detail,
                         st.session_state.claude_api_key,
                         st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
                     )
+                    api_time = time.time() - api_start
+                    
+                    # 処理時間を表示（デバッグモード時）
+                    if st.session_state.get('show_ocr_debug', False):
+                        st.write(f"⏱️ {detail_file.name} の処理時間:")
+                        st.write(f"  - 前処理: {preprocess_time:.1f}秒")
+                        st.write(f"  - Claude API: {api_time:.1f}秒")
                     
                     if api_result and api_result.get('success'):
                         claude_result = api_result.get('data', {})
@@ -2008,11 +2024,30 @@ if graph_files and st.session_state.get('start_analysis', False):
                     detail_machine_num = claude_data.get('machine_number')
                     detail_total_start = claude_data.get('total_rotations')
                     
+                    # デバッグ情報を表示
+                    if st.session_state.get('show_ocr_debug', False):
+                        st.write(f"🔍 ペアリングチェック - {result['name']} vs {detail['name']}")
+                        st.write(f"  - グラフ台番号: {graph_machine_num} → 正規化: {normalize_machine_number(str(graph_machine_num))}")
+                        st.write(f"  - 詳細台番号: {detail_machine_num} → 正規化: {normalize_machine_number(str(detail_machine_num))}")
+                        st.write(f"  - グラフ累計スタート: {graph_total_start}")
+                        st.write(f"  - 詳細累計スタート: {detail_total_start}")
+                    
                     # 台番号と累計スタートが両方一致する場合
+                    # 累計スタートを数値として比較
+                    graph_total_int = None
+                    detail_total_int = None
+                    try:
+                        graph_total_int = int(graph_total_start)
+                        detail_total_int = int(detail_total_start)
+                    except:
+                        pass
+                    
                     if (graph_machine_num and detail_machine_num and 
-                        graph_total_start and detail_total_start and
+                        graph_total_int is not None and detail_total_int is not None and
                         normalize_machine_number(str(graph_machine_num)) == normalize_machine_number(str(detail_machine_num)) and
-                        str(graph_total_start) == str(detail_total_start)):
+                        graph_total_int == detail_total_int):
+                        if st.session_state.get('show_ocr_debug', False):
+                            st.success(f"✅ ペアリング成立！")
                         best_match = detail
                         break
             
