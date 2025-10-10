@@ -129,8 +129,39 @@ def extract_site7_data(image):
     if machine_match:
         extracted_data['machine_name'] = machine_match.group(1).strip()
     
-    # 台番号の抽出（オレンジバー付近）
-    machine_number = extract_machine_number_from_orange_bar(image)
+    # 台番号の抽出（複数の方法を試行）
+    machine_number = None
+    
+    # 方法1: OCRテキストから複数のパターンを検索
+    # パターン1: 「〇〇番台」
+    machine_pattern = re.search(r'(\d{3,4})番台', text)
+    if machine_pattern:
+        machine_number = machine_pattern.group(1)
+        if st.session_state.get('show_ocr_debug', False):
+            extracted_data['machine_number_source'] = 'OCR_pattern_番台'
+    
+    # パターン2: 「〇〇番」（番台なし）
+    if not machine_number:
+        machine_pattern = re.search(r'(\d{3,4})番(?!台)', text)
+        if machine_pattern:
+            machine_number = machine_pattern.group(1)
+            if st.session_state.get('show_ocr_debug', False):
+                extracted_data['machine_number_source'] = 'OCR_pattern_番'
+    
+    # パターン3: 「台番〇〇」
+    if not machine_number:
+        machine_pattern = re.search(r'台番\s*[:：]?\s*(\d{3,4})', text)
+        if machine_pattern:
+            machine_number = machine_pattern.group(1)
+            if st.session_state.get('show_ocr_debug', False):
+                extracted_data['machine_number_source'] = 'OCR_pattern_台番'
+    
+    # 方法2: オレンジバー付近から抽出（フォールバック）
+    if not machine_number:
+        machine_number = extract_machine_number_from_orange_bar(image)
+        if machine_number and st.session_state.get('show_ocr_debug', False):
+            extracted_data['machine_number_source'] = 'orange_bar'
+    
     if machine_number:
         extracted_data['machine_number'] = machine_number
     

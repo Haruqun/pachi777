@@ -2759,22 +2759,8 @@ if 'analysis_results' in st.session_state:
                                 middle_balls = get_settings().get('middle_jackpot_balls', 750)
                                 small_balls = get_settings().get('small_jackpot_balls', 450)
                             
-                            # 通常時使用球数の計算（グラフ下降累積を優先）
-                            if result.get('total_decline_balls', 0) > 0:
-                                # グラフの下降部分を累積した値を使用（より正確）
-                                normal_balls = result.get('total_decline_balls', 0)
-                            else:
-                                # フォールバック：簡易計算
-                                # グラフデータから最低値と現在値を取得
-                                min_val = abs(prioritized_data.get('min_val', 0))
-                                current_val = prioritized_data.get('current_val', 0)
-                                total_jackpot_balls_graph = result.get('total_jackpot_balls_graph', result.get('total_jackpot_balls', 0))
-                                
-                                # 通常時使用球数 = |最低値| + 総獲得玉数 - 現在値
-                                if current_val >= 0:
-                                    normal_balls = min_val + total_jackpot_balls_graph - current_val
-                                else:
-                                    normal_balls = min_val + total_jackpot_balls_graph + abs(current_val)
+                            # 通常時使用球数の計算（グラフ下降累積のみ使用）
+                            normal_balls = result.get('total_decline_balls', 0)
                             
                             if normal_balls > 0:
                                 rotation_rate_2 = (normal_rotations / normal_balls) * 250
@@ -2793,20 +2779,11 @@ if 'analysis_results' in st.session_state:
                                 </div>'''
                                 
 
-                                if st.session_state.get('show_ocr_debug', False):
-                                    # グラフ解析による計算値を表示
-                                    normal_balls_graph = result.get('total_decline_balls', 0)
-                                    
-                                    if normal_balls_graph > 0:
-                                        normal_usage_html += f'''
-                                        <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                            <span>📊 グラフ下降累積により計算: {int(normal_balls_graph):,}{unit}</span>
-                                        </div>'''
-                                    else:
-                                        normal_usage_html += f'''
-                                        <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                            <span>📈 簡易計算を使用（グラフ下降データなし）</span>
-                                        </div>'''
+                                if st.session_state.get('show_ocr_debug', False) and normal_balls > 0:
+                                    normal_usage_html += f'''
+                                    <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
+                                        <span>📊 グラフ下降累積により計算</span>
+                                    </div>'''
                         
                         if not rotation_rate_2_calculated:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
@@ -3032,8 +3009,24 @@ if 'analysis_results' in st.session_state:
                                     
                                     # 抽出されたデータ
                                     st.markdown("#### 📊 抽出されたデータ")
-                                    ocr_debug_data = {
-                                        '台番号': result['ocr_data'].get('machine_number', '未検出'),
+                                    
+                                    # 台番号（取得元も表示）
+                                    machine_number = result['ocr_data'].get('machine_number', '未検出')
+                                    if machine_number != '未検出' and result['ocr_data'].get('machine_number_source'):
+                                        source = result['ocr_data']['machine_number_source']
+                                        source_labels = {
+                                            'OCR_pattern_番台': 'OCRパターン「〇〇番台」',
+                                            'OCR_pattern_番': 'OCRパターン「〇〇番」',
+                                            'OCR_pattern_台番': 'OCRパターン「台番〇〇」',
+                                            'orange_bar': 'オレンジバー領域'
+                                        }
+                                        source_label = source_labels.get(source, source)
+                                        st.write(f"- **台番号**: {machine_number} (取得元: {source_label})")
+                                    else:
+                                        st.write(f"- **台番号**: {machine_number}")
+                                    
+                                    # その他のデータ
+                                    other_data = {
                                         '累計スタート': result['ocr_data'].get('total_start', '未検出'),
                                         '大当り回数': result['ocr_data'].get('jackpot_count', '未検出'),
                                         '初当り回数': result['ocr_data'].get('first_hit_count', '未検出'),
@@ -3041,7 +3034,7 @@ if 'analysis_results' in st.session_state:
                                         '大当り確率': result['ocr_data'].get('jackpot_probability', '未検出'),
                                         '最高出玉': result['ocr_data'].get('max_payout', '未検出')
                                     }
-                                    for key, value in ocr_debug_data.items():
+                                    for key, value in other_data.items():
                                         st.write(f"- **{key}**: {value}")
                                 
                                 # オレンジバーOCRデバッグ情報
@@ -3347,6 +3340,9 @@ if 'analysis_results' in st.session_state:
                 # 通常時使用球数（表示時の値を使用）
                 row['通常時使用球数'] = result.get('display_normal_balls', 0)
                 
+                # グラフ解析データを保持（データエディタの再計算用）
+                row['_total_decline_balls'] = result.get('total_decline_balls', 0)
+                
                 # 通常回転数を追加（優先度に基づく）
                 row['通常回転数'] = prioritized_data.get('normal_rotations', 0) or 0
                 
@@ -3612,50 +3608,21 @@ if 'analysis_results' in st.session_state:
                             
                             # 回転率②を計算
                             # 通常回転数と使用球数から計算
-                            if '通常回転数' in calc_df.columns:
-                                if pd.notna(calc_df.at[idx, '通常回転数']):
-                                    normal_spins = calc_df.at[idx, '通常回転数']
-                                    
-                                    # 通常時の使用玉数を正しく計算
-                                    # 使用球数 = 最低値（最大投資） + 総払い出し球数 - 現在値
-                                    normal_balls = 0
-                                    
-                                    # 最低値（最大投資額）を取得
-                                    if '最低値' in calc_df.columns and pd.notna(calc_df.at[idx, '最低値']):
-                                        min_val = abs(calc_df.at[idx, '最低値'])
-                                    else:
-                                        min_val = 0
-                                    
-                                    if '現在値' in calc_df.columns and pd.notna(calc_df.at[idx, '現在値']):
-                                        current_val = calc_df.at[idx, '現在値']
-                                    else:
-                                        current_val = 0
-                                    
-                                    # 総払い出し球数を計算（総獲得球数がある場合はそれから逆算）
-                                    if '総獲得球数' in calc_df.columns and pd.notna(calc_df.at[idx, '総獲得球数']):
-                                        total_gained = calc_df.at[idx, '総獲得球数']
-                                        # 総払い出し球数 = 総獲得球数 + 現在値
-                                        if current_val >= 0:
-                                            total_payout = total_gained + current_val
-                                        else:
-                                            total_payout = total_gained - abs(current_val)
-                                    else:
-                                        # 総獲得球数がない場合はデフォルト
-                                        total_payout = 0
-                                    
-                                    # 使用球数 = 最大投資額 + 総払い出し球数 - 現在値
-                                    if current_val >= 0:
-                                        normal_balls = min_val + total_payout - current_val
-                                    else:
-                                        normal_balls = min_val + total_payout + abs(current_val)
-                                    
-                                    if normal_balls > 0 and normal_spins > 0:
-                                        # パチンコの場合は250玉/千円、パチスロの場合は50枚/千円
-                                        unit_per_1000yen = 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
-                                        rate2 = round((normal_spins / normal_balls) * unit_per_1000yen, 1)
-                                        calc_df.at[idx, '回転率②'] = f"{rate2:.1f}"
-                                    else:
-                                        calc_df.at[idx, '回転率②'] = '-'
+                            if '通常回転数' in calc_df.columns and pd.notna(calc_df.at[idx, '通常回転数']):
+                                normal_spins = calc_df.at[idx, '通常回転数']
+                                
+                                # グラフ下降累積データを使用
+                                normal_balls = 0
+                                if '_total_decline_balls' in calc_df.columns and pd.notna(calc_df.at[idx, '_total_decline_balls']):
+                                    normal_balls = calc_df.at[idx, '_total_decline_balls']
+                                
+                                if normal_balls > 0 and normal_spins > 0:
+                                    # パチンコの場合は250玉/千円、パチスロの場合は50枚/千円
+                                    unit_per_1000yen = 250 if st.session_state.get('game_type', 'パチンコ') == 'パチンコ' else 50
+                                    rate2 = round((normal_spins / normal_balls) * unit_per_1000yen, 1)
+                                    calc_df.at[idx, '回転率②'] = f"{rate2:.1f}"
+                                else:
+                                    calc_df.at[idx, '回転率②'] = '-'
                         
                         # 計算結果をセッションステートに保存
                         st.session_state.edited_df = calc_df.copy()
