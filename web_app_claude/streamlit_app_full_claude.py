@@ -1823,6 +1823,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 0), 1, cv2.LINE_AA)
 
             # 初当たり値ライン（端から端まで）
+            first_hit_pixel_x = None  # 初当たりの実際のピクセル位置を保存
             if first_hit_x is not None and first_hit_val != 0:  # 初当たりがある場合
                 first_hit_y = calculate_y_from_value(first_hit_val)
                 if 0 <= first_hit_y < overlay_img.shape[0]:
@@ -1830,6 +1831,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                     cv2.line(overlay_img, (0, first_hit_y), (overlay_img.shape[1], first_hit_y), (155, 48, 255), 2)
                     # 初当たりの点に大きめの円を描画
                     first_hit_graph_x = graph_data_points[first_hit_x][0]
+                    first_hit_pixel_x = first_hit_graph_x  # 実際のピクセル位置を保存
                     cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 4, (155, 48, 255), -1)
                     cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 5, (120, 30, 200), 2)
                     # 背景付きテキスト（白背景、紫文字）右端に表示
@@ -1908,6 +1910,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'min_val': int(min_val),
                 'current_val': int(current_val),
                 'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
+                'first_hit_pixel_x': int(first_hit_pixel_x) if first_hit_pixel_x is not None else None,  # 初当たりの実際のピクセル位置
                 'first_hit_used_balls': int(first_hit_used_balls),  # 初当たりまでの使用球数
                 'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数（AI優先）
                 'total_jackpot_balls_from_ai': int(total_jackpot_balls_from_ai) if total_jackpot_balls_from_ai is not None else None,  # AI計算による総獲得球数
@@ -2541,23 +2544,33 @@ if 'analysis_results' in st.session_state:
                         log(f"[Claude AI Marker] spins_per_pixel={spins_per_pixel}, initial_ball_starts={initial_ball_starts}")
 
                         # 必要なデータが揃っている場合のみ描画
-                        if spins_per_pixel > 0 and initial_ball_starts:
+                        if initial_ball_starts:
                             try:
                                 # 初当たり回転数を整数に変換
                                 initial_ball_starts = int(initial_ball_starts)
 
-                                # グラフ情報を取得
-                                first_hit_debug = result.get('first_hit_debug', {})
-                                graph_info = first_hit_debug.get('graph_info', {})
-                                graph_start_x = graph_info.get('graph_start_x', 0)
-
                                 # ゼロラインの位置を取得（STARTマーカーと同じY座標）
                                 zero_y = result.get('zero_line_y', display_img.shape[0] // 2)
 
-                                # Claude AI回転数の位置を計算
-                                claude_x = graph_start_x + (initial_ball_starts / spins_per_pixel)
+                                # 実際のピクセル位置を取得（優先）
+                                first_hit_pixel_x = result.get('first_hit_pixel_x')
 
-                                log(f"[Claude AI Marker] graph_start_x={graph_start_x}, claude_x={claude_x}, zero_y={zero_y}, img_size={display_img.shape}")
+                                if first_hit_pixel_x is not None:
+                                    # グラフから検出した実際の位置を使用（最も正確）
+                                    claude_x = first_hit_pixel_x
+                                    log(f"[Claude AI Marker] Using actual graph position: claude_x={claude_x}px")
+                                else:
+                                    # フォールバック：spins_per_pixelから計算
+                                    first_hit_debug = result.get('first_hit_debug', {})
+                                    graph_info = first_hit_debug.get('graph_info', {})
+                                    graph_start_x = graph_info.get('graph_start_x', 0)
+                                    claude_x = graph_start_x + (initial_ball_starts / spins_per_pixel) if spins_per_pixel > 0 else None
+                                    log(f"[Claude AI Marker] Calculated from spins_per_pixel: claude_x={claude_x}px")
+
+                                if claude_x is None:
+                                    raise ValueError("Could not determine marker position")
+
+                                log(f"[Claude AI Marker] claude_x={claude_x}, zero_y={zero_y}, img_size={display_img.shape}")
 
                                 # 画像範囲内かチェック
                                 if 0 <= claude_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
