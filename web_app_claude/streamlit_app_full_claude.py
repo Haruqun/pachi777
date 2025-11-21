@@ -2600,36 +2600,36 @@ if 'analysis_results' in st.session_state:
                                 else:
                                     log(f"[Claude AI Marker] Out of bounds - not drawing")
 
-                                # グラフ解析の累計回転数マーカーを追加
-                                cumulative_graph_spins = rotation_metrics.get('cumulative_first_hit_spins', 0)
-                                if cumulative_graph_spins > 0:
-                                    # グラフ解析の累計回転数の位置を計算
-                                    graph_cumulative_x = graph_start_x + (cumulative_graph_spins / spins_per_pixel)
+                                # Claude AIの累計スタート回数（グラフ最後の位置）のマーカーを追加
+                                total_rotations = claude_data.get('total_rotations', 0)
+                                if total_rotations > 0:
+                                    # 累計スタート回数の位置を計算
+                                    total_rotations_x = graph_start_x + (total_rotations / spins_per_pixel)
 
-                                    log(f"[Graph Cumulative Marker] cumulative_spins={cumulative_graph_spins}, graph_cumulative_x={graph_cumulative_x}")
+                                    log(f"[Total Rotations Marker] total_rotations={total_rotations}, total_rotations_x={total_rotations_x}")
 
-                                    if 0 <= graph_cumulative_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
-                                        log(f"[Graph Cumulative Marker] Drawing marker at ({int(graph_cumulative_x)}, {zero_y})")
+                                    if 0 <= total_rotations_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
+                                        log(f"[Total Rotations Marker] Drawing marker at ({int(total_rotations_x)}, {zero_y})")
                                         # マーカーを描画（緑色）
-                                        cv2.circle(display_img, (int(graph_cumulative_x), zero_y), 10, (0, 255, 0), -1)  # 塗りつぶし
-                                        cv2.circle(display_img, (int(graph_cumulative_x), zero_y), 12, (0, 200, 0), 2)   # 外枠
+                                        cv2.circle(display_img, (int(total_rotations_x), zero_y), 10, (0, 255, 0), -1)  # 塗りつぶし
+                                        cv2.circle(display_img, (int(total_rotations_x), zero_y), 12, (0, 200, 0), 2)   # 外枠
 
                                         # ラベルを描画
-                                        graph_label_text = f'Graph: {cumulative_graph_spins}'
+                                        total_label_text = f'Total: {total_rotations}'
                                         # ラベルの背景（白）
-                                        graph_label_size = cv2.getTextSize(graph_label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
-                                        graph_label_x = int(graph_cumulative_x) - graph_label_size[0] // 2
-                                        graph_label_y = zero_y + 35  # Claude AIのラベルの下に配置
+                                        total_label_size = cv2.getTextSize(total_label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
+                                        total_label_x = int(total_rotations_x) - total_label_size[0] // 2
+                                        total_label_y = zero_y + 35  # Claude AIのラベルの下に配置
                                         cv2.rectangle(display_img,
-                                                    (graph_label_x - 2, graph_label_y - graph_label_size[1] - 2),
-                                                    (graph_label_x + graph_label_size[0] + 2, graph_label_y + 2),
+                                                    (total_label_x - 2, total_label_y - total_label_size[1] - 2),
+                                                    (total_label_x + total_label_size[0] + 2, total_label_y + 2),
                                                     (255, 255, 255), -1)
                                         # テキスト（緑）
-                                        cv2.putText(display_img, graph_label_text,
-                                                  (graph_label_x, graph_label_y),
+                                        cv2.putText(display_img, total_label_text,
+                                                  (total_label_x, total_label_y),
                                                   cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 150, 0), 1, cv2.LINE_AA)
                                     else:
-                                        log(f"[Graph Cumulative Marker] Out of bounds - not drawing")
+                                        log(f"[Total Rotations Marker] Out of bounds - not drawing")
 
                             except (ValueError, TypeError) as e:
                                 # エラーが発生した場合は元の画像を使用
