@@ -2676,22 +2676,18 @@ if 'analysis_results' in st.session_state:
                                 total_payout_from_ai = 0
                                 # 超中小の内訳を使用した計算（上記で設定したbig_j, medium_j, small_jを使用）
                                 total_payout_from_ai = big_j * big_balls + medium_j * middle_balls + small_j * small_balls
-                                
+
                                 if total_payout_from_ai > 0:
                                     html_content += f'''
                                     <div class="stat-item">
                                         <span class="stat-label">💰 総払い出し球数（AI計算）</span>
                                         <span class="stat-value">{total_payout_from_ai:,}玉</span>
                                     </div>'''
-                                
-                                    html_content += '</div>'
-                                    
-                                    # HTMLを表示
-                                    st.markdown(html_content, unsafe_allow_html=True)
-                                else:
-                                    # テキスト形式で結果が返された場合
-                                    st.markdown("**解析結果（テキスト）**")
-                                    st.text(result['claude_analysis']['raw_text'])
+
+                                html_content += '</div>'
+
+                                # HTMLを表示
+                                st.markdown(html_content, unsafe_allow_html=True)
                             else:
                                 # APIエラーの場合
                                 if result['claude_analysis']:
