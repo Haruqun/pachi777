@@ -1774,8 +1774,8 @@ if graph_files and st.session_state.get('start_analysis', False):
                 cv2.line(overlay_img, (0, max_y), (overlay_img.shape[1], max_y), (0, 255, 255), 2)
                 # 最高値の点に大きめの円を描画
                 max_x = graph_data_points[max_idx][0]
-                cv2.circle(overlay_img, (int(max_x), max_y), 8, (0, 255, 255), -1)
-                cv2.circle(overlay_img, (int(max_x), max_y), 10, (0, 200, 200), 2)
+                cv2.circle(overlay_img, (int(max_x), max_y), 4, (0, 255, 255), -1)
+                cv2.circle(overlay_img, (int(max_x), max_y), 5, (0, 200, 200), 2)
                 # 背景付きテキスト（白背景、濃い黄色文字）右端に表示
                 text = f'MAX: {int(max_val):,}'
                 text_width = 140
@@ -1792,8 +1792,8 @@ if graph_files and st.session_state.get('start_analysis', False):
                 cv2.line(overlay_img, (0, min_y), (overlay_img.shape[1], min_y), (255, 0, 255), 2)
                 # 最低値の点に大きめの円を描画
                 min_x = graph_data_points[min_idx][0]
-                cv2.circle(overlay_img, (int(min_x), min_y), 8, (255, 0, 255), -1)
-                cv2.circle(overlay_img, (int(min_x), min_y), 10, (200, 0, 200), 2)
+                cv2.circle(overlay_img, (int(min_x), min_y), 4, (255, 0, 255), -1)
+                cv2.circle(overlay_img, (int(min_x), min_y), 5, (200, 0, 200), 2)
                 # 背景付きテキスト（白背景、濃いマゼンタ文字）右端に表示
                 text = f'MIN: {int(min_val):,}'
                 text_width = 140
@@ -1810,8 +1810,8 @@ if graph_files and st.session_state.get('start_analysis', False):
                 # 現在値の点に大きめの円を描画（グラフ上）
                 if len(graph_data_points) > 0:
                     current_x = graph_data_points[-1][0]  # 最後のデータポイントのX座標
-                    cv2.circle(overlay_img, (int(current_x), current_y), 8, (255, 255, 0), -1)
-                    cv2.circle(overlay_img, (int(current_x), current_y), 10, (200, 200, 0), 2)
+                    cv2.circle(overlay_img, (int(current_x), current_y), 4, (255, 255, 0), -1)
+                    cv2.circle(overlay_img, (int(current_x), current_y), 5, (200, 200, 0), 2)
                 # 背景付きテキスト（白背景、濃いシアン文字）右端に表示
                 text = f'CURRENT: {int(current_val):,}'
                 text_width = 160
@@ -1829,8 +1829,8 @@ if graph_files and st.session_state.get('start_analysis', False):
                     cv2.line(overlay_img, (0, first_hit_y), (overlay_img.shape[1], first_hit_y), (155, 48, 255), 2)
                     # 初当たりの点に大きめの円を描画
                     first_hit_graph_x = graph_data_points[first_hit_x][0]
-                    cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 8, (155, 48, 255), -1)
-                    cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 10, (120, 30, 200), 2)
+                    cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 4, (155, 48, 255), -1)
+                    cv2.circle(overlay_img, (int(first_hit_graph_x), first_hit_y), 5, (120, 30, 200), 2)
                     # 背景付きテキスト（白背景、紫文字）右端に表示
                     text = f'FIRST HIT: {int(first_hit_val):,}'
                     text_width = 150
@@ -1848,8 +1848,8 @@ if graph_files and st.session_state.get('start_analysis', False):
                 # 開始点（緑の点）- ゼロライン上
                 if graph_info.get('start_x') is not None:
                     start_x = graph_info['start_x']
-                    cv2.circle(overlay_img, (int(start_x), zero_y), 10, (0, 255, 0), -1)
-                    cv2.circle(overlay_img, (int(start_x), zero_y), 12, (0, 200, 0), 2)
+                    cv2.circle(overlay_img, (int(start_x), zero_y), 5, (0, 255, 0), -1)
+                    cv2.circle(overlay_img, (int(start_x), zero_y), 6, (0, 200, 0), 2)
                     # ラベル
                     cv2.putText(overlay_img, 'START', (int(start_x) - 20, zero_y - 15), 
                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 200, 0), 1, cv2.LINE_AA)
@@ -4954,8 +4954,8 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         # 赤い水平線を描画（グラフの最高点の高さ）
                         cv2.line(cropped_preview, (0, max_y_in_crop), (cropped_preview.shape[1], max_y_in_crop), (0, 0, 255), 3)
                         # 最大値の点に円を描画（グラフ上の実際の位置）
-                        cv2.circle(cropped_preview, (int(max_x), max_y_in_crop), 8, (0, 0, 255), -1)
-                        cv2.circle(cropped_preview, (int(max_x), max_y_in_crop), 10, (0, 0, 200), 2)
+                        cv2.circle(cropped_preview, (int(max_x), max_y_in_crop), 4, (0, 0, 255), -1)
+                        cv2.circle(cropped_preview, (int(max_x), max_y_in_crop), 5, (0, 0, 200), 2)
                         # ラベルを追加（表示する値は実際の値）
                         label_text = f"MAX: {int(display_value):,}"
                         cv2.putText(cropped_preview, label_text, (cropped_preview.shape[1] - 180, max_y_in_crop - 5), 
