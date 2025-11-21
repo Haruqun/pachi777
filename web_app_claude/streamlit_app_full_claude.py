@@ -2497,6 +2497,10 @@ if 'analysis_results' in st.session_state:
                     # Claude AI回転マーカーを追加
                     display_img = result['overlay_image'].copy()
 
+                    log(f"[Claude AI Marker] result keys: {list(result.keys())}")
+                    log(f"[Claude AI Marker] has rotation_metrics: {result.get('rotation_metrics') is not None}")
+                    log(f"[Claude AI Marker] has claude_analysis: {result.get('claude_analysis') is not None}")
+
                     # Claude AIの初当たり回転数がある場合、マーカーを追加
                     if result.get('rotation_metrics') and result.get('claude_analysis'):
                         rotation_metrics = result['rotation_metrics']
@@ -2504,6 +2508,7 @@ if 'analysis_results' in st.session_state:
                         spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
                         initial_ball_starts = claude_data.get('initial_ball_starts')
 
+                        log(f"[Claude AI Marker] claude_data keys: {list(claude_data.keys()) if claude_data else 'None'}")
                         log(f"[Claude AI Marker] spins_per_pixel={spins_per_pixel}, initial_ball_starts={initial_ball_starts}")
 
                         # 必要なデータが揃っている場合のみ描画
