@@ -1331,8 +1331,6 @@ if graph_files and st.session_state.get('start_analysis', False):
         progress_start = idx / len(graph_files)
         progress_bar.progress(progress_start)
         status_text.text(f'処理中... ({idx + 1}/{len(graph_files)})')
-        detail_text.text(f'📷 {uploaded_file.name} の画像を読み込み中...')
-        time.sleep(0.1)  # 視覚的フィードバックのため少し徇機
 
         # 画像を読み込み
         image = Image.open(uploaded_file)
@@ -1342,26 +1340,16 @@ if graph_files and st.session_state.get('start_analysis', False):
 
         # OCRでデータ抽出を試みる（スキップ設定を確認）
         if not st.session_state.get('skip_ocr', False):
-            detail_text.text(f'🔍 {uploaded_file.name} のOCR解析を実行中...')
             log(f"[Graph {idx+1}/{len(graph_files)}] Starting OCR analysis...")
             ocr_start_time = time.time()
             ocr_data = extract_site7_data(img_array)
             ocr_end_time = time.time()
             log(f"[Graph {idx+1}/{len(graph_files)}] OCR complete: {ocr_end_time - ocr_start_time:.1f}s")
-            
-            # OCR処理時間の詳細表示（デバッグモードの場合）
-            if ocr_data and ocr_data.get('ocr_timings'):
-                timing_details = " | ".join([f"{k}: {v}" for k, v in ocr_data['ocr_timings'].items()])
-                detail_text.text(f'✅ OCR完了 ({timing_details})')
-            else:
-                detail_text.text(f'✅ OCR完了 ({ocr_end_time - ocr_start_time:.1f}秒)')
         else:
-            detail_text.text(f'⚡ {uploaded_file.name} のOCR解析をスキップ（高速モード）')
+            log(f"[Graph {idx+1}/{len(graph_files)}] OCR skipped (fast mode)")
             ocr_data = None
-        
+
         # Pattern3: Zero Line Based の自動検出
-        detail_text.text(f'📐 {uploaded_file.name} のグラフ領域を検出中...')
-        time.sleep(0.1)  # 視覚的フィードバック
         
         # オレンジバーの検出（共通関数使用）
         orange_bottom = detect_orange_bar(img_array)
@@ -1460,8 +1448,8 @@ if graph_files and st.session_state.get('start_analysis', False):
         cv2.rectangle(img_with_grid, (int(left), int(top)), (int(right), int(bottom)), (0, 255, 0), 2)
 
         # 解析を自動実行
-        detail_text.text(f'📊 {uploaded_file.name} のグラフデータを解析中...')
-        
+        log(f"[Graph {idx+1}/{len(graph_files)}] Analyzing graph data...")
+
         # アナライザーのインスタンスを再利用
         try:
             if 'analyzer_instance' not in st.session_state:
@@ -1941,7 +1929,6 @@ if graph_files and st.session_state.get('start_analysis', False):
 
         for idx, detail_file in enumerate(detail_files):
             log(f"[Detail {idx+1}/{len(detail_files)}] Processing: {detail_file.name}")
-            detail_text.text(f'📷 {detail_file.name} の詳細画像を処理中...')
             detail_file.seek(0)
 
             # Claude APIで解析（APIキーがある場合）
@@ -1949,12 +1936,10 @@ if graph_files and st.session_state.get('start_analysis', False):
             if st.session_state.get('claude_api_key'):
                 try:
                     # 画像読み込み
-                    detail_text.text(f'📷 {detail_file.name} の画像を読み込み中...')
                     detail_img = Image.open(detail_file)
                     log(f"[Detail {idx+1}/{len(detail_files)}] Image loaded: {detail_img.width}x{detail_img.height}px")
 
                     # 前処理を適用
-                    detail_text.text(f'📷 {detail_file.name} の前処理中（黒枠検出・overlay合成）...')
                     import time
                     preprocess_start = time.time()
                     processed_detail = preprocess_detail_image(detail_img)
@@ -1962,7 +1947,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                     log(f"[Detail {idx+1}/{len(detail_files)}] Preprocessing complete: {preprocess_time:.1f}s")
 
                     # Claude APIで解析
-                    detail_text.text(f'📷 {detail_file.name} をClaude APIで解析中...')
+                    log(f"[Detail {idx+1}/{len(detail_files)}] Starting Claude API analysis...")
                     api_start = time.time()
                     api_result = analyze_with_claude(
                         processed_detail,
