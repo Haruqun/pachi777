@@ -61,6 +61,9 @@ st.set_page_config(
     layout="wide"
 )
 
+# リロード検出ログ
+logging.warning(f"[Reload] Streamlit app script execution started")
+
 # セッション状態の初期化を確実に行う
 if 'initialized' not in st.session_state:
     st.session_state.initialized = True
@@ -1096,6 +1099,7 @@ if graph_files or detail_files:
             with preset_cols[i]:
                 button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                 if st.button(f"📥 {preset_name}", use_container_width=True, key=f"analysis_preset_{preset_name}", type=button_type):
+                    logging.warning(f"[Button] Preset button clicked: '{preset_name}'")
                     if preset_name == "デフォルト":
                         reset_settings()
                     else:
@@ -1104,10 +1108,10 @@ if graph_files or detail_files:
                         load_preset(preset_name)
                         # プリセットに遊技種別情報がある場合でも、現在選択されている遊技種別を優先
                         st.session_state.game_type = current_game_type
-                    
+
                     # 現在のプリセット名を保存
                     st.session_state.current_preset_name = preset_name
-                    
+
                     st.success(f"✅ '{preset_name}' の設定を適用しました")
                     st.rerun()
     else:
@@ -1122,6 +1126,7 @@ if graph_files or detail_files:
                     with cols[col]:
                         button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                         if st.button(f"📥 {preset_name}", use_container_width=True, key=f"analysis_preset_{preset_name}", type=button_type):
+                            logging.warning(f"[Button] Preset button clicked: '{preset_name}'")
                             if preset_name == "デフォルト":
                                 reset_settings()
                             else:
@@ -1162,6 +1167,7 @@ if graph_files or detail_files:
     st.caption("設定を確認したら、解析ボタンをクリックしてください")
     
     if st.button("🚀 解析を開始", type="primary", use_container_width=True):
+        logging.warning(f"[Button] Analysis button clicked - skip_ocr={skip_ocr}, show_ocr_debug={show_ocr_debug}")
         # 解析開始時にエラーをクリア
         st.session_state.claude_errors = []
         st.session_state.analysis_started = True
@@ -1176,6 +1182,7 @@ if graph_files or detail_files:
             time.sleep(0.1)
             st.rerun()
         except Exception as e:
+            logging.warning(f"[Button] ERROR: Analysis start failed - {str(e)}")
             st.error(f"⚠️ 解析開始時にエラーが発生しました: {str(e)}")
             # エラーが発生しても続行できるようにする
             st.session_state.start_analysis = True
@@ -1200,6 +1207,7 @@ elif st.session_state.uploaded_file_names:
     
     # クリアボタン
     if st.button("🗑️ ファイル情報をクリア", use_container_width=True):
+        logging.warning(f"[Button] Clear files button clicked - clearing session state")
         # ファイル名をクリア
         st.session_state.uploaded_file_names = []
         # 編集中のデータフレームもクリア
@@ -1229,6 +1237,7 @@ elif st.session_state.uploaded_file_names:
                 del st.session_state[key]
         # 解析状態をリセット
         st.session_state.start_analysis = False
+        logging.warning(f"[Button] Session state cleared successfully")
         # セッション状態が確実に更新されるよう小さな遅延を追加
         time.sleep(0.1)
         st.rerun()
@@ -4190,6 +4199,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 with preset_cols[i]:
                     button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                     if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
+                        logging.warning(f"[Button] Preset button clicked (settings page): '{preset_name}'")
                         if preset_name == "デフォルト":
                             reset_settings()
                         else:
@@ -4217,6 +4227,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         with cols[col]:
                             button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                             if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
+                                logging.warning(f"[Button] Preset button clicked (settings page): '{preset_name}'")
                                 if preset_name == "デフォルト":
                                     reset_settings()
                                 else:
