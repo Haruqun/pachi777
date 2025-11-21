@@ -4440,46 +4440,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             )
             # セッションステートに保存
             update_settings('zero_line_adjustment', zero_line_adjustment)
-            
-            # 払い出し球数の手動設定
-            st.markdown("### 🎰 払い出し球数設定")
-            st.caption("大当たりラウンド別の払い出し球数を設定できます")
-            
-            payout_col1, payout_col2, payout_col3 = st.columns(3)
-            
-            with payout_col1:
-                big_jackpot_balls = st.number_input(
-                    "🔴 超（10R）払い出し球数",
-                    min_value=0,
-                    max_value=3000,
-                    value=get_settings().get('big_jackpot_balls', 1500),
-                    step=10,
-                    help="10ラウンド大当たりの払い出し球数"
-                )
-                update_settings('big_jackpot_balls', big_jackpot_balls)
-            
-            with payout_col2:
-                middle_jackpot_balls = st.number_input(
-                    "🟡 中（5R）払い出し球数",
-                    min_value=0,
-                    max_value=2000,
-                    value=get_settings().get('middle_jackpot_balls', 750),
-                    step=10,
-                    help="5ラウンド大当たりの払い出し球数"
-                )
-                update_settings('middle_jackpot_balls', middle_jackpot_balls)
-            
-            with payout_col3:
-                small_jackpot_balls = st.number_input(
-                    "🔵 小（2-3R）払い出し球数",
-                    min_value=0,
-                    max_value=1000,
-                    value=get_settings().get('small_jackpot_balls', 450),
-                    step=10,
-                    help="2-3ラウンド大当たりの払い出し球数"
-                )
-                update_settings('small_jackpot_balls', small_jackpot_balls)
-            
+
             # STEP 4: 最大値アライメント機能を統合
             if test_images:
                 st.markdown("### 🎯 STEP 4: 実際の最大値を入力して自動調整")
