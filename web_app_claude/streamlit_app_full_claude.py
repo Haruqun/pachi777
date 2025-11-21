@@ -1984,46 +1984,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                                     'middle_jackpot_balls': get_settings().get('middle_jackpot_balls', 750),
                                     'small_jackpot_balls': get_settings().get('small_jackpot_balls', 450)
                                 }
-                            
-                            # 各画像の超中小回数と払い出し球数を表示
-                            st.write(f"📊 **{detail_file.name}** の解析結果:")
-                            big_j = claude_result.get('big_jackpots', 0) or 0
-                            medium_j = claude_result.get('medium_jackpots', 0) or 0
-                            small_j = claude_result.get('small_jackpots', 0) or 0
-                            
-                            # 各大当たりの払い出し球数を計算
-                            if machine_payout_data:
-                                big_balls_per = machine_payout_data.get('big_jackpot_balls', 1500)
-                                medium_balls_per = machine_payout_data.get('middle_jackpot_balls', 750)
-                                small_balls_per = machine_payout_data.get('small_jackpot_balls', 450)
-                                
-                                big_total = big_j * big_balls_per
-                                medium_total = medium_j * medium_balls_per
-                                small_total = small_j * small_balls_per
-                                
-                                # 表示
-                                if big_j > 0:
-                                    st.write(f"  - 🔴 超: {big_j}回 × {big_balls_per}玉 = **{big_total:,}玉**")
-                                else:
-                                    st.write(f"  - 🔴 超: 0回")
-                                    
-                                if medium_j > 0:
-                                    st.write(f"  - 🟡 中: {medium_j}回 × {medium_balls_per}玉 = **{medium_total:,}玉**")
-                                else:
-                                    st.write(f"  - 🟡 中: 0回")
-                                    
-                                if small_j > 0:
-                                    st.write(f"  - 🔵 小: {small_j}回 × {small_balls_per}玉 = **{small_total:,}玉**")
-                                else:
-                                    st.write(f"  - 🔵 小: 0回")
-                                
-                                # 合計
-                                total_payout = big_total + medium_total + small_total
-                                if total_payout > 0:
-                                    st.success(f"💰 **総払い出し球数: {total_payout:,}玉**")
-                                else:
-                                    st.info("ℹ️ 払い出し球数: 0玉")
-                            
+
                             # 機種データをClaude結果に追加
                             if machine_payout_data:
                                 claude_result['machine_payouts'] = machine_payout_data
