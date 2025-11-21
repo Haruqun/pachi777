@@ -2552,6 +2552,11 @@ if 'analysis_results' in st.session_state:
                                 # ゼロラインの位置を取得（STARTマーカーと同じY座標）
                                 zero_y = result.get('zero_line_y', display_img.shape[0] // 2)
 
+                                # グラフ開始位置を取得（累計スタートマーカーでも使用）
+                                first_hit_debug = result.get('first_hit_debug', {})
+                                graph_info = first_hit_debug.get('graph_info', {})
+                                graph_start_x = graph_info.get('graph_start_x', 0)
+
                                 # 実際のピクセル位置を取得（優先）
                                 first_hit_pixel_x = result.get('first_hit_pixel_x')
 
@@ -2561,9 +2566,6 @@ if 'analysis_results' in st.session_state:
                                     log(f"[Claude AI Marker] Using actual graph position: claude_x={claude_x}px")
                                 else:
                                     # フォールバック：spins_per_pixelから計算
-                                    first_hit_debug = result.get('first_hit_debug', {})
-                                    graph_info = first_hit_debug.get('graph_info', {})
-                                    graph_start_x = graph_info.get('graph_start_x', 0)
                                     claude_x = graph_start_x + (initial_ball_starts / spins_per_pixel) if spins_per_pixel > 0 else None
                                     log(f"[Claude AI Marker] Calculated from spins_per_pixel: claude_x={claude_x}px")
 
