@@ -1896,7 +1896,8 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'correction_factor': correction_factor,  # 補正係数を追加
                 'rotation_metrics': rotation_metrics,  # 回転率データを追加
                 'first_hit_debug': first_hit_debug_info,  # 初当たり検出デバッグ情報を追加
-                'graph_values': graph_values  # グラフの生データを追加（回転率①計算用）
+                'graph_values': graph_values,  # グラフの生データを追加（回転率①計算用）
+                'zero_line_y': zero_line_in_crop  # ゼロライン位置を追加（Claude AIマーカー用）
             })
         else:
             # 解析失敗時
@@ -2498,8 +2499,60 @@ if 'analysis_results' in st.session_state:
                             on_change=trigger_update
                         )
 
+                    # Claude AI回転マーカーを追加
+                    display_img = result['overlay_image'].copy()
+
+                    # Claude AIの初当たり回転数がある場合、マーカーを追加
+                    if result.get('rotation_metrics') and result.get('claude_analysis'):
+                        rotation_metrics = result['rotation_metrics']
+                        claude_data = result['claude_analysis']
+                        spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
+                        initial_ball_starts = claude_data.get('initial_ball_starts')
+
+                        # 必要なデータが揃っている場合のみ描画
+                        if spins_per_pixel > 0 and initial_ball_starts:
+                            try:
+                                # 初当たり回転数を整数に変換
+                                initial_ball_starts = int(initial_ball_starts)
+
+                                # グラフ情報を取得
+                                first_hit_debug = result.get('first_hit_debug', {})
+                                graph_info = first_hit_debug.get('graph_info', {})
+                                graph_start_x = graph_info.get('graph_start_x', 0)
+
+                                # ゼロラインの位置を取得（STARTマーカーと同じY座標）
+                                zero_y = result.get('zero_line_y', display_img.shape[0] // 2)
+
+                                # Claude AI回転数の位置を計算
+                                claude_x = graph_start_x + (initial_ball_starts / spins_per_pixel)
+
+                                # 画像範囲内かチェック
+                                if 0 <= claude_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
+                                    # マーカーを描画（赤色）
+                                    cv2.circle(display_img, (int(claude_x), zero_y), 10, (0, 0, 255), -1)  # 塗りつぶし
+                                    cv2.circle(display_img, (int(claude_x), zero_y), 12, (0, 0, 200), 2)   # 外枠
+
+                                    # ラベルを描画
+                                    label_text = f'AI: {initial_ball_starts}'
+                                    # ラベルの背景（白）
+                                    label_size = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
+                                    label_x = int(claude_x) - label_size[0] // 2
+                                    label_y = zero_y - 20
+                                    cv2.rectangle(display_img,
+                                                (label_x - 2, label_y - label_size[1] - 2),
+                                                (label_x + label_size[0] + 2, label_y + 2),
+                                                (255, 255, 255), -1)
+                                    # テキスト（赤）
+                                    cv2.putText(display_img, label_text,
+                                              (label_x, label_y),
+                                              cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 200), 1, cv2.LINE_AA)
+                            except (ValueError, TypeError) as e:
+                                # エラーが発生した場合は元の画像を使用
+                                log(f"[Claude AI Marker] マーカー描画エラー: {str(e)}")
+                                pass
+
                     # 解析結果画像
-                    st.image(result['overlay_image'], use_column_width=True)
+                    st.image(display_img, use_column_width=True)
 
                     # 出玉詳細画像（ペアリング済みの場合表示）
                     if result.get('detail_image_processed') is not None:
