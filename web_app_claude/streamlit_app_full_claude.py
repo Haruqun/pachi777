@@ -803,11 +803,10 @@ if uploaded_files:
             cache_key = f"{file.name}_{file_hash}_{black_pixel_threshold}_{detail_threshold}"
 
             if cache_key in st.session_state.classification_cache:
-                # キャッシュから取得
+                # キャッシュから取得（ログ出力なし）
                 cached_result = st.session_state.classification_cache[cache_key]
                 black_ratio = cached_result['black_ratio']
                 file_type = cached_result['file_type']
-                log(f"[Classification] {file.name}: black_ratio={black_ratio:.3f}, type={file_type} (cached)")
             else:
                 # 新規に分類を実行
                 file.seek(0)
