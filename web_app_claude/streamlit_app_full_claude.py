@@ -1521,6 +1521,12 @@ if graph_files and st.session_state.get('start_analysis', False):
             # 補正前の値を保存
             graph_values_original = graph_values.copy()
 
+            # グラフデータの最初の20点をログ出力
+            log(f"[Graph Values] Total points: {len(graph_values)}")
+            log(f"[Graph Values] First 20 values: {[round(v, 1) for v in graph_values[:20]]}")
+            if len(graph_values) > 20:
+                log(f"[Graph Values] Values at index 40-60: {[round(v, 1) for v in graph_values[40:60]]}")
+
             # 統計情報を計算
             max_val_original = max(graph_values)
             min_val_original = min(graph_values)
