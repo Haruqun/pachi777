@@ -2554,17 +2554,6 @@ if 'analysis_results' in st.session_state:
 
                                 log(f"[Claude AI Marker] graph_start_x={graph_start_x}, claude_x={claude_x}, zero_y={zero_y}, img_size={display_img.shape}")
 
-                                # index 24 (x=48px, graph_start_x)の位置にマーカーを描画
-                                index_24_x = graph_start_x  # x=48pxの位置
-                                if 0 <= index_24_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
-                                    log(f"[Index 24 Marker] Drawing marker at x={index_24_x}")
-                                    # マーカーを描画（黄色）
-                                    cv2.circle(display_img, (index_24_x, zero_y), 8, (0, 255, 255), -1)  # 塗りつぶし
-                                    cv2.circle(display_img, (index_24_x, zero_y), 10, (0, 200, 200), 2)   # 外枠
-                                    # ラベル
-                                    cv2.putText(display_img, 'idx24', (index_24_x + 5, zero_y + 15),
-                                              cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 255, 255), 1, cv2.LINE_AA)
-
                                 # 画像範囲内かチェック
                                 if 0 <= claude_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
                                     log(f"[Claude AI Marker] Drawing marker at ({int(claude_x)}, {zero_y})")
