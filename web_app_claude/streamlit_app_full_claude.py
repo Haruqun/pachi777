@@ -1528,11 +1528,13 @@ if graph_files and st.session_state.get('start_analysis', False):
 
             # グラフデータを全て出力（デバッグ用）
             graph_start_x_val = graph_info.get('start_x', 0) if graph_info else 0
-            log(f"[Graph Values] Total points: {len(graph_values)}, graph_start_x: {graph_start_x_val}px (index {graph_start_x_val // 2})")
-            log(f"[Graph Values] All values:")
+            log(f"[Graph Values] Total points: {len(graph_values)}, graph_start_x: {graph_start_x_val}px")
+            log(f"[Graph Values] All values (graph_values[i] = x={graph_start_x_val} + i*2):")
             for i in range(0, len(graph_values), 10):
                 chunk = graph_values[i:i+10]
-                log(f"  index {i:3d}-{i+len(chunk)-1:3d} (x={i*2:3d}-{(i+len(chunk)-1)*2:3d}px): {[round(v, 1) for v in chunk]}")
+                x_start = graph_start_x_val + i*2
+                x_end = graph_start_x_val + (i+len(chunk)-1)*2
+                log(f"  index {i:3d}-{i+len(chunk)-1:3d} (x={x_start:3d}-{x_end:3d}px): {[round(v, 1) for v in chunk]}")
 
             # 統計情報を計算
             max_val_original = max(graph_values)
@@ -2940,11 +2942,12 @@ if 'analysis_results' in st.session_state:
                                 # ※ graph_start_xからの相対位置で計算
                                 target_x_pixel = graph_start_x + (initial_ball_starts / spins_per_pixel)
 
-                                # graph_valuesの構造を確認:
-                                # data_points.append((x, value)) で x=0,2,4,6... から格納されている
-                                # なので graph_values[i] は x=i*2 の位置の値
-                                # target_x_pixelに対応するインデックスは target_x_pixel / 2
-                                target_x_index = int(target_x_pixel / 2)
+                                # graph_valuesの構造:
+                                # graph_data_points[0] = (48, value) から始まる
+                                # graph_values[0] = x=48の値, graph_values[1] = x=50の値...
+                                # つまり graph_values[i] = x=(48 + i*2) の値
+                                # target_x_pixelに対応するインデックスは (target_x_pixel - graph_start_x) / 2
+                                target_x_index = int((target_x_pixel - graph_start_x) / 2)
 
                                 log(f"[Rotation Rate 1A] AI rotations: {initial_ball_starts}, spins_per_pixel: {spins_per_pixel}")
                                 log(f"[Rotation Rate 1A] graph_start_x: {graph_start_x}, target_x_pixel: {target_x_pixel}")
