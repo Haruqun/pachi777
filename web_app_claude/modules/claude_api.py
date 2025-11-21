@@ -30,10 +30,10 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
     import numpy as np
 
     if isinstance(image, np.ndarray):
-        log(f"[Claude API] Converting NumPy array to PIL Image - shape: {image.shape}")
+        # log(f"[Claude API] Converting NumPy array to PIL Image - shape: {image.shape}")
         image = Image.fromarray(image)
 
-    log(f"[Claude API] Image size: {image.width}x{image.height}px")
+    # log(f"[Claude API] Image size: {image.width}x{image.height}px")
 
     # 画像をbase64エンコード
     buffered = io.BytesIO()
@@ -41,15 +41,15 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
     # 画像が大きすぎる場合はリサイズ
     max_size = 1024
     if image.width > max_size or image.height > max_size:
-        log(f"[Claude API] Resizing image: {image.width}x{image.height} -> {max_size}x{max_size}")
+        # log(f"[Claude API] Resizing image: {image.width}x{image.height} -> {max_size}x{max_size}")
         image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-        log(f"[Claude API] Resize complete: {image.width}x{image.height}px")
+        # log(f"[Claude API] Resize complete: {image.width}x{image.height}px")
 
-    log(f"[Claude API] Encoding image to Base64...")
+    # log(f"[Claude API] Encoding image to Base64...")
     image.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
     img_size_kb = len(buffered.getvalue()) / 1024
-    log(f"[Claude API] Base64 encoding complete: {img_size_kb:.1f}KB")
+    # log(f"[Claude API] Base64 encoding complete: {img_size_kb:.1f}KB")
 
     prompt = """この画像から以下の情報を正確に抽出してJSON形式で返してください：
 
@@ -114,14 +114,14 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
         log(f"[Claude API] Response received - Time: {request_time:.1f}s, Status: {response.status_code}")
 
         if response.status_code == 200:
-            log(f"[Claude API] Parsing JSON response...")
+            # log(f"[Claude API] Parsing JSON response...")
             response_data = response.json()
 
             # レスポンスから内容を抽出
             content = response_data.get('content', [])
             if content and len(content) > 0:
                 result_text = content[0].get('text', '')
-                log(f"[Claude API] Response text length: {len(result_text)} chars")
+                # log(f"[Claude API] Response text length: {len(result_text)} chars")
             else:
                 log(f"[Claude API] ERROR: Empty response")
                 return {
@@ -132,13 +132,13 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
                 }
 
             # JSONを抽出してパース
-            log(f"[Claude API] Extracting JSON data...")
+            # log(f"[Claude API] Extracting JSON data...")
             json_match = re.search(r'\{[\s\S]*\}', result_text)
             if json_match:
                 try:
-                    log(f"[Claude API] JSON found, parsing...")
+                    # log(f"[Claude API] JSON found, parsing...")
                     extracted_data = json.loads(json_match.group())
-                    log(f"[Claude API] JSON parse success - {len(extracted_data)} fields")
+                    # log(f"[Claude API] JSON parse success - {len(extracted_data)} fields")
 
                     # 現在値の修正（通常時使用玉数から逆算）
                     if extracted_data.get('normal_usage_balls') and extracted_data.get('total_balls'):
@@ -148,9 +148,9 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
                         # 現在値 = 総払い出し - 通常時使用
                         current_value = total_balls - normal_usage
                         extracted_data['current_value_calculated'] = current_value
-                        log(f"[Claude API] Calculated current_value: {current_value}")
+                        # log(f"[Claude API] Calculated current_value: {current_value}")
 
-                    log(f"[Claude API] Analysis complete!")
+                    # log(f"[Claude API] Analysis complete!")
                     return {
                         'success': True,
                         'error': None,
