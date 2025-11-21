@@ -1521,12 +1521,13 @@ if graph_files and st.session_state.get('start_analysis', False):
             # 補正前の値を保存
             graph_values_original = graph_values.copy()
 
-            # グラフデータの最初の20点とグラフ開始位置をログ出力
+            # グラフデータを全て出力（デバッグ用）
             graph_start_x_val = graph_info.get('start_x', 0) if graph_info else 0
             log(f"[Graph Values] Total points: {len(graph_values)}, graph_start_x: {graph_start_x_val}px (index {graph_start_x_val // 2})")
-            log(f"[Graph Values] First 20 values: {[round(v, 1) for v in graph_values[:20]]}")
-            if len(graph_values) > 20:
-                log(f"[Graph Values] Values at index 40-60: {[round(v, 1) for v in graph_values[40:60]]}")
+            log(f"[Graph Values] All values:")
+            for i in range(0, len(graph_values), 10):
+                chunk = graph_values[i:i+10]
+                log(f"  index {i:3d}-{i+len(chunk)-1:3d} (x={i*2:3d}-{(i+len(chunk)-1)*2:3d}px): {[round(v, 1) for v in chunk]}")
 
             # 統計情報を計算
             max_val_original = max(graph_values)
