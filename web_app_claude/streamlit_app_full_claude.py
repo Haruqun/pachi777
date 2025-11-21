@@ -1520,6 +1520,7 @@ if graph_files and st.session_state.get('start_analysis', False):
             first_x = graph_data_points[0][0]
             log(f"[Graph Data Points] First point: x={first_x}px, value={graph_data_points[0][1]:.1f}玉")
             log(f"[Graph Data Points] Total points: {len(graph_data_points)}")
+            log(f"[DEBUG 1] About to process graph values, ocr_data exists: {ocr_data is not None}")
 
             # データポイントから値のみを抽出
             graph_values = [value for x, value in graph_data_points]
@@ -1858,6 +1859,7 @@ if graph_files and st.session_state.get('start_analysis', False):
             # 結果を保存
             # 回転率計算（OCRデータがある場合のみ）
             rotation_metrics = None
+            log(f"[DEBUG rotation_metrics] ocr_data={ocr_data is not None}, has_total_start={ocr_data.get('total_start') if ocr_data else 'N/A'}, skip_ocr={st.session_state.get('skip_ocr', False)}")
             if ocr_data and ocr_data.get('total_start') and not st.session_state.get('skip_ocr', False):
                 # グラフの実効幅（左右マージンを除外）
                 graph_width = right - left
@@ -1890,7 +1892,10 @@ if graph_files and st.session_state.get('start_analysis', False):
                     'graph_start_x': graph_info.get('start_x') if graph_info else None,
                     'graph_end_x': graph_info.get('end_x') if graph_info else None
                 }
-            
+
+            log(f"[DEBUG 2] About to save result, rotation_metrics={rotation_metrics is not None}, ocr_data={ocr_data is not None}")
+            if rotation_metrics:
+                log(f"[DEBUG 2] rotation_metrics keys: {list(rotation_metrics.keys())}, spins_per_pixel={rotation_metrics.get('spins_per_pixel', 'N/A')}")
             analysis_results.append({
                 'name': uploaded_file.name,
                 'original_image': img_with_grid,  # グリッド付き元画像を保存
