@@ -2863,16 +2863,46 @@ if 'analysis_results' in st.session_state:
                         except (ValueError, TypeError):
                             initial_ball_starts = 0
 
-                        # AI取得の初当たり回転数がある場合、グラフ解析の初当たり玉数を使用
+                        # AI取得の初当たり回転数がある場合、グラフ上の対応位置での使用球数を計算
                         if initial_ball_starts > 0:
-                            # グラフ解析から取得した初当たり玉数（投資球数）を使用
-                            first_hit_balls = abs(prioritized_data.get('first_hit_val') or 0)
+                            # 方法1: グラフ解析から取得した初当たり玉数（現在の方法）
+                            first_hit_balls_old = abs(prioritized_data.get('first_hit_val') or 0)
+
+                            # 方法2: Claude AIの回転数から位置を逆算してグラフ上の使用球数を取得（新方式）
+                            first_hit_balls_new = 0
+                            rotation_metrics = result.get('rotation_metrics') or {}
+                            spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
+
+                            if spins_per_pixel > 0 and result.get('graph_values'):
+                                # AI回転数に対応するグラフ上のx位置を計算
+                                target_x_position = initial_ball_starts / spins_per_pixel
+                                target_x_index = int(target_x_position)
+
+                                # グラフデータから該当位置までの最低値を取得
+                                graph_values = result.get('graph_values', [])
+                                if 0 <= target_x_index < len(graph_values):
+                                    # その時点での最低値を探す（使用球数）
+                                    min_val_at_target = 0
+                                    for i in range(min(target_x_index + 1, len(graph_values))):
+                                        if graph_values[i] < min_val_at_target:
+                                            min_val_at_target = graph_values[i]
+
+                                    first_hit_balls_new = abs(min_val_at_target)
+
+                            # 新方式を優先、データがない場合は旧方式
+                            first_hit_balls = first_hit_balls_new if first_hit_balls_new > 0 else first_hit_balls_old
 
                             if first_hit_balls > 0:
                                 rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
                                 warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
+
+                                # 比較情報を追加（デバッグモード時）
+                                comparison_info = ""
+                                if st.session_state.get('show_ocr_debug', False) and first_hit_balls_old > 0 and first_hit_balls_new > 0:
+                                    comparison_info = f'<div style="font-size: 0.75em; color: #999; margin-left: 20px;">旧方式: {int(first_hit_balls_old):,}{unit} / 新方式: {int(first_hit_balls_new):,}{unit}</div>'
+
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>{comparison_info}'
                                 rotation_rate_1_calculated = True
                                 # 結果に保存
                                 result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
