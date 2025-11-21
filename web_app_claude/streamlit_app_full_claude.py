@@ -808,71 +808,73 @@ if uploaded_files:
             continue
 
     logging.warning(f"[Classification] Result: {len(graph_files)} graph files, {len(detail_files)} detail files")
-    
+
     # 出玉詳細画像から先に機種名を検出して自動設定
-    if detail_files and st.session_state.game_type == "パチンコ" and not st.session_state.get('payout_manually_changed', False):
-        # 最初の出玉詳細画像から機種名を取得
-        if st.session_state.get('claude_api_key'):
-            for detail_file in detail_files[:1]:  # 最初の1枚だけチェック
-                try:
-                    detail_file.seek(0)
-                    detail_img = Image.open(detail_file)
-                    processed_detail = preprocess_detail_image(detail_img)
-                    
-                    # 機種名検出のための簡易解析
-                    try:
-                        if not st.session_state.get('claude_api_key'):
-                            st.warning("⚠️ APIキーが設定されていません。Claude設定タブでAPIキーを設定してください。")
-                            api_result = None
-                        else:
-                            api_result = analyze_with_claude(
-                                processed_detail,
-                                st.session_state.claude_api_key,
-                                st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
-                            )
-
-                            # エラーがある場合は表示
-                            if api_result and not api_result.get('success'):
-                                error_msg = api_result.get('error', 'Unknown error')
-                                file_name = uploaded_files[idx].name if idx < len(uploaded_files) else 'unknown'
-                                full_error_msg = f"❌ {file_name}: {error_msg}"
-                                st.error(full_error_msg)
-                                # エラーをセッションステートに保存（重複チェックを改善）
-                                # 同じファイルのエラーを更新
-                                st.session_state.claude_errors = [e for e in st.session_state.claude_errors if not e.startswith(f"❌ {file_name}:")]
-                                st.session_state.claude_errors.append(full_error_msg)
-                                # エラーログ出力
-                                from modules.error_handler import log_error
-                                log_error('Claude API Error at upload', error_msg, {
-                                    'has_api_key': bool(st.session_state.get('claude_api_key')),
-                                    'model': st.session_state.get('claude_model', 'claude-3-5-haiku-20241022'),
-                                    'file': uploaded_files[idx].name if idx < len(uploaded_files) else 'unknown'
-                                })
-                    except Exception as e:
-                        file_name = uploaded_files[idx].name if idx < len(uploaded_files) else 'unknown'
-                        full_error_msg = f"❌ {file_name}: AI分析エラー - {str(e)}"
-                        st.error(full_error_msg)
-                        # エラーをセッションステートに保存（重複チェックを改善）
-                        # 同じファイルのエラーを更新
-                        st.session_state.claude_errors = [e for e in st.session_state.claude_errors if not e.startswith(f"❌ {file_name}:")]
-                        st.session_state.claude_errors.append(full_error_msg)
-                        from modules.error_handler import log_error
-                        log_error('Exception during Claude analysis', str(e), {
-                            'location': 'file_upload_section',
-                            'file': uploaded_files[idx].name if idx < len(uploaded_files) else 'unknown'
-                        })
-                        api_result = None
-
-                    if api_result and api_result.get('success'):
-                        claude_data = api_result.get('data', {})
-                        machine_name = claude_data.get('machine_name')
-                        
-                        # 機種別払い出し球数の自動設定機能を削除
-
-                    detail_file.seek(0)  # ファイルポインタをリセット
-                    break
-                except:
-                    pass  # エラーは無視して続行
+    # NOTE: アップロード時のClaude API呼び出しを無効化（プリセット変更の度に再実行されて重いため）
+    # 機種名検出は解析ボタン押下後に実行されるので問題なし
+    # if detail_files and st.session_state.game_type == "パチンコ" and not st.session_state.get('payout_manually_changed', False):
+    #     # 最初の出玉詳細画像から機種名を取得
+    #     if st.session_state.get('claude_api_key'):
+    #         for detail_file in detail_files[:1]:  # 最初の1枚だけチェック
+    #             try:
+    #                 detail_file.seek(0)
+    #                 detail_img = Image.open(detail_file)
+    #                 processed_detail = preprocess_detail_image(detail_img)
+    #
+    #                 # 機種名検出のための簡易解析
+    #                 try:
+    #                     if not st.session_state.get('claude_api_key'):
+    #                         st.warning("⚠️ APIキーが設定されていません。Claude設定タブでAPIキーを設定してください。")
+    #                         api_result = None
+    #                     else:
+    #                         api_result = analyze_with_claude(
+    #                             processed_detail,
+    #                             st.session_state.claude_api_key,
+    #                             st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
+    #                         )
+    #
+    #                         # エラーがある場合は表示
+    #                         if api_result and not api_result.get('success'):
+    #                             error_msg = api_result.get('error', 'Unknown error')
+    #                             file_name = uploaded_files[idx].name if idx < len(uploaded_files) else 'unknown'
+    #                             full_error_msg = f"❌ {file_name}: {error_msg}"
+    #                             st.error(full_error_msg)
+    #                             # エラーをセッションステートに保存（重複チェックを改善）
+    #                             # 同じファイルのエラーを更新
+    #                             st.session_state.claude_errors = [e for e in st.session_state.claude_errors if not e.startswith(f"❌ {file_name}:")]
+    #                             st.session_state.claude_errors.append(full_error_msg)
+    #                             # エラーログ出力
+    #                             from modules.error_handler import log_error
+    #                             log_error('Claude API Error at upload', error_msg, {
+    #                                 'has_api_key': bool(st.session_state.get('claude_api_key')),
+    #                                 'model': st.session_state.get('claude_model', 'claude-3-5-haiku-20241022'),
+    #                                 'file': uploaded_files[idx].name if idx < len(uploaded_files) else 'unknown'
+    #                             })
+    #                 except Exception as e:
+    #                     file_name = uploaded_files[idx].name if idx < len(uploaded_files) else 'unknown'
+    #                     full_error_msg = f"❌ {file_name}: AI分析エラー - {str(e)}"
+    #                     st.error(full_error_msg)
+    #                     # エラーをセッションステートに保存（重複チェックを改善）
+    #                     # 同じファイルのエラーを更新
+    #                     st.session_state.claude_errors = [e for e in st.session_state.claude_errors if not e.startswith(f"❌ {file_name}:")]
+    #                     st.session_state.claude_errors.append(full_error_msg)
+    #                     from modules.error_handler import log_error
+    #                     log_error('Exception during Claude analysis', str(e), {
+    #                         'location': 'file_upload_section',
+    #                         'file': uploaded_files[idx].name if idx < len(uploaded_files) else 'unknown'
+    #                     })
+    #                     api_result = None
+    #
+    #                 if api_result and api_result.get('success'):
+    #                     claude_data = api_result.get('data', {})
+    #                     machine_name = claude_data.get('machine_name')
+    #
+    #                     # 機種別払い出し球数の自動設定機能を削除
+    #
+    #                 detail_file.seek(0)  # ファイルポインタをリセット
+    #                 break
+    #             except:
+    #                 pass  # エラーは無視して続行
     
     # 分類結果を表示
     col1, col2 = st.columns(2)
