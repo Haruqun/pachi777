@@ -54,6 +54,11 @@ from functools import lru_cache
 import traceback
 import os
 
+# サーバーログ出力用ヘルパー関数
+def log(message):
+    """Streamlit Cloud Logsに出力するためのログ関数"""
+    os.write(2, f"{message}\n".encode('utf-8'))
+
 # ページ設定
 st.set_page_config(
     page_title="AI Graph Analysis Report",
@@ -62,7 +67,7 @@ st.set_page_config(
 )
 
 # リロード検出ログ
-logging.warning(f"[Reload] Streamlit app script execution started")
+log(f"[Reload] Streamlit app script execution started")
 
 # セッション状態の初期化を確実に行う
 if 'initialized' not in st.session_state:
@@ -773,7 +778,7 @@ graph_files = []
 detail_files = []
 
 if uploaded_files:
-    logging.warning(f"[Upload] {len(uploaded_files)} files uploaded")
+    log(f"[Upload] {len(uploaded_files)} files uploaded")
 
     # 黒色割合で画像を分類
     detail_threshold = st.session_state.get('detail_image_threshold', 0.3)
@@ -791,7 +796,7 @@ if uploaded_files:
             black_ratio = calculate_black_ratio(img, black_threshold=black_pixel_threshold)
 
             file_type = 'Detail' if black_ratio >= detail_threshold else 'Graph'
-            logging.warning(f"[Classification] {file.name}: black_ratio={black_ratio:.3f}, type={file_type}")
+            log(f"[Classification] {file.name}: black_ratio={black_ratio:.3f}, type={file_type}")
 
             debug_data.append({
                 'name': file.name,
@@ -806,11 +811,11 @@ if uploaded_files:
             else:
                 graph_files.append(file)
         except Exception as e:
-            logging.warning(f"[Classification] ERROR: {file.name} - {str(e)}")
+            log(f"[Classification] ERROR: {file.name} - {str(e)}")
             st.error(f"⚠️ {file.name} の処理中にエラー: {str(e)}")
             continue
 
-    logging.warning(f"[Classification] Result: {len(graph_files)} graph files, {len(detail_files)} detail files")
+    log(f"[Classification] Result: {len(graph_files)} graph files, {len(detail_files)} detail files")
 
     # 出玉詳細画像から先に機種名を検出して自動設定
     # NOTE: アップロード時のClaude API呼び出しを無効化（プリセット変更の度に再実行されて重いため）
@@ -1099,7 +1104,7 @@ if graph_files or detail_files:
             with preset_cols[i]:
                 button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                 if st.button(f"📥 {preset_name}", use_container_width=True, key=f"analysis_preset_{preset_name}", type=button_type):
-                    logging.warning(f"[Button] Preset button clicked: '{preset_name}'")
+                    log(f"[Button] Preset button clicked: '{preset_name}'")
                     if preset_name == "デフォルト":
                         reset_settings()
                     else:
@@ -1126,7 +1131,7 @@ if graph_files or detail_files:
                     with cols[col]:
                         button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                         if st.button(f"📥 {preset_name}", use_container_width=True, key=f"analysis_preset_{preset_name}", type=button_type):
-                            logging.warning(f"[Button] Preset button clicked: '{preset_name}'")
+                            log(f"[Button] Preset button clicked: '{preset_name}'")
                             if preset_name == "デフォルト":
                                 reset_settings()
                             else:
@@ -1167,7 +1172,7 @@ if graph_files or detail_files:
     st.caption("設定を確認したら、解析ボタンをクリックしてください")
     
     if st.button("🚀 解析を開始", type="primary", use_container_width=True):
-        logging.warning(f"[Button] Analysis button clicked - skip_ocr={skip_ocr}, show_ocr_debug={show_ocr_debug}")
+        log(f"[Button] Analysis button clicked - skip_ocr={skip_ocr}, show_ocr_debug={show_ocr_debug}")
         # 解析開始時にエラーをクリア
         st.session_state.claude_errors = []
         st.session_state.analysis_started = True
@@ -1182,7 +1187,7 @@ if graph_files or detail_files:
             time.sleep(0.1)
             st.rerun()
         except Exception as e:
-            logging.warning(f"[Button] ERROR: Analysis start failed - {str(e)}")
+            log(f"[Button] ERROR: Analysis start failed - {str(e)}")
             st.error(f"⚠️ 解析開始時にエラーが発生しました: {str(e)}")
             # エラーが発生しても続行できるようにする
             st.session_state.start_analysis = True
@@ -1207,7 +1212,7 @@ elif st.session_state.uploaded_file_names:
     
     # クリアボタン
     if st.button("🗑️ ファイル情報をクリア", use_container_width=True):
-        logging.warning(f"[Button] Clear files button clicked - clearing session state")
+        log(f"[Button] Clear files button clicked - clearing session state")
         # ファイル名をクリア
         st.session_state.uploaded_file_names = []
         # 編集中のデータフレームもクリア
@@ -1237,7 +1242,7 @@ elif st.session_state.uploaded_file_names:
                 del st.session_state[key]
         # 解析状態をリセット
         st.session_state.start_analysis = False
-        logging.warning(f"[Button] Session state cleared successfully")
+        log(f"[Button] Session state cleared successfully")
         # セッション状態が確実に更新されるよう小さな遅延を追加
         time.sleep(0.1)
         st.rerun()
@@ -1286,7 +1291,7 @@ if graph_files and st.session_state.get('start_analysis', False):
     
     # 初期メッセージを表示
     status_text.text('🚀 解析を開始します...')
-    logging.warning(f"[Analysis] Starting analysis for {len(graph_files)} graph files")
+    log(f"[Analysis] Starting analysis for {len(graph_files)} graph files")
     time.sleep(0.5)  # 少し待機してメッセージを見やすくする
 
     # 解析結果を格納
@@ -1294,7 +1299,7 @@ if graph_files and st.session_state.get('start_analysis', False):
 
     # 各画像を処理
     for idx, uploaded_file in enumerate(graph_files):
-        logging.warning(f"[Graph {idx+1}/{len(graph_files)}] Processing: {uploaded_file.name}")
+        log(f"[Graph {idx+1}/{len(graph_files)}] Processing: {uploaded_file.name}")
 
         # 進捗更新（開始時）
         progress_start = idx / len(graph_files)
@@ -1307,16 +1312,16 @@ if graph_files and st.session_state.get('start_analysis', False):
         image = Image.open(uploaded_file)
         img_array = np.array(image)
         height, width = img_array.shape[:2]
-        logging.warning(f"[Graph {idx+1}/{len(graph_files)}] Image loaded: {width}x{height}px")
+        log(f"[Graph {idx+1}/{len(graph_files)}] Image loaded: {width}x{height}px")
 
         # OCRでデータ抽出を試みる（スキップ設定を確認）
         if not st.session_state.get('skip_ocr', False):
             detail_text.text(f'🔍 {uploaded_file.name} のOCR解析を実行中...')
-            logging.warning(f"[Graph {idx+1}/{len(graph_files)}] Starting OCR analysis...")
+            log(f"[Graph {idx+1}/{len(graph_files)}] Starting OCR analysis...")
             ocr_start_time = time.time()
             ocr_data = extract_site7_data(img_array)
             ocr_end_time = time.time()
-            logging.warning(f"[Graph {idx+1}/{len(graph_files)}] OCR complete: {ocr_end_time - ocr_start_time:.1f}s")
+            log(f"[Graph {idx+1}/{len(graph_files)}] OCR complete: {ocr_end_time - ocr_start_time:.1f}s")
             
             # OCR処理時間の詳細表示（デバッグモードの場合）
             if ocr_data and ocr_data.get('ocr_timings'):
@@ -1901,15 +1906,15 @@ if graph_files and st.session_state.get('start_analysis', False):
 
     if detail_files:
         status_text.text(f'出玉詳細画像を処理中...')
-        logging.warning(f"[Detail] Starting detail image analysis for {len(detail_files)} files")
+        log(f"[Detail] Starting detail image analysis for {len(detail_files)} files")
 
         # APIキーチェック（最初に1回だけ）
         if not st.session_state.get('claude_api_key') and detail_files:
-            logging.warning(f"[Detail] WARNING: Claude API key not set, skipping analysis")
+            log(f"[Detail] WARNING: Claude API key not set, skipping analysis")
             st.warning("⚠️ Claude APIキーが設定されていません。出玉詳細の自動解析はスキップされます。")
 
         for idx, detail_file in enumerate(detail_files):
-            logging.warning(f"[Detail {idx+1}/{len(detail_files)}] Processing: {detail_file.name}")
+            log(f"[Detail {idx+1}/{len(detail_files)}] Processing: {detail_file.name}")
             detail_text.text(f'📷 {detail_file.name} の詳細画像を処理中...')
             detail_file.seek(0)
 
@@ -1920,7 +1925,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                     # 画像読み込み
                     detail_text.text(f'📷 {detail_file.name} の画像を読み込み中...')
                     detail_img = Image.open(detail_file)
-                    logging.warning(f"[Detail {idx+1}/{len(detail_files)}] Image loaded: {detail_img.width}x{detail_img.height}px")
+                    log(f"[Detail {idx+1}/{len(detail_files)}] Image loaded: {detail_img.width}x{detail_img.height}px")
 
                     # 前処理を適用
                     detail_text.text(f'📷 {detail_file.name} の前処理中（黒枠検出・overlay合成）...')
@@ -1928,7 +1933,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                     preprocess_start = time.time()
                     processed_detail = preprocess_detail_image(detail_img)
                     preprocess_time = time.time() - preprocess_start
-                    logging.warning(f"[Detail {idx+1}/{len(detail_files)}] Preprocessing complete: {preprocess_time:.1f}s")
+                    log(f"[Detail {idx+1}/{len(detail_files)}] Preprocessing complete: {preprocess_time:.1f}s")
 
                     # Claude APIで解析
                     detail_text.text(f'📷 {detail_file.name} をClaude APIで解析中...')
@@ -1939,7 +1944,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                         st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
                     )
                     api_time = time.time() - api_start
-                    logging.warning(f"[Detail {idx+1}/{len(detail_files)}] Claude API complete: {api_time:.1f}s")
+                    log(f"[Detail {idx+1}/{len(detail_files)}] Claude API complete: {api_time:.1f}s")
                     
                     # 処理時間を表示（デバッグモード時）
                     if st.session_state.get('show_ocr_debug', False):
@@ -4199,7 +4204,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 with preset_cols[i]:
                     button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                     if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
-                        logging.warning(f"[Button] Preset button clicked (settings page): '{preset_name}'")
+                        log(f"[Button] Preset button clicked (settings page): '{preset_name}'")
                         if preset_name == "デフォルト":
                             reset_settings()
                         else:
@@ -4227,7 +4232,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                         with cols[col]:
                             button_type = "primary" if preset_name == st.session_state.get('current_preset_name', 'デフォルト') else "secondary"
                             if st.button(f"📥 {preset_name}", use_container_width=True, key=f"load_preset_{preset_name}", type=button_type):
-                                logging.warning(f"[Button] Preset button clicked (settings page): '{preset_name}'")
+                                log(f"[Button] Preset button clicked (settings page): '{preset_name}'")
                                 if preset_name == "デフォルト":
                                     reset_settings()
                                 else:
