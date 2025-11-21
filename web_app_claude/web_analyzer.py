@@ -541,7 +541,7 @@ class WebCompatibleAnalyzer:
     
     def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width, graph_info=None, ocr_data=None, game_type='パチンコ'):
         """回転率を計算
-        
+
         Args:
             data_points: グラフデータポイント [(x, value), ...]
             analysis: analyze_values()の結果
@@ -550,10 +550,14 @@ class WebCompatibleAnalyzer:
             graph_info: グラフの開始・終了座標情報（オプション）
             ocr_data: OCRで読み取ったデータ（オプション）
             game_type: 遊技種別（'パチンコ' or 'パチスロ'）
-            
+
         Returns:
             dict: 回転率メトリクス
         """
+        print(f"[DEBUG] calculate_rotation_metrics called: total_start={total_start}, graph_width={graph_width}, has_graph_info={graph_info is not None}, has_data_points={data_points is not None and len(data_points) if data_points else 0}")
+        if graph_info:
+            print(f"[DEBUG] graph_info details: start_x={graph_info.get('start_x')}, end_x={graph_info.get('end_x')}")
+
         if not data_points or not total_start or graph_width <= 0:
             return {
                 'spins_per_pixel': 0,
@@ -574,20 +578,17 @@ class WebCompatibleAnalyzer:
             if graph_info and graph_info.get('start_x') is not None and graph_info.get('end_x') is not None:
                 actual_graph_width = graph_info['end_x'] - graph_info['start_x']
                 graph_start_x = graph_info['start_x']
-                import os
-                os.write(2, f"[spins_per_pixel計算] graph_info使用: start_x={graph_info['start_x']}px, end_x={graph_info['end_x']}px, width={actual_graph_width}px\n".encode('utf-8'))
+                print(f"[spins_per_pixel計算] graph_info使用: start_x={graph_info['start_x']}px, end_x={graph_info['end_x']}px, width={actual_graph_width}px")
             else:
                 # グラフ座標情報がない場合は従来の方法
                 actual_graph_width = graph_width
                 graph_start_x = 0
-                import os
-                os.write(2, f"[spins_per_pixel計算] graph_widthを使用: {graph_width}px\n".encode('utf-8'))
+                print(f"[spins_per_pixel計算] graph_widthを使用: {graph_width}px")
 
             # 1ピクセルあたりの回転数（実際のグラフ幅を使用）
             spins_per_pixel = total_spins / actual_graph_width if actual_graph_width > 0 else 0
-            import os
-            os.write(2, f"[spins_per_pixel計算] total_spins={total_spins}, width={actual_graph_width}px, result={spins_per_pixel}\n".encode('utf-8'))
-            os.write(2, f"[spins_per_pixel計算] 仮定: グラフ幅({actual_graph_width}px)=全回転数({total_spins})\n".encode('utf-8'))
+            print(f"[spins_per_pixel計算] total_spins={total_spins}, width={actual_graph_width}px, result={spins_per_pixel}")
+            print(f"[spins_per_pixel計算] 仮定: グラフ幅({actual_graph_width}px)=全回転数({total_spins})")
             
             # 初当たりまでの計算
             first_hit_spins = 0
@@ -604,6 +605,8 @@ class WebCompatibleAnalyzer:
                 # 初当たりまでの回転数（グラフ開始位置からの相対位置を使用）
                 relative_x = first_hit_x - graph_start_x
                 first_hit_spins = int(relative_x * spins_per_pixel)
+
+                print(f"[初当たり回転数計算] first_hit_index={analysis['first_hit_index']}, first_hit_x={first_hit_x}px, graph_start_x={graph_start_x}px, relative_x={relative_x}px, spins_per_pixel={spins_per_pixel:.4f}, calculated_spins={first_hit_spins}")
 
                 # 累計回転数（ゲーム開始からの累計回転数）
                 # グラフ開始位置（graph_start_x）を0回転目として計算
