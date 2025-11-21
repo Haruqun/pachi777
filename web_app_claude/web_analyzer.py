@@ -668,6 +668,19 @@ class WebCompatibleAnalyzer:
             else:
                 log(f"[累計スタート計算] data_points is empty")
 
+            # AI基準のspins_per_pixel計算（初当たり回転数ベース）
+            ai_based_spins_per_pixel = 0
+            ai_based_cumulative_total_spins = 0
+            if ocr_data and ocr_data.get('initial_ball_starts') and analysis['first_hit_index'] > 0:
+                ai_first_hit_spins = int(ocr_data['initial_ball_starts'])  # 535回転
+                first_hit_x = data_points[analysis['first_hit_index']][0]
+                relative_first_hit_x = first_hit_x - graph_start_x  # 170px
+                if relative_first_hit_x > 0:
+                    ai_based_spins_per_pixel = ai_first_hit_spins / relative_first_hit_x  # 3.147
+                    if len(data_points) > 0:
+                        ai_based_cumulative_total_spins = int(relative_end_x * ai_based_spins_per_pixel)  # 1680回転
+                    log(f"[AI基準計算] ai_first_hit={ai_first_hit_spins}, relative_x={relative_first_hit_x}px, ai_spp={ai_based_spins_per_pixel:.4f}, ai_total={ai_based_cumulative_total_spins}")
+
             # 通常時の回転率計算
             rotation_rate_2 = 0
             normal_decline_spins = 0
@@ -838,7 +851,9 @@ class WebCompatibleAnalyzer:
                 'normal_decline_balls': int(normal_decline_balls),
                 'current_start_from_graph': current_start_from_graph,
                 'ocr_current_start': ocr_current_start,
-                'current_start_gap': current_start_gap
+                'current_start_gap': current_start_gap,
+                'ai_based_spins_per_pixel': round(ai_based_spins_per_pixel, 2) if ai_based_spins_per_pixel > 0 else 0,  # AI基準のspins_per_pixel
+                'ai_based_cumulative_total_spins': ai_based_cumulative_total_spins  # AI基準のグラフ終端累計回転数
             }
             
             if debug_info:

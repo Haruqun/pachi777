@@ -2626,6 +2626,39 @@ if 'analysis_results' in st.session_state:
                                     else:
                                         log(f"[Total Rotations Marker] Out of bounds - not drawing")
 
+                                # AI基準のグラフ終点マーカーを追加
+                                ai_based_spins_per_pixel = result.get('ai_based_spins_per_pixel', 0)
+                                ai_based_cumulative_total_spins = result.get('ai_based_cumulative_total_spins', 0)
+
+                                if ai_based_cumulative_total_spins > 0 and ai_based_spins_per_pixel > 0:
+                                    # AI基準の回転数の位置を計算
+                                    ai_total_x = graph_start_x + (ai_based_cumulative_total_spins / ai_based_spins_per_pixel)
+
+                                    log(f"[AI Total Rotations Marker] ai_total={ai_based_cumulative_total_spins}, ai_spp={ai_based_spins_per_pixel:.4f}, ai_total_x={ai_total_x}")
+
+                                    if 0 <= ai_total_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
+                                        log(f"[AI Total Rotations Marker] Drawing marker at ({int(ai_total_x)}, {zero_y})")
+                                        # マーカーを描画（青色）
+                                        cv2.circle(display_img, (int(ai_total_x), zero_y), 5, (255, 100, 0), -1)  # 塗りつぶし
+                                        cv2.circle(display_img, (int(ai_total_x), zero_y), 6, (200, 80, 0), 2)   # 外枠
+
+                                        # ラベルを描画
+                                        ai_label_text = f'AI: {ai_based_cumulative_total_spins} (spp:{ai_based_spins_per_pixel:.2f})'
+                                        # ラベルの背景（白）
+                                        ai_label_size = cv2.getTextSize(ai_label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
+                                        ai_label_x = int(ai_total_x) - ai_label_size[0] // 2
+                                        ai_label_y = zero_y + 60  # OCR基準ラベルの下に配置
+                                        cv2.rectangle(display_img,
+                                                    (ai_label_x - 2, ai_label_y - ai_label_size[1] - 2),
+                                                    (ai_label_x + ai_label_size[0] + 2, ai_label_y + 2),
+                                                    (255, 255, 255), -1)
+                                        # テキスト（青）
+                                        cv2.putText(display_img, ai_label_text,
+                                                  (ai_label_x, ai_label_y),
+                                                  cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 80, 0), 1, cv2.LINE_AA)
+                                    else:
+                                        log(f"[AI Total Rotations Marker] Out of bounds - not drawing")
+
                                 # 全ての大当たり（谷）のマーカーを描画
                                 all_jackpots = result.get('all_jackpots', [])
                                 if all_jackpots and len(all_jackpots) > 0:
@@ -2673,6 +2706,53 @@ if 'analysis_results' in st.session_state:
                                                 cv2.putText(display_img, label_text,
                                                           (label_x, label_y),
                                                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv2.LINE_AA)
+
+                                # AI基準の全ての大当たりマーカーを描画
+                                if all_jackpots and len(all_jackpots) > 0 and ai_based_spins_per_pixel > 0:
+                                    log(f"[AI Jackpots Markers] Drawing {len(all_jackpots)} AI-based markers")
+
+                                    # マーカーの色（薄い青系の色で区別）
+                                    ai_marker_colors = [
+                                        (255, 200, 150),  # ライトブルー（1回目）
+                                        (255, 180, 100),  # ライトシアン（2回目）
+                                        (255, 220, 180)   # ペールブルー（3回目）
+                                    ]
+
+                                    for idx, jackpot in enumerate(all_jackpots):
+                                        jackpot_index = jackpot.get('index', -1)
+                                        jackpot_value = jackpot.get('value', 0)
+
+                                        if jackpot_index >= 0:
+                                            # AI基準で回転数を計算
+                                            jackpot_x_px = jackpot.get('x', jackpot_index * 2 + 48)
+                                            relative_x = jackpot_x_px - graph_start_x
+                                            ai_jackpot_spins = int(relative_x * ai_based_spins_per_pixel)
+
+                                            # マーカーの色を選択
+                                            color = ai_marker_colors[idx % len(ai_marker_colors)]
+
+                                            if 0 <= jackpot_x_px < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
+                                                log(f"[AI Jackpots Markers] {idx+1}回目: x={jackpot_x_px}px, ai_spins={ai_jackpot_spins}, value={jackpot_value:.1f}玉")
+
+                                                # マーカーを描画（小さい円で区別）
+                                                cv2.circle(display_img, (int(jackpot_x_px), zero_y), 4, color, -1)  # 塗りつぶし（小さめ）
+                                                cv2.circle(display_img, (int(jackpot_x_px), zero_y), 5, tuple([c//2 for c in color]), 1)  # 外枠（細め）
+
+                                                # ラベルを描画（下側に配置してOCR基準と区別）
+                                                label_text = f'{idx+1}(AI): {ai_jackpot_spins}'
+                                                label_size = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.35, 1)[0]
+                                                label_x = int(jackpot_x_px) - label_size[0] // 2
+                                                label_y = zero_y + 45 + (idx % 2) * 15  # 下側に配置
+
+                                                # ラベルの背景（白）
+                                                cv2.rectangle(display_img,
+                                                            (label_x - 2, label_y - label_size[1] - 2),
+                                                            (label_x + label_size[0] + 2, label_y + 2),
+                                                            (255, 255, 255), -1)
+                                                # テキスト（小さめ）
+                                                cv2.putText(display_img, label_text,
+                                                          (label_x, label_y),
+                                                          cv2.FONT_HERSHEY_SIMPLEX, 0.35, color, 1, cv2.LINE_AA)
 
                             except (ValueError, TypeError) as e:
                                 # エラーが発生した場合は元の画像を使用
