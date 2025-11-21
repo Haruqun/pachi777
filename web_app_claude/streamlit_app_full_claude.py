@@ -67,7 +67,7 @@ st.set_page_config(
 )
 
 # リロード検出ログ
-log(f"[Reload] Streamlit app script execution started")
+# log(f"[Reload] Streamlit app script execution started")
 
 # セッション状態の初期化を確実に行う
 if 'initialized' not in st.session_state:
@@ -2902,14 +2902,20 @@ if 'analysis_results' in st.session_state:
                             first_hit_balls_new = 0
                             rotation_metrics = result.get('rotation_metrics') or {}
                             spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
+                            first_hit_debug = result.get('first_hit_debug', {})
+                            graph_info = first_hit_debug.get('graph_info', {})
+                            graph_start_x = graph_info.get('graph_start_x', 0)
 
                             if spins_per_pixel > 0 and result.get('graph_values'):
-                                # AI回転数に対応するグラフ上のx位置を計算
-                                target_x_position = initial_ball_starts / spins_per_pixel
-                                target_x_index = int(target_x_position)
+                                # AI回転数に対応するグラフ上のピクセル位置を計算
+                                target_x_pixel = graph_start_x + (initial_ball_starts / spins_per_pixel)
+
+                                # graph_data_pointsは2ピクセルステップなので、配列インデックスを計算
+                                target_x_index = int((target_x_pixel - graph_start_x) / 2)
 
                                 log(f"[Rotation Rate 1A] AI rotations: {initial_ball_starts}, spins_per_pixel: {spins_per_pixel}")
-                                log(f"[Rotation Rate 1A] target_x_position: {target_x_position}, target_x_index: {target_x_index}")
+                                log(f"[Rotation Rate 1A] graph_start_x: {graph_start_x}, target_x_pixel: {target_x_pixel}")
+                                log(f"[Rotation Rate 1A] target_x_index: {target_x_index}")
 
                                 # グラフデータから該当位置での値を取得
                                 graph_values = result.get('graph_values', [])
