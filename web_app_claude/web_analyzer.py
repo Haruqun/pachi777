@@ -534,6 +534,7 @@ class WebCompatibleAnalyzer:
             return {
                 'spins_per_pixel': 0,
                 'first_hit_spins': 0,
+                'cumulative_first_hit_spins': 0,
                 'first_hit_balls': 0,
                 'rotation_rate_1': 0,  # 初当たりまでの回転率
                 'rotation_rate_2': 0,  # 通常時全体の回転率
@@ -562,12 +563,20 @@ class WebCompatibleAnalyzer:
             first_hit_balls = 0
             rotation_rate_1 = 0
             
+            # 累計回転数の初期化
+            cumulative_first_hit_spins = 0
+
             if analysis['first_hit_index'] > 0 and analysis['first_hit_index'] < len(data_points):
                 # 初当たりの実際のx座標（ピクセル位置）を取得
                 first_hit_x = data_points[analysis['first_hit_index']][0]
                 # 初当たりまでの回転数（グラフ開始位置からの相対位置を使用）
                 relative_x = first_hit_x - graph_start_x
                 first_hit_spins = int(relative_x * spins_per_pixel)
+
+                # 累計回転数（ゲーム開始からの累計回転数）
+                # グラフ開始位置（graph_start_x）を0回転目として計算
+                cumulative_first_hit_spins = int(relative_x * spins_per_pixel)
+
                 # 初当たりまでの使用玉数（マイナス値の絶対値）
                 first_hit_balls = abs(analysis['first_hit_value'])
                 # 回転率①（1000円あたり）
@@ -726,6 +735,7 @@ class WebCompatibleAnalyzer:
                     'spins_per_pixel': round(spins_per_pixel, 2),
                     'first_hit_x': round(first_hit_x, 1) if 'first_hit_x' in locals() else 0,
                     'relative_x': round(relative_x, 1) if 'relative_x' in locals() else 0,
+                    'cumulative_first_hit_spins': cumulative_first_hit_spins,  # 累計回転数
                     'position_percent': round((relative_x / actual_graph_width * 100), 1) if 'relative_x' in locals() else 0,
                     'jackpot_spins': jackpot_spins,
                     'normal_total_spins': normal_total_spins,
@@ -735,6 +745,7 @@ class WebCompatibleAnalyzer:
             result = {
                 'spins_per_pixel': round(spins_per_pixel, 2),
                 'first_hit_spins': first_hit_spins,
+                'cumulative_first_hit_spins': cumulative_first_hit_spins,  # 累計回転数
                 'first_hit_balls': int(first_hit_balls),
                 'rotation_rate_1': rotation_rate_1,
                 'rotation_rate_2': rotation_rate_2,
@@ -756,6 +767,7 @@ class WebCompatibleAnalyzer:
             return {
                 'spins_per_pixel': 0,
                 'first_hit_spins': 0,
+                'cumulative_first_hit_spins': 0,
                 'first_hit_balls': 0,
                 'rotation_rate_1': 0,
                 'rotation_rate_2': 0,
