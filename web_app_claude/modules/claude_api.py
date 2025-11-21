@@ -20,31 +20,15 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
             'raw_text': None
         }
 
-    # ===== ログ方法テスト =====
-    print("TEST 1: print() - This is a test")
-    import logging
-    logging.info("TEST 2: logging.info() - This is a test")
-    logging.warning("TEST 3: logging.warning() - This is a test")
-    st.write("TEST 4: st.write() - This is a test")
-    st.info("TEST 5: st.info() - This is a test")
-    st.success("TEST 6: st.success() - This is a test")
-    st.warning("TEST 7: st.warning() - This is a test")
-    st.error("TEST 8: st.error() - This is a test")
-    import sys
-    sys.stdout.write("TEST 9: sys.stdout.write() - This is a test\n")
-    sys.stderr.write("TEST 10: sys.stderr.write() - This is a test\n")
-    import os
-    os.write(1, b"TEST 11: os.write(1) - This is a test\n")
-    os.write(2, b"TEST 12: os.write(2) - This is a test\n")
-    # ===== テスト終了 =====
-
     # NumPy配列をPIL Imageに変換
     import numpy as np
+    import logging
+
     if isinstance(image, np.ndarray):
-        st.write(f"🔄 NumPy配列をPIL Imageに変換中... (shape: {image.shape})")
+        logging.warning(f"[Claude API] Converting NumPy array to PIL Image - shape: {image.shape}")
         image = Image.fromarray(image)
 
-    st.write(f"📐 画像サイズ: {image.width} x {image.height}px")
+    logging.warning(f"[Claude API] Image size: {image.width}x{image.height}px")
 
     # 画像をbase64エンコード
     buffered = io.BytesIO()
@@ -52,15 +36,15 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
     # 画像が大きすぎる場合はリサイズ
     max_size = 1024
     if image.width > max_size or image.height > max_size:
-        st.write(f"⚠️ 画像が大きいためリサイズします: {image.width}x{image.height} → {max_size}x{max_size}")
+        logging.warning(f"[Claude API] Resizing image: {image.width}x{image.height} -> {max_size}x{max_size}")
         image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-        st.write(f"✅ リサイズ完了: {image.width} x {image.height}px")
+        logging.warning(f"[Claude API] Resize complete: {image.width}x{image.height}px")
 
-    st.write("🔐 画像をBase64エンコード中...")
+    logging.warning(f"[Claude API] Encoding image to Base64...")
     image.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
     img_size_kb = len(buffered.getvalue()) / 1024
-    st.write(f"✅ エンコード完了: {img_size_kb:.1f}KB")
+    logging.warning(f"[Claude API] Base64 encoding complete: {img_size_kb:.1f}KB")
 
     prompt = """この画像から以下の情報を正確に抽出してJSON形式で返してください：
 
@@ -118,23 +102,23 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
             ]
         }
 
-        st.write(f"🌐 Claude API ({model}) にリクエスト送信中...")
+        logging.warning(f"[Claude API] Sending request to Claude API - Model: {model}")
         request_start = time.time()
         response = requests.post(url, headers=headers, json=data, timeout=30)
         request_time = time.time() - request_start
-        st.write(f"✅ APIレスポンス受信完了: {request_time:.1f}秒 (ステータス: {response.status_code})")
-        
+        logging.warning(f"[Claude API] Response received - Time: {request_time:.1f}s, Status: {response.status_code}")
+
         if response.status_code == 200:
-            st.write("📦 APIレスポンスをJSON解析中...")
+            logging.warning(f"[Claude API] Parsing JSON response...")
             response_data = response.json()
 
             # レスポンスから内容を抽出
             content = response_data.get('content', [])
             if content and len(content) > 0:
                 result_text = content[0].get('text', '')
-                st.write(f"📝 Claude応答テキスト長: {len(result_text)}文字")
+                logging.warning(f"[Claude API] Response text length: {len(result_text)} chars")
             else:
-                st.error("❌ レスポンスが空です")
+                logging.warning(f"[Claude API] ERROR: Empty response")
                 return {
                     'success': False,
                     'error': "レスポンスが空です",
@@ -143,24 +127,25 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
                 }
 
             # JSONを抽出してパース
-            st.write("🔍 JSON形式のデータを抽出中...")
+            logging.warning(f"[Claude API] Extracting JSON data...")
             json_match = re.search(r'\{[\s\S]*\}', result_text)
             if json_match:
                 try:
-                    st.write("✅ JSONデータ発見、パース中...")
+                    logging.warning(f"[Claude API] JSON found, parsing...")
                     extracted_data = json.loads(json_match.group())
-                    st.write(f"✅ JSONパース成功: {len(extracted_data)}個のフィールド")
-                    
+                    logging.warning(f"[Claude API] JSON parse success - {len(extracted_data)} fields")
+
                     # 現在値の修正（通常時使用玉数から逆算）
                     if extracted_data.get('normal_usage_balls') and extracted_data.get('total_balls'):
                         total_balls = extracted_data['total_balls']
                         normal_usage = extracted_data['normal_usage_balls']
-                        
+
                         # 現在値 = 総払い出し - 通常時使用
                         current_value = total_balls - normal_usage
                         extracted_data['current_value_calculated'] = current_value
-                    
-                    st.success("✅ Claude API解析完了！")
+                        logging.warning(f"[Claude API] Calculated current_value: {current_value}")
+
+                    logging.warning(f"[Claude API] Analysis complete!")
                     return {
                         'success': True,
                         'error': None,
@@ -168,7 +153,7 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
                         'raw_text': result_text
                     }
                 except json.JSONDecodeError as e:
-                    st.error(f"❌ JSON解析エラー: {str(e)}")
+                    logging.warning(f"[Claude API] ERROR: JSON parse failed - {str(e)}")
                     return {
                         'success': False,
                         'error': f"JSON解析エラー: {str(e)}",
@@ -177,16 +162,16 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
                     }
             else:
                 # JSONが見つからない場合でも、テキストは返す
-                st.warning("⚠️ JSONデータが見つかりませんでした")
+                logging.warning(f"[Claude API] WARNING: JSON data not found in response")
                 return {
                     'success': False,
                     'error': "JSONデータが見つかりませんでした",
                     'data': None,
                     'raw_text': result_text
                 }
-                
+
         elif response.status_code == 401:
-            st.error("❌ APIキー認証エラー (401)")
+            logging.warning(f"[Claude API] ERROR: Authentication failed (401)")
             return {
                 'success': False,
                 'error': "APIキーが無効です。正しいキーを入力してください。",
@@ -194,7 +179,7 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
                 'raw_text': None
             }
         elif response.status_code == 429:
-            st.error("❌ APIレート制限エラー (429)")
+            logging.warning(f"[Claude API] ERROR: Rate limit exceeded (429)")
             return {
                 'success': False,
                 'error': "APIレート制限に達しました。しばらく待ってから再試行してください。",
@@ -203,7 +188,7 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
             }
         else:
             error_detail = response.json() if response.text else {"error": "Unknown error"}
-            st.error(f"❌ APIエラー ({response.status_code}): {error_detail}")
+            logging.warning(f"[Claude API] ERROR: API error ({response.status_code}) - {error_detail}")
             return {
                 'success': False,
                 'error': f"APIエラー ({response.status_code}): {error_detail}",
@@ -212,7 +197,7 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
             }
 
     except requests.exceptions.Timeout:
-        st.error("❌ APIリクエストがタイムアウトしました (30秒)")
+        logging.warning(f"[Claude API] ERROR: Request timeout (30s)")
         return {
             'success': False,
             'error': "APIリクエストがタイムアウトしました",
@@ -222,7 +207,7 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
     except Exception as e:
         from modules.error_handler import log_error
         log_error('Claude API Error', str(e), {'function': 'analyze_with_claude', 'image_type': 'detail_analysis'})
-        st.error(f"❌ 予期しないエラー: {str(e)}")
+        logging.warning(f"[Claude API] ERROR: Unexpected error - {str(e)}")
         return {
             'success': False,
             'error': str(e),

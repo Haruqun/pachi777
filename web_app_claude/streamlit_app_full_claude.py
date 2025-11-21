@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 import io
+import logging
 from web_analyzer import WebCompatibleAnalyzer
 from modules.image_processor import detect_orange_bar, detect_zero_line, crop_graph_area
 from modules.claude_api import analyze_with_claude
@@ -769,28 +770,32 @@ graph_files = []
 detail_files = []
 
 if uploaded_files:
+    logging.warning(f"[Upload] {len(uploaded_files)} files uploaded")
+
     # 黒色割合で画像を分類
     detail_threshold = st.session_state.get('detail_image_threshold', 0.3)
-    
+
 
     debug_data = []
-    
+
     # 黒色判定の閾値を取得
     black_pixel_threshold = st.session_state.get('black_pixel_threshold', 50)
-    
+
     for file in uploaded_files:
         try:
             file.seek(0)
             img = Image.open(file)
             black_ratio = calculate_black_ratio(img, black_threshold=black_pixel_threshold)
-            
+
+            file_type = 'Detail' if black_ratio >= detail_threshold else 'Graph'
+            logging.warning(f"[Classification] {file.name}: black_ratio={black_ratio:.3f}, type={file_type}")
 
             debug_data.append({
                 'name': file.name,
                 'ratio': black_ratio,
                 'type': '出玉詳細' if black_ratio >= detail_threshold else 'グラフ'
             })
-            
+
             # 分類
             file.seek(0)  # ファイルポインタをリセット
             if black_ratio >= detail_threshold:
@@ -798,8 +803,11 @@ if uploaded_files:
             else:
                 graph_files.append(file)
         except Exception as e:
+            logging.warning(f"[Classification] ERROR: {file.name} - {str(e)}")
             st.error(f"⚠️ {file.name} の処理中にエラー: {str(e)}")
             continue
+
+    logging.warning(f"[Classification] Result: {len(graph_files)} graph files, {len(detail_files)} detail files")
     
     # 出玉詳細画像から先に機種名を検出して自動設定
     if detail_files and st.session_state.game_type == "パチンコ" and not st.session_state.get('payout_manually_changed', False):
@@ -1267,31 +1275,37 @@ if graph_files and st.session_state.get('start_analysis', False):
     
     # 初期メッセージを表示
     status_text.text('🚀 解析を開始します...')
+    logging.warning(f"[Analysis] Starting analysis for {len(graph_files)} graph files")
     time.sleep(0.5)  # 少し待機してメッセージを見やすくする
-    
+
     # 解析結果を格納
     analysis_results = []
-    
+
     # 各画像を処理
     for idx, uploaded_file in enumerate(graph_files):
+        logging.warning(f"[Graph {idx+1}/{len(graph_files)}] Processing: {uploaded_file.name}")
+
         # 進捗更新（開始時）
         progress_start = idx / len(graph_files)
         progress_bar.progress(progress_start)
         status_text.text(f'処理中... ({idx + 1}/{len(graph_files)})')
         detail_text.text(f'📷 {uploaded_file.name} の画像を読み込み中...')
         time.sleep(0.1)  # 視覚的フィードバックのため少し徇機
-        
+
         # 画像を読み込み
         image = Image.open(uploaded_file)
         img_array = np.array(image)
         height, width = img_array.shape[:2]
-        
+        logging.warning(f"[Graph {idx+1}/{len(graph_files)}] Image loaded: {width}x{height}px")
+
         # OCRでデータ抽出を試みる（スキップ設定を確認）
         if not st.session_state.get('skip_ocr', False):
             detail_text.text(f'🔍 {uploaded_file.name} のOCR解析を実行中...')
+            logging.warning(f"[Graph {idx+1}/{len(graph_files)}] Starting OCR analysis...")
             ocr_start_time = time.time()
             ocr_data = extract_site7_data(img_array)
             ocr_end_time = time.time()
+            logging.warning(f"[Graph {idx+1}/{len(graph_files)}] OCR complete: {ocr_end_time - ocr_start_time:.1f}s")
             
             # OCR処理時間の詳細表示（デバッグモードの場合）
             if ocr_data and ocr_data.get('ocr_timings'):
@@ -1873,18 +1887,21 @@ if graph_files and st.session_state.get('start_analysis', False):
     detail_analysis_results = []
     machine_payout_data = None  # 機種別払い出し球数を一度だけ取得
     detected_machine_name = None  # 検出した機種名を保存
-    
+
     if detail_files:
         status_text.text(f'出玉詳細画像を処理中...')
-        
+        logging.warning(f"[Detail] Starting detail image analysis for {len(detail_files)} files")
+
         # APIキーチェック（最初に1回だけ）
         if not st.session_state.get('claude_api_key') and detail_files:
+            logging.warning(f"[Detail] WARNING: Claude API key not set, skipping analysis")
             st.warning("⚠️ Claude APIキーが設定されていません。出玉詳細の自動解析はスキップされます。")
-        
+
         for idx, detail_file in enumerate(detail_files):
+            logging.warning(f"[Detail {idx+1}/{len(detail_files)}] Processing: {detail_file.name}")
             detail_text.text(f'📷 {detail_file.name} の詳細画像を処理中...')
             detail_file.seek(0)
-            
+
             # Claude APIで解析（APIキーがある場合）
             claude_result = None
             if st.session_state.get('claude_api_key'):
@@ -1892,14 +1909,16 @@ if graph_files and st.session_state.get('start_analysis', False):
                     # 画像読み込み
                     detail_text.text(f'📷 {detail_file.name} の画像を読み込み中...')
                     detail_img = Image.open(detail_file)
-                    
+                    logging.warning(f"[Detail {idx+1}/{len(detail_files)}] Image loaded: {detail_img.width}x{detail_img.height}px")
+
                     # 前処理を適用
                     detail_text.text(f'📷 {detail_file.name} の前処理中（黒枠検出・overlay合成）...')
                     import time
                     preprocess_start = time.time()
                     processed_detail = preprocess_detail_image(detail_img)
                     preprocess_time = time.time() - preprocess_start
-                    
+                    logging.warning(f"[Detail {idx+1}/{len(detail_files)}] Preprocessing complete: {preprocess_time:.1f}s")
+
                     # Claude APIで解析
                     detail_text.text(f'📷 {detail_file.name} をClaude APIで解析中...')
                     api_start = time.time()
@@ -1909,6 +1928,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                         st.session_state.get('claude_model', 'claude-3-5-haiku-20241022')
                     )
                     api_time = time.time() - api_start
+                    logging.warning(f"[Detail {idx+1}/{len(detail_files)}] Claude API complete: {api_time:.1f}s")
                     
                     # 処理時間を表示（デバッグモード時）
                     if st.session_state.get('show_ocr_debug', False):
