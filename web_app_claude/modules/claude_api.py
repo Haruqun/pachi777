@@ -21,21 +21,21 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
         }
 
     # ===== ログ方法テスト =====
-    print("TEST 1: print() - これはテストです")
+    print("TEST 1: print() - This is a test")
     import logging
-    logging.info("TEST 2: logging.info() - これはテストです")
-    logging.warning("TEST 3: logging.warning() - これはテストです")
-    st.write("TEST 4: st.write() - これはテストです")
-    st.info("TEST 5: st.info() - これはテストです")
-    st.success("TEST 6: st.success() - これはテストです")
-    st.warning("TEST 7: st.warning() - これはテストです")
-    st.error("TEST 8: st.error() - これはテストです")
+    logging.info("TEST 2: logging.info() - This is a test")
+    logging.warning("TEST 3: logging.warning() - This is a test")
+    st.write("TEST 4: st.write() - This is a test")
+    st.info("TEST 5: st.info() - This is a test")
+    st.success("TEST 6: st.success() - This is a test")
+    st.warning("TEST 7: st.warning() - This is a test")
+    st.error("TEST 8: st.error() - This is a test")
     import sys
-    sys.stdout.write("TEST 9: sys.stdout.write() - これはテストです\n")
-    sys.stderr.write("TEST 10: sys.stderr.write() - これはテストです\n")
+    sys.stdout.write("TEST 9: sys.stdout.write() - This is a test\n")
+    sys.stderr.write("TEST 10: sys.stderr.write() - This is a test\n")
     import os
-    os.write(1, b"TEST 11: os.write(1) - これはテストです\n")
-    os.write(2, b"TEST 12: os.write(2) - これはテストです\n")
+    os.write(1, b"TEST 11: os.write(1) - This is a test\n")
+    os.write(2, b"TEST 12: os.write(2) - This is a test\n")
     # ===== テスト終了 =====
 
     # NumPy配列をPIL Imageに変換
