@@ -2557,17 +2557,14 @@ if 'analysis_results' in st.session_state:
                                 graph_info = first_hit_debug.get('graph_info', {})
                                 graph_start_x = graph_info.get('graph_start_x', 0)
 
-                                # 実際のピクセル位置を取得（優先）
-                                first_hit_pixel_x = result.get('first_hit_pixel_x')
-
-                                if first_hit_pixel_x is not None:
-                                    # グラフから検出した実際の位置を使用（最も正確）
-                                    claude_x = first_hit_pixel_x
-                                    log(f"[Claude AI Marker] Using actual graph position: claude_x={claude_x}px")
+                                # Claude AIの初当たり回転数をピクセル位置に変換
+                                # グラフ解析の位置とは独立して計算
+                                if spins_per_pixel > 0:
+                                    claude_x = graph_start_x + (initial_ball_starts / spins_per_pixel)
+                                    log(f"[Claude AI Marker] Calculated position: claude_x={claude_x:.1f}px (start={graph_start_x}px, spins={initial_ball_starts}, scale={spins_per_pixel:.4f})")
                                 else:
-                                    # フォールバック：spins_per_pixelから計算
-                                    claude_x = graph_start_x + (initial_ball_starts / spins_per_pixel) if spins_per_pixel > 0 else None
-                                    log(f"[Claude AI Marker] Calculated from spins_per_pixel: claude_x={claude_x}px")
+                                    claude_x = None
+                                    log(f"[Claude AI Marker] Cannot calculate: spins_per_pixel={spins_per_pixel}")
 
                                 if claude_x is None:
                                     raise ValueError("Could not determine marker position")
@@ -3028,29 +3025,7 @@ if 'analysis_results' in st.session_state:
                         first_hit_spins = rotation_metrics.get('first_hit_spins', 0)
                         cumulative_total_spins = rotation_metrics.get('cumulative_total_spins', 0)
 
-                        # Claude AIの値がある場合は優先（より正確）
-                        log(f"[Display Debug] result has claude_analysis: {result.get('claude_analysis') is not None}")
-                        if result.get('claude_analysis'):
-                            claude_analysis = result['claude_analysis']
-                            log(f"[Display Debug] claude_analysis keys: {list(claude_analysis.keys())}")
-
-                            # データ構造に応じて取得（{'success': True, 'data': {...}} 形式の場合）
-                            if 'data' in claude_analysis and 'success' in claude_analysis:
-                                claude_data = claude_analysis.get('data', {})
-                                log(f"[Display Debug] Using nested structure, data keys: {list(claude_data.keys()) if isinstance(claude_data, dict) else 'not dict'}")
-                            else:
-                                claude_data = claude_analysis
-                                log(f"[Display Debug] Using direct structure")
-
-                            log(f"[Display Debug] initial_ball_starts value: {claude_data.get('initial_ball_starts')}")
-                            if claude_data.get('initial_ball_starts'):
-                                first_hit_spins = int(claude_data['initial_ball_starts'])
-                                log(f"[Display] Using Claude AI initial_ball_starts: {first_hit_spins}")
-                            else:
-                                log(f"[Display Debug] initial_ball_starts is None or empty")
-                        else:
-                            log(f"[Display Debug] No claude_analysis in result")
-
+                        # グラフ解析結果をそのまま使用（Claude AI値での上書きはしない）
                         first_hit_html = f'<div class="stat-item"><span class="stat-label">🎰 初当たり{unit}数</span><span class="stat-value {first_hit_class}">{first_hit_text}</span></div>'
                         first_hit_html += f'<div class="stat-item"><span class="stat-label">🎲 初当たり回転数</span><span class="stat-value">{first_hit_spins:,}回</span></div>'
                         first_hit_html += f'<div class="stat-item"><span class="stat-label">📊 累計スタート（グラフ）</span><span class="stat-value">{cumulative_total_spins:,}回</span></div>'
