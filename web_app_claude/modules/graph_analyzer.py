@@ -223,37 +223,68 @@ def detect_first_hit(graph_values, game_type='パチンコ', small_jackpot_balls
         'candidates': []
     }
 
-    # 方法1: 閾値以上の急激な増加を検出
-    for i in range(1, min(len(graph_values)-2, 150)):  # 最大150点まで探索
-        current_increase = graph_values[i+1] - graph_values[i]
+    # 方法0: 最低値ベースの検出（最優先）
+    # マイナス値の中で最も深い点を見つけ、そこから上昇があれば初当たりとする
+    min_val_in_range = float('inf')
+    min_val_idx = -1
+    for i in range(min(len(graph_values), 150)):  # 最大150点まで探索
+        if graph_values[i] < 0 and graph_values[i] < min_val_in_range:
+            min_val_in_range = graph_values[i]
+            min_val_idx = i
 
-        # 閾値以上の増加を検出
-        if current_increase > min_payout:
-            # 候補として記録
-            if graph_values[i] < 0:
+    # 最低値から上昇が始まっているか確認
+    if min_val_idx != -1 and min_val_idx < len(graph_values) - 2:
+        # 最低値の次の点で上昇しているか確認（小さな上昇でもOK）
+        if graph_values[min_val_idx + 1] > graph_values[min_val_idx] + 20:  # 20玉以上の上昇
+            # さらにその後も上昇傾向が続くか確認
+            total_increase = 0
+            for j in range(min_val_idx + 1, min(min_val_idx + 4, len(graph_values))):
+                total_increase += graph_values[j] - graph_values[j-1]
+
+            # 3点間で合計min_payout以上上昇していれば初当たりと判定
+            if total_increase > min_payout:
+                first_hit_val = graph_values[min_val_idx]
+                first_hit_x = min_val_idx
+                first_hit_debug_info['detection_method'] = '方法0: 最低値ベースの検出'
                 first_hit_debug_info['candidates'].append({
-                    'position': i,
-                    'value': graph_values[i],
-                    'increase': current_increase,
-                    'next_point': graph_values[i+1] if i+1 < len(graph_values) else None,
-                    'reason': f'{current_increase:.0f}玉の上昇検出'
+                    'position': min_val_idx,
+                    'value': graph_values[min_val_idx],
+                    'increase': total_increase,
+                    'reason': f'最低値{graph_values[min_val_idx]:.0f}玉から合計{total_increase:.0f}玉上昇'
                 })
-            # 次の点も上昇または維持していることを確認（ノイズ除外）
-            noise_threshold = 50 if game_type == 'パチンコ' else 10
-            if graph_values[i+2] >= graph_values[i+1] - noise_threshold:
-                # 初当たりは必ずマイナス値から
+
+    # 方法1: 閾値以上の急激な増加を検出
+    if first_hit_x is None:
+        for i in range(1, min(len(graph_values)-2, 150)):  # 最大150点まで探索
+            current_increase = graph_values[i+1] - graph_values[i]
+
+            # 閾値以上の増加を検出
+            if current_increase > min_payout:
+                # 候補として記録
                 if graph_values[i] < 0:
-                    # 補正なしで純粋な検出位置を使用
-                    first_hit_val = graph_values[i]
-                    first_hit_x = i
-                    first_hit_debug_info['detection_method'] = '方法1: 急激な増加検出'
                     first_hit_debug_info['candidates'].append({
                         'position': i,
                         'value': graph_values[i],
                         'increase': current_increase,
-                        'reason': f'{current_increase:.0f}玉の急上昇'
+                        'next_point': graph_values[i+1] if i+1 < len(graph_values) else None,
+                        'reason': f'{current_increase:.0f}玉の上昇検出'
                     })
-                    break
+                # 次の点も上昇または維持していることを確認（ノイズ除外）
+                noise_threshold = 50 if game_type == 'パチンコ' else 10
+                if graph_values[i+2] >= graph_values[i+1] - noise_threshold:
+                    # 初当たりは必ずマイナス値から
+                    if graph_values[i] < 0:
+                        # 補正なしで純粋な検出位置を使用
+                        first_hit_val = graph_values[i]
+                        first_hit_x = i
+                        first_hit_debug_info['detection_method'] = '方法1: 急激な増加検出'
+                        first_hit_debug_info['candidates'].append({
+                            'position': i,
+                            'value': graph_values[i],
+                            'increase': current_increase,
+                            'reason': f'{current_increase:.0f}玉の急上昇'
+                        })
+                        break
 
     # 方法2: 減少傾向からの急上昇を検出
     if first_hit_x is None:
