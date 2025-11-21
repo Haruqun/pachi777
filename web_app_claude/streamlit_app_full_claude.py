@@ -2913,19 +2913,36 @@ if 'analysis_results' in st.session_state:
                             first_hit_balls = first_hit_balls_new if first_hit_balls_new > 0 else first_hit_balls_old
 
                             if first_hit_balls > 0:
-                                rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
-                                warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
+                                rotation_rate_1_a = (initial_ball_starts / first_hit_balls) * 250
+                                warning_a = " ⚠️" if rotation_rate_1_a < 10 or rotation_rate_1_a > 35 else ""
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①A (AI+グラフ)</span><span class="stat-value positive">{rotation_rate_1_a:.1f}回/千円{warning_a}</span></div>'
 
-                                # 比較情報を追加（デバッグモード時）
-                                comparison_info = ""
-                                if st.session_state.get('show_ocr_debug', False) and first_hit_balls_old > 0 and first_hit_balls_new > 0:
-                                    comparison_info = f'<div style="font-size: 0.75em; color: #999; margin-left: 20px;">旧方式: {int(first_hit_balls_old):,}{unit} / 新方式: {int(first_hit_balls_new):,}{unit}</div>'
+                                # グラフ解析のみの回転率①G
+                                graph_first_hit_rotations = result.get('first_hit_debug', {}).get('graph_info', {}).get('total_spins', 0)
+                                graph_first_hit_balls = abs(result.get('first_hit_val', 0))
 
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>{comparison_info}'
+                                if graph_first_hit_rotations > 0 and graph_first_hit_balls > 0:
+                                    # グラフの初当たり回転数を計算
+                                    rotation_metrics = result.get('rotation_metrics', {})
+                                    spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
+                                    first_hit_index = result.get('first_hit_debug', {}).get('detected_position')
+
+                                    if spins_per_pixel > 0 and first_hit_index is not None:
+                                        graph_rotations = int(first_hit_index * spins_per_pixel)
+                                        rotation_rate_1_g = (graph_rotations / graph_first_hit_balls) * 250
+                                        warning_g = " ⚠️" if rotation_rate_1_g < 10 or rotation_rate_1_g > 35 else ""
+                                        rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①G (グラフのみ)</span><span class="stat-value positive">{rotation_rate_1_g:.1f}回/千円{warning_g}</span></div>'
+
+                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ ①A: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
+                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ ①G: {graph_rotations}回転 ÷ {int(graph_first_hit_balls):,}{unit}使用</div>'
+                                    else:
+                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
+                                else:
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
+
                                 rotation_rate_1_calculated = True
                                 # 結果に保存
-                                result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
+                                result['display_rotation_rate_1'] = f"{rotation_rate_1_a:.1f}{warning_a}"
                             else:
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
                                 result['display_rotation_rate_1'] = '-'
