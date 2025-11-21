@@ -565,6 +565,7 @@ class WebCompatibleAnalyzer:
             
             # 累計回転数の初期化
             cumulative_first_hit_spins = 0
+            cumulative_total_spins = 0  # グラフ終端の累計回転数
 
             if analysis['first_hit_index'] > 0 and analysis['first_hit_index'] < len(data_points):
                 # 初当たりの実際のx座標（ピクセル位置）を取得
@@ -584,7 +585,13 @@ class WebCompatibleAnalyzer:
                 unit_per_1000yen = 250 if game_type == 'パチンコ' else 50
                 if first_hit_balls > 0:
                     rotation_rate_1 = round((first_hit_spins / first_hit_balls) * unit_per_1000yen, 1)
-            
+
+            # グラフ終端の累計スタート数を計算
+            if len(data_points) > 0:
+                end_x = data_points[-1][0]
+                relative_end_x = end_x - graph_start_x
+                cumulative_total_spins = int(relative_end_x * spins_per_pixel)
+
             # 通常時の回転率計算
             rotation_rate_2 = 0
             normal_decline_spins = 0
@@ -745,7 +752,8 @@ class WebCompatibleAnalyzer:
             result = {
                 'spins_per_pixel': round(spins_per_pixel, 2),
                 'first_hit_spins': first_hit_spins,
-                'cumulative_first_hit_spins': cumulative_first_hit_spins,  # 累計回転数
+                'cumulative_first_hit_spins': cumulative_first_hit_spins,  # 初当たりまでの累計回転数
+                'cumulative_total_spins': cumulative_total_spins,  # グラフ終端の累計回転数
                 'first_hit_balls': int(first_hit_balls),
                 'rotation_rate_1': rotation_rate_1,
                 'rotation_rate_2': rotation_rate_2,

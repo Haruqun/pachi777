@@ -3003,12 +3003,14 @@ if 'analysis_results' in st.session_state:
                     # 初当たり関連のHTMLを条件分岐で生成
                     first_hit_html = ""
                     if st.session_state.game_type == 'パチンコ':
-                        # グラフ解析から計算された初当たり回転数を使用
+                        # グラフ解析から計算された初当たり回転数と累計スタート数を使用
                         rotation_metrics = result.get('rotation_metrics') or {}
                         first_hit_spins = rotation_metrics.get('first_hit_spins', 0)
-                        
+                        cumulative_total_spins = rotation_metrics.get('cumulative_total_spins', 0)
+
                         first_hit_html = f'<div class="stat-item"><span class="stat-label">🎰 初当たり{unit}数</span><span class="stat-value {first_hit_class}">{first_hit_text}</span></div>'
                         first_hit_html += f'<div class="stat-item"><span class="stat-label">🎲 初当たり回転数</span><span class="stat-value">{first_hit_spins:,}回</span></div>'
+                        first_hit_html += f'<div class="stat-item"><span class="stat-label">📊 累計スタート（グラフ）</span><span class="stat-value">{cumulative_total_spins:,}回</span></div>'
                     
                     # 大当り回数の計算（グラフから検出した回数を使用）
                     if st.session_state.game_type == 'パチンコ':
