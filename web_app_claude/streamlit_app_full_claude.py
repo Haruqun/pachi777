@@ -2558,8 +2558,8 @@ if 'analysis_results' in st.session_state:
                                 if 0 <= claude_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
                                     log(f"[Claude AI Marker] Drawing marker at ({int(claude_x)}, {zero_y})")
                                     # マーカーを描画（赤色）
-                                    cv2.circle(display_img, (int(claude_x), zero_y), 10, (0, 0, 255), -1)  # 塗りつぶし
-                                    cv2.circle(display_img, (int(claude_x), zero_y), 12, (0, 0, 200), 2)   # 外枠
+                                    cv2.circle(display_img, (int(claude_x), zero_y), 5, (0, 0, 255), -1)  # 塗りつぶし
+                                    cv2.circle(display_img, (int(claude_x), zero_y), 6, (0, 0, 200), 2)   # 外枠
 
                                     # ラベルを描画
                                     label_text = f'AI HIT: {initial_ball_starts}'
@@ -2589,8 +2589,8 @@ if 'analysis_results' in st.session_state:
                                     if 0 <= total_rotations_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
                                         log(f"[Total Rotations Marker] Drawing marker at ({int(total_rotations_x)}, {zero_y})")
                                         # マーカーを描画（緑色）
-                                        cv2.circle(display_img, (int(total_rotations_x), zero_y), 10, (0, 255, 0), -1)  # 塗りつぶし
-                                        cv2.circle(display_img, (int(total_rotations_x), zero_y), 12, (0, 200, 0), 2)   # 外枠
+                                        cv2.circle(display_img, (int(total_rotations_x), zero_y), 5, (0, 255, 0), -1)  # 塗りつぶし
+                                        cv2.circle(display_img, (int(total_rotations_x), zero_y), 6, (0, 200, 0), 2)   # 外枠
 
                                         # ラベルを描画
                                         total_label_text = f'AI TOTAL: {total_rotations}'
