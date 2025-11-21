@@ -2920,91 +2920,21 @@ if 'analysis_results' in st.session_state:
                         # 優先度に基づいてデータを取得
                         prioritized_data = get_prioritized_data(result)
                         
-                        # 回転率①の計算
+                        # 回転率①の計算（グラフ解析のみ）
                         rotation_rate_1_calculated = False
-                        initial_ball_starts = prioritized_data.get('initial_ball_starts', 0)  # AI取得の初当たり回転数
+                        rotation_metrics = result.get('rotation_metrics', {})
+                        graph_first_hit_spins = rotation_metrics.get('first_hit_spins', 0)
+                        graph_first_hit_balls = rotation_metrics.get('first_hit_balls', 0)
 
-                        # 文字列の場合は数値に変換
-                        try:
-                            initial_ball_starts = int(initial_ball_starts) if initial_ball_starts else 0
-                        except (ValueError, TypeError):
-                            initial_ball_starts = 0
+                        if graph_first_hit_spins > 0 and graph_first_hit_balls > 0:
+                            rotation_rate_1 = (graph_first_hit_spins / graph_first_hit_balls) * 250
+                            warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
+                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
 
-                        # AI取得の初当たり回転数がある場合、グラフ上の対応位置での使用球数を計算
-                        if initial_ball_starts > 0:
-                            # 方法1: グラフ解析から取得した初当たり玉数（現在の方法）
-                            first_hit_balls_old = abs(prioritized_data.get('first_hit_val') or 0)
+                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {graph_first_hit_spins}回転 ÷ {int(graph_first_hit_balls):,}{unit}使用</div>'
 
-                            # 方法2: Claude AIの回転数から位置を逆算してグラフ上の使用球数を取得（新方式）
-                            first_hit_balls_new = 0
-                            rotation_metrics = result.get('rotation_metrics') or {}
-                            spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
-                            first_hit_debug = result.get('first_hit_debug', {})
-                            graph_info = first_hit_debug.get('graph_info', {})
-                            graph_start_x = graph_info.get('graph_start_x', 0)
-
-                            if spins_per_pixel > 0 and result.get('graph_values'):
-                                # AI回転数に対応するグラフ上のピクセル位置を計算
-                                # ※ graph_start_xからの相対位置で計算
-                                target_x_pixel = graph_start_x + (initial_ball_starts / spins_per_pixel)
-
-                                # graph_valuesの構造:
-                                # graph_data_points[0] = (48, value) から始まる
-                                # graph_values[0] = x=48の値, graph_values[1] = x=50の値...
-                                # つまり graph_values[i] = x=(48 + i*2) の値
-                                # target_x_pixelに対応するインデックスは (target_x_pixel - graph_start_x) / 2
-                                target_x_index = int((target_x_pixel - graph_start_x) / 2)
-
-                                log(f"[Rotation Rate 1A] AI rotations: {initial_ball_starts}, spins_per_pixel: {spins_per_pixel}")
-                                log(f"[Rotation Rate 1A] graph_start_x: {graph_start_x}, target_x_pixel: {target_x_pixel}")
-                                log(f"[Rotation Rate 1A] target_x_index: {target_x_index}")
-
-                                # グラフデータから該当位置での値を取得
-                                graph_values = result.get('graph_values', [])
-                                log(f"[Rotation Rate 1A] graph_values length: {len(graph_values)}")
-
-                                if 0 <= target_x_index < len(graph_values):
-                                    # その位置での実際の値を取得（使用球数）
-                                    value_at_target = graph_values[target_x_index]
-                                    first_hit_balls_new = abs(value_at_target)
-                                    log(f"[Rotation Rate 1A] value_at_target (index {target_x_index}): {value_at_target}, balls: {first_hit_balls_new}")
-
-                                    # 周辺の値も確認
-                                    if target_x_index > 0:
-                                        log(f"[Rotation Rate 1A] Surrounding values: index {target_x_index-1}: {graph_values[target_x_index-1]:.1f}, index {target_x_index}: {value_at_target:.1f}, index {target_x_index+1}: {graph_values[target_x_index+1]:.1f}")
-
-                            # 新方式を優先、データがない場合は旧方式
-                            first_hit_balls = first_hit_balls_new if first_hit_balls_new > 0 else first_hit_balls_old
-
-                            if first_hit_balls > 0:
-                                rotation_rate_1_a = (initial_ball_starts / first_hit_balls) * 250
-                                warning_a = " ⚠️" if rotation_rate_1_a < 10 or rotation_rate_1_a > 35 else ""
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①A (AI+グラフ)</span><span class="stat-value positive">{rotation_rate_1_a:.1f}回/千円{warning_a}</span></div>'
-
-                                # グラフ解析のみの回転率①G
-                                # rotation_metricsから正しい初当たり回転数を取得
-                                rotation_metrics = result.get('rotation_metrics', {})
-                                graph_first_hit_spins = rotation_metrics.get('first_hit_spins', 0)
-                                graph_first_hit_balls = rotation_metrics.get('first_hit_balls', 0)
-
-                                log(f"[Rotation Rate 1G] first_hit_spins: {graph_first_hit_spins}, first_hit_balls: {graph_first_hit_balls}")
-
-                                if graph_first_hit_spins > 0 and graph_first_hit_balls > 0:
-                                    rotation_rate_1_g = (graph_first_hit_spins / graph_first_hit_balls) * 250
-                                    warning_g = " ⚠️" if rotation_rate_1_g < 10 or rotation_rate_1_g > 35 else ""
-                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①G (グラフのみ)</span><span class="stat-value positive">{rotation_rate_1_g:.1f}回/千円{warning_g}</span></div>'
-
-                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ ①A: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
-                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ ①G: {graph_first_hit_spins}回転 ÷ {int(graph_first_hit_balls):,}{unit}使用</div>'
-                                else:
-                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
-
-                                rotation_rate_1_calculated = True
-                                # 結果に保存
-                                result['display_rotation_rate_1'] = f"{rotation_rate_1_a:.1f}{warning_a}"
-                            else:
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
-                                result['display_rotation_rate_1'] = '-'
+                            rotation_rate_1_calculated = True
+                            result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
                         else:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
                             result['display_rotation_rate_1'] = '-'
