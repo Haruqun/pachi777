@@ -1521,8 +1521,9 @@ if graph_files and st.session_state.get('start_analysis', False):
             # 補正前の値を保存
             graph_values_original = graph_values.copy()
 
-            # グラフデータの最初の20点をログ出力
-            log(f"[Graph Values] Total points: {len(graph_values)}")
+            # グラフデータの最初の20点とグラフ開始位置をログ出力
+            graph_start_x_val = graph_info.get('start_x', 0) if graph_info else 0
+            log(f"[Graph Values] Total points: {len(graph_values)}, graph_start_x: {graph_start_x_val}px (index {graph_start_x_val // 2})")
             log(f"[Graph Values] First 20 values: {[round(v, 1) for v in graph_values[:20]]}")
             if len(graph_values) > 20:
                 log(f"[Graph Values] Values at index 40-60: {[round(v, 1) for v in graph_values[40:60]]}")
@@ -2926,6 +2927,10 @@ if 'analysis_results' in st.session_state:
                                     value_at_target = graph_values[target_x_index]
                                     first_hit_balls_new = abs(value_at_target)
                                     log(f"[Rotation Rate 1A] value_at_target (index {target_x_index}): {value_at_target}, balls: {first_hit_balls_new}")
+
+                                    # 周辺の値も確認
+                                    if target_x_index > 0:
+                                        log(f"[Rotation Rate 1A] Surrounding values: index {target_x_index-1}: {graph_values[target_x_index-1]:.1f}, index {target_x_index}: {value_at_target:.1f}, index {target_x_index+1}: {graph_values[target_x_index+1]:.1f}")
 
                             # 新方式を優先、データがない場合は旧方式
                             first_hit_balls = first_hit_balls_new if first_hit_balls_new > 0 else first_hit_balls_old
