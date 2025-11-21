@@ -2900,7 +2900,7 @@ if 'analysis_results' in st.session_state:
                                         rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
                                         warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
                                         rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
-                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {first_hit_balls}{unit}使用</div>'
+                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
                                         rotation_rate_1_calculated = True
                                         # 結果に保存
                                         result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
@@ -2921,7 +2921,7 @@ if 'analysis_results' in st.session_state:
                                     rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
                                     warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
-                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {first_hit_balls}{unit}使用</div>'
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
                                     rotation_rate_1_calculated = True
                                     result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
                                 else:
@@ -2958,7 +2958,7 @@ if 'analysis_results' in st.session_state:
                                 rotation_rate_2 = (normal_rotations / normal_balls) * 250
                                 warning = " ⚠️" if rotation_rate_2 < 10 or rotation_rate_2 > 30 else ""
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{rotation_rate_2:.1f}回/千円{warning}</span></div>'
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {normal_rotations}回転 ÷ {normal_balls}{unit}使用</div>'
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {normal_rotations}回転 ÷ {int(normal_balls):,}{unit}使用</div>'
                                 rotation_rate_2_calculated = True
                                 # 結果に保存
                                 result['display_rotation_rate_2'] = f"{rotation_rate_2:.1f}{warning}"
