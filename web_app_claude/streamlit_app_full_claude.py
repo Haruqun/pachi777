@@ -2114,7 +2114,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                         'max_index': 0,  # 不要だが形式上必要
                         'min_value': result.get('min_val', 0),
                         'min_index': 0,
-                        'first_hit_index': result.get('first_hit_debug', {}).get('first_hit_index', -1),
+                        'first_hit_index': result.get('first_hit_index', -1),
                         'first_hit_value': result.get('first_hit_val', 0),
                         'final_value': result.get('current_val', 0)
                     }
