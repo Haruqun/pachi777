@@ -2674,11 +2674,11 @@ if 'analysis_results' in st.session_state:
                                 ai_based_spins_per_pixel = rotation_metrics.get('ai_based_spins_per_pixel', 0)
                                 ai_based_cumulative_total_spins = rotation_metrics.get('ai_based_cumulative_total_spins', 0)
 
-                                if ai_based_cumulative_total_spins > 0 and ai_based_spins_per_pixel > 0:
-                                    # AI基準の回転数の位置を計算
-                                    ai_total_x = graph_start_x + (ai_based_cumulative_total_spins / ai_based_spins_per_pixel)
+                                if ai_based_cumulative_total_spins > 0 and ai_based_spins_per_pixel > 0 and total_rotations > 0:
+                                    # AI基準のスケールでOCR累計回転数がどこに到達するかを計算
+                                    ai_total_x = graph_start_x + (total_rotations / ai_based_spins_per_pixel)
 
-                                    log(f"[AI Total Rotations Marker] ai_total={ai_based_cumulative_total_spins}, ai_spp={ai_based_spins_per_pixel:.4f}, ai_total_x={ai_total_x}")
+                                    log(f"[AI Total Rotations Marker] ocr_total={total_rotations}, ai_spp={ai_based_spins_per_pixel:.4f}, ai_total_x={ai_total_x}")
 
                                     if 0 <= ai_total_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
                                         log(f"[AI Total Rotations Marker] Drawing marker at ({int(ai_total_x)}, {zero_y})")
@@ -2687,7 +2687,7 @@ if 'analysis_results' in st.session_state:
                                         cv2.circle(display_img, (int(ai_total_x), zero_y), 6, (200, 80, 0), 2)   # 外枠
 
                                         # ラベルを描画
-                                        ai_label_text = f'AI: {ai_based_cumulative_total_spins} (spp:{ai_based_spins_per_pixel:.2f})'
+                                        ai_label_text = f'AI Scale: {total_rotations} (spp:{ai_based_spins_per_pixel:.2f})'
                                         # ラベルの背景（白）
                                         ai_label_size = cv2.getTextSize(ai_label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
                                         ai_label_x = int(ai_total_x) - ai_label_size[0] // 2
