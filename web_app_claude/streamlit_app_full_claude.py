@@ -2504,8 +2504,11 @@ if 'analysis_results' in st.session_state:
                     # Claude AIの初当たり回転数がある場合、マーカーを追加
                     if result.get('rotation_metrics') and result.get('claude_analysis'):
                         rotation_metrics = result['rotation_metrics']
-                        claude_data = result['claude_analysis']
+                        claude_analysis = result['claude_analysis']
                         spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
+
+                        # claude_analysisの構造: {'success': True, 'data': {...}}
+                        claude_data = claude_analysis.get('data', {}) if claude_analysis.get('success') else {}
                         initial_ball_starts = claude_data.get('initial_ball_starts')
 
                         log(f"[Claude AI Marker] claude_data keys: {list(claude_data.keys()) if claude_data else 'None'}")
