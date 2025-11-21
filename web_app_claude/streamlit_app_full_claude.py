@@ -2902,12 +2902,18 @@ if 'analysis_results' in st.session_state:
                                 target_x_position = initial_ball_starts / spins_per_pixel
                                 target_x_index = int(target_x_position)
 
+                                log(f"[Rotation Rate 1A] AI rotations: {initial_ball_starts}, spins_per_pixel: {spins_per_pixel}")
+                                log(f"[Rotation Rate 1A] target_x_position: {target_x_position}, target_x_index: {target_x_index}")
+
                                 # グラフデータから該当位置での値を取得
                                 graph_values = result.get('graph_values', [])
+                                log(f"[Rotation Rate 1A] graph_values length: {len(graph_values)}")
+
                                 if 0 <= target_x_index < len(graph_values):
                                     # その位置での実際の値を取得（使用球数）
                                     value_at_target = graph_values[target_x_index]
                                     first_hit_balls_new = abs(value_at_target)
+                                    log(f"[Rotation Rate 1A] value_at_target (index {target_x_index}): {value_at_target}, balls: {first_hit_balls_new}")
 
                             # 新方式を優先、データがない場合は旧方式
                             first_hit_balls = first_hit_balls_new if first_hit_balls_new > 0 else first_hit_balls_old
@@ -2927,8 +2933,13 @@ if 'analysis_results' in st.session_state:
                                     spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
                                     first_hit_index = result.get('first_hit_debug', {}).get('detected_position')
 
+                                    log(f"[Rotation Rate 1G] first_hit_index: {first_hit_index}, spins_per_pixel: {spins_per_pixel}")
+                                    log(f"[Rotation Rate 1G] graph_first_hit_balls: {graph_first_hit_balls}")
+
                                     if spins_per_pixel > 0 and first_hit_index is not None:
                                         graph_rotations = int(first_hit_index * spins_per_pixel)
+                                        log(f"[Rotation Rate 1G] Calculated rotations: {first_hit_index} × {spins_per_pixel} = {graph_rotations}")
+
                                         rotation_rate_1_g = (graph_rotations / graph_first_hit_balls) * 250
                                         warning_g = " ⚠️" if rotation_rate_1_g < 10 or rotation_rate_1_g > 35 else ""
                                         rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①G (グラフのみ)</span><span class="stat-value positive">{rotation_rate_1_g:.1f}回/千円{warning_g}</span></div>'
