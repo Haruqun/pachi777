@@ -1909,6 +1909,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'max_val': int(max_val),
                 'min_val': int(min_val),
                 'current_val': int(current_val),
+                'first_hit_index': int(first_hit_x) if first_hit_x is not None else -1,  # 初当たりインデックス（AI基準計算用）
                 'first_hit_val': int(first_hit_val) if first_hit_x is not None else None,
                 'first_hit_pixel_x': int(first_hit_pixel_x) if first_hit_pixel_x is not None else None,  # 初当たりの実際のピクセル位置
                 'first_hit_used_balls': int(first_hit_used_balls),  # 初当たりまでの使用球数
@@ -2118,6 +2119,9 @@ if graph_files and st.session_state.get('start_analysis', False):
                         'first_hit_value': result.get('first_hit_val', 0),
                         'final_value': result.get('current_val', 0)
                     }
+
+                    # デバッグ: 再計算前の値を確認
+                    log(f"[Pairing Recalc Debug] first_hit_index={analysis_data.get('first_hit_index')}, initial_ball_starts={enhanced_ocr_data.get('initial_ball_starts')}, data_points_len={len(graph_data_points)}")
 
                     if enhanced_ocr_data.get('total_start') and graph_data_points:
                         recalculated_metrics = analyzer.calculate_rotation_metrics(
