@@ -3062,9 +3062,42 @@ if 'analysis_results' in st.session_state:
                         
                         if first_hit_count > 0:
                             html_content += f'<div class="stat-item"><span class="stat-label">🎰 初当たり回数</span><span class="stat-value positive">{first_hit_count}回</span></div>'
-                    
-                    # 総獲得球数（グラフ解析結果なのでグラフから計算した値のみ表示）
-                    html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数</span><span class="stat-value positive">{result.get("total_jackpot_balls_graph", result.get("total_jackpot_balls", 0)):,}{unit}</span></div>'
+
+                    # 総獲得球数の計算
+                    # Claude AIから総払い出し球数が取得できている場合は「総払い出し - 現在値」で計算
+                    total_earned_balls = 0
+                    if result.get('claude_analysis') and result['claude_analysis'].get('success'):
+                        claude_data = result['claude_analysis'].get('data', {})
+                        if claude_data:
+                            # 総払い出し球数をAIから計算
+                            big_j = claude_data.get('big_jackpots', 0) or 0
+                            medium_j = claude_data.get('medium_jackpots', 0) or 0
+                            small_j = claude_data.get('small_jackpots', 0) or 0
+
+                            # 機種別の払い出し球数を取得
+                            if claude_data.get('machine_payouts'):
+                                big_balls = claude_data['machine_payouts'].get('big_jackpot_balls', 1500)
+                                middle_balls = claude_data['machine_payouts'].get('middle_jackpot_balls', 750)
+                                small_balls = claude_data['machine_payouts'].get('small_jackpot_balls', 450)
+                            else:
+                                big_balls = get_settings().get('big_jackpot_balls', 1500)
+                                middle_balls = get_settings().get('middle_jackpot_balls', 750)
+                                small_balls = get_settings().get('small_jackpot_balls', 450)
+
+                            total_payout = big_j * big_balls + medium_j * middle_balls + small_j * small_balls
+
+                            # 現在値を取得
+                            current_value = result.get('current_value', 0)
+
+                            # 総獲得玉数 = 総払い出し球数 - 現在値
+                            if total_payout > 0:
+                                total_earned_balls = total_payout - current_value
+
+                    # Claude AIデータがない場合はグラフから計算した値を使用
+                    if total_earned_balls == 0:
+                        total_earned_balls = result.get("total_jackpot_balls_graph", result.get("total_jackpot_balls", 0))
+
+                    html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数</span><span class="stat-value positive">{total_earned_balls:,}{unit}</span></div>'
                     
                     if correction_info:
                         html_content += correction_info
