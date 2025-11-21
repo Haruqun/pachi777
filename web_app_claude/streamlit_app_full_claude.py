@@ -2626,6 +2626,54 @@ if 'analysis_results' in st.session_state:
                                     else:
                                         log(f"[Total Rotations Marker] Out of bounds - not drawing")
 
+                                # 全ての大当たり（谷）のマーカーを描画
+                                all_jackpots = result.get('all_jackpots', [])
+                                if all_jackpots and len(all_jackpots) > 0:
+                                    log(f"[All Jackpots Markers] Drawing {len(all_jackpots)} markers")
+
+                                    # マーカーの色（異なる色で区別）
+                                    marker_colors = [
+                                        (255, 0, 255),  # マゼンタ（1回目）
+                                        (255, 128, 0),  # オレンジ（2回目）
+                                        (0, 255, 255)   # シアン（3回目）
+                                    ]
+
+                                    for idx, jackpot in enumerate(all_jackpots):
+                                        jackpot_index = jackpot.get('index', -1)
+                                        jackpot_value = jackpot.get('value', 0)
+
+                                        if jackpot_index >= 0:
+                                            # 回転数を計算
+                                            jackpot_x_px = jackpot.get('x', jackpot_index * 2 + 48)
+                                            relative_x = jackpot_x_px - graph_start_x
+                                            jackpot_spins = int(relative_x * spins_per_pixel)
+
+                                            # マーカーの色を選択
+                                            color = marker_colors[idx % len(marker_colors)]
+
+                                            if 0 <= jackpot_x_px < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
+                                                log(f"[All Jackpots Markers] {idx+1}回目: x={jackpot_x_px}px, spins={jackpot_spins}, value={jackpot_value:.1f}玉")
+
+                                                # マーカーを描画
+                                                cv2.circle(display_img, (int(jackpot_x_px), zero_y), 6, color, -1)  # 塗りつぶし
+                                                cv2.circle(display_img, (int(jackpot_x_px), zero_y), 7, tuple([c//2 for c in color]), 2)  # 外枠（暗い色）
+
+                                                # ラベルを描画
+                                                label_text = f'{idx+1}: {jackpot_spins}'
+                                                label_size = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
+                                                label_x = int(jackpot_x_px) - label_size[0] // 2
+                                                label_y = zero_y - 40 - (idx % 2) * 20  # 交互に配置
+
+                                                # ラベルの背景（白）
+                                                cv2.rectangle(display_img,
+                                                            (label_x - 2, label_y - label_size[1] - 2),
+                                                            (label_x + label_size[0] + 2, label_y + 2),
+                                                            (255, 255, 255), -1)
+                                                # テキスト
+                                                cv2.putText(display_img, label_text,
+                                                          (label_x, label_y),
+                                                          cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv2.LINE_AA)
+
                             except (ValueError, TypeError) as e:
                                 # エラーが発生した場合は元の画像を使用
                                 log(f"[Claude AI Marker] マーカー描画エラー: {str(e)}")

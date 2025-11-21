@@ -530,7 +530,38 @@ class WebCompatibleAnalyzer:
                 i = j
             else:
                 i += 1
-        
+
+        # 全ての谷（大当たり地点）を検出
+        all_jackpots = []
+        valley_threshold = 100 if game_type == 'パチンコ' else 20  # 上昇閾値
+
+        for i in range(1, len(values) - 1):
+            # 下降から上昇に転じる点（谷）を検出
+            if values[i] < 0:  # マイナス値のみ
+                # 前の点から下降または横ばい、次の点で上昇
+                prev_change = values[i] - values[i-1]
+                next_change = values[i+1] - values[i]
+
+                # 谷の条件：前から下降または横ばい、次で上昇
+                if prev_change <= 0 and next_change >= valley_threshold:
+                    all_jackpots.append({
+                        'index': i,
+                        'value': values[i],
+                        'x': i * 2 + 48  # ピクセル座標（仮定: 2px間隔、開始48px）
+                    })
+
+        # 谷が見つからない場合、初当たりのみを追加
+        if len(all_jackpots) == 0 and first_hit_idx >= 0:
+            all_jackpots.append({
+                'index': first_hit_idx,
+                'value': first_hit_val,
+                'x': first_hit_idx * 2 + 48
+            })
+
+        log(f"[All Jackpots] 検出された谷の数: {len(all_jackpots)}")
+        for i, jk in enumerate(all_jackpots):
+            log(f"[All Jackpots] {i+1}回目: index={jk['index']}, value={jk['value']:.1f}玉, x={jk['x']}px")
+
         return {
             'max_value': int(max_val),
             'max_index': max_idx,
@@ -541,7 +572,8 @@ class WebCompatibleAnalyzer:
             'final_value': int(current_val),
             'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数を追加
             'jackpot_count': jackpot_count,  # 大当り回数を追加
-            'jackpot_details': jackpot_details  # 各大当りの詳細情報を追加
+            'jackpot_details': jackpot_details,  # 各大当りの詳細情報を追加
+            'all_jackpots': all_jackpots  # 全ての谷（大当たり地点）を追加
         }
     
     def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width, graph_info=None, ocr_data=None, game_type='パチンコ'):
