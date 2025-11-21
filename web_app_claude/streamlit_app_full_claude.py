@@ -2982,30 +2982,20 @@ if 'analysis_results' in st.session_state:
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①A (AI+グラフ)</span><span class="stat-value positive">{rotation_rate_1_a:.1f}回/千円{warning_a}</span></div>'
 
                                 # グラフ解析のみの回転率①G
-                                graph_first_hit_rotations = result.get('first_hit_debug', {}).get('graph_info', {}).get('total_spins', 0)
-                                graph_first_hit_balls = abs(result.get('first_hit_val', 0))
+                                # rotation_metricsから正しい初当たり回転数を取得
+                                rotation_metrics = result.get('rotation_metrics', {})
+                                graph_first_hit_spins = rotation_metrics.get('first_hit_spins', 0)
+                                graph_first_hit_balls = rotation_metrics.get('first_hit_balls', 0)
 
-                                if graph_first_hit_rotations > 0 and graph_first_hit_balls > 0:
-                                    # グラフの初当たり回転数を計算
-                                    rotation_metrics = result.get('rotation_metrics', {})
-                                    spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
-                                    first_hit_index = result.get('first_hit_debug', {}).get('detected_position')
+                                log(f"[Rotation Rate 1G] first_hit_spins: {graph_first_hit_spins}, first_hit_balls: {graph_first_hit_balls}")
 
-                                    log(f"[Rotation Rate 1G] first_hit_index: {first_hit_index}, spins_per_pixel: {spins_per_pixel}")
-                                    log(f"[Rotation Rate 1G] graph_first_hit_balls: {graph_first_hit_balls}")
+                                if graph_first_hit_spins > 0 and graph_first_hit_balls > 0:
+                                    rotation_rate_1_g = (graph_first_hit_spins / graph_first_hit_balls) * 250
+                                    warning_g = " ⚠️" if rotation_rate_1_g < 10 or rotation_rate_1_g > 35 else ""
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①G (グラフのみ)</span><span class="stat-value positive">{rotation_rate_1_g:.1f}回/千円{warning_g}</span></div>'
 
-                                    if spins_per_pixel > 0 and first_hit_index is not None:
-                                        graph_rotations = int(first_hit_index * spins_per_pixel)
-                                        log(f"[Rotation Rate 1G] Calculated rotations: {first_hit_index} × {spins_per_pixel} = {graph_rotations}")
-
-                                        rotation_rate_1_g = (graph_rotations / graph_first_hit_balls) * 250
-                                        warning_g = " ⚠️" if rotation_rate_1_g < 10 or rotation_rate_1_g > 35 else ""
-                                        rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①G (グラフのみ)</span><span class="stat-value positive">{rotation_rate_1_g:.1f}回/千円{warning_g}</span></div>'
-
-                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ ①A: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
-                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ ①G: {graph_rotations}回転 ÷ {int(graph_first_hit_balls):,}{unit}使用</div>'
-                                    else:
-                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ ①A: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ ①G: {graph_first_hit_spins}回転 ÷ {int(graph_first_hit_balls):,}{unit}使用</div>'
                                 else:
                                     rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
 
