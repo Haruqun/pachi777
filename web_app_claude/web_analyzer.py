@@ -591,6 +591,9 @@ class WebCompatibleAnalyzer:
                 end_x = data_points[-1][0]
                 relative_end_x = end_x - graph_start_x
                 cumulative_total_spins = int(relative_end_x * spins_per_pixel)
+                print(f"[累計スタート計算] end_x={end_x}, graph_start_x={graph_start_x}, relative_end_x={relative_end_x}, spins_per_pixel={spins_per_pixel}, cumulative_total_spins={cumulative_total_spins}")
+            else:
+                print(f"[累計スタート計算] data_points is empty")
 
             # 通常時の回転率計算
             rotation_rate_2 = 0
@@ -776,6 +779,7 @@ class WebCompatibleAnalyzer:
                 'spins_per_pixel': 0,
                 'first_hit_spins': 0,
                 'cumulative_first_hit_spins': 0,
+                'cumulative_total_spins': 0,
                 'first_hit_balls': 0,
                 'rotation_rate_1': 0,
                 'rotation_rate_2': 0,
