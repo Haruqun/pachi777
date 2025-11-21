@@ -154,6 +154,9 @@ if 'claude_errors' not in st.session_state:
 if 'analysis_started' not in st.session_state:
     st.session_state.analysis_started = False
 
+# 画像分類キャッシュの初期化
+if 'classification_cache' not in st.session_state:
+    st.session_state.classification_cache = {}
 
 # Claude APIキーの初期化（専用データベースから読み込み）
 if 'claude_api_key' not in st.session_state:
@@ -791,12 +794,33 @@ if uploaded_files:
 
     for file in uploaded_files:
         try:
+            # ファイルのハッシュ値を計算してキャッシュキーとする
             file.seek(0)
-            img = Image.open(file)
-            black_ratio = calculate_black_ratio(img, black_threshold=black_pixel_threshold)
+            file_content = file.read()
+            file_hash = hashlib.md5(file_content).hexdigest()
 
-            file_type = 'Detail' if black_ratio >= detail_threshold else 'Graph'
-            log(f"[Classification] {file.name}: black_ratio={black_ratio:.3f}, type={file_type}")
+            # キャッシュに分類結果があるかチェック
+            cache_key = f"{file.name}_{file_hash}_{black_pixel_threshold}_{detail_threshold}"
+
+            if cache_key in st.session_state.classification_cache:
+                # キャッシュから取得
+                cached_result = st.session_state.classification_cache[cache_key]
+                black_ratio = cached_result['black_ratio']
+                file_type = cached_result['file_type']
+                log(f"[Classification] {file.name}: black_ratio={black_ratio:.3f}, type={file_type} (cached)")
+            else:
+                # 新規に分類を実行
+                file.seek(0)
+                img = Image.open(file)
+                black_ratio = calculate_black_ratio(img, black_threshold=black_pixel_threshold)
+                file_type = 'Detail' if black_ratio >= detail_threshold else 'Graph'
+
+                # キャッシュに保存
+                st.session_state.classification_cache[cache_key] = {
+                    'black_ratio': black_ratio,
+                    'file_type': file_type
+                }
+                log(f"[Classification] {file.name}: black_ratio={black_ratio:.3f}, type={file_type}")
 
             debug_data.append({
                 'name': file.name,
@@ -1240,6 +1264,9 @@ elif st.session_state.uploaded_file_names:
         for key in list(st.session_state.keys()):
             if key.startswith('machine_input_'):
                 del st.session_state[key]
+        # 画像分類キャッシュもクリア
+        if 'classification_cache' in st.session_state:
+            st.session_state.classification_cache = {}
         # 解析状態をリセット
         st.session_state.start_analysis = False
         log(f"[Button] Session state cleared successfully")
