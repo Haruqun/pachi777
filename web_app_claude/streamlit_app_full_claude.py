@@ -3028,6 +3028,13 @@ if 'analysis_results' in st.session_state:
                         first_hit_spins = rotation_metrics.get('first_hit_spins', 0)
                         cumulative_total_spins = rotation_metrics.get('cumulative_total_spins', 0)
 
+                        # Claude AIの値がある場合は優先（より正確）
+                        if result.get('claude_analysis'):
+                            claude_data = result['claude_analysis']
+                            if claude_data.get('initial_ball_starts'):
+                                first_hit_spins = int(claude_data['initial_ball_starts'])
+                                log(f"[Display] Using Claude AI initial_ball_starts: {first_hit_spins}")
+
                         first_hit_html = f'<div class="stat-item"><span class="stat-label">🎰 初当たり{unit}数</span><span class="stat-value {first_hit_class}">{first_hit_text}</span></div>'
                         first_hit_html += f'<div class="stat-item"><span class="stat-label">🎲 初当たり回転数</span><span class="stat-value">{first_hit_spins:,}回</span></div>'
                         first_hit_html += f'<div class="stat-item"><span class="stat-label">📊 累計スタート（グラフ）</span><span class="stat-value">{cumulative_total_spins:,}回</span></div>'
