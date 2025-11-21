@@ -416,21 +416,45 @@ class WebCompatibleAnalyzer:
         first_hit_val = 0
         # 遊技種別に応じて閾値を設定
         min_payout = 100 if game_type == 'パチンコ' else 20  # パチスロは20枚以上
-        
-        # 方法1: シンプルな増加検出
-        for i in range(1, min(len(values)-2, 150)):  # 最大150点まで探索
-            current_increase = values[i+1] - values[i]
-            
-            # 100玉以上の増加を検出
-            if current_increase > min_payout:
-                # 次の点も上昇または維持していることを確認
-                if values[i+2] >= values[i+1] - 20:
-                    # 重要：初当たりは必ずマイナス値でなければならない
-                    if values[i] < 0:  # マイナス値のみを初当たりとして検出
-                        # 補正なしで純粋な検出位置を使用
-                        first_hit_idx = i
-                        first_hit_val = values[i]
-                        break
+
+        # 方法0: 最低値ベースの検出（最優先）
+        # マイナス値の中で最も深い点を見つけ、そこから上昇があれば初当たりとする
+        min_val_in_range = float('inf')
+        min_val_idx = -1
+        for i in range(min(len(values), 150)):  # 最大150点まで探索
+            if values[i] < 0 and values[i] < min_val_in_range:
+                min_val_in_range = values[i]
+                min_val_idx = i
+
+        # 最低値から上昇が始まっているか確認
+        if min_val_idx != -1 and min_val_idx < len(values) - 2:
+            # 最低値の次の点で上昇しているか確認（小さな上昇でもOK）
+            if values[min_val_idx + 1] > values[min_val_idx] + 20:  # 20玉以上の上昇
+                # さらにその後も上昇傾向が続くか確認
+                total_increase = 0
+                for j in range(min_val_idx + 1, min(min_val_idx + 4, len(values))):
+                    total_increase += values[j] - values[j-1]
+
+                # 3点間で合計100玉以上上昇していれば初当たりと判定
+                if total_increase > min_payout:
+                    first_hit_idx = min_val_idx
+                    first_hit_val = values[min_val_idx]
+
+        # 方法1: シンプルな増加検出（方法0で検出できなかった場合）
+        if first_hit_idx == -1:
+            for i in range(1, min(len(values)-2, 150)):  # 最大150点まで探索
+                current_increase = values[i+1] - values[i]
+
+                # 100玉以上の増加を検出
+                if current_increase > min_payout:
+                    # 次の点も上昇または維持していることを確認
+                    if values[i+2] >= values[i+1] - 20:
+                        # 重要：初当たりは必ずマイナス値でなければならない
+                        if values[i] < 0:  # マイナス値のみを初当たりとして検出
+                            # 補正なしで純粋な検出位置を使用
+                            first_hit_idx = i
+                            first_hit_val = values[i]
+                            break
         
         # 方法2: 通常パターン（減少→上昇）の検出
         if first_hit_idx == -1:
