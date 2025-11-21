@@ -605,17 +605,19 @@ class WebCompatibleAnalyzer:
             cumulative_total_spins = 0  # グラフ終端の累計回転数
 
             if analysis['first_hit_index'] > 0 and analysis['first_hit_index'] < len(data_points):
-                # 初当たりの実際のx座標（ピクセル位置）を取得
-                first_hit_x = data_points[analysis['first_hit_index']][0]
-                # 初当たりまでの回転数（グラフ開始位置からの相対位置を使用）
-                relative_x = first_hit_x - graph_start_x
-                first_hit_spins = int(relative_x * spins_per_pixel)
-
-                log(f"[初当たり回転数計算] first_hit_index={analysis['first_hit_index']}, first_hit_x={first_hit_x}px, graph_start_x={graph_start_x}px, relative_x={relative_x}px, spins_per_pixel={spins_per_pixel:.4f}, calculated_spins={first_hit_spins}")
-
-                # 累計回転数（ゲーム開始からの累計回転数）
-                # グラフ開始位置（graph_start_x）を0回転目として計算
-                cumulative_first_hit_spins = int(relative_x * spins_per_pixel)
+                # 初当たり回転数の取得：Claude AIの値を最優先、なければグラフから計算
+                if ocr_data and ocr_data.get('initial_ball_starts'):
+                    # Claude APIから取得した初当たり回転数を使用（最も正確）
+                    first_hit_spins = int(ocr_data['initial_ball_starts'])
+                    cumulative_first_hit_spins = first_hit_spins
+                    log(f"[初当たり回転数] Claude AI使用: initial_ball_starts={first_hit_spins}")
+                else:
+                    # フォールバック：グラフベースの計算
+                    first_hit_x = data_points[analysis['first_hit_index']][0]
+                    relative_x = first_hit_x - graph_start_x
+                    first_hit_spins = int(relative_x * spins_per_pixel)
+                    cumulative_first_hit_spins = first_hit_spins
+                    log(f"[初当たり回転数] グラフ計算: first_hit_index={analysis['first_hit_index']}, first_hit_x={first_hit_x}px, graph_start_x={graph_start_x}px, relative_x={relative_x}px, spins_per_pixel={spins_per_pixel:.4f}, calculated_spins={first_hit_spins}")
 
                 # 初当たりまでの使用玉数（マイナス値の絶対値）
                 first_hit_balls = abs(analysis['first_hit_value'])
