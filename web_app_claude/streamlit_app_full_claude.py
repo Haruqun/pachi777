@@ -2504,6 +2504,8 @@ if 'analysis_results' in st.session_state:
                         spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
                         initial_ball_starts = claude_data.get('initial_ball_starts')
 
+                        log(f"[Claude AI Marker] spins_per_pixel={spins_per_pixel}, initial_ball_starts={initial_ball_starts}")
+
                         # 必要なデータが揃っている場合のみ描画
                         if spins_per_pixel > 0 and initial_ball_starts:
                             try:
@@ -2521,8 +2523,11 @@ if 'analysis_results' in st.session_state:
                                 # Claude AI回転数の位置を計算
                                 claude_x = graph_start_x + (initial_ball_starts / spins_per_pixel)
 
+                                log(f"[Claude AI Marker] graph_start_x={graph_start_x}, claude_x={claude_x}, zero_y={zero_y}, img_size={display_img.shape}")
+
                                 # 画像範囲内かチェック
                                 if 0 <= claude_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
+                                    log(f"[Claude AI Marker] Drawing marker at ({int(claude_x)}, {zero_y})")
                                     # マーカーを描画（赤色）
                                     cv2.circle(display_img, (int(claude_x), zero_y), 10, (0, 0, 255), -1)  # 塗りつぶし
                                     cv2.circle(display_img, (int(claude_x), zero_y), 12, (0, 0, 200), 2)   # 外枠
@@ -2541,6 +2546,8 @@ if 'analysis_results' in st.session_state:
                                     cv2.putText(display_img, label_text,
                                               (label_x, label_y),
                                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 200), 1, cv2.LINE_AA)
+                                else:
+                                    log(f"[Claude AI Marker] Out of bounds - not drawing")
                             except (ValueError, TypeError) as e:
                                 # エラーが発生した場合は元の画像を使用
                                 log(f"[Claude AI Marker] マーカー描画エラー: {str(e)}")
