@@ -351,6 +351,8 @@ class WebCompatibleAnalyzer:
                         # グラフの開始と終了位置を記録
                         if graph_start_x is None:
                             graph_start_x = x
+                            # デバッグ: 最初の点の情報をログ出力
+                            print(f"[Graph Start Debug] x={x}px, median_y={median_y:.1f}px, detected_zero={detected_zero}px, scale={self.scale:.2f}, calculated_value={value:.1f}玉")
                         graph_end_x = x
                 
                 if len(data_points) > max_points:
