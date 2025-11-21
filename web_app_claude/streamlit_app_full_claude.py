@@ -1926,7 +1926,10 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'rotation_metrics': rotation_metrics,  # 回転率データを追加
                 'first_hit_debug': first_hit_debug_info,  # 初当たり検出デバッグ情報を追加
                 'graph_values': graph_values,  # グラフの生データを追加（回転率①計算用）
-                'zero_line_y': zero_line_in_crop  # ゼロライン位置を追加（Claude AIマーカー用）
+                'zero_line_y': zero_line_in_crop,  # ゼロライン位置を追加（Claude AIマーカー用）
+                'graph_data_points': graph_data_points,  # グラフデータポイントを追加（AI基準計算用）
+                'graph_info': graph_info,  # グラフ情報を追加（AI基準計算用）
+                'graph_width': graph_width  # グラフ幅を追加（AI基準計算用）
             })
         else:
             # 解析失敗時
@@ -2095,7 +2098,43 @@ if graph_files and st.session_state.get('start_analysis', False):
                     'match_info': f'台番号: {machine_num}, 累計スタート: {graph_total_start}'
                 })
                 best_match['used'] = True
-                
+
+                # ペアリング成功後、AI基準の回転率を再計算
+                if result.get('rotation_metrics') and best_match.get('claude_data'):
+                    claude_data = best_match['claude_data']
+                    # OCRデータにClaude APIのデータを追加
+                    enhanced_ocr_data = result.get('ocr_data', {}).copy() if result.get('ocr_data') else {}
+                    enhanced_ocr_data['initial_ball_starts'] = claude_data.get('initial_ball_starts')
+
+                    # rotation_metricsを再計算
+                    analyzer = WebCompatibleAnalyzer()
+                    graph_data_points = result.get('graph_data_points', [])
+                    analysis_data = {
+                        'max_value': result.get('max_val', 0),
+                        'max_index': 0,  # 不要だが形式上必要
+                        'min_value': result.get('min_val', 0),
+                        'min_index': 0,
+                        'first_hit_index': result.get('first_hit_debug', {}).get('first_hit_index', -1),
+                        'first_hit_value': result.get('first_hit_val', 0),
+                        'final_value': result.get('current_val', 0)
+                    }
+
+                    if enhanced_ocr_data.get('total_start') and graph_data_points:
+                        recalculated_metrics = analyzer.calculate_rotation_metrics(
+                            graph_data_points,
+                            analysis_data,
+                            enhanced_ocr_data['total_start'],
+                            result.get('graph_width', 939),
+                            result.get('graph_info'),
+                            enhanced_ocr_data,  # Claude APIのデータを含む
+                            st.session_state.get('game_type', 'パチンコ')
+                        )
+
+                        # rotation_metricsを更新
+                        if recalculated_metrics:
+                            result['rotation_metrics'] = recalculated_metrics
+                            log(f"[Pairing] Recalculated rotation_metrics with AI data: ai_spp={recalculated_metrics.get('ai_based_spins_per_pixel', 0)}, ai_total={recalculated_metrics.get('ai_based_cumulative_total_spins', 0)}")
+
                 # デバッグ情報
                 if st.session_state.get('show_ocr_debug', False):
                     st.success(f"✅ ペアリング成功: {result['name']} ⟷ {best_match['name']}")
