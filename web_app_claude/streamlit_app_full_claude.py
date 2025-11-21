@@ -1526,6 +1526,12 @@ if graph_files and st.session_state.get('start_analysis', False):
             # 補正前の値を保存
             graph_values_original = graph_values.copy()
 
+            # START地点（graph_values[0]）を0として全体を補正
+            start_offset = graph_values[0]
+            graph_values = [v - start_offset for v in graph_values]
+            log(f"[Graph Values] Offset correction: start_offset={start_offset:.1f}玉 (graph_values[0]を0に補正)")
+            log(f"[Graph Values] After correction: graph_values[0]={graph_values[0]:.1f}玉 (should be 0)")
+
             # グラフデータを全て出力（デバッグ用）
             graph_start_x_val = graph_info.get('start_x', 0) if graph_info else 0
             log(f"[Graph Values] Total points: {len(graph_values)}, graph_start_x: {graph_start_x_val}px")
