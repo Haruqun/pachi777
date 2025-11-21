@@ -2670,8 +2670,9 @@ if 'analysis_results' in st.session_state:
                                         log(f"[Total Rotations Marker] Out of bounds - not drawing")
 
                                 # AI基準のグラフ終点マーカーを追加
-                                ai_based_spins_per_pixel = result.get('ai_based_spins_per_pixel', 0)
-                                ai_based_cumulative_total_spins = result.get('ai_based_cumulative_total_spins', 0)
+                                rotation_metrics = result.get('rotation_metrics', {})
+                                ai_based_spins_per_pixel = rotation_metrics.get('ai_based_spins_per_pixel', 0)
+                                ai_based_cumulative_total_spins = rotation_metrics.get('ai_based_cumulative_total_spins', 0)
 
                                 if ai_based_cumulative_total_spins > 0 and ai_based_spins_per_pixel > 0:
                                     # AI基準の回転数の位置を計算
