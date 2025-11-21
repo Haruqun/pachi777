@@ -210,8 +210,8 @@ def detect_first_hit(graph_values, game_type='パチンコ', small_jackpot_balls
     
     # 機種や設定により動的に閾値を調整
     if game_type == 'パチンコ':
-        # 小当たりの払い出し球数を基準に（通常300-450球）
-        min_payout = small_jackpot_balls * 0.8  # 80%を閾値に
+        # 初当たり検出の閾値を小当たり球数の半分に設定（より小さな上昇も検出）
+        min_payout = small_jackpot_balls * 0.5
     else:
         min_payout = 20  # パチスロは20枚
     
