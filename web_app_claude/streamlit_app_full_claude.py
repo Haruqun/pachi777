@@ -2863,70 +2863,22 @@ if 'analysis_results' in st.session_state:
                         except (ValueError, TypeError):
                             initial_ball_starts = 0
 
-                        # AI取得の初当たり回転数がある場合、その時点での使用球数を計算
+                        # AI取得の初当たり回転数がある場合、グラフ解析の初当たり玉数を使用
                         if initial_ball_starts > 0:
-                            # rotation_metricsにスケール情報があるか確認
-                            rotation_metrics = result.get('rotation_metrics') or {}
-                            spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
-                            
-                            # グラフデータと回転数の対応関係を計算
-                            if spins_per_pixel > 0 and result.get('graph_values'):
-                                # AI回転数に対応するグラフ上のx位置を計算
-                                target_x_position = initial_ball_starts / spins_per_pixel
-                                target_x_index = int(target_x_position)
-                                
-                                # グラフデータから該当位置の値を取得
-                                graph_values = result.get('graph_values', [])
-                                if 0 <= target_x_index < len(graph_values):
-                                    # その時点での最低値を探す（使用球数）
-                                    min_val_at_target = 0
-                                    for i in range(min(target_x_index + 1, len(graph_values))):
-                                        if graph_values[i] < min_val_at_target:
-                                            min_val_at_target = graph_values[i]
-                                    
-                                    first_hit_balls = abs(min_val_at_target)
-                                    
-                                    # デバッグ情報を表示
-                                    if st.session_state.get('show_ocr_debug', False):
-                                        st.write(f"🔍 回転率①計算デバッグ - {result['name']}")
-                                        st.write(f"- AI初当たり回転数: {initial_ball_starts}回")
-                                        st.write(f"- 1ピクセルあたりの回転数: {spins_per_pixel:.2f}回/px")
-                                        st.write(f"- 目標X位置: {target_x_position:.1f}px (index: {target_x_index})")
-                                        st.write(f"- グラフデータ長: {len(graph_values)}点")
-                                        st.write(f"- 該当位置での最低値: {min_val_at_target}{unit}")
-                                        st.write(f"- 使用球数: {first_hit_balls}{unit}")
-                                    
-                                    if first_hit_balls > 0:
-                                        rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
-                                        warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
-                                        rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
-                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
-                                        rotation_rate_1_calculated = True
-                                        # 結果に保存
-                                        result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
-                                    else:
-                                        rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
-                                        result['display_rotation_rate_1'] = '-'
-                                else:
-                                    # デバッグ情報
-                                    if st.session_state.get('show_ocr_debug', False):
-                                        st.write(f"⚠️ 回転率①計算エラー - {result['name']}")
-                                        st.write(f"- target_x_index ({target_x_index}) が範囲外 (0-{len(graph_values)-1})")
-                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
-                                    result['display_rotation_rate_1'] = '-'
+                            # グラフ解析から取得した初当たり玉数（投資球数）を使用
+                            first_hit_balls = abs(prioritized_data.get('first_hit_val') or 0)
+
+                            if first_hit_balls > 0:
+                                rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
+                                warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
+                                rotation_rate_1_calculated = True
+                                # 結果に保存
+                                result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
                             else:
-                                # フォールバック：グラフの初当たり位置での使用球数を使用
-                                first_hit_balls = abs(prioritized_data.get('first_hit_val') or 0)
-                                if first_hit_balls > 0:
-                                    rotation_rate_1 = (initial_ball_starts / first_hit_balls) * 250
-                                    warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
-                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
-                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {initial_ball_starts}回転 ÷ {int(first_hit_balls):,}{unit}使用</div>'
-                                    rotation_rate_1_calculated = True
-                                    result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
-                                else:
-                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
-                                    result['display_rotation_rate_1'] = '-'
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
+                                result['display_rotation_rate_1'] = '-'
                         else:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
                             result['display_rotation_rate_1'] = '-'
