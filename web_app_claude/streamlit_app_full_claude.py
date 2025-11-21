@@ -2634,43 +2634,85 @@ if 'analysis_results' in st.session_state:
                                     </div>'''
                                 
                                 if claude_data.get('normal_rotations') is not None:
-                                    html_content += f'''
-                                    <div class="stat-item">
-                                        <span class="stat-label">🔄 通常回転数</span>
-                                        <span class="stat-value">{claude_data['normal_rotations']:,}回</span>
-                                    </div>'''
+                                    # 数値に変換してフォーマット
+                                    try:
+                                        normal_rot = int(claude_data['normal_rotations'])
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🔄 通常回転数</span>
+                                            <span class="stat-value">{normal_rot:,}回</span>
+                                        </div>'''
+                                    except (ValueError, TypeError):
+                                        # 数値変換できない場合はそのまま表示
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🔄 通常回転数</span>
+                                            <span class="stat-value">{claude_data['normal_rotations']}回</span>
+                                        </div>'''
                                 
                                 # 回転数情報
                                 if claude_data.get('spin_count') is not None:
-                                    html_content += f'''
-                                    <div class="stat-item">
-                                        <span class="stat-label">🎲 累計スタート</span>
-                                        <span class="stat-value">{claude_data['spin_count']:,}回</span>
-                                    </div>'''
+                                    try:
+                                        spin_cnt = int(claude_data['spin_count'])
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🎲 累計スタート</span>
+                                            <span class="stat-value">{spin_cnt:,}回</span>
+                                        </div>'''
+                                    except (ValueError, TypeError):
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🎲 累計スタート</span>
+                                            <span class="stat-value">{claude_data['spin_count']}回</span>
+                                        </div>'''
 
                                 if claude_data.get('normal_spins') is not None:
-                                    html_content += f'''
-                                    <div class="stat-item">
-                                        <span class="stat-label">🔄 通常回転数</span>
-                                        <span class="stat-value">{claude_data['normal_spins']:,}回</span>
-                                    </div>'''
+                                    try:
+                                        normal_spn = int(claude_data['normal_spins'])
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🔄 通常回転数</span>
+                                            <span class="stat-value">{normal_spn:,}回</span>
+                                        </div>'''
+                                    except (ValueError, TypeError):
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🔄 通常回転数</span>
+                                            <span class="stat-value">{claude_data['normal_spins']}回</span>
+                                        </div>'''
 
                                 # 現在回転数はマスクで隠れているため削除
                                     
                                 # その他情報
                                 if claude_data.get('max_balls') is not None:
-                                    html_content += f'''
-                                    <div class="stat-item">
-                                        <span class="stat-label">💰 最高出玉</span>
-                                        <span class="stat-value positive">{claude_data['max_balls']:,}玉</span>
-                                    </div>'''
-                                
+                                    try:
+                                        max_b = int(claude_data['max_balls'])
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">💰 最高出玉</span>
+                                            <span class="stat-value positive">{max_b:,}玉</span>
+                                        </div>'''
+                                    except (ValueError, TypeError):
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">💰 最高出玉</span>
+                                            <span class="stat-value positive">{claude_data['max_balls']}玉</span>
+                                        </div>'''
+
                                 if claude_data.get('initial_ball_starts') is not None:
-                                    html_content += f'''
-                                    <div class="stat-item">
-                                        <span class="stat-label">🎱 初回特賞スタート</span>
-                                        <span class="stat-value">{claude_data['initial_ball_starts']}回</span>
-                                    </div>'''
+                                    try:
+                                        init_starts = int(claude_data['initial_ball_starts'])
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🎱 初回特賞スタート</span>
+                                            <span class="stat-value">{init_starts:,}回</span>
+                                        </div>'''
+                                    except (ValueError, TypeError):
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">🎱 初回特賞スタート</span>
+                                            <span class="stat-value">{claude_data['initial_ball_starts']}回</span>
+                                        </div>'''
                                     
                                 # 総払い出し球数をAIから計算
                                 total_payout_from_ai = 0
@@ -2767,7 +2809,13 @@ if 'analysis_results' in st.session_state:
                         # 回転率①の計算
                         rotation_rate_1_calculated = False
                         initial_ball_starts = prioritized_data.get('initial_ball_starts', 0)  # AI取得の初当たり回転数
-                        
+
+                        # 文字列の場合は数値に変換
+                        try:
+                            initial_ball_starts = int(initial_ball_starts) if initial_ball_starts else 0
+                        except (ValueError, TypeError):
+                            initial_ball_starts = 0
+
                         # AI取得の初当たり回転数がある場合、その時点での使用球数を計算
                         if initial_ball_starts > 0:
                             # rotation_metricsにスケール情報があるか確認
