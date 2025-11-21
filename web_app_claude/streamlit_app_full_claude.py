@@ -2583,8 +2583,8 @@ if 'analysis_results' in st.session_state:
                                     cv2.circle(display_img, (int(claude_x), zero_y), 10, (0, 0, 255), -1)  # 塗りつぶし
                                     cv2.circle(display_img, (int(claude_x), zero_y), 12, (0, 0, 200), 2)   # 外枠
 
-                                    # ラベルを描画（日本語）
-                                    label_text = f'初当: {initial_ball_starts}'
+                                    # ラベルを描画
+                                    label_text = f'AI HIT: {initial_ball_starts}'
                                     # ラベルの背景（白）
                                     label_size = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
                                     label_x = int(claude_x) - label_size[0] // 2
@@ -2614,8 +2614,8 @@ if 'analysis_results' in st.session_state:
                                         cv2.circle(display_img, (int(total_rotations_x), zero_y), 10, (0, 255, 0), -1)  # 塗りつぶし
                                         cv2.circle(display_img, (int(total_rotations_x), zero_y), 12, (0, 200, 0), 2)   # 外枠
 
-                                        # ラベルを描画（日本語）
-                                        total_label_text = f'累計: {total_rotations}'
+                                        # ラベルを描画
+                                        total_label_text = f'AI TOTAL: {total_rotations}'
                                         # ラベルの背景（白）
                                         total_label_size = cv2.getTextSize(total_label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
                                         total_label_x = int(total_rotations_x) - total_label_size[0] // 2
