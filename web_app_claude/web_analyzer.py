@@ -574,20 +574,20 @@ class WebCompatibleAnalyzer:
             if graph_info and graph_info.get('start_x') is not None and graph_info.get('end_x') is not None:
                 actual_graph_width = graph_info['end_x'] - graph_info['start_x']
                 graph_start_x = graph_info['start_x']
-                print(f"[spins_per_pixel計算] graph_info使用:")
-                print(f"  start_x={graph_info['start_x']}px, end_x={graph_info['end_x']}px")
-                print(f"  actual_graph_width={actual_graph_width}px")
+                import os
+                os.write(2, f"[spins_per_pixel計算] graph_info使用: start_x={graph_info['start_x']}px, end_x={graph_info['end_x']}px, width={actual_graph_width}px\n".encode('utf-8'))
             else:
                 # グラフ座標情報がない場合は従来の方法
                 actual_graph_width = graph_width
                 graph_start_x = 0
-                print(f"[spins_per_pixel計算] graph_widthを使用: {graph_width}px")
+                import os
+                os.write(2, f"[spins_per_pixel計算] graph_widthを使用: {graph_width}px\n".encode('utf-8'))
 
             # 1ピクセルあたりの回転数（実際のグラフ幅を使用）
             spins_per_pixel = total_spins / actual_graph_width if actual_graph_width > 0 else 0
-            print(f"[spins_per_pixel計算] total_spins={total_spins}, actual_graph_width={actual_graph_width}px")
-            print(f"[spins_per_pixel計算] 計算結果: spins_per_pixel={spins_per_pixel}")
-            print(f"[spins_per_pixel計算] 重要な仮定: グラフの幅({actual_graph_width}px)が全回転数({total_spins})をカバーしている")
+            import os
+            os.write(2, f"[spins_per_pixel計算] total_spins={total_spins}, width={actual_graph_width}px, result={spins_per_pixel}\n".encode('utf-8'))
+            os.write(2, f"[spins_per_pixel計算] 仮定: グラフ幅({actual_graph_width}px)=全回転数({total_spins})\n".encode('utf-8'))
             
             # 初当たりまでの計算
             first_hit_spins = 0
