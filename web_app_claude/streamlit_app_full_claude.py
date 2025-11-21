@@ -1516,6 +1516,11 @@ if graph_files and st.session_state.get('start_analysis', False):
         #             st.write(f"  X={int(x)}, 値={int(val)}玉, Y座標={int(y_pixel)}px")
 
         if graph_data_points:
+            # graph_data_pointsの最初の要素のX座標を確認
+            first_x = graph_data_points[0][0]
+            log(f"[Graph Data Points] First point: x={first_x}px, value={graph_data_points[0][1]:.1f}玉")
+            log(f"[Graph Data Points] Total points: {len(graph_data_points)}")
+
             # データポイントから値のみを抽出
             graph_values = [value for x, value in graph_data_points]
             # 補正前の値を保存
