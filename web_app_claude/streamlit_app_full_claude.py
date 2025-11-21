@@ -2839,16 +2839,12 @@ if 'analysis_results' in st.session_state:
                                 target_x_position = initial_ball_starts / spins_per_pixel
                                 target_x_index = int(target_x_position)
 
-                                # グラフデータから該当位置までの最低値を取得
+                                # グラフデータから該当位置での値を取得
                                 graph_values = result.get('graph_values', [])
                                 if 0 <= target_x_index < len(graph_values):
-                                    # その時点での最低値を探す（使用球数）
-                                    min_val_at_target = 0
-                                    for i in range(min(target_x_index + 1, len(graph_values))):
-                                        if graph_values[i] < min_val_at_target:
-                                            min_val_at_target = graph_values[i]
-
-                                    first_hit_balls_new = abs(min_val_at_target)
+                                    # その位置での実際の値を取得（使用球数）
+                                    value_at_target = graph_values[target_x_index]
+                                    first_hit_balls_new = abs(value_at_target)
 
                             # 新方式を優先、データがない場合は旧方式
                             first_hit_balls = first_hit_balls_new if first_hit_balls_new > 0 else first_hit_balls_old
