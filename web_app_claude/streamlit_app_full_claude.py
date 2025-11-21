@@ -1957,12 +1957,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                     )
                     api_time = time.time() - api_start
                     log(f"[Detail {idx+1}/{len(detail_files)}] Claude API complete: {api_time:.1f}s")
-                    
-                    # 処理時間を表示（デバッグモード時）
-                    if st.session_state.get('show_ocr_debug', False):
-                        st.write(f"⏱️ {detail_file.name} の処理時間:")
-                        st.write(f"  - 前処理: {preprocess_time:.1f}秒")
-                        st.write(f"  - Claude API: {api_time:.1f}秒")
+                    log(f"[Timing] {detail_file.name} - Preprocess: {preprocess_time:.1f}s, API: {api_time:.1f}s")
                     
                     if api_result and api_result.get('success'):
                         claude_result = api_result.get('data', {})
@@ -1976,7 +1971,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                             
                             # 最初の1回だけ機種データを設定
                             if machine_payout_data is None:
-                                st.write(f"🔍 機種名検出: 「{machine_name}」")
+                                log(f"[Machine Detection] 機種名検出: 「{machine_name}」")
                                 detected_machine_name = machine_name
                                 
                                 # 手動設定された値を使用
