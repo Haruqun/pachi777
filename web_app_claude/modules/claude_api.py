@@ -20,6 +20,24 @@ def analyze_with_claude(image, api_key, model="claude-3-5-haiku-20241022"):
             'raw_text': None
         }
 
+    # ===== ログ方法テスト =====
+    print("TEST 1: print() - これはテストです")
+    import logging
+    logging.info("TEST 2: logging.info() - これはテストです")
+    logging.warning("TEST 3: logging.warning() - これはテストです")
+    st.write("TEST 4: st.write() - これはテストです")
+    st.info("TEST 5: st.info() - これはテストです")
+    st.success("TEST 6: st.success() - これはテストです")
+    st.warning("TEST 7: st.warning() - これはテストです")
+    st.error("TEST 8: st.error() - これはテストです")
+    import sys
+    sys.stdout.write("TEST 9: sys.stdout.write() - これはテストです\n")
+    sys.stderr.write("TEST 10: sys.stderr.write() - これはテストです\n")
+    import os
+    os.write(1, b"TEST 11: os.write(1) - これはテストです\n")
+    os.write(2, b"TEST 12: os.write(2) - これはテストです\n")
+    # ===== テスト終了 =====
+
     # NumPy配列をPIL Imageに変換
     import numpy as np
     if isinstance(image, np.ndarray):
