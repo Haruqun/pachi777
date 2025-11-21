@@ -111,7 +111,8 @@ def extract_site7_data(image):
         'balance': r'収支\s*[:：]?\s*([+-−＋]?\s*\d+)',
         'payout_per_1k': r'(\d{2,3}\.\d)\s*[玉枚]/千円',
         'current_start': r'現在\s*[:：]?\s*(\d+)',
-        'highest_hits': r'最高連\s*[:：]?\s*(\d+)\s*連'
+        'highest_hits': r'最高連\s*[:：]?\s*(\d+)\s*連',
+        'max_value': r'最大値\s*[:：]?\s*(\d+)'
     }
     
     extracted_data = {}
