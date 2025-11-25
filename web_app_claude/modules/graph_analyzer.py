@@ -367,23 +367,35 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
                 'start_balls': balls,
                 'end_rotation': rotation,
                 'end_balls': balls,
+                'prev_balls': balls,  # 前回の玉数
                 'start_index': i
             }
         else:
+            prev_balls = current_section.get('prev_balls', current_section['end_balls'])
+
             # 玉数の変化をチェック
             if balls < current_section['end_balls']:
-                # 下降継続
+                # 下降継続 → 上昇状態をリセット
                 current_section['end_rotation'] = rotation
                 current_section['end_balls'] = balls
+                current_section['prev_balls'] = balls
+                current_section.pop('rise_start_balls', None)  # 上昇状態リセット
             elif balls == current_section['end_balls']:
-                # 横ばい（区間継続）
+                # 横ばい → 上昇状態をリセット
                 current_section['end_rotation'] = rotation
-            else:
-                # 上昇をチェック
-                rise = balls - current_section['end_balls']
-                SIGNIFICANT_RISE = 100  # 100玉以上の上昇を本当の当たりと判定
+                current_section['prev_balls'] = balls
+                current_section.pop('rise_start_balls', None)  # 上昇状態リセット
+            elif balls > prev_balls:
+                # 上昇中
+                if 'rise_start_balls' not in current_section:
+                    # 上昇の開始
+                    current_section['rise_start_balls'] = prev_balls
 
-                if rise >= SIGNIFICANT_RISE:
+                # 累積上昇量を計算
+                cumulative_rise = balls - current_section['rise_start_balls']
+                SIGNIFICANT_RISE = 100  # 100玉以上の連続上昇を本当の当たりと判定
+
+                if cumulative_rise >= SIGNIFICANT_RISE:
                     # 大きな上昇（当たり） → 区間終了
                     if current_section['start_balls'] != current_section['end_balls']:
                         # 玉数変化がある区間のみ記録
@@ -403,12 +415,18 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
                         'start_balls': balls,
                         'end_rotation': rotation,
                         'end_balls': balls,
+                        'prev_balls': balls,
                         'start_index': i
                     }
                 else:
-                    # 小さな上昇（ノイズ） → 区間継続（最低値を保持）
+                    # まだ100玉未満の上昇 → 区間継続
                     current_section['end_rotation'] = rotation
-                    # end_ballsは更新しない（最低値のまま維持）
+                    current_section['prev_balls'] = balls
+            else:
+                # 横ばい（balls == prev_balls）→  上昇状態をリセット
+                current_section['end_rotation'] = rotation
+                current_section['prev_balls'] = balls
+                current_section.pop('rise_start_balls', None)
 
     # 最後の区間を処理
     if current_section and current_section['start_balls'] != current_section['end_balls']:
