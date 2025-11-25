@@ -3127,8 +3127,14 @@ if 'analysis_results' in st.session_state:
                             
                         # 回転率②の計算
                         rotation_rate_2_calculated = False
+
+                        # 優先順位: 1. Claude AIデータ, 2. OCRの累計スタート
                         normal_rotations = prioritized_data.get('normal_rotations')
-                        
+                        if not normal_rotations or normal_rotations == 0:
+                            # OCRデータから累計スタートを取得
+                            ocr_data = result.get('ocr_data', {})
+                            normal_rotations = ocr_data.get('total_start', 0)
+
                         if normal_rotations and normal_rotations > 0:
                             # 総払い出し球数を計算
                             total_payout = 0
@@ -3145,9 +3151,13 @@ if 'analysis_results' in st.session_state:
                                 middle_balls = get_settings().get('middle_jackpot_balls', 750)
                                 small_balls = get_settings().get('small_jackpot_balls', 450)
                             
-                            # 通常時使用球数の計算（グラフ下降累積のみ使用）
+                            # 通常時使用球数の計算
+                            # 優先順位: 1. グラフ下降累積, 2. 初当たり使用球数
                             normal_balls = result.get('total_decline_balls', 0)
-                            
+                            if normal_balls == 0:
+                                # フォールバック: 初当たり使用球数を使用
+                                normal_balls = result.get('first_hit_used_balls', 0)
+
                             if normal_balls > 0:
                                 rotation_rate_2 = (normal_rotations / normal_balls) * 250
                                 warning = " ⚠️" if rotation_rate_2 < 10 or rotation_rate_2 > 30 else ""
