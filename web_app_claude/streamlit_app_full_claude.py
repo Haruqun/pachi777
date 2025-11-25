@@ -3771,7 +3771,7 @@ if 'analysis_results' in st.session_state:
                     '最低値': prioritized_data['min_val'],
                     '現在値': prioritized_data['current_val'],
                     '初当たり球数': prioritized_data['first_hit_val'] if prioritized_data['first_hit_val'] is not None else None,
-                    '初当たり回転数': prioritized_data.get('initial_ball_starts', 0) if prioritized_data.get('first_hit_val') is not None else 0,
+                    '初当たり回転数': result.get('rotation_metrics', {}).get('first_hit_spins', 0) if prioritized_data.get('first_hit_val') is not None else 0,
                     '収支（円）': int(prioritized_data['current_val'] * get_settings().get('exchange_rate', 3.57145)),
                     '総獲得球数': result.get('total_jackpot_balls', 0),
                     '大当り回数（グラフ）': result.get('jackpot_count', 0),  # 列名を変更
