@@ -1534,6 +1534,15 @@ if graph_files and st.session_state.get('start_analysis', False):
             # log(f"[Graph Values] Offset correction: start_offset={start_offset:.1f}玉 (graph_values[0]を0に補正)")
             # log(f"[Graph Values] After correction: graph_values[0]={graph_values[0]:.1f}玉 (should be 0)")
 
+            # 非線形補正を全体に適用（modules/correction.py）
+            try:
+                from modules.correction import apply_correction
+                graph_values_before_correction = graph_values.copy()
+                graph_values = [apply_correction(v) for v in graph_values]
+                log(f"[Correction] Applied non-linear correction to {len(graph_values)} graph values")
+            except ImportError as e:
+                log(f"[Correction Error] Failed to import correction module: {e}")
+
             # # グラフデータを全て出力（デバッグ用）
             # graph_start_x_val = graph_info.get('start_x', 0) if graph_info else 0
             # log(f"[Graph Values] Total points: {len(graph_values)}, graph_start_x: {graph_start_x_val}px")
@@ -1544,34 +1553,20 @@ if graph_files and st.session_state.get('start_analysis', False):
             #     x_end = graph_start_x_val + (i+len(chunk)-1)*2
             #     log(f"  index {i:3d}-{i+len(chunk)-1:3d} (x={x_start:3d}-{x_end:3d}px): {[round(v, 1) for v in chunk]}")
 
-            # 統計情報を計算
-            max_val_original = max(graph_values)
-            min_val_original = min(graph_values)
-            
+            # 統計情報を計算（既に補正済みのgraph_valuesから）
+            max_val = max(graph_values)
+            min_val = min(graph_values)
+
             # 現在値を複数の方法で検証して精度向上
             if len(graph_values) >= 5:
                 # 最後の5点の中央値（外れ値除去）
-                current_val_original = np.median(graph_values[-5:])
+                current_val = np.median(graph_values[-5:])
             else:
-                current_val_original = graph_values[-1] if graph_values else 0
-            
+                current_val = graph_values[-1] if graph_values else 0
+
             # インデックスを保存
-            max_idx = graph_values.index(max_val_original)
-            min_idx = graph_values.index(min_val_original)
-            
-            # 非線形補正を適用（modules/correction.py）
-            try:
-                from modules.correction import apply_correction
-                max_val = apply_correction(max_val_original)
-                min_val = apply_correction(min_val_original)
-                current_val = apply_correction(current_val_original)
-                log(f"[Correction Applied] max: {max_val_original:.1f} → {max_val:.1f}玉")
-            except ImportError as e:
-                log(f"[Correction Error] Failed to import: {e}")
-                # フォールバック：補正なし
-                max_val = max_val_original
-                min_val = min_val_original
-                current_val = current_val_original
+            max_idx = graph_values.index(max_val)
+            min_idx = graph_values.index(min_val)
 
             # グラフの上下限値でクリップ
             graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
