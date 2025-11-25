@@ -3141,85 +3141,81 @@ if 'analysis_results' in st.session_state:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
                             result['display_rotation_rate_1'] = '-'
                             
-                        # 回転率②の計算
+                        # 回転率②の計算（A方式を優先使用）
                         rotation_rate_2_calculated = False
 
-                        # 優先順位: 1. Claude AIデータ, 2. rotation_metricsの通常時回転数
-                        normal_rotations = prioritized_data.get('normal_rotations')
-                        if not normal_rotations or normal_rotations == 0:
-                            # rotation_metricsから通常時回転数を取得（累計 - 大当たり中）
-                            rotation_metrics = result.get('rotation_metrics', {})
-                            normal_decline_spins = rotation_metrics.get('normal_decline_spins', 0)
-                            # 文字列の場合は整数に変換
-                            try:
-                                normal_rotations = int(normal_decline_spins) if normal_decline_spins else 0
-                            except (ValueError, TypeError):
-                                normal_rotations = 0
-
-                        # 型を確実に整数にする
-                        try:
-                            normal_rotations = int(normal_rotations) if normal_rotations else 0
-                        except (ValueError, TypeError):
-                            normal_rotations = 0
-
-                        if normal_rotations > 0:
-                            # 総払い出し球数を計算
-                            total_payout = 0
-                            
-                            # 機種別の払い出し球数を取得
-                            if prioritized_data.get('machine_payouts'):
-                                machine_payouts = prioritized_data['machine_payouts']
-                                big_balls = machine_payouts.get('big_jackpot_balls', 1500)
-                                middle_balls = machine_payouts.get('middle_jackpot_balls', 750)
-                                small_balls = machine_payouts.get('small_jackpot_balls', 450)
-                            else:
-                                # デフォルト値を使用
-                                big_balls = get_settings().get('big_jackpot_balls', 1500)
-                                middle_balls = get_settings().get('middle_jackpot_balls', 750)
-                                small_balls = get_settings().get('small_jackpot_balls', 450)
-                            
-                            # 通常時使用球数の計算
-                            # 優先順位: 1. グラフ下降累積, 2. 初当たり使用球数
-                            normal_balls = result.get('total_decline_balls', 0)
-                            if normal_balls == 0:
-                                # フォールバック: 初当たり使用球数を使用
-                                normal_balls = result.get('first_hit_used_balls', 0)
-
-                            if normal_balls > 0:
-                                rotation_rate_2 = (normal_rotations / normal_balls) * 250
-                                warning = " ⚠️" if rotation_rate_2 < 10 or rotation_rate_2 > 30 else ""
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{rotation_rate_2:.1f}回/千円{warning}</span></div>'
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {normal_rotations}回転 ÷ {int(normal_balls):,}{unit}使用</div>'
+                        # 優先順位: 1. A方式（下降区間解析）, 2. Claude AIデータ, 3. rotation_metricsの通常時回転数
+                        declining_analysis = result.get('declining_analysis')
+                        if declining_analysis and st.session_state.game_type == 'パチンコ':
+                            overall_rate = declining_analysis.get('overall_rate')
+                            if overall_rate:
+                                # A方式のデータを使用（最も正確）
+                                normal_rotations = declining_analysis['total_rotations']
+                                normal_balls = declining_analysis['total_balls_used']
+                                rotation_rate_2 = overall_rate  # A方式の回転率をそのまま使用
+                                warning = " ⚠️" if rotation_rate_2 < 15 or rotation_rate_2 > 35 else ""
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②（A方式）</span><span class="stat-value positive">{rotation_rate_2:.1f}回/250玉{warning}</span></div>'
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 下降区間のみ: {normal_rotations}回転 ÷ {int(normal_balls):,}{unit}使用</div>'
                                 rotation_rate_2_calculated = True
                                 # 結果に保存
                                 result['display_rotation_rate_2'] = f"{rotation_rate_2:.1f}{warning}"
                                 result['display_normal_balls'] = int(normal_balls)
-                                
+
                                 # 通常時使用球数のHTML準備
                                 normal_usage_html = f'''<div class="stat-item">
                                     <span class="stat-label">🎮 通常時使用球数</span>
                                     <span class="stat-value">{int(normal_balls):,}{unit}</span>
                                 </div>'''
-                                
 
-                                if st.session_state.get('show_ocr_debug', False) and normal_balls > 0:
+                                if st.session_state.get('show_ocr_debug', False):
                                     normal_usage_html += f'''
                                     <div style="font-size: 0.85em; color: #666; margin-left: 20px;">
-                                        <span>📊 グラフ下降累積により計算</span>
+                                        <span>📊 A方式（下降区間のみ）</span>
                                     </div>'''
-                        
+
+                        # A方式が使えない場合のフォールバック
+                        if not rotation_rate_2_calculated:
+                            # Claude AIデータを使用
+                            normal_rotations = prioritized_data.get('normal_rotations')
+                            if not normal_rotations or normal_rotations == 0:
+                                # rotation_metricsから通常時回転数を取得（累計 - 大当たり中）
+                                rotation_metrics = result.get('rotation_metrics', {})
+                                normal_decline_spins = rotation_metrics.get('normal_decline_spins', 0)
+                                # 文字列の場合は整数に変換
+                                try:
+                                    normal_rotations = int(normal_decline_spins) if normal_decline_spins else 0
+                                except (ValueError, TypeError):
+                                    normal_rotations = 0
+
+                            # 型を確実に整数にする
+                            try:
+                                normal_rotations = int(normal_rotations) if normal_rotations else 0
+                            except (ValueError, TypeError):
+                                normal_rotations = 0
+
+                            if normal_rotations > 0:
+                                # 通常時使用球数の計算
+                                normal_balls = result.get('total_decline_balls', 0)
+                                if normal_balls == 0:
+                                    normal_balls = result.get('first_hit_used_balls', 0)
+
+                                if normal_balls > 0:
+                                    rotation_rate_2 = (normal_rotations / normal_balls) * 250
+                                    warning = " ⚠️" if rotation_rate_2 < 10 or rotation_rate_2 > 30 else ""
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value positive">{rotation_rate_2:.1f}回/千円{warning}</span></div>'
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時: {normal_rotations}回転 ÷ {int(normal_balls):,}{unit}使用</div>'
+                                    rotation_rate_2_calculated = True
+                                    result['display_rotation_rate_2'] = f"{rotation_rate_2:.1f}{warning}"
+                                    result['display_normal_balls'] = int(normal_balls)
+
+                                    normal_usage_html = f'''<div class="stat-item">
+                                        <span class="stat-label">🎮 通常時使用球数</span>
+                                        <span class="stat-value">{int(normal_balls):,}{unit}</span>
+                                    </div>'''
+
                         if not rotation_rate_2_calculated:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
                             result['display_rotation_rate_2'] = '-'
-
-                        # A方式: 下降区間解析結果を表示
-                        declining_analysis = result.get('declining_analysis')
-                        if declining_analysis and st.session_state.game_type == 'パチンコ':
-                            overall_rate = declining_analysis.get('overall_rate')
-                            if overall_rate:
-                                warning = " ⚠️" if overall_rate < 15 or overall_rate > 35 else ""
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">🔍 回転率（A方式）</span><span class="stat-value positive">{overall_rate:.1f}回/250玉{warning}</span></div>'
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 下降区間のみ: {declining_analysis["total_rotations"]}回転 ÷ {int(declining_analysis["total_balls_used"]):,}玉使用</div>'
 
 
                     # 初当たり関連のHTMLを条件分岐で生成
