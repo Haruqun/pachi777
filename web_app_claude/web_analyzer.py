@@ -333,11 +333,18 @@ class WebCompatibleAnalyzer:
             try:
                 mask = cv2.inRange(hsv, color_range['lower'], color_range['upper'])
                 
+                # グラフ解析のピクセル間隔を設定から取得
+                try:
+                    from modules.config_manager import get_settings
+                    pixel_step = get_settings().get('pixel_step', 2)
+                except:
+                    pixel_step = 2  # デフォルトは2px
+
                 data_points = []
                 graph_start_x = None  # グラフの開始X座標
                 graph_end_x = None    # グラフの終了X座標
-                
-                for x in range(0, width, 2):  # production版と同じ2ピクセルステップ
+
+                for x in range(0, width, pixel_step):  # ピクセル間隔を設定値から取得
                     col_mask = mask[:, x]
                     colored_pixels = np.where(col_mask > 0)[0]
                     

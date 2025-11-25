@@ -20,7 +20,9 @@ DEFAULT_SETTINGS = {
     # 超中小の払い出し球数
     'big_jackpot_balls': 1500,   # 超（大）の払い出し球数
     'middle_jackpot_balls': 750,  # 中の払い出し球数
-    'small_jackpot_balls': 450    # 小の払い出し球数
+    'small_jackpot_balls': 450,   # 小の払い出し球数
+    # グラフ解析の精度
+    'pixel_step': 1,  # グラフ解析のピクセル間隔（1=高精度、2=標準）
 }
 
 # 定数
