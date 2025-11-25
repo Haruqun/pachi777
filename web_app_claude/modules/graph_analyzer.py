@@ -225,10 +225,12 @@ def detect_first_hit(graph_values, game_type='パチンコ', small_jackpot_balls
 
     # 方法0: 最低値ベースの検出（最優先）
     # マイナス値の中で最も深い点を見つけ、そこから上昇があれば初当たりとする
+    # ただし、最小深さの閾値を設定（浅すぎる下降を除外）
+    min_depth_threshold = -500 if game_type == 'パチンコ' else -100  # 最小深さ要件
     min_val_in_range = float('inf')
     min_val_idx = -1
     for i in range(min(len(graph_values), 150)):  # 最大150点まで探索
-        if graph_values[i] < 0 and graph_values[i] < min_val_in_range:
+        if graph_values[i] < min_depth_threshold and graph_values[i] < min_val_in_range:
             min_val_in_range = graph_values[i]
             min_val_idx = i
 
