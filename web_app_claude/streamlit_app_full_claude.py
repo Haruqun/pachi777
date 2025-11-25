@@ -2623,7 +2623,7 @@ if 'analysis_results' in st.session_state:
                                     cv2.circle(display_img, (int(claude_x), zero_y), 6, (0, 0, 200), 2)   # 外枠
 
                                     # ラベルを描画
-                                    label_text = f'OCR FIRST HIT: {initial_ball_starts}'
+                                    label_text = f'AI HIT: {initial_ball_starts}'
                                     # ラベルの背景（白）
                                     label_size = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
                                     label_x = int(claude_x) - label_size[0] // 2
@@ -2737,7 +2737,10 @@ if 'analysis_results' in st.session_state:
                                                 cv2.circle(display_img, (int(jackpot_x_px), zero_y), 7, tuple([c//2 for c in color]), 2)  # 外枠（暗い色）
 
                                                 # ラベルを描画
-                                                label_text = f'{idx+1}: {jackpot_spins}'
+                                                if idx == 0:
+                                                    label_text = f'FIRST HIT: {jackpot_spins}'
+                                                else:
+                                                    label_text = f'{idx+1}: {jackpot_spins}'
                                                 label_size = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
                                                 label_x = int(jackpot_x_px) - label_size[0] // 2
                                                 label_y = zero_y - 40 - (idx % 2) * 20  # 交互に配置
