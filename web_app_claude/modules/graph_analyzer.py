@@ -274,8 +274,8 @@ def detect_first_hit(graph_values, game_type='パチンコ', small_jackpot_balls
                 # 次の点も上昇または維持していることを確認（ノイズ除外）
                 noise_threshold = 50 if game_type == 'パチンコ' else 10
                 if graph_values[i+2] >= graph_values[i+1] - noise_threshold:
-                    # 初当たりは必ずマイナス値から
-                    if graph_values[i] < 0:
+                    # 初当たりは最小深さ以下から（浅すぎる下降を除外）
+                    if graph_values[i] < min_depth_threshold:
                         # 補正なしで純粋な検出位置を使用
                         first_hit_val = graph_values[i]
                         first_hit_x = i
@@ -304,8 +304,8 @@ def detect_first_hit(graph_values, game_type='パチンコ', small_jackpot_balls
                 if avg_slope <= 0 and current_change > min_payout:
                     noise_threshold = 50 if game_type == 'パチンコ' else 10
                     if i + 2 < len(graph_values) and graph_values[i+2] > graph_values[i+1] - noise_threshold:
-                        # 初当たりは必ずマイナス値
-                        if graph_values[i] < 0:
+                        # 初当たりは最小深さ以下から（浅すぎる下降を除外）
+                        if graph_values[i] < min_depth_threshold:
                             # 補正なしで純粋な検出位置を使用
                             first_hit_val = graph_values[i]
                             first_hit_x = i
