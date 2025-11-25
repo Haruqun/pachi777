@@ -3621,6 +3621,52 @@ if 'analysis_results' in st.session_state:
                                     candidates_html += '</div>'
                                     st.markdown(candidates_html, unsafe_allow_html=True)
 
+                        # 玉推移JSONデータ
+                        if result.get('graph_values'):
+                            with st.expander("📊 玉推移データ (JSON)"):
+                                import json
+
+                                # グラフ情報を取得
+                                graph_info = result.get('graph_info', {})
+                                graph_start_x = graph_info.get('start_x', 0) if graph_info else 0
+
+                                # JSON形式でデータを作成
+                                json_data = {
+                                    "machine_number": result.get('ocr_data', {}).get('machine_number', result.get('name', '').rsplit('.', 1)[0]),
+                                    "total_spins": result.get('ocr_data', {}).get('total_start', 0),
+                                    "graph_start_x": graph_start_x,
+                                    "pixel_step": 2,
+                                    "unit": "玉",
+                                    "data_points": len(result['graph_values']),
+                                    "values": [
+                                        {
+                                            "index": i,
+                                            "x_pixel": graph_start_x + i * 2,
+                                            "value": round(val, 1)
+                                        }
+                                        for i, val in enumerate(result['graph_values'])
+                                    ]
+                                }
+
+                                # JSON文字列を整形して表示
+                                json_str = json.dumps(json_data, ensure_ascii=False, indent=2)
+
+                                st.info(f"📊 データポイント数: {len(result['graph_values'])}点")
+                                st.text_area(
+                                    "JSON データ（コピー可）",
+                                    json_str,
+                                    height=300,
+                                    help="このテキストを選択してコピーできます"
+                                )
+
+                                # ダウンロードボタンも追加
+                                st.download_button(
+                                    label="📥 JSONファイルとしてダウンロード",
+                                    data=json_str,
+                                    file_name=f"{result.get('name', 'graph').rsplit('.', 1)[0]}_values.json",
+                                    mime="application/json"
+                                )
+
                     else:
                         st.warning("⚠️ グラフデータを検出できませんでした")
 
