@@ -8,8 +8,8 @@ import os
 DEFAULT_SETTINGS = {
     'search_start_offset': 50,
     'search_end_offset': 500,
-    'crop_top': 246,
-    'crop_bottom': 280,
+    'crop_top': 350,
+    'crop_bottom': 400,
     'left_margin': 120,
     'right_margin': 120,
     # グリッドライン調整値
