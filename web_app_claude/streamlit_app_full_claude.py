@@ -2623,7 +2623,7 @@ if 'analysis_results' in st.session_state:
                                     cv2.circle(display_img, (int(claude_x), zero_y), 6, (0, 0, 200), 2)   # 外枠
 
                                     # ラベルを描画
-                                    label_text = f'AI HIT: {initial_ball_starts}'
+                                    label_text = f'OCR FIRST HIT: {initial_ball_starts}'
                                     # ラベルの背景（白）
                                     label_size = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
                                     label_x = int(claude_x) - label_size[0] // 2
