@@ -13,8 +13,8 @@ DEFAULT_SETTINGS = {
     'left_margin': 120,
     'right_margin': 120,
     # グリッドライン調整値
-    'grid_30k_offset': 1,       # +30000ライン（最上部）
-    'grid_minus_30k_offset': -34, # -30000ライン（最下部）
+    'grid_30k_offset': 20,       # +30000ライン（最上部）
+    'grid_minus_30k_offset': -69, # -30000ライン（最下部）
     'exchange_rate': 3.57145,    # 交換レート（円/玉）デフォルトは28玉交換
     'zero_line_adjustment': 0,   # ゼロライン調整値
     # 超中小の払い出し球数
