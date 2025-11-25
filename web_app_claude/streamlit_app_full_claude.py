@@ -3133,9 +3133,20 @@ if 'analysis_results' in st.session_state:
                         if not normal_rotations or normal_rotations == 0:
                             # OCRデータから累計スタートを取得
                             ocr_data = result.get('ocr_data', {})
-                            normal_rotations = ocr_data.get('total_start', 0)
+                            total_start = ocr_data.get('total_start', 0)
+                            # 文字列の場合は整数に変換
+                            try:
+                                normal_rotations = int(total_start) if total_start else 0
+                            except (ValueError, TypeError):
+                                normal_rotations = 0
 
-                        if normal_rotations and normal_rotations > 0:
+                        # 型を確実に整数にする
+                        try:
+                            normal_rotations = int(normal_rotations) if normal_rotations else 0
+                        except (ValueError, TypeError):
+                            normal_rotations = 0
+
+                        if normal_rotations > 0:
                             # 総払い出し球数を計算
                             total_payout = 0
                             
