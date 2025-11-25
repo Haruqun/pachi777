@@ -3631,8 +3631,8 @@ if 'analysis_results' in st.session_state:
                                 # CSV形式でデータを作成（回転数と玉数のペア）
                                 csv_lines = ["rotation,balls"]
                                 for i, ball_value in enumerate(result['graph_values']):
-                                    # 回転数を計算（pixel_step=2なので、i*2 pixelに対応）
-                                    rotation = round(i * 2 * spins_per_pixel) if spins_per_pixel > 0 else i * 2
+                                    # 回転数を計算（pixel_step=1なので、i pixel = i * spins_per_pixel回転）
+                                    rotation = round(i * spins_per_pixel) if spins_per_pixel > 0 else i
                                     csv_lines.append(f"{rotation},{round(ball_value, 1)}")
 
                                 csv_str = "\n".join(csv_lines)
