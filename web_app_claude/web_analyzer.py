@@ -28,7 +28,16 @@ from pathlib import Path
 import re
 import matplotlib.font_manager as fm
 import platform
-from modules.correction import apply_correction
+
+# 補正モジュールのインポート
+try:
+    from modules.correction import apply_correction
+    log("[Import] modules.correction imported successfully")
+except ImportError as e:
+    log(f"[Import Error] Failed to import modules.correction: {e}")
+    # フォールバック：補正なし
+    def apply_correction(value):
+        return value
 
 # 日本語フォント設定
 if platform.system() == 'Darwin':  # macOS
