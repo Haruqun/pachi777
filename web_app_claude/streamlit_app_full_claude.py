@@ -3206,10 +3206,14 @@ if 'analysis_results' in st.session_state:
                         jackpot_label = "大当り回数"
                     
                     # HTMLコンテンツを組み立て
+                    # 解析精度を取得して表示
+                    pixel_step = get_settings().get('pixel_step', 2)
+                    precision_label = f"[{pixel_step}px間隔]"
+
                     html_content = f"""
                     <div class="stat-card">
                         <div style="font-size: 1.1em; font-weight: bold; color: #17a2b8; margin-bottom: 10px;">
-                            📊 グラフ解析結果
+                            📊 グラフ解析結果 {precision_label}
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">🎯 現在値</span>
