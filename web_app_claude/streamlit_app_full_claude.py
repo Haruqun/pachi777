@@ -3610,6 +3610,45 @@ if 'analysis_results' in st.session_state:
     success_count = sum(1 for r in analysis_results if r['success'])
     st.info(f"📈 総画像数: {len(analysis_results)}枚 | ✅ 成功: {success_count}枚 | ⚠️ 失敗: {len(analysis_results) - success_count}枚")
 
+    # 切り抜き画像の一括ダウンロード
+    if analysis_results:
+        import zipfile
+        import io
+        from PIL import Image
+
+        # ZIPファイルを作成
+        zip_buffer = io.BytesIO()
+        image_count = 0
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for i, result in enumerate(analysis_results):
+                if result.get('cropped_image') is not None:
+                    # PIL ImageをPNGバイナリに変換
+                    img_buffer = io.BytesIO()
+                    Image.fromarray(result['cropped_image']).save(img_buffer, format='PNG')
+                    img_buffer.seek(0)
+
+                    # ファイル名を生成（台番号または元ファイル名）
+                    machine_number = result.get('ocr_data', {}).get('machine_number', '')
+                    if machine_number:
+                        filename = f"{machine_number}_graph.png"
+                    else:
+                        filename = f"{result.get('name', f'graph_{i+1}')}_graph.png"
+
+                    # ZIPに追加
+                    zip_file.writestr(filename, img_buffer.getvalue())
+                    image_count += 1
+
+        zip_buffer.seek(0)
+
+        # ダウンロードボタン
+        if image_count > 0:
+            st.download_button(
+                label=f"📥 切り抜き画像を一括ダウンロード ({image_count}枚 / ZIP)",
+                data=zip_buffer,
+                file_name="cropped_graphs.zip",
+                mime="application/zip",
+                use_container_width=True
+            )
 
     # 結果を表形式で表示
     st.markdown("### 📊 解析結果（表形式）")
