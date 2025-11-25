@@ -13,7 +13,7 @@ DEFAULT_SETTINGS = {
     'left_margin': 120,
     'right_margin': 120,
     # グリッドライン調整値（ゼロラインから±30000ラインまでの距離）
-    'grid_distance': 330,  # ゼロラインから±30000ラインまでの距離（px）
+    'grid_distance': 327,  # ゼロラインから±30000ラインまでの距離（px）
     'exchange_rate': 3.57145,    # 交換レート（円/玉）デフォルトは28玉交換
     'zero_line_adjustment': 0,   # ゼロライン調整値
     # 超中小の払い出し球数

@@ -1303,7 +1303,7 @@ if graph_files and st.session_state.get('start_analysis', False):
         
         with col3:
             st.markdown("**グリッドライン調整**")
-            st.text(f"距離: {current_settings.get('grid_distance', 330)}px")
+            st.text(f"距離: {current_settings.get('grid_distance', 327)}px")
     
     # セッションステートからプログレスバーを取得（既に上部で作成済み）
     progress_bar = st.session_state.get('progress_bar')
@@ -1401,7 +1401,7 @@ if graph_files and st.session_state.get('start_analysis', False):
         
         # グリッドライン描画（設定値を使用）
         # ゼロラインからの距離を取得
-        grid_distance = settings.get('grid_distance', 330)
+        grid_distance = settings.get('grid_distance', 327)
 
         # +上限ライン（ゼロラインから上にgrid_distance）
         y_30k = zero_line_in_crop - grid_distance
@@ -1471,7 +1471,7 @@ if graph_files and st.session_state.get('start_analysis', False):
         # 0ラインの位置を設定
         analyzer.zero_y = zero_line_in_crop
         # ゼロラインから±30,000ラインまでの距離を取得
-        grid_distance = settings.get('grid_distance', 330)
+        grid_distance = settings.get('grid_distance', 327)
 
         # ±30,000ラインの位置（ゼロラインからの距離で指定）
         y_30k_adjusted = zero_line_in_crop - grid_distance  # ゼロラインから上に grid_distance px
@@ -1491,7 +1491,7 @@ if graph_files and st.session_state.get('start_analysis', False):
             analyzer.scale = graph_limit / avg_distance_adjusted
         else:
             # フォールバック（距離が不正な場合はデフォルト値を使用）
-            default_distance = 330
+            default_distance = 327
             analyzer.scale = graph_limit / default_distance
         
         # グラフデータを抽出
@@ -1502,8 +1502,8 @@ if graph_files and st.session_state.get('start_analysis', False):
         #     st.write(f"🔍 デバッグ情報 - {uploaded_file.name}")
         #     st.write(f"- ゼロライン位置（切り抜き内）: {zero_line_in_crop}px")
         #     st.write(f"- 切り抜き画像の高さ: {crop_height}px")
-        #     st.write(f"- 調整された+30000ライン位置: {y_30k_adjusted}px (ゼロラインから: {settings.get('grid_distance', 330)}px)")
-        #     st.write(f"- 調整された-30000ライン位置: {y_minus_30k_adjusted}px (ゼロラインから: {settings.get('grid_distance', 330)}px)")
+        #     st.write(f"- 調整された+30000ライン位置: {y_30k_adjusted}px (ゼロラインから: {settings.get('grid_distance', 327)}px)")
+        #     st.write(f"- 調整された-30000ライン位置: {y_minus_30k_adjusted}px (ゼロラインから: {settings.get('grid_distance', 327)}px)")
         #     st.write(f"- ゼロから+30000までの距離: {distance_to_plus_30k_adjusted}px")
         #     st.write(f"- ゼロから-30000までの距離: {distance_to_minus_30k_adjusted}px")
         #     st.write(f"- スケール: {analyzer.scale:.2f} 玉/ピクセル")
@@ -4620,7 +4620,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
 
             grid_distance = st.number_input(
                 f"ゼロラインから±{graph_limit:,}ラインまでの距離",
-                min_value=100, max_value=500, value=get_settings().get('grid_distance', 330),
+                min_value=100, max_value=500, value=get_settings().get('grid_distance', 327),
                 step=1, help=f"ゼロラインから上下対称に±{graph_limit:,}ラインまでの距離（デフォルト: 330px）"
             )
             
