@@ -3122,16 +3122,26 @@ if 'analysis_results' in st.session_state:
                         # 優先度に基づいてデータを取得
                         prioritized_data = get_prioritized_data(result)
                         
-                        # 回転率①の計算（グラフ解析のみ）
+                        # 回転率①の計算（A方式の最初の区間を使用）
                         rotation_rate_1_calculated = False
-                        rotation_metrics = result.get('rotation_metrics', {})
-                        graph_first_hit_spins = rotation_metrics.get('first_hit_spins', 0)
-                        graph_first_hit_balls = rotation_metrics.get('first_hit_balls', 0)
+
+                        # 優先順位: 1. A方式の最初の区間, 2. rotation_metricsのフォールバック
+                        declining_analysis_for_rate1 = result.get('declining_analysis')
+                        if declining_analysis_for_rate1 and declining_analysis_for_rate1.get('sections'):
+                            # A方式の最初の区間 = 初当たりまでの期間
+                            first_section = declining_analysis_for_rate1['sections'][0]
+                            graph_first_hit_spins = first_section['rotations']
+                            graph_first_hit_balls = first_section['used_balls']
+                        else:
+                            # フォールバック: rotation_metricsを使用
+                            rotation_metrics = result.get('rotation_metrics', {})
+                            graph_first_hit_spins = rotation_metrics.get('first_hit_spins', 0)
+                            graph_first_hit_balls = rotation_metrics.get('first_hit_balls', 0)
 
                         if graph_first_hit_spins > 0 and graph_first_hit_balls > 0:
                             rotation_rate_1 = (graph_first_hit_spins / graph_first_hit_balls) * 250
                             warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
-                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/千円{warning}</span></div>'
+                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/250玉{warning}</span></div>'
 
                             rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {graph_first_hit_spins}回転 ÷ {int(graph_first_hit_balls):,}{unit}使用</div>'
 
@@ -3221,9 +3231,18 @@ if 'analysis_results' in st.session_state:
                     # 初当たり関連のHTMLを条件分岐で生成
                     first_hit_html = ""
                     if st.session_state.game_type == 'パチンコ':
-                        # グラフ解析から計算された初当たり回転数と累計スタート数を使用
+                        # A方式の最初の区間から初当たり回転数を取得
+                        declining_analysis_for_display = result.get('declining_analysis')
+                        if declining_analysis_for_display and declining_analysis_for_display.get('sections'):
+                            first_section = declining_analysis_for_display['sections'][0]
+                            first_hit_spins = first_section['rotations']
+                        else:
+                            # フォールバック: rotation_metricsを使用
+                            rotation_metrics = result.get('rotation_metrics') or {}
+                            first_hit_spins = rotation_metrics.get('first_hit_spins', 0)
+
+                        # 累計スタート数は rotation_metrics から取得
                         rotation_metrics = result.get('rotation_metrics') or {}
-                        first_hit_spins = rotation_metrics.get('first_hit_spins', 0)
                         cumulative_total_spins = rotation_metrics.get('cumulative_total_spins', 0)
 
                         # グラフ解析結果をそのまま使用（Claude AI値での上書きはしない）
