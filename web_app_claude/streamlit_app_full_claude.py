@@ -1540,6 +1540,10 @@ if graph_files and st.session_state.get('start_analysis', False):
                 graph_values_before_correction = graph_values.copy()
                 graph_values = [apply_correction(v) for v in graph_values]
                 log(f"[Correction] Applied non-linear correction to {len(graph_values)} graph values")
+
+                # graph_data_pointsも補正された値で更新（回転率計算用）
+                graph_data_points = [(x, corrected_val) for (x, _), corrected_val in zip(graph_data_points, graph_values)]
+                log(f"[Correction] Updated graph_data_points with corrected values")
             except ImportError as e:
                 log(f"[Correction Error] Failed to import correction module: {e}")
 
