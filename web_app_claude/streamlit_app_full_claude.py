@@ -63,7 +63,8 @@ def log(message):
 st.set_page_config(
     page_title="AI Graph Analysis Report",
     page_icon="🎰",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
 # リロード検出ログ
@@ -2653,7 +2654,7 @@ if 'analysis_results' in st.session_state:
                                         cv2.circle(display_img, (int(total_rotations_x), zero_y), 6, (0, 200, 0), 2)   # 外枠
 
                                         # ラベルを描画
-                                        total_label_text = f'AI TOTAL: {total_rotations}'
+                                        total_label_text = f'OCR LAST: {total_rotations}'
                                         # ラベルの背景（白）
                                         total_label_size = cv2.getTextSize(total_label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
                                         total_label_x = int(total_rotations_x) - total_label_size[0] // 2
@@ -2687,7 +2688,7 @@ if 'analysis_results' in st.session_state:
                                         cv2.circle(display_img, (int(ai_total_x), zero_y), 6, (200, 80, 0), 2)   # 外枠
 
                                         # ラベルを描画
-                                        ai_label_text = f'AI Scale: {total_rotations} (spp:{ai_based_spins_per_pixel:.2f})'
+                                        ai_label_text = f'AI LAST: {total_rotations} (spp:{ai_based_spins_per_pixel:.2f})'
                                         # ラベルの背景（白）
                                         ai_label_size = cv2.getTextSize(ai_label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
                                         ai_label_x = int(ai_total_x) - ai_label_size[0] // 2
@@ -2907,25 +2908,11 @@ if 'analysis_results' in st.session_state:
                                     medium_j = claude_data.get('medium_jackpots') if claude_data.get('medium_jackpots') is not None else 0
                                     small_j = claude_data.get('small_jackpots') if claude_data.get('small_jackpots') is not None else 0
                                     
-                                # 超
+                                # 超・中・小（1行表示）
                                 html_content += f'''
                                 <div class="stat-item">
-                                    <span class="stat-label">🔴 超</span>
-                                    <span class="stat-value">{big_j}回 ({big_balls}玉/回)</span>
-                                </div>'''
-                                
-                                # 中
-                                html_content += f'''
-                                <div class="stat-item">
-                                    <span class="stat-label">🟡 中</span>
-                                    <span class="stat-value">{medium_j}回 ({middle_balls}玉/回)</span>
-                                </div>'''
-                                
-                                # 小
-                                html_content += f'''
-                                <div class="stat-item">
-                                    <span class="stat-label">🔵 小</span>
-                                    <span class="stat-value">{small_j}回 ({small_balls}玉/回)</span>
+                                    <span class="stat-label">大当り内訳</span>
+                                    <span class="stat-value">超{big_j} 中{medium_j} 小{small_j}</span>
                                 </div>'''
                                     
 
