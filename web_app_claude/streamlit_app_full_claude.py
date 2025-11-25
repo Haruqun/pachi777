@@ -1531,18 +1531,18 @@ if graph_files and st.session_state.get('start_analysis', False):
             # START地点（graph_values[0]）を0として全体を補正
             start_offset = graph_values[0]
             graph_values = [v - start_offset for v in graph_values]
-            log(f"[Graph Values] Offset correction: start_offset={start_offset:.1f}玉 (graph_values[0]を0に補正)")
-            log(f"[Graph Values] After correction: graph_values[0]={graph_values[0]:.1f}玉 (should be 0)")
+            # log(f"[Graph Values] Offset correction: start_offset={start_offset:.1f}玉 (graph_values[0]を0に補正)")
+            # log(f"[Graph Values] After correction: graph_values[0]={graph_values[0]:.1f}玉 (should be 0)")
 
-            # グラフデータを全て出力（デバッグ用）
-            graph_start_x_val = graph_info.get('start_x', 0) if graph_info else 0
-            log(f"[Graph Values] Total points: {len(graph_values)}, graph_start_x: {graph_start_x_val}px")
-            log(f"[Graph Values] All values (graph_values[i] = x={graph_start_x_val} + i*2):")
-            for i in range(0, len(graph_values), 10):
-                chunk = graph_values[i:i+10]
-                x_start = graph_start_x_val + i*2
-                x_end = graph_start_x_val + (i+len(chunk)-1)*2
-                log(f"  index {i:3d}-{i+len(chunk)-1:3d} (x={x_start:3d}-{x_end:3d}px): {[round(v, 1) for v in chunk]}")
+            # # グラフデータを全て出力（デバッグ用）
+            # graph_start_x_val = graph_info.get('start_x', 0) if graph_info else 0
+            # log(f"[Graph Values] Total points: {len(graph_values)}, graph_start_x: {graph_start_x_val}px")
+            # log(f"[Graph Values] All values (graph_values[i] = x={graph_start_x_val} + i*2):")
+            # for i in range(0, len(graph_values), 10):
+            #     chunk = graph_values[i:i+10]
+            #     x_start = graph_start_x_val + i*2
+            #     x_end = graph_start_x_val + (i+len(chunk)-1)*2
+            #     log(f"  index {i:3d}-{i+len(chunk)-1:3d} (x={x_start:3d}-{x_end:3d}px): {[round(v, 1) for v in chunk]}")
 
             # 統計情報を計算
             max_val_original = max(graph_values)
@@ -1559,17 +1559,16 @@ if graph_files and st.session_state.get('start_analysis', False):
             max_idx = graph_values.index(max_val_original)
             min_idx = graph_values.index(min_val_original)
             
-            # 補正係数の計算
-            correction_factor = settings.get('correction_factor', 1.0)
-            
-            # 補正を適用
-            if correction_factor != 1.0:
-                max_val = max_val_original * correction_factor
-                min_val = min_val_original * correction_factor
-                current_val = current_val_original * correction_factor
-                # グラフ値も更新（初当たり検出用）
-                graph_values = [v * correction_factor for v in graph_values]
-            else:
+            # 非線形補正を適用（modules/correction.py）
+            try:
+                from modules.correction import apply_correction
+                max_val = apply_correction(max_val_original)
+                min_val = apply_correction(min_val_original)
+                current_val = apply_correction(current_val_original)
+                log(f"[Correction Applied] max: {max_val_original:.1f} → {max_val:.1f}玉")
+            except ImportError as e:
+                log(f"[Correction Error] Failed to import: {e}")
+                # フォールバック：補正なし
                 max_val = max_val_original
                 min_val = min_val_original
                 current_val = current_val_original
