@@ -2804,6 +2804,9 @@ if 'analysis_results' in st.session_state:
                                 log(f"[Claude AI Marker] マーカー描画エラー: {str(e)}")
                                 pass
 
+                    # マーカー描画後のdisplay_imgをoverlay_imageに保存（ZIPダウンロード用）
+                    result['overlay_image'] = display_img
+
                     # 解析結果画像
                     st.image(display_img, use_column_width=True)
 
