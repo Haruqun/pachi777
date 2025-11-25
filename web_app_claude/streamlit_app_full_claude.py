@@ -1898,6 +1898,17 @@ if graph_files and st.session_state.get('start_analysis', False):
             log(f"[DEBUG 2] About to save result, rotation_metrics={rotation_metrics is not None}, ocr_data={ocr_data is not None}")
             if rotation_metrics:
                 log(f"[DEBUG 2] rotation_metrics keys: {list(rotation_metrics.keys())}, spins_per_pixel={rotation_metrics.get('spins_per_pixel', 'N/A')}")
+
+            # A方式: 下降区間解析を実行
+            declining_analysis = None
+            if rotation_metrics and graph_data_points:
+                spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
+                if spins_per_pixel > 0:
+                    from modules.graph_analyzer import analyze_declining_sections
+                    declining_analysis = analyze_declining_sections(graph_data_points, spins_per_pixel)
+                    if declining_analysis:
+                        log(f"[Declining Analysis] Found {len(declining_analysis['sections'])} sections, overall rate: {declining_analysis['overall_rate']:.2f}")
+
             analysis_results.append({
                 'name': uploaded_file.name,
                 'original_image': img_with_grid,  # グリッド付き元画像を保存
@@ -1929,7 +1940,8 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'zero_line_y': zero_line_in_crop,  # ゼロライン位置を追加（Claude AIマーカー用）
                 'graph_data_points': graph_data_points,  # グラフデータポイントを追加（AI基準計算用）
                 'graph_info': graph_info,  # グラフ情報を追加（AI基準計算用）
-                'graph_width': graph_width  # グラフ幅を追加（AI基準計算用）
+                'graph_width': graph_width,  # グラフ幅を追加（AI基準計算用）
+                'declining_analysis': declining_analysis  # A方式: 下降区間解析結果
             })
         else:
             # 解析失敗時
@@ -3199,8 +3211,17 @@ if 'analysis_results' in st.session_state:
                         if not rotation_rate_2_calculated:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
                             result['display_rotation_rate_2'] = '-'
-                        
-                    
+
+                        # A方式: 下降区間解析結果を表示
+                        declining_analysis = result.get('declining_analysis')
+                        if declining_analysis and st.session_state.game_type == 'パチンコ':
+                            overall_rate = declining_analysis.get('overall_rate')
+                            if overall_rate:
+                                warning = " ⚠️" if overall_rate < 15 or overall_rate > 35 else ""
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">🔍 回転率（A方式）</span><span class="stat-value positive">{overall_rate:.1f}回/250玉{warning}</span></div>'
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 下降区間のみ: {declining_analysis["total_rotations"]}回転 ÷ {int(declining_analysis["total_balls_used"]):,}玉使用</div>'
+
+
                     # 初当たり関連のHTMLを条件分岐で生成
                     first_hit_html = ""
                     if st.session_state.game_type == 'パチンコ':
@@ -3656,6 +3677,49 @@ if 'analysis_results' in st.session_state:
                                     file_name=f"{result.get('name', 'graph').rsplit('.', 1)[0]}_transition.csv",
                                     mime="text/csv"
                                 )
+
+                        # A方式: 下降区間詳細
+                        declining_analysis = result.get('declining_analysis')
+                        if declining_analysis and st.session_state.game_type == 'パチンコ':
+                            with st.expander("🔍 下降区間解析（A方式）詳細"):
+                                st.markdown("**下降区間のみを通常時とみなした正確な回転率計算**")
+                                st.markdown("---")
+
+                                # サマリー
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("全体回転率", f"{declining_analysis['overall_rate']:.2f}回/250玉")
+                                with col2:
+                                    if declining_analysis['initial_section_rate']:
+                                        st.metric("初当たりまで", f"{declining_analysis['initial_section_rate']:.2f}回/250玉")
+                                with col3:
+                                    if declining_analysis['post_initial_rate']:
+                                        st.metric("初当たり後平均", f"{declining_analysis['post_initial_rate']:.2f}回/250玉")
+
+                                st.markdown("---")
+                                st.markdown(f"**検出区間数:** {len(declining_analysis['sections'])}区間")
+                                st.markdown(f"**通常時総回転数:** {declining_analysis['total_rotations']:,}回転")
+                                st.markdown(f"**通常時総使用玉数:** {int(declining_analysis['total_balls_used']):,}玉")
+                                st.markdown("---")
+
+                                # 各区間の詳細
+                                st.markdown("### 📋 区間ごとの詳細")
+                                for i, section in enumerate(declining_analysis['sections'], 1):
+                                    section_type = "🎯 初当たりまで" if i == 1 else f"📊 区間{i}"
+                                    with st.container():
+                                        st.markdown(f"**{section_type}**")
+                                        col1, col2, col3, col4 = st.columns(4)
+                                        with col1:
+                                            st.markdown(f"回転数<br>{section['start_rotation']} → {section['end_rotation']}", unsafe_allow_html=True)
+                                        with col2:
+                                            st.markdown(f"使用玉数<br>{int(section['used_balls']):,}玉", unsafe_allow_html=True)
+                                        with col3:
+                                            st.markdown(f"回転数増加<br>{section['rotations']}回転", unsafe_allow_html=True)
+                                        with col4:
+                                            rate_class = "positive" if 18 <= section['rotation_rate'] <= 30 else "negative"
+                                            st.markdown(f"回転率<br>**{section['rotation_rate']:.2f}**回/250玉", unsafe_allow_html=True)
+                                        if i < len(declining_analysis['sections']):
+                                            st.markdown("---")
 
                     else:
                         st.warning("⚠️ グラフデータを検出できませんでした")

@@ -325,9 +325,119 @@ def detect_first_hit(graph_values, game_type='パチンコ', small_jackpot_balls
     
     first_hit_debug_info['detected_position'] = first_hit_x
     first_hit_debug_info['detected_value'] = first_hit_val if first_hit_x is not None else None
-    
+
     return {
         'first_hit_val': first_hit_val,
         'first_hit_x': first_hit_x,
         'debug_info': first_hit_debug_info
+    }
+
+
+def analyze_declining_sections(graph_data_points, spins_per_pixel):
+    """
+    A方式: 下降区間だけを抽出して通常時回転率を計算
+
+    Args:
+        graph_data_points: [(x, balls), ...] のリスト（補正済みの値）
+        spins_per_pixel: 1ピクセルあたりの回転数
+
+    Returns:
+        {
+            'sections': [各区間の詳細],
+            'initial_section_rate': 初当たりまでの回転率,
+            'post_initial_rate': 初当たり後の平均回転率,
+            'overall_rate': 全体の回転率,
+            'total_rotations': 通常時の総回転数,
+            'total_balls_used': 通常時の総使用玉数
+        }
+    """
+    if not graph_data_points or spins_per_pixel <= 0:
+        return None
+
+    sections = []
+    current_section = None
+
+    for i, (x, balls) in enumerate(graph_data_points):
+        rotation = round(i * spins_per_pixel)
+
+        if current_section is None:
+            # 最初の区間開始
+            current_section = {
+                'start_rotation': rotation,
+                'start_balls': balls,
+                'end_rotation': rotation,
+                'end_balls': balls,
+                'start_index': i
+            }
+        else:
+            # 玉数の変化をチェック
+            if balls < current_section['end_balls']:
+                # 下降継続
+                current_section['end_rotation'] = rotation
+                current_section['end_balls'] = balls
+            elif balls == current_section['end_balls']:
+                # 横ばい（区間継続）
+                current_section['end_rotation'] = rotation
+            else:
+                # 上昇（当たり） → 区間終了
+                if current_section['start_balls'] != current_section['end_balls']:
+                    # 玉数変化がある区間のみ記録
+                    used_balls = current_section['start_balls'] - current_section['end_balls']
+                    rotations = current_section['end_rotation'] - current_section['start_rotation']
+
+                    if used_balls > 0 and rotations > 0:
+                        rotation_rate = rotations / (used_balls / 250)
+                        current_section['used_balls'] = used_balls
+                        current_section['rotations'] = rotations
+                        current_section['rotation_rate'] = rotation_rate
+                        sections.append(current_section)
+
+                # 新しい区間開始
+                current_section = {
+                    'start_rotation': rotation,
+                    'start_balls': balls,
+                    'end_rotation': rotation,
+                    'end_balls': balls,
+                    'start_index': i
+                }
+
+    # 最後の区間を処理
+    if current_section and current_section['start_balls'] != current_section['end_balls']:
+        used_balls = current_section['start_balls'] - current_section['end_balls']
+        rotations = current_section['end_rotation'] - current_section['start_rotation']
+
+        if used_balls > 0 and rotations > 0:
+            rotation_rate = rotations / (used_balls / 250)
+            current_section['used_balls'] = used_balls
+            current_section['rotations'] = rotations
+            current_section['rotation_rate'] = rotation_rate
+            sections.append(current_section)
+
+    if not sections:
+        return None
+
+    # 統計計算
+    initial_section_rate = sections[0]['rotation_rate'] if sections else None
+
+    # 初当たり後の平均（2つ目以降の区間）
+    if len(sections) > 1:
+        post_sections = sections[1:]
+        post_total_rotations = sum(s['rotations'] for s in post_sections)
+        post_total_balls = sum(s['used_balls'] for s in post_sections)
+        post_initial_rate = post_total_rotations / (post_total_balls / 250) if post_total_balls > 0 else None
+    else:
+        post_initial_rate = None
+
+    # 全体の回転率
+    total_rotations = sum(s['rotations'] for s in sections)
+    total_balls_used = sum(s['used_balls'] for s in sections)
+    overall_rate = total_rotations / (total_balls_used / 250) if total_balls_used > 0 else None
+
+    return {
+        'sections': sections,
+        'initial_section_rate': initial_section_rate,
+        'post_initial_rate': post_initial_rate,
+        'overall_rate': overall_rate,
+        'total_rotations': total_rotations,
+        'total_balls_used': total_balls_used
     }
