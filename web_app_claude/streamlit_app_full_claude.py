@@ -3132,15 +3132,15 @@ if 'analysis_results' in st.session_state:
                         # 回転率②の計算
                         rotation_rate_2_calculated = False
 
-                        # 優先順位: 1. Claude AIデータ, 2. OCRの累計スタート
+                        # 優先順位: 1. Claude AIデータ, 2. rotation_metricsの通常時回転数
                         normal_rotations = prioritized_data.get('normal_rotations')
                         if not normal_rotations or normal_rotations == 0:
-                            # OCRデータから累計スタートを取得
-                            ocr_data = result.get('ocr_data', {})
-                            total_start = ocr_data.get('total_start', 0)
+                            # rotation_metricsから通常時回転数を取得（累計 - 大当たり中）
+                            rotation_metrics = result.get('rotation_metrics', {})
+                            normal_decline_spins = rotation_metrics.get('normal_decline_spins', 0)
                             # 文字列の場合は整数に変換
                             try:
-                                normal_rotations = int(total_start) if total_start else 0
+                                normal_rotations = int(normal_decline_spins) if normal_decline_spins else 0
                             except (ValueError, TypeError):
                                 normal_rotations = 0
 
