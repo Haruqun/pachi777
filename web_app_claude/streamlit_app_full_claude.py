@@ -3626,32 +3626,32 @@ if 'analysis_results' in st.session_state:
                             with st.expander("📊 玉推移データ (JSON)"):
                                 import json
 
-                                # グラフ情報を取得
-                                graph_info = result.get('graph_info', {})
-                                graph_start_x = graph_info.get('start_x', 0) if graph_info else 0
+                                # 回転数計算用のデータを取得
+                                rotation_metrics = result.get('rotation_metrics', {})
+                                spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
 
-                                # JSON形式でデータを作成
+                                # JSON形式でデータを作成（回転数と玉数のペア）
+                                values_data = []
+                                for i, ball_value in enumerate(result['graph_values']):
+                                    # 回転数を計算（pixel_step=2なので、i*2 pixelに対応）
+                                    rotation = round(i * 2 * spins_per_pixel) if spins_per_pixel > 0 else i * 2
+                                    values_data.append({
+                                        "rotation": rotation,
+                                        "balls": round(ball_value, 1)
+                                    })
+
                                 json_data = {
                                     "machine_number": result.get('ocr_data', {}).get('machine_number', result.get('name', '').rsplit('.', 1)[0]),
                                     "total_spins": result.get('ocr_data', {}).get('total_start', 0),
-                                    "graph_start_x": graph_start_x,
-                                    "pixel_step": 2,
-                                    "unit": "玉",
                                     "data_points": len(result['graph_values']),
-                                    "values": [
-                                        {
-                                            "index": i,
-                                            "x_pixel": graph_start_x + i * 2,
-                                            "value": round(val, 1)
-                                        }
-                                        for i, val in enumerate(result['graph_values'])
-                                    ]
+                                    "unit": "玉",
+                                    "values": values_data
                                 }
 
                                 # JSON文字列を整形して表示
                                 json_str = json.dumps(json_data, ensure_ascii=False, indent=2)
 
-                                st.info(f"📊 データポイント数: {len(result['graph_values'])}点")
+                                st.info(f"📊 データポイント数: {len(result['graph_values'])}点 (回転数 × 玉数)")
                                 st.text_area(
                                     "JSON データ（コピー可）",
                                     json_str,
@@ -3663,7 +3663,7 @@ if 'analysis_results' in st.session_state:
                                 st.download_button(
                                     label="📥 JSONファイルとしてダウンロード",
                                     data=json_str,
-                                    file_name=f"{result.get('name', 'graph').rsplit('.', 1)[0]}_values.json",
+                                    file_name=f"{result.get('name', 'graph').rsplit('.', 1)[0]}_transition.json",
                                     mime="application/json"
                                 )
 
