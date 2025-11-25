@@ -1303,8 +1303,7 @@ if graph_files and st.session_state.get('start_analysis', False):
         
         with col3:
             st.markdown("**グリッドライン調整**")
-            st.text(f"+30k: {current_settings.get('grid_30k_offset', 0):+d}px")
-            st.text(f"-30k: {current_settings.get('grid_minus_30k_offset', 0):+d}px")
+            st.text(f"距離: {current_settings.get('grid_distance', 330)}px")
     
     # セッションステートからプログレスバーを取得（既に上部で作成済み）
     progress_bar = st.session_state.get('progress_bar')
@@ -1401,22 +1400,25 @@ if graph_files and st.session_state.get('start_analysis', False):
         graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
         
         # グリッドライン描画（設定値を使用）
-        # +上限ライン（最上部）
-        y_30k = 0 + settings.get('grid_30k_offset', 0)  # 最上部基準
-        if 0 <= y_30k < crop_height:
-            cv2.line(cropped_img, (0, y_30k), (cropped_img.shape[1], y_30k), (128, 128, 128), 2)
-            cv2.putText(cropped_img, f'+{graph_limit}', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
-        
-        # -下限ライン（最下部）
-        y_minus_30k = crop_height - 1 + settings.get('grid_minus_30k_offset', 0)
-        y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
-        cv2.line(cropped_img, (0, y_minus_30k), (cropped_img.shape[1], y_minus_30k), (128, 128, 128), 2)
-        cv2.putText(cropped_img, f'-{graph_limit}', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
+        # ゼロラインからの距離を取得
+        grid_distance = settings.get('grid_distance', 330)
 
-        
-        # ゼロラインから上下限ラインまでの距離を計算
-        distance_to_plus_30k = zero_line_in_crop - y_30k
-        distance_to_minus_30k = y_minus_30k - zero_line_in_crop
+        # +上限ライン（ゼロラインから上にgrid_distance）
+        y_30k = zero_line_in_crop - grid_distance
+        if 0 <= y_30k < crop_height:
+            cv2.line(cropped_img, (0, int(y_30k)), (cropped_img.shape[1], int(y_30k)), (128, 128, 128), 2)
+            cv2.putText(cropped_img, f'+{graph_limit}', (10, max(20, int(y_30k) + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
+
+        # -下限ライン（ゼロラインから下にgrid_distance）
+        y_minus_30k = zero_line_in_crop + grid_distance
+        y_minus_30k = min(max(0, y_minus_30k), crop_height - 1)  # 画像範囲内に制限
+        cv2.line(cropped_img, (0, int(y_minus_30k)), (cropped_img.shape[1], int(y_minus_30k)), (128, 128, 128), 2)
+        cv2.putText(cropped_img, f'-{graph_limit}', (10, max(10, int(y_minus_30k) - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (64, 64, 64), 1)
+
+
+        # ゼロラインから上下限ラインまでの距離（上下対称なのでgrid_distance）
+        distance_to_plus_30k = grid_distance
+        distance_to_minus_30k = grid_distance
         
         # 0ライン
         y_0 = int(zero_line_in_crop)  # 調整なし
@@ -1500,8 +1502,8 @@ if graph_files and st.session_state.get('start_analysis', False):
         #     st.write(f"🔍 デバッグ情報 - {uploaded_file.name}")
         #     st.write(f"- ゼロライン位置（切り抜き内）: {zero_line_in_crop}px")
         #     st.write(f"- 切り抜き画像の高さ: {crop_height}px")
-        #     st.write(f"- 調整された+30000ライン位置: {y_30k_adjusted}px (オフセット: {settings.get('grid_30k_offset', 0)})")
-        #     st.write(f"- 調整された-30000ライン位置: {y_minus_30k_adjusted}px (オフセット: {settings.get('grid_minus_30k_offset', 0)})")
+        #     st.write(f"- 調整された+30000ライン位置: {y_30k_adjusted}px (ゼロラインから: {settings.get('grid_distance', 330)}px)")
+        #     st.write(f"- 調整された-30000ライン位置: {y_minus_30k_adjusted}px (ゼロラインから: {settings.get('grid_distance', 330)}px)")
         #     st.write(f"- ゼロから+30000までの距離: {distance_to_plus_30k_adjusted}px")
         #     st.write(f"- ゼロから-30000までの距離: {distance_to_minus_30k_adjusted}px")
         #     st.write(f"- スケール: {analyzer.scale:.2f} 玉/ピクセル")
@@ -4614,23 +4616,13 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             st.markdown("##### ⚙️ 手動調整")
             # 遊技種別に応じた上下限値を取得
             graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
-            st.caption(f"±{graph_limit:,}ラインの位置を微調整できます（単位：ピクセル）")
-            
-            grid_col1, grid_col2 = st.columns(2)
-            
-            with grid_col1:
-                grid_30k_offset = st.number_input(
-                    f"+{graph_limit:,}ライン調整",
-                    min_value=-1000, max_value=1000, value=get_settings().get('grid_30k_offset', 0),
-                    step=1, help=f"上端の+{graph_limit:,}ラインの位置調整"
-                )
-            
-            with grid_col2:
-                grid_minus_30k_offset = st.number_input(
-                    f"-{graph_limit:,}ライン調整",
-                    min_value=-1000, max_value=1000, value=get_settings().get('grid_minus_30k_offset', 0),
-                    step=1, help=f"下端の-{graph_limit:,}ラインの位置調整"
-                )
+            st.caption(f"ゼロラインから±{graph_limit:,}ラインまでの距離を調整できます（単位：ピクセル）")
+
+            grid_distance = st.number_input(
+                f"ゼロラインから±{graph_limit:,}ラインまでの距離",
+                min_value=100, max_value=500, value=get_settings().get('grid_distance', 330),
+                step=1, help=f"ゼロラインから上下対称に±{graph_limit:,}ラインまでの距離（デフォルト: 330px）"
+            )
             
             # 中間ライン用のダミー変数を設定（他のコードで参照されるため）
             
@@ -4669,8 +4661,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     'crop_bottom': crop_bottom,
                     'left_margin': left_margin,
                     'right_margin': right_margin,
-                    'grid_30k_offset': grid_30k_offset,
-                    'grid_minus_30k_offset': grid_minus_30k_offset
+                    'grid_distance': grid_distance
                 }
                 
                 # 各画像を解析
@@ -4732,13 +4723,12 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                     
                     # グリッドライン調整値も適用（現在の入力値を使用）
                     align_zero_in_crop = align_zero_line_y - align_top
-                    align_distance_to_plus_30k = align_zero_in_crop - grid_30k_offset
-                    align_distance_to_minus_30k = (align_bottom - align_top - 1 + grid_minus_30k_offset) - align_zero_in_crop
-                    
+                    align_grid_distance = grid_distance
+
                     # カスタム設定で解析
                     analyzer_align.zero_y = align_zero_in_crop
                     graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
-                    analyzer_align.scale = graph_limit / align_distance_to_plus_30k if align_distance_to_plus_30k > 0 else 122
+                    analyzer_align.scale = graph_limit / align_grid_distance if align_grid_distance > 0 else 122
                     
                     # 切り抜き画像で解析
                     cropped_for_align = img_array_tmp[int(align_top):int(align_bottom), int(align_left):int(align_right)]
@@ -4867,53 +4857,41 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                                 if actual_distance > 0:
                                     new_scale = visual_max / actual_distance
                                     
-                                    # 新しい上限ラインの位置を計算
+                                    # 新しい距離を計算（上下対称）
                                     graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
-                                    new_30k_distance = graph_limit / new_scale
-                                    current_30k_distance = detection['zero_in_crop'] - current_settings_align['grid_30k_offset']
-                                    adjustment_30k = int(current_30k_distance - new_30k_distance)
-                                    
-                                    # 新しい下限ラインの位置を計算
-                                    new_minus_30k_distance = graph_limit / new_scale
-                                    current_minus_30k_distance = (detection['crop_height'] - 1 + current_settings_align['grid_minus_30k_offset']) - detection['zero_in_crop']
-                                    adjustment_minus_30k = int(new_minus_30k_distance - current_minus_30k_distance)
-                                    
+                                    new_distance = graph_limit / new_scale
+                                    current_distance = current_settings_align['grid_distance']
+                                    adjustment = int(new_distance - current_distance)
+
                                     corrections.append({
-                                        'adjustment_30k': adjustment_30k,
-                                        'adjustment_minus_30k': adjustment_minus_30k,
+                                        'adjustment': adjustment,
                                         'correction_factor': correction_factor
                                     })
                         
                         if corrections:
                             # 平均調整値を計算
-                            avg_adjustment_30k = int(np.mean([c['adjustment_30k'] for c in corrections]))
-                            avg_adjustment_minus_30k = int(np.mean([c['adjustment_minus_30k'] for c in corrections]))
+                            avg_adjustment = int(np.mean([c['adjustment'] for c in corrections]))
                             avg_correction_factor = np.mean([c['correction_factor'] for c in corrections])
-                            
+
                             # セッションステートに保存
                             st.session_state.avg_correction_factor = avg_correction_factor
-                            
+
                             if abs(avg_correction_factor - 1.0) > 0.001:
                                 # 推奨調整値を表示
                                 # st.info(f"平均補正率: **{avg_correction_factor:.2f}x** （{len(corrections)}枚の画像から計算）")  # 補正率表示を非表示化
-                                
-                                col_adj1, col_adj2 = st.columns(2)
+
                                 graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
-                                with col_adj1:
-                                    st.info(f"**+{graph_limit:,}ライン:** {grid_30k_offset}px → {grid_30k_offset + avg_adjustment_30k}px (調整: {avg_adjustment_30k:+d}px)")
-                                with col_adj2:
-                                    st.info(f"**-{graph_limit:,}ライン:** {grid_minus_30k_offset}px → {grid_minus_30k_offset + avg_adjustment_minus_30k}px (調整: {avg_adjustment_minus_30k:+d}px)")
-                                
+                                st.info(f"**ゼロラインから±{graph_limit:,}ラインまでの距離:** {grid_distance}px → {grid_distance + avg_adjustment}px (調整: {avg_adjustment:+d}px)")
+
                                 # 自動適用ボタン
                                 if st.button("🔧 推奨値を自動適用", type="secondary", key="apply_max_alignment"):
                                     # セッションステートに新しい値を設定（現在の入力値に調整を加える）
-                                    update_settings('grid_30k_offset', grid_30k_offset + avg_adjustment_30k)
-                                    update_settings('grid_minus_30k_offset', grid_minus_30k_offset + avg_adjustment_minus_30k)
-                                    
+                                    update_settings('grid_distance', grid_distance + avg_adjustment)
+
                                     # 最初の画像の最大値位置を保存（非線形スケール用）
                                     if all_max_positions:
                                         st.session_state['max_value_position'] = all_max_positions[0]
-                                    
+
                                     st.success("✅ 推奨値を適用しました！画面が更新されます...")
                                     time.sleep(1)
                                     st.rerun()
@@ -5036,20 +5014,19 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
         cv2.putText(overlay_img, 'Orange Bar', (10, orange_bottom_preview + 30), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 140, 0), 2)
         
-        # ゼロラインから±30000ラインまでの距離を計算（切り抜き内での計算）
+        # ゼロラインから±30000ラインまでの距離を取得
         zero_in_crop = zero_line_y - top
-        distance_to_plus_30k = zero_in_crop - grid_30k_offset
-        distance_to_minus_30k = (bottom - top - 1 + grid_minus_30k_offset) - zero_in_crop
-        
+        grid_distance_preview = grid_distance
+
         # グリッドラインを元画像にも追加
-        # +30000ライン（元画像座標）
-        y_30k_orig = int(top + grid_30k_offset)
+        # +30000ライン（元画像座標、ゼロラインから上にgrid_distance）
+        y_30k_orig = int(zero_line_y - grid_distance_preview)
         if 0 <= y_30k_orig < height_preview:
             cv2.line(overlay_img, (0, y_30k_orig), (width_preview, y_30k_orig), (128, 128, 128), 2)
             cv2.putText(overlay_img, '+30000', (10, max(20, y_30k_orig + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
-        
-        # -30000ライン（元画像座標）
-        y_minus_30k_orig = int(bottom - 1 + grid_minus_30k_offset)
+
+        # -30000ライン（元画像座標、ゼロラインから下にgrid_distance）
+        y_minus_30k_orig = int(zero_line_y + grid_distance_preview)
         if 0 <= y_minus_30k_orig < height_preview:
             cv2.line(overlay_img, (0, y_minus_30k_orig), (width_preview, y_minus_30k_orig), (128, 128, 128), 2)
             cv2.putText(overlay_img, '-30000', (10, max(10, y_minus_30k_orig - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (64, 64, 64), 2)
@@ -5071,40 +5048,29 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
             cv2.line(cropped_preview, (0, int(zero_in_crop)), (cropped_preview.shape[1], int(zero_in_crop)), (255, 0, 0), 2)
             
             # グリッドラインを追加（調整値付き）
-            # +30000ライン（最上部付近）
-            y_30k = 0 + grid_30k_offset  # 最上部を基準に調整
+            # +30000ライン（ゼロラインから上にgrid_distance）
+            y_30k = zero_in_crop - grid_distance_preview
             if 0 <= y_30k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_30k), (cropped_preview.shape[1], y_30k), (0, 150, 0), 3)
-                cv2.putText(cropped_preview, '+30000', (10, max(20, y_30k + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 100, 0), 2)
-            
-            # -30000ライン
-            y_minus_30k = cropped_preview.shape[0] - 1 + grid_minus_30k_offset  # 最下部基準
+                cv2.line(cropped_preview, (0, int(y_30k)), (cropped_preview.shape[1], int(y_30k)), (0, 150, 0), 3)
+                cv2.putText(cropped_preview, '+30000', (10, max(20, int(y_30k) + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 100, 0), 2)
+
+            # -30000ライン（ゼロラインから下にgrid_distance）
+            y_minus_30k = zero_in_crop + grid_distance_preview
             if 0 <= y_minus_30k < cropped_preview.shape[0]:
-                cv2.line(cropped_preview, (0, y_minus_30k), (cropped_preview.shape[1], y_minus_30k), (150, 0, 0), 3)
-                cv2.putText(cropped_preview, '-30000', (10, max(10, y_minus_30k - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 0, 0), 2)
-            
-            
+                cv2.line(cropped_preview, (0, int(y_minus_30k)), (cropped_preview.shape[1], int(y_minus_30k)), (150, 0, 0), 3)
+                cv2.putText(cropped_preview, '-30000', (10, max(10, int(y_minus_30k) - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 0, 0), 2)
+
+
             # 選択された画像の実際の最大値を表示
             if 'preview_image_index' in st.session_state:
                 preview_idx = st.session_state.get('preview_image_index', 0)
-                
+
                 # プレビュー用の解析を実行して最大値を検出
                 analyzer_preview = WebCompatibleAnalyzer()
                 analyzer_preview.zero_y = zero_in_crop
-                
-                # 調整されたグリッドライン位置に基づいてスケールを計算
-                y_30k_adjusted = 0 + grid_30k_offset
-                y_minus_30k_adjusted = cropped_preview.shape[0] - 1 + grid_minus_30k_offset
-                
-                # 線形スケールのみ使用
-                distance_to_plus_30k_adjusted = zero_in_crop - y_30k_adjusted
-                distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_in_crop
-                
-                if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
-                    avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
-                    analyzer_preview.scale = 30000 / avg_distance_adjusted
-                else:
-                    analyzer_preview.scale = 122  # デフォルト
+
+                # スケールを計算（ゼロラインからの距離を使用）
+                analyzer_preview.scale = 30000 / grid_distance_preview if grid_distance_preview > 0 else 122
 
 
                 # BGRに変換（グリッドラインなしの元画像を使用）
@@ -5176,8 +5142,7 @@ with st.expander("⚙️ 画像解析の調整設定", expanded=st.session_state
                 'crop_bottom': crop_bottom,
                 'left_margin': left_margin,
                 'right_margin': right_margin,
-                'grid_30k_offset': grid_30k_offset,
-                'grid_minus_30k_offset': grid_minus_30k_offset,
+                'grid_distance': grid_distance,
                 'zero_line_adjustment': get_settings().get('zero_line_adjustment', 0),  # ゼロライン調整値を追加
                 'game_type': st.session_state.game_type  # 遊技種別を追加
             }
