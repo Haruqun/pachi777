@@ -1468,31 +1468,29 @@ if graph_files and st.session_state.get('start_analysis', False):
         
         # 0ラインの位置を設定
         analyzer.zero_y = zero_line_in_crop
-        # 調整されたグリッドライン位置に基づいてスケールを計算
-        crop_height = analysis_img.shape[0]
-        
-        # 調整された±30,000ライン位置
-        y_30k_adjusted = 0 + settings.get('grid_30k_offset', 0)
-        y_minus_30k_adjusted = crop_height - 1 + settings.get('grid_minus_30k_offset', 0)
-        
-        # ゼロラインから調整された±30,000ラインまでの距離
-        distance_to_plus_30k_adjusted = zero_line_in_crop - y_30k_adjusted
-        distance_to_minus_30k_adjusted = y_minus_30k_adjusted - zero_line_in_crop
+        # ゼロラインから±30,000ラインまでの距離を取得
+        grid_distance = settings.get('grid_distance', 330)
+
+        # ±30,000ラインの位置（ゼロラインからの距離で指定）
+        y_30k_adjusted = zero_line_in_crop - grid_distance  # ゼロラインから上に grid_distance px
+        y_minus_30k_adjusted = zero_line_in_crop + grid_distance  # ゼロラインから下に grid_distance px
+
+        # ゼロラインから±30,000ラインまでの距離（上下対称）
+        distance_to_plus_30k_adjusted = grid_distance
+        distance_to_minus_30k_adjusted = grid_distance
         
         # グラフの上下限値を取得
         graph_limit = get_graph_limit(st.session_state.get('game_type', 'パチンコ'))
         
-        # 通常の線形スケール計算
+        # 線形スケール計算（ゼロラインから±30,000ラインまでの距離を使用）
         if distance_to_plus_30k_adjusted > 0 and distance_to_minus_30k_adjusted > 0:
-            # 上下の平均距離を使用
+            # 上下対称なので平均 = grid_distance
             avg_distance_adjusted = (distance_to_plus_30k_adjusted + distance_to_minus_30k_adjusted) / 2
             analyzer.scale = graph_limit / avg_distance_adjusted
         else:
-            # フォールバック（調整前の値を使用）
-            distance_to_top = zero_line_in_crop
-            distance_to_bottom = crop_height - zero_line_in_crop
-            avg_distance = (distance_to_top + distance_to_bottom) / 2
-            analyzer.scale = graph_limit / avg_distance
+            # フォールバック（距離が不正な場合はデフォルト値を使用）
+            default_distance = 330
+            analyzer.scale = graph_limit / default_distance
         
         # グラフデータを抽出
         graph_data_points, dominant_color, _, graph_info = analyzer.extract_graph_data(analysis_img)
