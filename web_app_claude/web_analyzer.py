@@ -28,6 +28,7 @@ from pathlib import Path
 import re
 import matplotlib.font_manager as fm
 import platform
+from modules.correction import apply_correction
 
 # 日本語フォント設定
 if platform.system() == 'Darwin':  # macOS
@@ -569,14 +570,24 @@ class WebCompatibleAnalyzer:
         for i, jk in enumerate(all_jackpots):
             log(f"[All Jackpots] {i+1}回目: index={jk['index']}, value={jk['value']:.1f}玉, x={jk['x']}px")
 
+        # 非線形補正を適用
+        max_val_original = max_val
+        max_val_corrected = apply_correction(max_val)
+        min_val_corrected = apply_correction(min_val)
+        current_val_corrected = apply_correction(current_val)
+        first_hit_val_corrected = apply_correction(first_hit_val)
+
+        log(f"[Correction] 最大値: {max_val_original:.1f} → {max_val_corrected:.1f}玉")
+
         return {
-            'max_value': int(max_val),
+            'max_value': int(max_val_corrected),
+            'max_value_original': int(max_val_original),  # デバッグ用に元の値も保存
             'max_index': max_idx,
-            'min_value': int(min_val),
+            'min_value': int(min_val_corrected),
             'min_index': min_idx,
             'first_hit_index': first_hit_idx,
-            'first_hit_value': int(first_hit_val),
-            'final_value': int(current_val),
+            'first_hit_value': int(first_hit_val_corrected),
+            'final_value': int(current_val_corrected),
             'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数を追加
             'jackpot_count': jackpot_count,  # 大当り回数を追加
             'jackpot_details': jackpot_details,  # 各大当りの詳細情報を追加
