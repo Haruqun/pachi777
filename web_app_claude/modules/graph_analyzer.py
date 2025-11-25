@@ -379,27 +379,36 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
                 # 横ばい（区間継続）
                 current_section['end_rotation'] = rotation
             else:
-                # 上昇（当たり） → 区間終了
-                if current_section['start_balls'] != current_section['end_balls']:
-                    # 玉数変化がある区間のみ記録
-                    used_balls = current_section['start_balls'] - current_section['end_balls']
-                    rotations = current_section['end_rotation'] - current_section['start_rotation']
+                # 上昇をチェック
+                rise = balls - current_section['end_balls']
+                SIGNIFICANT_RISE = 100  # 100玉以上の上昇を本当の当たりと判定
 
-                    if used_balls > 0 and rotations > 0:
-                        rotation_rate = rotations / (used_balls / 250)
-                        current_section['used_balls'] = used_balls
-                        current_section['rotations'] = rotations
-                        current_section['rotation_rate'] = rotation_rate
-                        sections.append(current_section)
+                if rise >= SIGNIFICANT_RISE:
+                    # 大きな上昇（当たり） → 区間終了
+                    if current_section['start_balls'] != current_section['end_balls']:
+                        # 玉数変化がある区間のみ記録
+                        used_balls = current_section['start_balls'] - current_section['end_balls']
+                        rotations = current_section['end_rotation'] - current_section['start_rotation']
 
-                # 新しい区間開始
-                current_section = {
-                    'start_rotation': rotation,
-                    'start_balls': balls,
-                    'end_rotation': rotation,
-                    'end_balls': balls,
-                    'start_index': i
-                }
+                        if used_balls > 0 and rotations > 0:
+                            rotation_rate = rotations / (used_balls / 250)
+                            current_section['used_balls'] = used_balls
+                            current_section['rotations'] = rotations
+                            current_section['rotation_rate'] = rotation_rate
+                            sections.append(current_section)
+
+                    # 新しい区間開始
+                    current_section = {
+                        'start_rotation': rotation,
+                        'start_balls': balls,
+                        'end_rotation': rotation,
+                        'end_balls': balls,
+                        'start_index': i
+                    }
+                else:
+                    # 小さな上昇（ノイズ） → 区間継続（最低値を保持）
+                    current_section['end_rotation'] = rotation
+                    # end_ballsは更新しない（最低値のまま維持）
 
     # 最後の区間を処理
     if current_section and current_section['start_balls'] != current_section['end_balls']:
