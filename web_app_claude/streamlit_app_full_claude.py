@@ -3621,18 +3621,25 @@ if 'analysis_results' in st.session_state:
         image_count = 0
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for i, result in enumerate(analysis_results):
-                if result.get('cropped_image') is not None:
+                # オーバーレイ画像を優先、なければ切り抜き画像を使用
+                overlay_img = result.get('overlay_image')
+                cropped_img = result.get('cropped_image')
+
+                if overlay_img is not None or cropped_img is not None:
+                    # 使用する画像を決定
+                    image_to_save = overlay_img if overlay_img is not None else cropped_img
+
                     # PIL ImageをPNGバイナリに変換
                     img_buffer = io.BytesIO()
-                    Image.fromarray(result['cropped_image']).save(img_buffer, format='PNG')
+                    Image.fromarray(image_to_save).save(img_buffer, format='PNG')
                     img_buffer.seek(0)
 
                     # ファイル名を生成（台番号または元ファイル名）
                     machine_number = result.get('ocr_data', {}).get('machine_number', '')
                     if machine_number:
-                        filename = f"{machine_number}_graph.png"
+                        filename = f"{machine_number}_overlay.png"
                     else:
-                        filename = f"{result.get('name', f'graph_{i+1}')}_graph.png"
+                        filename = f"{result.get('name', f'graph_{i+1}')}_overlay.png"
 
                     # ZIPに追加
                     zip_file.writestr(filename, img_buffer.getvalue())
@@ -3643,9 +3650,9 @@ if 'analysis_results' in st.session_state:
         # ダウンロードボタン
         if image_count > 0:
             st.download_button(
-                label=f"📥 切り抜き画像を一括ダウンロード ({image_count}枚 / ZIP)",
+                label=f"📥 オーバーレイ画像を一括ダウンロード ({image_count}枚 / ZIP)",
                 data=zip_buffer,
-                file_name="cropped_graphs.zip",
+                file_name="overlay_graphs.zip",
                 mime="application/zip",
                 use_container_width=True
             )
