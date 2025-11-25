@@ -573,7 +573,8 @@ class WebCompatibleAnalyzer:
             'total_jackpot_balls': int(total_jackpot_balls),  # 総獲得球数を追加
             'jackpot_count': jackpot_count,  # 大当り回数を追加
             'jackpot_details': jackpot_details,  # 各大当りの詳細情報を追加
-            'all_jackpots': all_jackpots  # 全ての谷（大当たり地点）を追加
+            'all_jackpots': all_jackpots,  # 全ての谷（大当たり地点）を追加
+            'first_jackpot_count': len(all_jackpots)  # 初当たり回数（グラフ解析）
         }
     
     def calculate_rotation_metrics(self, data_points, analysis, total_start, graph_width, graph_info=None, ocr_data=None, game_type='パチンコ'):

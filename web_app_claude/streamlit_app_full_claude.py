@@ -3251,18 +3251,13 @@ if 'analysis_results' in st.session_state:
                     # 残りの統計情報を追加
                     html_content += f'<div class="stat-item"><span class="stat-label">🎯 {jackpot_label}</span><span class="stat-value positive">{jackpot_count}回</span></div>'
                     
-                    # 初当たり回数（OCRまたはClaude AIから取得）
+                    # 初当たり回数（グラフ解析から取得）
                     if st.session_state.game_type == 'パチンコ':
                         first_hit_count = 0
-                        # Claude AIデータがある場合はそちらを優先
-                        if result.get('claude_analysis') and result['claude_analysis'].get('success'):
-                            claude_data = result['claude_analysis'].get('data', {})
-                            if claude_data.get('first_jackpots') is not None:
-                                first_hit_count = claude_data['first_jackpots']
-                        # Claude AIデータがない場合はOCRから
-                        elif result.get('ocr_data') and result['ocr_data'].get('first_hit_count'):
-                            first_hit_count = result['ocr_data']['first_hit_count']
-                        
+                        # グラフ解析データから取得
+                        if result.get('first_jackpot_count') is not None:
+                            first_hit_count = result['first_jackpot_count']
+
                         if first_hit_count > 0:
                             html_content += f'<div class="stat-item"><span class="stat-label">🎰 初当たり回数</span><span class="stat-value positive">{first_hit_count}回</span></div>'
 
