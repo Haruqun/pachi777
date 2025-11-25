@@ -2639,61 +2639,59 @@ if 'analysis_results' in st.session_state:
                                 else:
                                     log(f"[Claude AI Marker] Out of bounds - not drawing")
 
-                                # OCR基準のグラフ終点マーカーを追加（グラフ幅=全回転数の仮定）
-                                ocr_cumulative_total = rotation_metrics.get('cumulative_total_spins', 0)
-                                claude_total_rotations = claude_data.get('total_rotations', 0)
+                                # Claude AIの累計スタート回数（グラフ最後の位置）のマーカーを追加
+                                total_rotations = claude_data.get('total_rotations', 0)
+                                if total_rotations > 0:
+                                    # 累計スタート回数の位置を計算
+                                    total_rotations_x = graph_start_x + (total_rotations / spins_per_pixel)
 
-                                # OCR方式で計算した累計回転数を使用（グラフ終端）
-                                if ocr_cumulative_total > 0:
-                                    # OCR方式: グラフ幅=全回転数と仮定した場合の終端位置
-                                    ocr_last_x = graph_start_x + (ocr_cumulative_total / spins_per_pixel)
+                                    log(f"[Total Rotations Marker] total_rotations={total_rotations}, total_rotations_x={total_rotations_x}")
 
-                                    log(f"[OCR LAST Marker] ocr_cumulative={ocr_cumulative_total}, ocr_last_x={ocr_last_x}")
-
-                                    if 0 <= ocr_last_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
-                                        log(f"[OCR LAST Marker] Drawing marker at ({int(ocr_last_x)}, {zero_y})")
+                                    if 0 <= total_rotations_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
+                                        log(f"[Total Rotations Marker] Drawing marker at ({int(total_rotations_x)}, {zero_y})")
                                         # マーカーを描画（緑色）
-                                        cv2.circle(display_img, (int(ocr_last_x), zero_y), 5, (0, 255, 0), -1)  # 塗りつぶし
-                                        cv2.circle(display_img, (int(ocr_last_x), zero_y), 6, (0, 200, 0), 2)   # 外枠
+                                        cv2.circle(display_img, (int(total_rotations_x), zero_y), 5, (0, 255, 0), -1)  # 塗りつぶし
+                                        cv2.circle(display_img, (int(total_rotations_x), zero_y), 6, (0, 200, 0), 2)   # 外枠
 
                                         # ラベルを描画
-                                        ocr_label_text = f'OCR LAST: {ocr_cumulative_total}'
+                                        total_label_text = f'OCR LAST: {total_rotations}'
                                         # ラベルの背景（白）
-                                        ocr_label_size = cv2.getTextSize(ocr_label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
-                                        ocr_label_x = int(ocr_last_x) - ocr_label_size[0] // 2
-                                        ocr_label_y = zero_y + 35  # 初当ラベルの下に配置
+                                        total_label_size = cv2.getTextSize(total_label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
+                                        total_label_x = int(total_rotations_x) - total_label_size[0] // 2
+                                        total_label_y = zero_y + 35  # 初当ラベルの下に配置
                                         cv2.rectangle(display_img,
-                                                    (ocr_label_x - 2, ocr_label_y - ocr_label_size[1] - 2),
-                                                    (ocr_label_x + ocr_label_size[0] + 2, ocr_label_y + 2),
+                                                    (total_label_x - 2, total_label_y - total_label_size[1] - 2),
+                                                    (total_label_x + total_label_size[0] + 2, total_label_y + 2),
                                                     (255, 255, 255), -1)
                                         # テキスト（緑）
-                                        cv2.putText(display_img, ocr_label_text,
-                                                  (ocr_label_x, ocr_label_y),
+                                        cv2.putText(display_img, total_label_text,
+                                                  (total_label_x, total_label_y),
                                                   cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 150, 0), 1, cv2.LINE_AA)
                                     else:
-                                        log(f"[OCR LAST Marker] Out of bounds - not drawing")
+                                        log(f"[Total Rotations Marker] Out of bounds - not drawing")
 
                                 # AI基準のグラフ終点マーカーを追加
+                                rotation_metrics = result.get('rotation_metrics', {})
                                 ai_based_spins_per_pixel = rotation_metrics.get('ai_based_spins_per_pixel', 0)
                                 ai_based_cumulative_total_spins = rotation_metrics.get('ai_based_cumulative_total_spins', 0)
 
-                                if ai_based_spins_per_pixel > 0 and claude_total_rotations > 0:
-                                    # AI基準のスケールでClaude累計回転数がどこに到達するかを計算
-                                    ai_last_x = graph_start_x + (claude_total_rotations / ai_based_spins_per_pixel)
+                                if ai_based_cumulative_total_spins > 0 and ai_based_spins_per_pixel > 0 and total_rotations > 0:
+                                    # AI基準のスケールでOCR累計回転数がどこに到達するかを計算
+                                    ai_total_x = graph_start_x + (total_rotations / ai_based_spins_per_pixel)
 
-                                    log(f"[AI LAST Marker] claude_total={claude_total_rotations}, ai_spp={ai_based_spins_per_pixel:.4f}, ai_last_x={ai_last_x}")
+                                    log(f"[AI Total Rotations Marker] ocr_total={total_rotations}, ai_spp={ai_based_spins_per_pixel:.4f}, ai_total_x={ai_total_x}")
 
-                                    if 0 <= ai_last_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
-                                        log(f"[AI LAST Marker] Drawing marker at ({int(ai_last_x)}, {zero_y})")
+                                    if 0 <= ai_total_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
+                                        log(f"[AI Total Rotations Marker] Drawing marker at ({int(ai_total_x)}, {zero_y})")
                                         # マーカーを描画（青色）
-                                        cv2.circle(display_img, (int(ai_last_x), zero_y), 5, (255, 100, 0), -1)  # 塗りつぶし
-                                        cv2.circle(display_img, (int(ai_last_x), zero_y), 6, (200, 80, 0), 2)   # 外枠
+                                        cv2.circle(display_img, (int(ai_total_x), zero_y), 5, (255, 100, 0), -1)  # 塗りつぶし
+                                        cv2.circle(display_img, (int(ai_total_x), zero_y), 6, (200, 80, 0), 2)   # 外枠
 
                                         # ラベルを描画
-                                        ai_label_text = f'AI LAST: {claude_total_rotations} (spp:{ai_based_spins_per_pixel:.2f})'
+                                        ai_label_text = f'AI LAST: {total_rotations} (spp:{ai_based_spins_per_pixel:.2f})'
                                         # ラベルの背景（白）
                                         ai_label_size = cv2.getTextSize(ai_label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
-                                        ai_label_x = int(ai_last_x) - ai_label_size[0] // 2
+                                        ai_label_x = int(ai_total_x) - ai_label_size[0] // 2
                                         ai_label_y = zero_y + 60  # OCR基準ラベルの下に配置
                                         cv2.rectangle(display_img,
                                                     (ai_label_x - 2, ai_label_y - ai_label_size[1] - 2),
@@ -2704,7 +2702,7 @@ if 'analysis_results' in st.session_state:
                                                   (ai_label_x, ai_label_y),
                                                   cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 80, 0), 1, cv2.LINE_AA)
                                     else:
-                                        log(f"[AI LAST Marker] Out of bounds - not drawing")
+                                        log(f"[AI Total Rotations Marker] Out of bounds - not drawing")
 
                                 # 全ての大当たり（谷）のマーカーを描画
                                 all_jackpots = result.get('all_jackpots', [])
