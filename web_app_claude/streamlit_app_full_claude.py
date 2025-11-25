@@ -1923,7 +1923,6 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'dominant_color': dominant_color,
                 'ocr_data': ocr_data,  # OCRデータを追加
                 'ocr_text': ocr_data.get('ocr_text') if ocr_data else None,  # OCRテキストを追加
-                'correction_factor': correction_factor,  # 補正係数を追加
                 'rotation_metrics': rotation_metrics,  # 回転率データを追加
                 'first_hit_debug': first_hit_debug_info,  # 初当たり検出デバッグ情報を追加
                 'graph_values': graph_values,  # グラフの生データを追加（回転率①計算用）
