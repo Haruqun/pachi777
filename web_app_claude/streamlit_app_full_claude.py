@@ -1543,15 +1543,16 @@ if graph_files and st.session_state.get('start_analysis', False):
             except ImportError as e:
                 log(f"[Correction Error] Failed to import correction module: {e}")
 
-            # # グラフデータを全て出力（デバッグ用）
-            # graph_start_x_val = graph_info.get('start_x', 0) if graph_info else 0
-            # log(f"[Graph Values] Total points: {len(graph_values)}, graph_start_x: {graph_start_x_val}px")
-            # log(f"[Graph Values] All values (graph_values[i] = x={graph_start_x_val} + i*2):")
-            # for i in range(0, len(graph_values), 10):
-            #     chunk = graph_values[i:i+10]
-            #     x_start = graph_start_x_val + i*2
-            #     x_end = graph_start_x_val + (i+len(chunk)-1)*2
-            #     log(f"  index {i:3d}-{i+len(chunk)-1:3d} (x={x_start:3d}-{x_end:3d}px): {[round(v, 1) for v in chunk]}")
+            # グラフデータを全て出力（デバッグ用 - 1台目のみ）
+            if idx == 0:
+                graph_start_x_val = graph_info.get('start_x', 0) if graph_info else 0
+                log(f"[Graph Values] Total points: {len(graph_values)}, graph_start_x: {graph_start_x_val}px")
+                log(f"[Graph Values] All values (graph_values[i] = x={graph_start_x_val} + i*2):")
+                for i in range(0, len(graph_values), 10):
+                    chunk = graph_values[i:i+10]
+                    x_start = graph_start_x_val + i*2
+                    x_end = graph_start_x_val + (i+len(chunk)-1)*2
+                    log(f"  index {i:3d}-{i+len(chunk)-1:3d} (x={x_start:3d}-{x_end:3d}px): {[round(v, 1) for v in chunk]}")
 
             # 統計情報を計算（既に補正済みのgraph_valuesから）
             max_val = max(graph_values)
