@@ -1558,12 +1558,13 @@ if graph_files and st.session_state.get('start_analysis', False):
                 graph_values_inverse = [apply_correction_inverse(v) for v in graph_values]
                 graph_data_points_inverse = [(x, corrected_val) for (x, _), corrected_val in zip(graph_data_points, graph_values_inverse)]
 
-                # デフォルトは従来補正（後で変更可能）
-                graph_values = graph_values_traditional
-                graph_data_points = graph_data_points_traditional
+                # デフォルトは逆数補正に変更（2025/11/26）
+                # 理由：MAX/MIN/現在値/初当たり値も逆数補正が必要
+                graph_values = graph_values_inverse
+                graph_data_points = graph_data_points_inverse
                 correction_applied = True
                 log(f"[Correction] 補正適用完了: {len(graph_values)}点")
-                log(f"[Correction] 従来補正・逆数補正・補正なしの3つを保持")
+                log(f"[Correction] 逆数補正をメイン使用、従来補正・補正なしも保持")
             except ImportError as e:
                 log(f"[Correction Error] Failed to import correction module: {e}")
                 log(f"[Correction] 補正なしで続行します")
@@ -3988,9 +3989,9 @@ if 'analysis_results' in st.session_state:
                 
                 # 通常時使用球数（表示時の値を使用）
                 row['通常時使用球数'] = result.get('display_normal_balls', 0)
-                
-                # グラフ解析データを保持（データエディタの再計算用）
-                row['_total_decline_balls'] = result.get('total_decline_balls', 0)
+
+                # グラフ解析データを保持（データエディタの再計算用・逆数補正済み）
+                row['_total_decline_balls'] = result.get('display_normal_balls', 0)
                 
                 # 通常回転数を追加（優先度に基づく）
                 row['通常回転数'] = prioritized_data.get('normal_rotations', 0) or 0
