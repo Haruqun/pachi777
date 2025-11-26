@@ -1546,11 +1546,15 @@ if graph_files and st.session_state.get('start_analysis', False):
                     correction_factor = get_correction_factor(abs(sample_before)) if sample_before != 0 else 1.0
                     log(f"[Correction] サンプル補正: {sample_before:.1f} → {sample_after:.1f} (係数: {correction_factor:.3f})")
 
+                # 補正前データを保持（回転率計算の比較用）
+                graph_data_points_uncorrected = graph_data_points.copy()
+
                 graph_values = [apply_correction(v) for v in graph_values]
-                # graph_data_pointsも補正された値で更新（回転率計算用）
+                # graph_data_pointsも補正された値で更新（表示用）
                 graph_data_points = [(x, corrected_val) for (x, _), corrected_val in zip(graph_data_points, graph_values)]
                 correction_applied = True
                 log(f"[Correction] 補正適用完了: {len(graph_values)}点")
+                log(f"[Correction] 補正前データを回転率計算用に保持")
             except ImportError as e:
                 log(f"[Correction Error] Failed to import correction module: {e}")
                 log(f"[Correction] 補正なしで続行します")
@@ -1897,13 +1901,22 @@ if graph_files and st.session_state.get('start_analysis', False):
 
             # A方式: 下降区間解析を実行
             declining_analysis = None
+            declining_analysis_uncorrected = None
             if rotation_metrics and graph_data_points:
                 spins_per_pixel = rotation_metrics.get('spins_per_pixel', 0)
                 if spins_per_pixel > 0:
                     from modules.graph_analyzer import analyze_declining_sections
+
+                    # 補正ありデータで計算（表示用）
                     declining_analysis = analyze_declining_sections(graph_data_points, spins_per_pixel)
                     if declining_analysis:
-                        log(f"[Declining Analysis] Found {len(declining_analysis['sections'])} sections, overall rate: {declining_analysis['overall_rate']:.2f}")
+                        log(f"[Declining Analysis 補正あり] Found {len(declining_analysis['sections'])} sections, overall rate: {declining_analysis['overall_rate']:.2f}")
+
+                    # 補正なしデータで計算（比較用）
+                    if 'graph_data_points_uncorrected' in locals():
+                        declining_analysis_uncorrected = analyze_declining_sections(graph_data_points_uncorrected, spins_per_pixel)
+                        if declining_analysis_uncorrected:
+                            log(f"[Declining Analysis 補正なし] Found {len(declining_analysis_uncorrected['sections'])} sections, overall rate: {declining_analysis_uncorrected['overall_rate']:.2f}")
 
             analysis_results.append({
                 'name': uploaded_file.name,
@@ -1937,7 +1950,8 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'graph_data_points': graph_data_points,  # グラフデータポイントを追加（AI基準計算用）
                 'graph_info': graph_info,  # グラフ情報を追加（AI基準計算用）
                 'graph_width': graph_width,  # グラフ幅を追加（AI基準計算用）
-                'declining_analysis': declining_analysis  # A方式: 下降区間解析結果
+                'declining_analysis': declining_analysis,  # A方式: 下降区間解析結果（補正あり）
+                'declining_analysis_uncorrected': declining_analysis_uncorrected  # A方式: 下降区間解析結果（補正なし・比較用）
             })
         else:
             # 解析失敗時
@@ -3160,13 +3174,25 @@ if 'analysis_results' in st.session_state:
                         if declining_analysis and st.session_state.game_type == 'パチンコ':
                             overall_rate = declining_analysis.get('overall_rate')
                             if overall_rate:
-                                # A方式のデータを使用（最も正確）
+                                # A方式のデータを使用（補正あり）
                                 normal_rotations = declining_analysis['total_rotations']
                                 normal_balls = declining_analysis['total_balls_used']
                                 rotation_rate_2 = overall_rate  # A方式の回転率をそのまま使用
                                 warning = " ⚠️" if rotation_rate_2 < 15 or rotation_rate_2 > 35 else ""
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②（A方式）</span><span class="stat-value positive">{rotation_rate_2:.1f}回/250玉{warning}</span></div>'
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②（A方式・補正あり）</span><span class="stat-value positive">{rotation_rate_2:.1f}回/250玉{warning}</span></div>'
                                 rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 下降区間のみ: {normal_rotations}回転 ÷ {int(normal_balls):,}{unit}使用</div>'
+
+                                # 補正なしバージョンも表示（比較用）
+                                declining_analysis_uncorrected = result.get('declining_analysis_uncorrected')
+                                if declining_analysis_uncorrected:
+                                    overall_rate_uncorr = declining_analysis_uncorrected.get('overall_rate')
+                                    if overall_rate_uncorr:
+                                        normal_rotations_uncorr = declining_analysis_uncorrected['total_rotations']
+                                        normal_balls_uncorr = declining_analysis_uncorrected['total_balls_used']
+                                        warning_uncorr = " ⚠️" if overall_rate_uncorr < 15 or overall_rate_uncorr > 35 else ""
+                                        rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②（A方式・補正なし）</span><span class="stat-value" style="color: #888;">{overall_rate_uncorr:.1f}回/250玉{warning_uncorr} [参考値]</span></div>'
+                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 下降区間のみ: {normal_rotations_uncorr}回転 ÷ {int(normal_balls_uncorr):,}{unit}使用 [補正なし]</div>'
+
                                 rotation_rate_2_calculated = True
                                 # 結果に保存
                                 result['display_rotation_rate_2'] = f"{rotation_rate_2:.1f}{warning}"
