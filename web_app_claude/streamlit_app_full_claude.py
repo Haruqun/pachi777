@@ -3155,11 +3155,11 @@ if 'analysis_results' in st.session_state:
                         # 優先度に基づいてデータを取得
                         prioritized_data = get_prioritized_data(result)
                         
-                        # 回転率①の計算（A方式の最初の区間を使用）
+                        # 回転率①の計算（A方式の最初の区間を使用・逆数補正）
                         rotation_rate_1_calculated = False
 
-                        # 優先順位: 1. A方式の最初の区間, 2. rotation_metricsのフォールバック
-                        declining_analysis_for_rate1 = result.get('declining_analysis')
+                        # 優先順位: 1. A方式の最初の区間（逆数補正）, 2. rotation_metricsのフォールバック
+                        declining_analysis_for_rate1 = result.get('declining_analysis_inverse')
                         if declining_analysis_for_rate1 and declining_analysis_for_rate1.get('sections'):
                             # A方式の最初の区間 = 初当たりまでの期間
                             first_section = declining_analysis_for_rate1['sections'][0]
