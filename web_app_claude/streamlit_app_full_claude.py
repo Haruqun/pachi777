@@ -1533,14 +1533,30 @@ if graph_files and st.session_state.get('start_analysis', False):
             # log(f"[Graph Values] After correction: graph_values[0]={graph_values[0]:.1f}玉 (should be 0)")
 
             # 非線形補正を全体に適用（modules/correction.py）
+            correction_applied = False
             try:
-                from modules.correction import apply_correction
+                from modules.correction import apply_correction, get_correction_factor
                 graph_values_before_correction = graph_values.copy()
+
+                # サンプル値で補正を確認（デバッグ用）
+                if len(graph_values) > 100:
+                    sample_idx = len(graph_values) // 2
+                    sample_before = graph_values[sample_idx]
+                    sample_after = apply_correction(sample_before)
+                    correction_factor = get_correction_factor(abs(sample_before)) if sample_before != 0 else 1.0
+                    log(f"[Correction] サンプル補正: {sample_before:.1f} → {sample_after:.1f} (係数: {correction_factor:.3f})")
+
                 graph_values = [apply_correction(v) for v in graph_values]
                 # graph_data_pointsも補正された値で更新（回転率計算用）
                 graph_data_points = [(x, corrected_val) for (x, _), corrected_val in zip(graph_data_points, graph_values)]
+                correction_applied = True
+                log(f"[Correction] 補正適用完了: {len(graph_values)}点")
             except ImportError as e:
                 log(f"[Correction Error] Failed to import correction module: {e}")
+                log(f"[Correction] 補正なしで続行します")
+            except Exception as e:
+                log(f"[Correction Error] Unexpected error during correction: {e}")
+                log(f"[Correction] 補正なしで続行します")
 
             # 統計情報を計算（既に補正済みのgraph_valuesから）
             max_val = max(graph_values)
