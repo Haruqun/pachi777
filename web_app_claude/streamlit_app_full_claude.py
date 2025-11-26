@@ -3170,33 +3170,35 @@ if 'analysis_results' in st.session_state:
                         rotation_rate_2_calculated = False
 
                         # 優先順位: 1. A方式（下降区間解析）, 2. Claude AIデータ, 3. rotation_metricsの通常時回転数
-                        declining_analysis = result.get('declining_analysis')
-                        if declining_analysis and st.session_state.game_type == 'パチンコ':
-                            overall_rate = declining_analysis.get('overall_rate')
-                            if overall_rate:
-                                # A方式のデータを使用（補正あり）
-                                normal_rotations = declining_analysis['total_rotations']
-                                normal_balls = declining_analysis['total_balls_used']
-                                rotation_rate_2 = overall_rate  # A方式の回転率をそのまま使用
+                        # 補正なしをメイン表示に変更（2025/11/26）
+                        # 理由：11/12台で補正なしの方が正確。補正は絶対値用で、傾き計算には不適切
+                        declining_analysis_uncorrected = result.get('declining_analysis_uncorrected')
+                        if declining_analysis_uncorrected and st.session_state.game_type == 'パチンコ':
+                            overall_rate_uncorr = declining_analysis_uncorrected.get('overall_rate')
+                            if overall_rate_uncorr:
+                                # A方式のデータを使用（補正なし）
+                                normal_rotations_uncorr = declining_analysis_uncorrected['total_rotations']
+                                normal_balls_uncorr = declining_analysis_uncorrected['total_balls_used']
+                                rotation_rate_2 = overall_rate_uncorr  # A方式の回転率（補正なし）
                                 warning = " ⚠️" if rotation_rate_2 < 15 or rotation_rate_2 > 35 else ""
-                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②（A方式・補正あり）</span><span class="stat-value positive">{rotation_rate_2:.1f}回/250玉{warning}</span></div>'
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 下降区間のみ: {normal_rotations}回転 ÷ {int(normal_balls):,}{unit}使用</div>'
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②（A方式）</span><span class="stat-value positive">{rotation_rate_2:.1f}回/250玉{warning}</span></div>'
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 下降区間のみ: {normal_rotations_uncorr}回転 ÷ {int(normal_balls_uncorr):,}{unit}使用</div>'
 
-                                # 補正なしバージョンも表示（比較用）
-                                declining_analysis_uncorrected = result.get('declining_analysis_uncorrected')
-                                if declining_analysis_uncorrected:
-                                    overall_rate_uncorr = declining_analysis_uncorrected.get('overall_rate')
-                                    if overall_rate_uncorr:
-                                        normal_rotations_uncorr = declining_analysis_uncorrected['total_rotations']
-                                        normal_balls_uncorr = declining_analysis_uncorrected['total_balls_used']
-                                        warning_uncorr = " ⚠️" if overall_rate_uncorr < 15 or overall_rate_uncorr > 35 else ""
-                                        rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②（A方式・補正なし）</span><span class="stat-value" style="color: #888;">{overall_rate_uncorr:.1f}回/250玉{warning_uncorr} [参考値]</span></div>'
-                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 下降区間のみ: {normal_rotations_uncorr}回転 ÷ {int(normal_balls_uncorr):,}{unit}使用 [補正なし]</div>'
+                                # 補正ありバージョンも表示（参考値）
+                                declining_analysis = result.get('declining_analysis')
+                                if declining_analysis:
+                                    overall_rate = declining_analysis.get('overall_rate')
+                                    if overall_rate:
+                                        normal_rotations = declining_analysis['total_rotations']
+                                        normal_balls = declining_analysis['total_balls_used']
+                                        warning_ref = " ⚠️" if overall_rate < 15 or overall_rate > 35 else ""
+                                        rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②（A方式・補正あり）</span><span class="stat-value" style="color: #888;">{overall_rate:.1f}回/250玉{warning_ref} [参考値]</span></div>'
+                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 下降区間のみ: {normal_rotations}回転 ÷ {int(normal_balls):,}{unit}使用 [補正あり]</div>'
 
                                 rotation_rate_2_calculated = True
-                                # 結果に保存
+                                # 結果に保存（補正なしをメインに）
                                 result['display_rotation_rate_2'] = f"{rotation_rate_2:.1f}{warning}"
-                                result['display_normal_balls'] = int(normal_balls)
+                                result['display_normal_balls'] = int(normal_balls_uncorr)
 
                                 # 通常時使用球数のHTML準備
                                 normal_usage_html = f'''<div class="stat-item">
