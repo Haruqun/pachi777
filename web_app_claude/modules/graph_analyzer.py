@@ -380,16 +380,19 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
                 current_section['end_balls'] = balls
                 current_section['prev_balls'] = balls
                 current_section.pop('rise_start_balls', None)  # 上昇状態リセット
+                current_section.pop('rise_start_rotation', None)
             elif balls == current_section['end_balls']:
                 # 横ばい → 上昇状態をリセット
                 current_section['end_rotation'] = rotation
                 current_section['prev_balls'] = balls
                 current_section.pop('rise_start_balls', None)  # 上昇状態リセット
+                current_section.pop('rise_start_rotation', None)
             elif balls > prev_balls:
                 # 上昇中
                 if 'rise_start_balls' not in current_section:
-                    # 上昇の開始
+                    # 上昇の開始（この時点の回転数を記録）
                     current_section['rise_start_balls'] = prev_balls
+                    current_section['rise_start_rotation'] = current_section['end_rotation']  # 上昇開始直前の回転数
 
                 # 累積上昇量を計算
                 cumulative_rise = balls - current_section['rise_start_balls']
@@ -397,10 +400,12 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
 
                 if cumulative_rise >= SIGNIFICANT_RISE:
                     # 大きな上昇（当たり） → 区間終了
+                    # 区間の終了は上昇開始直前の時点
                     if current_section['start_balls'] != current_section['end_balls']:
                         # 玉数変化がある区間のみ記録
                         used_balls = current_section['start_balls'] - current_section['end_balls']
-                        rotations = current_section['end_rotation'] - current_section['start_rotation']
+                        end_rotation_for_section = current_section.get('rise_start_rotation', current_section['end_rotation'])
+                        rotations = end_rotation_for_section - current_section['start_rotation']
 
                         if used_balls > 0 and rotations > 0:
                             rotation_rate = rotations / (used_balls / 250)
@@ -419,14 +424,14 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
                         'start_index': i
                     }
                 else:
-                    # まだ100玉未満の上昇 → 区間継続
-                    current_section['end_rotation'] = rotation
+                    # まだ100玉未満の上昇 → 区間継続（end_rotationは更新しない）
                     current_section['prev_balls'] = balls
             else:
                 # 横ばい（balls == prev_balls）→  上昇状態をリセット
                 current_section['end_rotation'] = rotation
                 current_section['prev_balls'] = balls
                 current_section.pop('rise_start_balls', None)
+                current_section.pop('rise_start_rotation', None)
 
     # 最後の区間を処理
     if current_section and current_section['start_balls'] != current_section['end_balls']:
