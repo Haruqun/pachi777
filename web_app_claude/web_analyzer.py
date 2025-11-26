@@ -326,18 +326,19 @@ class WebCompatibleAnalyzer:
             self.zero_y = detected_zero
             self.scale = 30000 / max(1, (self.zero_y - self.target_30k_y))
         
-        # HSV変換
+        # HSV変換とグレースケール変換
         try:
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         except:
             return [], "なし", detected_zero
-        
+
         best_result = []
         best_color = "なし"
         max_points = 0
         best_graph_start_x = None
         best_graph_end_x = None
-        
+
         # 各色でデータ抽出を試みる
         for color_name, color_range in self.color_ranges.items():
             try:
@@ -359,8 +360,9 @@ class WebCompatibleAnalyzer:
                     colored_pixels = np.where(col_mask > 0)[0]
 
                     if len(colored_pixels) > 0:
-                        # サブピクセル精度：輝度で重み付けした重心を計算
-                        intensities = col_mask[colored_pixels]
+                        # サブピクセル精度：グレースケール画像から輝度を取得して重心を計算
+                        gray_col = gray[:, x]
+                        intensities = gray_col[colored_pixels]
                         if np.sum(intensities) > 0:
                             # 重心計算（輝度で重み付け）
                             weighted_y = np.sum(colored_pixels * intensities) / np.sum(intensities)
