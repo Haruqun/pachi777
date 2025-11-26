@@ -393,17 +393,43 @@ class WebCompatibleAnalyzer:
             except:
                 continue
 
-        # 移動平均フィルタを適用（階段状を滑らかに）
+        # 線形補間を適用（階段状のデータを滑らかに）
         if best_result and len(best_result) > 3:
             x_coords = [x for x, _ in best_result]
             values = np.array([v for _, v in best_result])
+            interpolated_values = values.copy()
 
-            # 移動平均（ウィンドウサイズ3）
-            window_size = 3
-            smoothed_values = np.convolve(values, np.ones(window_size)/window_size, mode='same')
+            n = len(values)
+            i = 0
 
-            # 端の処理（convolveのmodeをsameにすると端が正しく処理される）
-            best_result = [(x, float(v)) for x, v in zip(x_coords, smoothed_values)]
+            while i < n:
+                # 連続した同一値を検出
+                if i < n - 1 and abs(values[i] - values[i + 1]) < 0.1:  # 0.1以下の差は同一とみなす
+                    # plateau（同一値が続く区間）の開始
+                    plateau_start = i
+                    plateau_value = values[i]
+
+                    # plateau終了位置を探す
+                    while i < n and abs(values[i] - plateau_value) < 0.1:
+                        i += 1
+                    plateau_end = i - 1
+
+                    # plateau前後の異なる値を見つけて線形補間
+                    if plateau_start > 0 and plateau_end < n - 1:
+                        # 前の値と後の値が存在する場合
+                        value_before = values[plateau_start - 1]
+                        value_after = values[plateau_end + 1]
+
+                        # 線形補間で埋める
+                        total_steps = plateau_end - plateau_start + 3  # 前後含めたステップ数
+                        for j in range(plateau_start, plateau_end + 1):
+                            step = j - plateau_start + 1
+                            interpolated_values[j] = value_before + (value_after - value_before) * step / total_steps
+                else:
+                    i += 1
+
+            # 補間後の値で更新
+            best_result = [(x, float(v)) for x, v in zip(x_coords, interpolated_values)]
 
         # グラフの座標情報を追加して返す
         graph_info = {
