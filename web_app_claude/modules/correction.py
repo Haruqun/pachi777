@@ -46,12 +46,15 @@ def get_correction_factor(graph_value):
         return CORRECTION_TABLE[0][1]
 
 
-def apply_correction(graph_value):
+def apply_correction(graph_value, use_inverse_for_negative=False):
     """
     グラフ測定値に補正を適用
 
     Args:
         graph_value: グラフから測定された値（玉数）
+        use_inverse_for_negative: マイナス側に逆数補正を使用するか（デフォルト: False）
+            False: マイナス側も減らす（従来方式）
+            True: マイナス側は増やす（逆数補正）
 
     Returns:
         補正後の値（玉数）
@@ -64,10 +67,31 @@ def apply_correction(graph_value):
     abs_value = abs(graph_value)
 
     correction_factor = get_correction_factor(abs_value)
-    corrected_value = abs_value * correction_factor
+
+    if is_negative and use_inverse_for_negative:
+        # マイナス側：逆数を使って増やす
+        # 理由：グラフはマイナス側を過小報告している（-1000玉が実際は-1500玉など）
+        corrected_value = abs_value / correction_factor
+    else:
+        # プラス側または従来方式：そのまま使って減らす
+        # 理由：グラフはプラス側を過大報告している（+1000玉が実際は+750玉など）
+        corrected_value = abs_value * correction_factor
 
     # 元の符号を戻す
     return -corrected_value if is_negative else corrected_value
+
+
+def apply_correction_inverse(graph_value):
+    """
+    逆数補正を適用（マイナス側は増やす）
+
+    Args:
+        graph_value: グラフから測定された値（玉数）
+
+    Returns:
+        補正後の値（玉数）
+    """
+    return apply_correction(graph_value, use_inverse_for_negative=True)
 
 
 def apply_correction_to_result(result):
