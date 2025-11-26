@@ -3235,10 +3235,10 @@ if 'analysis_results' in st.session_state:
                                 result['display_rotation_rate_2'] = f"{rotation_rate_2:.1f}{warning}"
                                 result['display_normal_balls'] = int(normal_balls_inv)
 
-                                # 通常時使用球数のHTML準備
+                                # 通常時使用球数のHTML準備（逆数補正版を使用）
                                 normal_usage_html = f'''<div class="stat-item">
                                     <span class="stat-label">🎮 通常時使用球数</span>
-                                    <span class="stat-value">{int(normal_balls):,}{unit}</span>
+                                    <span class="stat-value">{int(normal_balls_inv):,}{unit}</span>
                                 </div>'''
 
                                 if st.session_state.get('show_ocr_debug', False):
