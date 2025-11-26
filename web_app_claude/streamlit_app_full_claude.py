@@ -2614,9 +2614,9 @@ if 'analysis_results' in st.session_state:
                     # Claude AI回転マーカーを追加
                     display_img = result['overlay_image'].copy()
 
-                    log(f"[Claude AI Marker] result keys: {list(result.keys())}")
-                    log(f"[Claude AI Marker] has rotation_metrics: {result.get('rotation_metrics') is not None}")
-                    log(f"[Claude AI Marker] has claude_analysis: {result.get('claude_analysis') is not None}")
+                    # log(f"[Claude AI Marker] result keys: {list(result.keys())}")
+                    # log(f"[Claude AI Marker] has rotation_metrics: {result.get('rotation_metrics') is not None}")
+                    # log(f"[Claude AI Marker] has claude_analysis: {result.get('claude_analysis') is not None}")
 
                     # Claude AIの初当たり回転数がある場合、マーカーを追加
                     if result.get('rotation_metrics') and result.get('claude_analysis'):
@@ -2628,8 +2628,8 @@ if 'analysis_results' in st.session_state:
                         claude_data = claude_analysis.get('data', {}) if claude_analysis.get('success') else {}
                         initial_ball_starts = claude_data.get('initial_ball_starts')
 
-                        log(f"[Claude AI Marker] claude_data keys: {list(claude_data.keys()) if claude_data else 'None'}")
-                        log(f"[Claude AI Marker] spins_per_pixel={spins_per_pixel}, initial_ball_starts={initial_ball_starts}")
+                        # log(f"[Claude AI Marker] claude_data keys: {list(claude_data.keys()) if claude_data else 'None'}")
+                        # log(f"[Claude AI Marker] spins_per_pixel={spins_per_pixel}, initial_ball_starts={initial_ball_starts}")
 
                         # 必要なデータが揃っている場合のみ描画
                         if initial_ball_starts:
@@ -2649,19 +2649,19 @@ if 'analysis_results' in st.session_state:
                                 # グラフ解析の位置とは独立して計算
                                 if spins_per_pixel > 0:
                                     claude_x = graph_start_x + (initial_ball_starts / spins_per_pixel)
-                                    log(f"[Claude AI Marker] Calculated position: claude_x={claude_x:.1f}px (start={graph_start_x}px, spins={initial_ball_starts}, scale={spins_per_pixel:.4f})")
+                                    # log(f"[Claude AI Marker] Calculated position: claude_x={claude_x:.1f}px (start={graph_start_x}px, spins={initial_ball_starts}, scale={spins_per_pixel:.4f})")
                                 else:
                                     claude_x = None
-                                    log(f"[Claude AI Marker] Cannot calculate: spins_per_pixel={spins_per_pixel}")
+                                    # log(f"[Claude AI Marker] Cannot calculate: spins_per_pixel={spins_per_pixel}")
 
                                 if claude_x is None:
                                     raise ValueError("Could not determine marker position")
 
-                                log(f"[Claude AI Marker] claude_x={claude_x}, zero_y={zero_y}, img_size={display_img.shape}")
+                                # log(f"[Claude AI Marker] claude_x={claude_x}, zero_y={zero_y}, img_size={display_img.shape}")
 
                                 # 画像範囲内かチェック
                                 if 0 <= claude_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
-                                    log(f"[Claude AI Marker] Drawing marker at ({int(claude_x)}, {zero_y})")
+                                    # log(f"[Claude AI Marker] Drawing marker at ({int(claude_x)}, {zero_y})")
                                     # マーカーを描画（赤色）
                                     cv2.circle(display_img, (int(claude_x), zero_y), 5, (0, 0, 255), -1)  # 塗りつぶし
                                     cv2.circle(display_img, (int(claude_x), zero_y), 6, (0, 0, 200), 2)   # 外枠
@@ -2681,7 +2681,7 @@ if 'analysis_results' in st.session_state:
                                               (label_x, label_y),
                                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 200), 1, cv2.LINE_AA)
                                 else:
-                                    log(f"[Claude AI Marker] Out of bounds - not drawing")
+                                    pass  # log(f"[Claude AI Marker] Out of bounds - not drawing")
 
                                 # Claude AIの累計スタート回数（グラフ最後の位置）のマーカーを追加
                                 total_rotations = claude_data.get('total_rotations', 0)
@@ -2689,10 +2689,10 @@ if 'analysis_results' in st.session_state:
                                     # 累計スタート回数の位置を計算
                                     total_rotations_x = graph_start_x + (total_rotations / spins_per_pixel)
 
-                                    log(f"[Total Rotations Marker] total_rotations={total_rotations}, total_rotations_x={total_rotations_x}")
+                                    # log(f"[Total Rotations Marker] total_rotations={total_rotations}, total_rotations_x={total_rotations_x}")
 
                                     if 0 <= total_rotations_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
-                                        log(f"[Total Rotations Marker] Drawing marker at ({int(total_rotations_x)}, {zero_y})")
+                                        # log(f"[Total Rotations Marker] Drawing marker at ({int(total_rotations_x)}, {zero_y})")
                                         # マーカーを描画（緑色）
                                         cv2.circle(display_img, (int(total_rotations_x), zero_y), 5, (0, 255, 0), -1)  # 塗りつぶし
                                         cv2.circle(display_img, (int(total_rotations_x), zero_y), 6, (0, 200, 0), 2)   # 外枠
@@ -2712,7 +2712,7 @@ if 'analysis_results' in st.session_state:
                                                   (total_label_x, total_label_y),
                                                   cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 150, 0), 1, cv2.LINE_AA)
                                     else:
-                                        log(f"[Total Rotations Marker] Out of bounds - not drawing")
+                                        pass  # log(f"[Total Rotations Marker] Out of bounds - not drawing")
 
                                 # AI基準のグラフ終点マーカーを追加
                                 rotation_metrics = result.get('rotation_metrics', {})
@@ -2723,10 +2723,10 @@ if 'analysis_results' in st.session_state:
                                     # AI基準のスケールでOCR累計回転数がどこに到達するかを計算
                                     ai_total_x = graph_start_x + (total_rotations / ai_based_spins_per_pixel)
 
-                                    log(f"[AI Total Rotations Marker] ocr_total={total_rotations}, ai_spp={ai_based_spins_per_pixel:.4f}, ai_total_x={ai_total_x}")
+                                    # log(f"[AI Total Rotations Marker] ocr_total={total_rotations}, ai_spp={ai_based_spins_per_pixel:.4f}, ai_total_x={ai_total_x}")
 
                                     if 0 <= ai_total_x < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
-                                        log(f"[AI Total Rotations Marker] Drawing marker at ({int(ai_total_x)}, {zero_y})")
+                                        # log(f"[AI Total Rotations Marker] Drawing marker at ({int(ai_total_x)}, {zero_y})")
                                         # マーカーを描画（青色）
                                         cv2.circle(display_img, (int(ai_total_x), zero_y), 5, (255, 100, 0), -1)  # 塗りつぶし
                                         cv2.circle(display_img, (int(ai_total_x), zero_y), 6, (200, 80, 0), 2)   # 外枠
@@ -2746,12 +2746,12 @@ if 'analysis_results' in st.session_state:
                                                   (ai_label_x, ai_label_y),
                                                   cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 80, 0), 1, cv2.LINE_AA)
                                     else:
-                                        log(f"[AI Total Rotations Marker] Out of bounds - not drawing")
+                                        pass  # log(f"[AI Total Rotations Marker] Out of bounds - not drawing")
 
                                 # 全ての大当たり（谷）のマーカーを描画
                                 all_jackpots = result.get('all_jackpots', [])
                                 if all_jackpots and len(all_jackpots) > 0:
-                                    log(f"[All Jackpots Markers] Drawing {len(all_jackpots)} markers")
+                                    # log(f"[All Jackpots Markers] Drawing {len(all_jackpots)} markers")
 
                                     # マーカーの色（異なる色で区別）
                                     marker_colors = [
@@ -2774,7 +2774,7 @@ if 'analysis_results' in st.session_state:
                                             color = marker_colors[idx % len(marker_colors)]
 
                                             if 0 <= jackpot_x_px < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
-                                                log(f"[All Jackpots Markers] {idx+1}回目: x={jackpot_x_px}px, spins={jackpot_spins}, value={jackpot_value:.1f}玉")
+                                                # log(f"[All Jackpots Markers] {idx+1}回目: x={jackpot_x_px}px, spins={jackpot_spins}, value={jackpot_value:.1f}玉")
 
                                                 # マーカーを描画
                                                 cv2.circle(display_img, (int(jackpot_x_px), zero_y), 6, color, -1)  # 塗りつぶし
@@ -2801,7 +2801,7 @@ if 'analysis_results' in st.session_state:
 
                                 # AI基準の全ての大当たりマーカーを描画
                                 if all_jackpots and len(all_jackpots) > 0 and ai_based_spins_per_pixel > 0:
-                                    log(f"[AI Jackpots Markers] Drawing {len(all_jackpots)} AI-based markers")
+                                    # log(f"[AI Jackpots Markers] Drawing {len(all_jackpots)} AI-based markers")
 
                                     # マーカーの色（薄い青系の色で区別）
                                     ai_marker_colors = [
@@ -2824,7 +2824,7 @@ if 'analysis_results' in st.session_state:
                                             color = ai_marker_colors[idx % len(ai_marker_colors)]
 
                                             if 0 <= jackpot_x_px < display_img.shape[1] and 0 <= zero_y < display_img.shape[0]:
-                                                log(f"[AI Jackpots Markers] {idx+1}回目: x={jackpot_x_px}px, ai_spins={ai_jackpot_spins}, value={jackpot_value:.1f}玉")
+                                                # log(f"[AI Jackpots Markers] {idx+1}回目: x={jackpot_x_px}px, ai_spins={ai_jackpot_spins}, value={jackpot_value:.1f}玉")
 
                                                 # マーカーを描画（小さい円で区別）
                                                 cv2.circle(display_img, (int(jackpot_x_px), zero_y), 4, color, -1)  # 塗りつぶし（小さめ）
@@ -2848,7 +2848,7 @@ if 'analysis_results' in st.session_state:
 
                             except (ValueError, TypeError) as e:
                                 # エラーが発生した場合は元の画像を使用
-                                log(f"[Claude AI Marker] マーカー描画エラー: {str(e)}")
+                                # log(f"[Claude AI Marker] マーカー描画エラー: {str(e)}")
                                 pass
 
                     # マーカー描画後のdisplay_imgをoverlay_imageに保存（ZIPダウンロード用）
