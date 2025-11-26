@@ -392,7 +392,19 @@ class WebCompatibleAnalyzer:
                     best_graph_end_x = graph_end_x
             except:
                 continue
-        
+
+        # 移動平均フィルタを適用（階段状を滑らかに）
+        if best_result and len(best_result) > 3:
+            x_coords = [x for x, _ in best_result]
+            values = np.array([v for _, v in best_result])
+
+            # 移動平均（ウィンドウサイズ3）
+            window_size = 3
+            smoothed_values = np.convolve(values, np.ones(window_size)/window_size, mode='same')
+
+            # 端の処理（convolveのmodeをsameにすると端が正しく処理される）
+            best_result = [(x, float(v)) for x, v in zip(x_coords, smoothed_values)]
+
         # グラフの座標情報を追加して返す
         graph_info = {
             'start_x': best_graph_start_x,
