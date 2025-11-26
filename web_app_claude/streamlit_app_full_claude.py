@@ -1519,9 +1519,7 @@ if graph_files and st.session_state.get('start_analysis', False):
         if graph_data_points:
             # graph_data_pointsの最初の要素のX座標を確認
             first_x = graph_data_points[0][0]
-            log(f"[Graph Data Points] First point: x={first_x}px, value={graph_data_points[0][1]:.1f}玉")
             log(f"[Graph Data Points] Total points: {len(graph_data_points)}")
-            log(f"[DEBUG 1] About to process graph values, ocr_data exists: {ocr_data is not None}")
 
             # データポイントから値のみを抽出
             graph_values = [value for x, value in graph_data_points]
@@ -1539,24 +1537,10 @@ if graph_files and st.session_state.get('start_analysis', False):
                 from modules.correction import apply_correction
                 graph_values_before_correction = graph_values.copy()
                 graph_values = [apply_correction(v) for v in graph_values]
-                log(f"[Correction] Applied non-linear correction to {len(graph_values)} graph values")
-
                 # graph_data_pointsも補正された値で更新（回転率計算用）
                 graph_data_points = [(x, corrected_val) for (x, _), corrected_val in zip(graph_data_points, graph_values)]
-                log(f"[Correction] Updated graph_data_points with corrected values")
             except ImportError as e:
                 log(f"[Correction Error] Failed to import correction module: {e}")
-
-            # グラフデータを全て出力（デバッグ用 - 1台目のみ）
-            if idx == 0:
-                graph_start_x_val = graph_info.get('start_x', 0) if graph_info else 0
-                log(f"[Graph Values] Total points: {len(graph_values)}, graph_start_x: {graph_start_x_val}px")
-                log(f"[Graph Values] All values (graph_values[i] = x={graph_start_x_val} + i*2):")
-                for i in range(0, len(graph_values), 10):
-                    chunk = graph_values[i:i+10]
-                    x_start = graph_start_x_val + i*2
-                    x_end = graph_start_x_val + (i+len(chunk)-1)*2
-                    log(f"  index {i:3d}-{i+len(chunk)-1:3d} (x={x_start:3d}-{x_end:3d}px): {[round(v, 1) for v in chunk]}")
 
             # 統計情報を計算（既に補正済みのgraph_valuesから）
             max_val = max(graph_values)
@@ -1894,10 +1878,6 @@ if graph_files and st.session_state.get('start_analysis', False):
                     'graph_start_x': graph_info.get('start_x') if graph_info else None,
                     'graph_end_x': graph_info.get('end_x') if graph_info else None
                 }
-
-            log(f"[DEBUG 2] About to save result, rotation_metrics={rotation_metrics is not None}, ocr_data={ocr_data is not None}")
-            if rotation_metrics:
-                log(f"[DEBUG 2] rotation_metrics keys: {list(rotation_metrics.keys())}, spins_per_pixel={rotation_metrics.get('spins_per_pixel', 'N/A')}")
 
             # A方式: 下降区間解析を実行
             declining_analysis = None

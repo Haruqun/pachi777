@@ -373,8 +373,6 @@ class WebCompatibleAnalyzer:
                         # グラフの開始と終了位置を記録
                         if graph_start_x is None:
                             graph_start_x = x
-                            # デバッグ: 最初の点の情報をログ出力
-                            log(f"[Graph Start Debug] x={x}px, median_y={median_y:.1f}px, detected_zero={detected_zero}px, scale={self.scale:.2f}, calculated_value={value:.1f}玉")
                         graph_end_x = x
                 
                 if len(data_points) > max_points:
@@ -585,8 +583,6 @@ class WebCompatibleAnalyzer:
         min_val_corrected = apply_correction(min_val)
         current_val_corrected = apply_correction(current_val)
         first_hit_val_corrected = apply_correction(first_hit_val)
-
-        log(f"[Correction] 最大値: {max_val_original:.1f} → {max_val_corrected:.1f}玉")
 
         return {
             'max_value': int(max_val_corrected),
