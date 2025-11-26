@@ -3120,13 +3120,18 @@ if 'analysis_results' in st.session_state:
 
                         if graph_first_hit_spins > 0 and graph_first_hit_balls > 0:
                             rotation_rate_1 = (graph_first_hit_spins / graph_first_hit_balls) * 250
-                            warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
-                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/250玉{warning}</span></div>'
 
-                            rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {graph_first_hit_spins}回転 ÷ {int(graph_first_hit_balls):,}{unit}使用</div>'
-
-                            rotation_rate_1_calculated = True
-                            result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
+                            if rotation_rate_1 > 40:
+                                # 40を超える場合は計測不可
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">計測不可 ⚠️</span></div>'
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {graph_first_hit_spins}回転 ÷ {int(graph_first_hit_balls):,}{unit}使用</div>'
+                                result['display_rotation_rate_1'] = '計測不可'
+                            else:
+                                warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
+                                rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/250玉{warning}</span></div>'
+                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {graph_first_hit_spins}回転 ÷ {int(graph_first_hit_balls):,}{unit}使用</div>'
+                                rotation_rate_1_calculated = True
+                                result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
                         else:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value">-</span></div>'
                             result['display_rotation_rate_1'] = '-'
