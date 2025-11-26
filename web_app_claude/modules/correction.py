@@ -92,25 +92,19 @@ def apply_correction_to_result(result):
         corrected_result['max_val_original'] = original_max
         corrected_result['max_val_correction_factor'] = get_correction_factor(abs(original_max))
 
-    # 現在値を補正（プラスの場合のみ）
+    # 現在値を補正
     if 'current_val' in result and result['current_val'] is not None:
-        if result['current_val'] > 0:
-            # プラスの場合のみ補正を適用
-            corrected_result['current_val'] = int(round(apply_correction(result['current_val'])))
-        else:
-            # マイナスの場合は補正しない（使用球数が少なく見えるのを防ぐ）
-            corrected_result['current_val'] = result['current_val']
+        corrected_result['current_val'] = int(round(apply_correction(result['current_val'])))
 
-    # 最小値を補正（無効化：マイナス側には補正を適用しない）
-    # 理由：補正テーブルはプラス側の実測データから作成されており、
-    #      マイナス側に適用すると使用球数が少なく計算され、回転率が高く見える
-    # if 'min_val' in result and result['min_val'] is not None:
-    #     corrected_result['min_val'] = int(round(apply_correction(result['min_val'])))
+    # 最小値を補正
+    # 理由：グラフはマイナス側も過大報告している（実測データで確認）
+    #      補正を外すと回転率が悪化する（24.4回 vs 補正あり23.1回）
+    if 'min_val' in result and result['min_val'] is not None:
+        corrected_result['min_val'] = int(round(apply_correction(result['min_val'])))
 
-    # 初当たり値を補正（無効化：マイナスの場合があるため）
-    # 理由：初当たり時にマイナス（赤字）の場合、補正すると使用球数が少なく見え、
-    #      回転率が高く計算される問題がある
-    # if 'first_hit_val' in result and result['first_hit_val'] is not None:
-    #     corrected_result['first_hit_val'] = int(round(apply_correction(result['first_hit_val'])))
+    # 初当たり値を補正
+    # 理由：グラフはプラス/マイナス問わず過大報告するため、補正が必要
+    if 'first_hit_val' in result and result['first_hit_val'] is not None:
+        corrected_result['first_hit_val'] = int(round(apply_correction(result['first_hit_val'])))
 
     return corrected_result
