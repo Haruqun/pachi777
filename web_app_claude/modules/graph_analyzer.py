@@ -367,6 +367,8 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
                 'start_balls': balls,
                 'end_rotation': rotation,
                 'end_balls': balls,
+                'min_balls': balls,  # 区間内の真の最小値を追跡
+                'min_rotation': rotation,  # 最小値の位置
                 'prev_balls': balls,  # 前回の玉数
                 'start_index': i
             }
@@ -381,6 +383,11 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
                 current_section['prev_balls'] = balls
                 current_section.pop('rise_start_balls', None)  # 上昇状態リセット
                 current_section.pop('rise_start_rotation', None)
+
+                # 最小値を更新
+                if balls < current_section['min_balls']:
+                    current_section['min_balls'] = balls
+                    current_section['min_rotation'] = rotation
             elif balls == current_section['end_balls']:
                 # 横ばい → 上昇状態をリセット
                 current_section['end_rotation'] = rotation
@@ -403,7 +410,8 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
                     # 区間の終了は上昇開始直前の時点
                     if current_section['start_balls'] != current_section['end_balls']:
                         # 玉数変化がある区間のみ記録
-                        used_balls = current_section['start_balls'] - current_section['end_balls']
+                        # ★修正: 真の最小値（min_balls）を使用
+                        used_balls = current_section['start_balls'] - current_section['min_balls']
                         end_rotation_for_section = current_section.get('rise_start_rotation', current_section['end_rotation'])
                         rotations = end_rotation_for_section - current_section['start_rotation']
 
@@ -420,6 +428,8 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
                         'start_balls': balls,
                         'end_rotation': rotation,
                         'end_balls': balls,
+                        'min_balls': balls,  # 区間内の真の最小値を追跡
+                        'min_rotation': rotation,  # 最小値の位置
                         'prev_balls': balls,
                         'start_index': i
                     }
@@ -435,7 +445,8 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
 
     # 最後の区間を処理
     if current_section and current_section['start_balls'] != current_section['end_balls']:
-        used_balls = current_section['start_balls'] - current_section['end_balls']
+        # ★修正: 真の最小値（min_balls）を使用
+        used_balls = current_section['start_balls'] - current_section['min_balls']
         rotations = current_section['end_rotation'] - current_section['start_rotation']
 
         if used_balls > 0 and rotations > 0:
