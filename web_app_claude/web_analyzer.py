@@ -357,15 +357,22 @@ class WebCompatibleAnalyzer:
                 for x in range(0, width, pixel_step):  # ピクセル間隔を設定値から取得
                     col_mask = mask[:, x]
                     colored_pixels = np.where(col_mask > 0)[0]
-                    
+
                     if len(colored_pixels) > 0:
-                        # グラフ線の太さを考慮して中央値を使用（平均値だと太い線の影響を受ける）
-                        median_y = np.median(colored_pixels)
+                        # サブピクセル精度：輝度で重み付けした重心を計算
+                        intensities = col_mask[colored_pixels]
+                        if np.sum(intensities) > 0:
+                            # 重心計算（輝度で重み付け）
+                            weighted_y = np.sum(colored_pixels * intensities) / np.sum(intensities)
+                        else:
+                            # 輝度情報がない場合は中央値を使用
+                            weighted_y = np.median(colored_pixels)
+
                         # 非線形スケールを使用する場合
                         if self.use_nonlinear_scale:
-                            value = self.calculate_value_nonlinear(median_y)
+                            value = self.calculate_value_nonlinear(weighted_y)
                         else:
-                            value = (detected_zero - median_y) * self.scale
+                            value = (detected_zero - weighted_y) * self.scale
                         # 値を±30,000の範囲にクリップ
                         value = max(-30000, min(30000, value))
                         data_points.append((x, value))
