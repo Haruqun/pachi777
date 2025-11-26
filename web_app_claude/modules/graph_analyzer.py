@@ -356,6 +356,9 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
 
     sections = []
     current_section = None
+    in_jackpot = False  # 大当たり中フラグ
+    jackpot_peak_balls = None  # 大当たり中のピーク値
+    jackpot_peak_rotation = None  # ピーク時の回転数
 
     for i, (x, balls) in enumerate(graph_data_points):
         rotation = round(i * spins_per_pixel)
@@ -372,45 +375,56 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
                 'prev_balls': balls,  # 前回の玉数
                 'start_index': i
             }
+        elif in_jackpot:
+            # 大当たり中：ピークを追跡
+            if balls > jackpot_peak_balls:
+                # ピーク更新
+                jackpot_peak_balls = balls
+                jackpot_peak_rotation = rotation
+            elif balls < jackpot_peak_balls - 50:
+                # ピークから50玉以上下降 → 下降開始と判定
+                # ピークから新しい下降区間を開始
+                in_jackpot = False
+                current_section = {
+                    'start_rotation': jackpot_peak_rotation,
+                    'start_balls': jackpot_peak_balls,
+                    'end_rotation': rotation,
+                    'end_balls': balls,
+                    'min_balls': balls,
+                    'min_rotation': rotation,
+                    'prev_balls': balls,
+                    'start_index': i
+                }
         else:
+            # 下降区間中
             prev_balls = current_section.get('prev_balls', current_section['end_balls'])
 
-            # 玉数の変化をチェック
             if balls < current_section['end_balls']:
-                # 下降継続 → 上昇状態をリセット
+                # 下降継続
                 current_section['end_rotation'] = rotation
                 current_section['end_balls'] = balls
                 current_section['prev_balls'] = balls
-                current_section.pop('rise_start_balls', None)  # 上昇状態リセット
+                current_section.pop('rise_start_balls', None)
                 current_section.pop('rise_start_rotation', None)
 
                 # 最小値を更新
                 if balls < current_section['min_balls']:
                     current_section['min_balls'] = balls
                     current_section['min_rotation'] = rotation
-            elif balls == current_section['end_balls']:
-                # 横ばい → 上昇状態をリセット
-                current_section['end_rotation'] = rotation
-                current_section['prev_balls'] = balls
-                current_section.pop('rise_start_balls', None)  # 上昇状態リセット
-                current_section.pop('rise_start_rotation', None)
+
             elif balls > prev_balls:
-                # 上昇中
+                # 上昇検出
                 if 'rise_start_balls' not in current_section:
-                    # 上昇の開始（この時点の回転数を記録）
                     current_section['rise_start_balls'] = prev_balls
-                    current_section['rise_start_rotation'] = current_section['end_rotation']  # 上昇開始直前の回転数
+                    current_section['rise_start_rotation'] = current_section['end_rotation']
 
                 # 累積上昇量を計算
                 cumulative_rise = balls - current_section['rise_start_balls']
-                SIGNIFICANT_RISE = 100  # 100玉以上の連続上昇を本当の当たりと判定
+                SIGNIFICANT_RISE = 100
 
                 if cumulative_rise >= SIGNIFICANT_RISE:
-                    # 大きな上昇（当たり） → 区間終了
-                    # 区間の終了は上昇開始直前の時点
+                    # 大当たり検出 → 現在の下降区間を終了
                     if current_section['start_balls'] != current_section['end_balls']:
-                        # 玉数変化がある区間のみ記録
-                        # ★修正: 真の最小値（min_balls）を使用
                         used_balls = current_section['start_balls'] - current_section['min_balls']
                         end_rotation_for_section = current_section.get('rise_start_rotation', current_section['end_rotation'])
                         rotations = end_rotation_for_section - current_section['start_rotation']
@@ -422,22 +436,17 @@ def analyze_declining_sections(graph_data_points, spins_per_pixel):
                             current_section['rotation_rate'] = rotation_rate
                             sections.append(current_section)
 
-                    # 新しい区間開始
-                    current_section = {
-                        'start_rotation': rotation,
-                        'start_balls': balls,
-                        'end_rotation': rotation,
-                        'end_balls': balls,
-                        'min_balls': balls,  # 区間内の真の最小値を追跡
-                        'min_rotation': rotation,  # 最小値の位置
-                        'prev_balls': balls,
-                        'start_index': i
-                    }
+                    # 大当たり中モードに移行
+                    in_jackpot = True
+                    jackpot_peak_balls = balls
+                    jackpot_peak_rotation = rotation
+                    current_section = None
                 else:
-                    # まだ100玉未満の上昇 → 区間継続（end_rotationは更新しない）
+                    # 小さな上昇 → 区間継続
                     current_section['prev_balls'] = balls
+
             else:
-                # 横ばい（balls == prev_balls）→  上昇状態をリセット
+                # 横ばい
                 current_section['end_rotation'] = rotation
                 current_section['prev_balls'] = balls
                 current_section.pop('rise_start_balls', None)
