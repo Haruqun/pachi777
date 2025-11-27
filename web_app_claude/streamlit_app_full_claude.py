@@ -1937,8 +1937,9 @@ if graph_files and st.session_state.get('start_analysis', False):
                         if declining_analysis_uncorrected:
                             log(f"[Declining Analysis 補正なし] Found {len(declining_analysis_uncorrected['sections'])} sections, overall rate: {declining_analysis_uncorrected['overall_rate']:.2f}")
 
-                    # デフォルトは従来補正（後方互換性）
-                    declining_analysis = declining_analysis_traditional
+                    # デフォルトは逆数補正に変更（2025/11/27）
+                    # 理由：回転率表示、CSV、A方式詳細を全て逆数補正で統一
+                    declining_analysis = declining_analysis_inverse
 
             analysis_results.append({
                 'name': uploaded_file.name,
@@ -1972,7 +1973,7 @@ if graph_files and st.session_state.get('start_analysis', False):
                 'graph_data_points': graph_data_points,  # グラフデータポイントを追加（AI基準計算用）
                 'graph_info': graph_info,  # グラフ情報を追加（AI基準計算用）
                 'graph_width': graph_width,  # グラフ幅を追加（AI基準計算用）
-                'declining_analysis': declining_analysis,  # A方式: 下降区間解析結果（デフォルト・従来補正）
+                'declining_analysis': declining_analysis,  # A方式: 下降区間解析結果（デフォルト・逆数補正）
                 'declining_analysis_uncorrected': declining_analysis_uncorrected,  # A方式: 下降区間解析結果（補正なし）
                 'declining_analysis_traditional': declining_analysis_traditional,  # A方式: 下降区間解析結果（従来補正）
                 'declining_analysis_inverse': declining_analysis_inverse  # A方式: 下降区間解析結果（逆数補正）
