@@ -3390,13 +3390,13 @@ if 'analysis_results' in st.session_state:
                             # 現在値を取得
                             current_value = result.get('current_value', 0)
 
-                            # 総獲得玉数 = 総払い出し球数 - 現在値
-                            if total_payout > 0:
-                                total_earned_balls = total_payout - current_value
+                            # 総獲得玉数 = グラフの現在値（最終的な収支）
+                            # 注: 総払い出し球数とは異なり、使用球数を差し引いた純増減を示す
+                            total_earned_balls = current_value
 
-                    # Claude AIデータがない場合はグラフから計算した値を使用
+                    # Claude AIデータがない場合もグラフの現在値を使用
                     if total_earned_balls == 0:
-                        total_earned_balls = result.get("total_jackpot_balls_graph", result.get("total_jackpot_balls", 0))
+                        total_earned_balls = result.get('current_val', 0)
 
                     html_content += f'<div class="stat-item"><span class="stat-label">💰 総獲得{unit}数</span><span class="stat-value positive">{total_earned_balls:,}{unit}</span></div>'
                     
@@ -3848,8 +3848,8 @@ if 'analysis_results' in st.session_state:
             max_result = max(success_results, key=lambda x: x['current_val'])
             min_result = min(success_results, key=lambda x: x['current_val'])
             
-            # 1日の総獲得球数を計算
-            total_day_jackpot_balls = sum(r.get('total_jackpot_balls', 0) for r in success_results)
+            # 1日の総獲得球数を計算（グラフの現在値の合計 = 最終的な収支）
+            total_day_jackpot_balls = sum(r.get('current_val', 0) for r in success_results)
             
             # パチスロの場合はBB+RBの合計、パチンコは従来通り
             if st.session_state.game_type == 'パチスロ':
@@ -3863,7 +3863,8 @@ if 'analysis_results' in st.session_state:
             else:
                 total_day_jackpot_count = sum(r.get('jackpot_count', 0) for r in success_results)
             
-            avg_day_jackpot_balls = total_day_jackpot_balls / total_day_jackpot_count if total_day_jackpot_count > 0 else 0
+            # 台平均の獲得球数を計算
+            avg_day_jackpot_balls = total_day_jackpot_balls / len(success_results) if len(success_results) > 0 else 0
             
             # 総投資球数を計算（各台の最低値の絶対値の合計）
             total_investment = sum(abs(min(r['min_val'], 0)) for r in success_results)
@@ -3898,9 +3899,9 @@ if 'analysis_results' in st.session_state:
             
             with col5:
                 st.metric(
-                    "総大当り回数",
+                    "総初当り回数",
                     f"{total_day_jackpot_count}回",
-                    f"{len(success_results)}台合計"
+                    f"{len(success_results)}台合計（グラフ検出）"
                 )
             
             with col6:
@@ -3909,7 +3910,7 @@ if 'analysis_results' in st.session_state:
                 st.metric(
                     label,
                     f"{total_day_jackpot_balls:,}{unit}",
-                    f"平均{avg_day_jackpot_balls:,.0f}{unit}/回"
+                    f"台平均{avg_day_jackpot_balls:,.0f}{unit}"
                 )
             
             with col7:
@@ -3947,8 +3948,8 @@ if 'analysis_results' in st.session_state:
                     '初当たり球数': prioritized_data['first_hit_val'] if prioritized_data['first_hit_val'] is not None else None,
                     '初当たり回転数': result.get('rotation_metrics', {}).get('first_hit_spins', 0) if prioritized_data.get('first_hit_val') is not None else 0,
                     '収支（円）': int(prioritized_data['current_val'] * get_settings().get('exchange_rate', 3.57145)),
-                    '総獲得球数': result.get('total_jackpot_balls', 0),
-                    '大当り回数（グラフ）': result.get('jackpot_count', 0),  # 列名を変更
+                    '総獲得球数': prioritized_data['current_val'],  # グラフの現在値 = 最終的な収支
+                    '初当り回数（グラフ）': result.get('jackpot_count', 0),  # 列名を変更
                     '色': result['dominant_color']
                 }
                 
