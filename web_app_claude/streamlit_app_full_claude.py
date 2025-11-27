@@ -3939,6 +3939,12 @@ if 'analysis_results' in st.session_state:
                 # 優先度に基づいてデータを取得
                 prioritized_data = get_prioritized_data(result)
                 
+                # AI総払出球数を取得
+                ai_total_payout = result.get('total_jackpot_balls_from_ai')
+                if ai_total_payout is None:
+                    # AIデータから計算
+                    ai_total_payout = result.get('total_jackpot_balls', 0)
+
                 row = {
                     '画像名': result['name'],  # 画像名を追加
                     '台番号': machine_number,
@@ -3948,8 +3954,9 @@ if 'analysis_results' in st.session_state:
                     '初当たり球数': prioritized_data['first_hit_val'] if prioritized_data['first_hit_val'] is not None else None,
                     '初当たり回転数': result.get('rotation_metrics', {}).get('first_hit_spins', 0) if prioritized_data.get('first_hit_val') is not None else 0,
                     '収支（円）': int(prioritized_data['current_val'] * get_settings().get('exchange_rate', 3.57145)),
-                    '総獲得球数': prioritized_data['current_val'],  # グラフの現在値 = 最終的な収支
-                    '初当り回数（グラフ）': result.get('jackpot_count', 0),  # 列名を変更
+                    '総獲得球数（グラフ）': prioritized_data['current_val'],  # グラフの現在値 = 最終的な収支
+                    '総払出球数（AI）': ai_total_payout if ai_total_payout else '',  # AI計算による総払出
+                    '初当り回数（グラフ）': result.get('jackpot_count', 0),
                     '色': result['dominant_color']
                 }
                 
