@@ -3744,16 +3744,12 @@ if 'analysis_results' in st.session_state:
                                 st.markdown("**下降区間のみを通常時とみなした正確な回転率計算**")
                                 st.markdown("---")
 
-                                # サマリー
-                                col1, col2, col3 = st.columns(3)
-                                with col1:
-                                    st.metric("全体回転率", f"{declining_analysis['overall_rate']:.2f}回/250玉")
-                                with col2:
-                                    if declining_analysis['initial_section_rate']:
-                                        st.metric("初当たりまで", f"{declining_analysis['initial_section_rate']:.2f}回/250玉")
-                                with col3:
-                                    if declining_analysis['post_initial_rate']:
-                                        st.metric("初当たり後平均", f"{declining_analysis['post_initial_rate']:.2f}回/250玉")
+                                # サマリー（縦並び）
+                                st.metric("全体回転率", f"{declining_analysis['overall_rate']:.2f}回/250玉")
+                                if declining_analysis['initial_section_rate']:
+                                    st.metric("初当たりまで", f"{declining_analysis['initial_section_rate']:.2f}回/250玉")
+                                if declining_analysis['post_initial_rate']:
+                                    st.metric("初当たり後平均", f"{declining_analysis['post_initial_rate']:.2f}回/250玉")
 
                                 st.markdown("---")
                                 st.markdown(f"**検出区間数:** {len(declining_analysis['sections'])}区間")
