@@ -3767,16 +3767,12 @@ if 'analysis_results' in st.session_state:
                                     section_type = "🎯 初当たりまで" if i == 1 else f"📊 区間{i}"
                                     with st.container():
                                         st.markdown(f"**{section_type}**")
-                                        col1, col2, col3, col4 = st.columns(4)
-                                        with col1:
-                                            st.markdown(f"回転数<br>{section['start_rotation']} → {section['end_rotation']}", unsafe_allow_html=True)
-                                        with col2:
-                                            st.markdown(f"使用玉数<br>{int(section['used_balls']):,}玉", unsafe_allow_html=True)
-                                        with col3:
-                                            st.markdown(f"回転数増加<br>{section['rotations']}回転", unsafe_allow_html=True)
-                                        with col4:
-                                            rate_class = "positive" if 18 <= section['rotation_rate'] <= 30 else "negative"
-                                            st.markdown(f"回転率<br>**{section['rotation_rate']:.2f}**回/250玉", unsafe_allow_html=True)
+                                        # 縦並びレイアウトに変更
+                                        st.markdown(f"**回転数:** {section['start_rotation']} → {section['end_rotation']}")
+                                        st.markdown(f"**使用玉数:** {int(section['used_balls']):,}玉")
+                                        st.markdown(f"**回転数増加:** {section['rotations']}回転")
+                                        rate_class = "positive" if 18 <= section['rotation_rate'] <= 30 else "negative"
+                                        st.markdown(f"**回転率:** {section['rotation_rate']:.2f}回/250玉")
                                         if i < len(declining_analysis['sections']):
                                             st.markdown("---")
 
