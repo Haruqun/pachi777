@@ -3173,8 +3173,9 @@ if 'analysis_results' in st.session_state:
                             return "zero"
 
                     unit = get_unit(st.session_state.get('game_type', 'パチンコ'))
-                    first_hit_text = f"{result['first_hit_val']:,}{unit}" if result['first_hit_val'] is not None else "なし"
-                    first_hit_class = get_value_class(result['first_hit_val']) if result['first_hit_val'] is not None else ""
+                    first_hit_val = result.get('first_hit_val')
+                    first_hit_text = f"{first_hit_val:,}{unit}" if first_hit_val is not None else "なし"
+                    first_hit_class = get_value_class(first_hit_val) if first_hit_val is not None else ""
 
                     # 補正係数の表示を準備（非表示にする）
                     correction_info = ""
