@@ -1948,8 +1948,13 @@ if graph_files and st.session_state.get('start_analysis', False):
                     img_height = overlay_img.shape[0]
                     img_width = overlay_img.shape[1]
 
-                    # 500回転ごとにグリッド線を描画
-                    current_x = pixels_per_500_spins
+                    # グラフの開始X座標を取得（切り抜き画像内での位置）
+                    graph_start_x = 0
+                    if graph_info and graph_info.get('start_x') is not None:
+                        graph_start_x = graph_info.get('start_x', 0)
+
+                    # 500回転ごとにグリッド線を描画（グラフ開始位置から）
+                    current_x = graph_start_x + pixels_per_500_spins
                     spin_count = 500
                     while current_x < img_width:
                         x_pos = int(current_x)
