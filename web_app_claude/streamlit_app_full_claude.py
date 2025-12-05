@@ -1732,6 +1732,31 @@ if graph_files and st.session_state.get('start_analysis', False):
             # オーバーレイ画像を作成
             overlay_img = cropped_img.copy()
 
+            # 500回転ごとの縦グリッド線を描画（薄めの細線）
+            grid_color = (180, 180, 180)  # 薄いグレー
+            grid_thickness = 1  # 細め
+            spins_per_500 = 500
+
+            # 1ピクセルあたりの回転数からX座標を計算
+            if spins_per_pixel > 0:
+                pixels_per_500_spins = spins_per_500 / spins_per_pixel
+                img_height = overlay_img.shape[0]
+                img_width = overlay_img.shape[1]
+
+                # 500回転ごとにグリッド線を描画
+                current_x = pixels_per_500_spins
+                spin_count = 500
+                while current_x < img_width:
+                    x_pos = int(current_x)
+                    # 縦線を描画
+                    cv2.line(overlay_img, (x_pos, 0), (x_pos, img_height), grid_color, grid_thickness)
+                    # 回転数ラベルを描画（上部に小さく）
+                    label = f"{spin_count}"
+                    cv2.putText(overlay_img, label, (x_pos + 2, 15),
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
+                    current_x += pixels_per_500_spins
+                    spin_count += 500
+
             # 検出されたグラフラインを描画
             prev_x = None
             prev_y = None
