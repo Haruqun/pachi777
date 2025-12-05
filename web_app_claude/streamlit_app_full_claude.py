@@ -126,21 +126,18 @@ if 'current_preset_name' not in st.session_state:
 if 'uploaded_file_names' not in st.session_state:
     st.session_state.uploaded_file_names = []
 
-# CSV表示項目の設定を初期化
+# CSV表示項目の設定を初期化（クライアント要望 2025/12/03 で変更）
 if 'csv_columns' not in st.session_state:
-    # デフォルト表示項目
+    # デフォルト表示項目（順番通り）
     st.session_state.csv_columns = [
         '台番号',
         '現在値',
         '初当たり球数',
         '初当たり回転数',
-        '総獲得球数',
         '回転率①',
-        '回転率②',
         '通常回転数',
-        '超回数',
-        '中回数',
-        '小回数'
+        '通常時使用球数',
+        '回転率②'
     ]
 
 # 遊技種別の初期化
@@ -3279,6 +3276,57 @@ if 'analysis_results' in st.session_state:
                             rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②</span><span class="stat-value">-</span></div>'
                             result['display_rotation_rate_2'] = '-'
 
+                        # B方式の計算（クライアント要望 2025/12/03）
+                        # 通常時使用玉数(B) = 総払い出し球数(AI) ± 現在値
+                        # 回転率②(B方式) = 通常回転数 ÷ (通常時使用玉数 ÷ 250)
+                        b_method_calculated = False
+
+                        # Claude AIのデータを取得
+                        claude_data_for_b = result.get('claude_data', {})
+                        if claude_data_for_b:
+                            # 総払い出し球数(AI)を取得
+                            ai_payout = result.get('total_jackpot_balls_from_ai', 0)
+                            if not ai_payout:
+                                # 超中小から計算
+                                big_j_b = claude_data_for_b.get('big_jackpots', 0) or 0
+                                medium_j_b = claude_data_for_b.get('medium_jackpots', 0) or 0
+                                small_j_b = claude_data_for_b.get('small_jackpots', 0) or 0
+                                big_balls_b = get_settings().get('big_jackpot_balls', 1500)
+                                middle_balls_b = get_settings().get('middle_jackpot_balls', 750)
+                                small_balls_b = get_settings().get('small_jackpot_balls', 450)
+                                ai_payout = big_j_b * big_balls_b + medium_j_b * middle_balls_b + small_j_b * small_balls_b
+
+                            # 現在値を取得
+                            current_val_b = result.get('current_val', 0)
+
+                            # 通常回転数を取得（Claude AIから）
+                            normal_rotations_b = claude_data_for_b.get('normal_rotations', 0)
+                            if not normal_rotations_b:
+                                normal_rotations_b = claude_data_for_b.get('normal_spins', 0)
+
+                            # 型を整数に変換
+                            try:
+                                normal_rotations_b = int(normal_rotations_b) if normal_rotations_b else 0
+                            except (ValueError, TypeError):
+                                normal_rotations_b = 0
+
+                            if ai_payout > 0 and normal_rotations_b > 0:
+                                # 通常時使用玉数の計算
+                                # グラフが+の場合: 通常時使用玉数 = 総払い出し球数(AI) - 現在値
+                                # グラフが-の場合: 通常時使用玉数 = 総払い出し球数(AI) + |現在値|
+                                if current_val_b >= 0:
+                                    normal_usage_b = ai_payout - current_val_b
+                                else:
+                                    normal_usage_b = ai_payout + abs(current_val_b)
+
+                                if normal_usage_b > 0:
+                                    rotation_rate_b = (normal_rotations_b / normal_usage_b) * 250
+                                    warning_b = " ⚠️" if rotation_rate_b < 10 or rotation_rate_b > 35 else ""
+                                    rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②（B方式）</span><span class="stat-value positive">{rotation_rate_b:.1f}回/250玉{warning_b}</span></div>'
+                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ B方式: {normal_rotations_b}回転 ÷ {int(normal_usage_b):,}{unit}使用</div>'
+                                    b_method_calculated = True
+                                    result['display_rotation_rate_2_b'] = f"{rotation_rate_b:.1f}{warning_b}"
+                                    result['display_normal_balls_b'] = int(normal_usage_b)
 
                     # 初当たり関連のHTMLを条件分岐で生成
                     first_hit_html = ""
@@ -3881,52 +3929,7 @@ if 'analysis_results' in st.session_state:
             net_balance = total_day_jackpot_balls - total_investment
             net_balance_yen = int(net_balance * exchange_rate)
 
-            # 統計情報を2列で表示（見やすさ重視）
-            st.markdown("#### 📊 収支サマリー")
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.metric(
-                    "🎯 現在の合計収支",
-                    f"{total_balance_yen:+,}円",
-                    f"{total_balance:+,}{get_unit(st.session_state.get('game_type', 'パチンコ'))}",
-                    delta_color="normal"
-                )
-
-            with col2:
-                st.metric(
-                    "📊 台平均収支",
-                    f"{avg_balance_yen:+,.0f}円",
-                    f"{avg_balance:+,.0f}{get_unit(st.session_state.get('game_type', 'パチンコ'))}",
-                    delta_color="normal"
-                )
-            
-            # 大当り情報を別セクションに
-            st.markdown("#### 🎰 大当り分析")
-            col5, col6, col7 = st.columns(3)
-            
-            with col5:
-                st.metric(
-                    "総初当り回数",
-                    f"{total_day_jackpot_count}回",
-                    f"{len(success_results)}台合計（グラフ検出）"
-                )
-            
-            with col6:
-                unit = get_unit(st.session_state.get('game_type', 'パチンコ'))
-                label = "総獲得球数" if st.session_state.game_type == "パチンコ" else "総獲得枚数"
-                st.metric(
-                    label,
-                    f"{total_day_jackpot_balls:,}{unit}",
-                    f"台平均{avg_day_jackpot_balls:,.0f}{unit}"
-                )
-            
-            with col7:
-                st.metric(
-                    "獲得金額換算",
-                    f"{int(total_day_jackpot_balls * exchange_rate):,}円",
-                    f"@{exchange_rate:.3f}円/{get_unit(st.session_state.get('game_type', 'パチンコ'))}"
-                )
+            # 収支サマリーは削除（クライアント要望 2025/12/03）
 
         # データフレームを作成
         df_data = []
@@ -3986,18 +3989,24 @@ if 'analysis_results' in st.session_state:
                 # 回転率データを追加（表示時に計算した値をそのまま使用）
                 # 回転率①（表示時の値を使用）
                 row['回転率①'] = result.get('display_rotation_rate_1', '-')
-                
-                # 回転率②（表示時の値を使用）
+
+                # 回転率②（A方式：表示時の値を使用）
                 row['回転率②'] = result.get('display_rotation_rate_2', '-')
-                
+
+                # 回転率②（B方式：クライアント要望 2025/12/03）
+                row['回転率②(B)'] = result.get('display_rotation_rate_2_b', '-')
+
                 # 初当り使用玉
                 if result.get('rotation_metrics'):
                     row['初当り使用玉'] = result['rotation_metrics']['first_hit_balls'] if result['rotation_metrics'].get('first_hit_balls', 0) > 0 else '-'
                 else:
                     row['初当り使用玉'] = '-'
-                
-                # 通常時使用球数（表示時の値を使用）
+
+                # 通常時使用球数（A方式：表示時の値を使用）
                 row['通常時使用球数'] = result.get('display_normal_balls', 0)
+
+                # 通常時使用球数（B方式：クライアント要望 2025/12/03）
+                row['通常時使用球数(B)'] = result.get('display_normal_balls_b', '-')
 
                 # グラフ解析データを保持（データエディタの再計算用・逆数補正済み）
                 row['_total_decline_balls'] = result.get('display_normal_balls', 0)
@@ -4487,6 +4496,7 @@ with st.expander("📊 CSV表示項目の設定", expanded=False):
         f'初当たり{unit}数', '初当たり回転数', '収支（円）',
         f'総獲得{unit}数', '大当り回数（グラフ）', '色', '回転率①', '回転率②',
         '通常回転数', f'初当り使用{unit}', f'通常時使用{unit}数',
+        '回転率②(B)', f'通常時使用{unit}数(B)',  # B方式追加（2025/12/03）
         '累計スタート', '大当り回数（OCR）', '初当り回数',
         '現在回転数', '大当り確率', f'最高出{unit}',
         '機種名', '超回数', '中回数', '小回数'
@@ -4499,10 +4509,10 @@ with st.expander("📊 CSV表示項目の設定", expanded=False):
             'ART回数', '合成確率', 'BB+RB回数'
         ])
     
-    # デフォルト表示項目
+    # デフォルト表示項目（クライアント要望 2025/12/03 で変更）
     default_columns = [
         '台番号', '現在値', f'初当たり{unit}数', '初当たり回転数',
-        f'総獲得{unit}数', '回転率①', '回転率②', '通常回転数'
+        '回転率①', '通常回転数', f'通常時使用{unit}数', '回転率②'
     ]
     
     # 初期化時にデフォルト値を設定
