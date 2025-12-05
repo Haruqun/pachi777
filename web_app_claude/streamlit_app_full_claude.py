@@ -1967,6 +1967,19 @@ if graph_files and st.session_state.get('start_analysis', False):
                         current_x += pixels_per_500_spins
                         spin_count += 500
 
+            # 累計回転数が0の台はスキップ
+            total_start_value = 0
+            if ocr_data and ocr_data.get('total_start'):
+                try:
+                    total_start_value = int(ocr_data.get('total_start', 0))
+                except (ValueError, TypeError):
+                    total_start_value = 0
+
+            if total_start_value == 0:
+                log(f"[Skip] {uploaded_file.name}: 累計回転数が0のためスキップ")
+                st.warning(f"⚠️ {uploaded_file.name}: 累計回転数が0のためスキップしました")
+                continue
+
             analysis_results.append({
                 'name': uploaded_file.name,
                 'original_image': img_with_grid,  # グリッド付き元画像を保存
