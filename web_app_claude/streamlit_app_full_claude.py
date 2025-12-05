@@ -3371,6 +3371,59 @@ if 'analysis_results' in st.session_state:
                                     result['display_rotation_rate_2_b'] = f"{rotation_rate_b:.1f}{warning_b}"
                                     result['display_normal_balls_b'] = int(normal_usage_b)
 
+                        # C方式の計算（クライアント要望 2025/12/05）
+                        # 回転率①(C方式) = 初当たり回転数(AI) ÷ (初当たり玉数(グラフ) ÷ 250)
+                        # 初当たり回転数: 出玉詳細（Claude AI）から取得
+                        # 初当たり玉数: グラフ上で、その回転数の位置の玉数を読み取る
+                        c_method_calculated = False
+
+                        if claude_data_for_b:
+                            # AIから初当たり回転数を取得
+                            ai_first_hit_spins = claude_data_for_b.get('first_jackpot_spins', 0)
+                            if not ai_first_hit_spins:
+                                ai_first_hit_spins = claude_data_for_b.get('initial_ball_starts', 0)
+
+                            try:
+                                ai_first_hit_spins = int(ai_first_hit_spins) if ai_first_hit_spins else 0
+                            except (ValueError, TypeError):
+                                ai_first_hit_spins = 0
+
+                            if ai_first_hit_spins > 0:
+                                # グラフからその回転数位置の玉数を取得
+                                rotation_metrics_c = result.get('rotation_metrics', {})
+                                spins_per_pixel_c = rotation_metrics_c.get('spins_per_pixel', 0)
+                                graph_data_points_c = result.get('graph_data_points', [])
+
+                                if spins_per_pixel_c > 0 and graph_data_points_c:
+                                    # 初当たり回転数に相当するX座標を計算
+                                    target_x = int(ai_first_hit_spins / spins_per_pixel_c)
+
+                                    # グラフ開始位置を考慮
+                                    graph_info_c = result.get('graph_info', {})
+                                    graph_start_x_c = graph_info_c.get('start_x', 0) if graph_info_c else 0
+                                    target_x += graph_start_x_c
+
+                                    # その位置の玉数を取得
+                                    graph_first_hit_balls_c = None
+                                    for x, value in graph_data_points_c:
+                                        if x >= target_x:
+                                            graph_first_hit_balls_c = abs(value)  # 使用玉数なので絶対値
+                                            break
+
+                                    # 最後のポイントを超えた場合は最後の値を使用
+                                    if graph_first_hit_balls_c is None and graph_data_points_c:
+                                        graph_first_hit_balls_c = abs(graph_data_points_c[-1][1])
+
+                                    if graph_first_hit_balls_c and graph_first_hit_balls_c > 0:
+                                        rotation_rate_c = (ai_first_hit_spins / graph_first_hit_balls_c) * 250
+                                        warning_c = " ⚠️" if rotation_rate_c < 10 or rotation_rate_c > 35 else ""
+
+                                        if rotation_rate_c <= 40:  # 40を超える場合は計測不可として表示しない
+                                            rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①（C方式）</span><span class="stat-value positive">{rotation_rate_c:.1f}回/250玉{warning_c}</span></div>'
+                                            rotation_html += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ {ai_first_hit_spins:,}回転(AI) ÷ ({int(graph_first_hit_balls_c):,}玉(グラフ) ÷ 250)</div>'
+                                            c_method_calculated = True
+                                            result['display_rotation_rate_1_c'] = f"{rotation_rate_c:.1f}{warning_c}"
+
                     # 初当たり関連のHTMLを条件分岐で生成
                     first_hit_html = ""
                     if st.session_state.game_type == 'パチンコ':
