@@ -2978,11 +2978,19 @@ if 'analysis_results' in st.session_state:
                                     
                                 # 回転数情報
                                 if claude_data.get('total_rotations') is not None:
-                                    html_content += f'''
-                                    <div class="stat-item">
-                                        <span class="stat-label">📊 累計スタート</span>
-                                        <span class="stat-value">{claude_data['total_rotations']:,}回</span>
-                                    </div>'''
+                                    try:
+                                        total_rot = int(claude_data['total_rotations'])
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">📊 累計スタート</span>
+                                            <span class="stat-value">{total_rot:,}回</span>
+                                        </div>'''
+                                    except (ValueError, TypeError):
+                                        html_content += f'''
+                                        <div class="stat-item">
+                                            <span class="stat-label">📊 累計スタート</span>
+                                            <span class="stat-value">{claude_data['total_rotations']}回</span>
+                                        </div>'''
                                 
                                 if claude_data.get('normal_rotations') is not None:
                                     # 数値に変換してフォーマット
