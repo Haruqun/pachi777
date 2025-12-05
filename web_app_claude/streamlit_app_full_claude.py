@@ -1732,31 +1732,6 @@ if graph_files and st.session_state.get('start_analysis', False):
             # オーバーレイ画像を作成
             overlay_img = cropped_img.copy()
 
-            # 500回転ごとの縦グリッド線を描画（薄めの細線）
-            grid_color = (180, 180, 180)  # 薄いグレー
-            grid_thickness = 1  # 細め
-            spins_per_500 = 500
-
-            # 1ピクセルあたりの回転数からX座標を計算
-            if spins_per_pixel > 0:
-                pixels_per_500_spins = spins_per_500 / spins_per_pixel
-                img_height = overlay_img.shape[0]
-                img_width = overlay_img.shape[1]
-
-                # 500回転ごとにグリッド線を描画
-                current_x = pixels_per_500_spins
-                spin_count = 500
-                while current_x < img_width:
-                    x_pos = int(current_x)
-                    # 縦線を描画
-                    cv2.line(overlay_img, (x_pos, 0), (x_pos, img_height), grid_color, grid_thickness)
-                    # 回転数ラベルを描画（上部に小さく）
-                    label = f"{spin_count}"
-                    cv2.putText(overlay_img, label, (x_pos + 2, 15),
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
-                    current_x += pixels_per_500_spins
-                    spin_count += 500
-
             # 検出されたグラフラインを描画
             prev_x = None
             prev_y = None
@@ -1962,6 +1937,30 @@ if graph_files and st.session_state.get('start_analysis', False):
                     # デフォルトは逆数補正に変更（2025/11/27）
                     # 理由：回転率表示、CSV、A方式詳細を全て逆数補正で統一
                     declining_analysis = declining_analysis_inverse
+
+                    # 500回転ごとの縦グリッド線を描画（薄めの細線）
+                    grid_color = (180, 180, 180)  # 薄いグレー
+                    grid_thickness = 1  # 細め
+                    spins_per_500 = 500
+
+                    # 1ピクセルあたりの回転数からX座標を計算
+                    pixels_per_500_spins = spins_per_500 / spins_per_pixel
+                    img_height = overlay_img.shape[0]
+                    img_width = overlay_img.shape[1]
+
+                    # 500回転ごとにグリッド線を描画
+                    current_x = pixels_per_500_spins
+                    spin_count = 500
+                    while current_x < img_width:
+                        x_pos = int(current_x)
+                        # 縦線を描画
+                        cv2.line(overlay_img, (x_pos, 0), (x_pos, img_height), grid_color, grid_thickness)
+                        # 回転数ラベルを描画（上部に小さく）
+                        label = f"{spin_count}"
+                        cv2.putText(overlay_img, label, (x_pos + 2, 15),
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
+                        current_x += pixels_per_500_spins
+                        spin_count += 500
 
             analysis_results.append({
                 'name': uploaded_file.name,
@@ -3306,8 +3305,9 @@ if 'analysis_results' in st.session_state:
                         # 回転率②(B方式) = 通常回転数 ÷ (通常時使用玉数 ÷ 250)
                         b_method_calculated = False
 
-                        # Claude AIのデータを取得
-                        claude_data_for_b = result.get('claude_data', {})
+                        # Claude AIのデータを取得（正しいパス）
+                        claude_analysis_for_b = result.get('claude_analysis', {})
+                        claude_data_for_b = claude_analysis_for_b.get('data', {}) if claude_analysis_for_b.get('success') else {}
                         if claude_data_for_b:
                             # 総払い出し球数(AI)を取得
                             ai_payout = result.get('total_jackpot_balls_from_ai', 0)
@@ -3834,7 +3834,7 @@ if 'analysis_results' in st.session_state:
 
                                 st.markdown("---")
                                 st.markdown(f"**検出区間数:** {len(declining_analysis['sections'])}区間")
-                                st.markdown(f"**通常時総回転数:** {declining_analysis['total_rotations']:,}回転")
+                                st.markdown(f"**通常時総回転数:** {int(declining_analysis['total_rotations']):,}回転")
                                 st.markdown(f"**通常時総使用玉数:** {int(declining_analysis['total_balls_used']):,}玉")
                                 st.markdown("---")
 
