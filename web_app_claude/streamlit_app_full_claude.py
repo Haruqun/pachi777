@@ -3218,7 +3218,7 @@ if 'analysis_results' in st.session_state:
                             else:
                                 warning = " ⚠️" if rotation_rate_1 < 10 or rotation_rate_1 > 35 else ""
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率①</span><span class="stat-value positive">{rotation_rate_1:.1f}回/250玉{warning}</span></div>'
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 初当たりまで: {graph_first_hit_spins}回転 ÷ {int(graph_first_hit_balls):,}{unit}使用</div>'
+                                rotation_html += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ {graph_first_hit_spins}回転 ÷ {int(graph_first_hit_balls):,}{unit}使用</div>'
                                 rotation_rate_1_calculated = True
                                 result['display_rotation_rate_1'] = f"{rotation_rate_1:.1f}{warning}"
                         else:
@@ -3242,7 +3242,7 @@ if 'analysis_results' in st.session_state:
                                 rotation_rate_2 = overall_rate_inv  # A方式の回転率（逆数補正）
                                 warning = " ⚠️" if rotation_rate_2 < 15 or rotation_rate_2 > 35 else ""
                                 rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②（A方式）</span><span class="stat-value positive">{rotation_rate_2:.1f}回/250玉{warning}</span></div>'
-                                rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 下降区間のみ: {normal_rotations_inv}回転 ÷ {int(normal_balls_inv):,}{unit}使用</div>'
+                                rotation_html += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ {normal_rotations_inv}回転 ÷ {int(normal_balls_inv):,}{unit}使用</div>'
 
                                 rotation_rate_2_calculated = True
                                 # 結果に保存（逆数補正をメインに）
@@ -3311,8 +3311,8 @@ if 'analysis_results' in st.session_state:
                         b_method_calculated = False
 
                         # Claude AIのデータを取得（正しいパス）
-                        claude_analysis_for_b = result.get('claude_analysis', {})
-                        claude_data_for_b = claude_analysis_for_b.get('data', {}) if claude_analysis_for_b.get('success') else {}
+                        claude_analysis_for_b = result.get('claude_analysis') or {}
+                        claude_data_for_b = claude_analysis_for_b.get('data', {}) if claude_analysis_for_b and claude_analysis_for_b.get('success') else {}
                         if claude_data_for_b:
                             # 総払い出し球数(AI)を取得
                             ai_payout = result.get('total_jackpot_balls_from_ai', 0)
@@ -3354,12 +3354,12 @@ if 'analysis_results' in st.session_state:
                                     warning_b = " ⚠️" if rotation_rate_b < 10 or rotation_rate_b > 35 else ""
                                     rotation_html += f'<div class="stat-item"><span class="stat-label">📊 回転率②（B方式）</span><span class="stat-value positive">{rotation_rate_b:.1f}回/250玉{warning_b}</span></div>'
                                     # 計算式の詳細を表示
-                                    rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 計算式: 通常回転数 {normal_rotations_b:,} ÷ (通常時使用玉数 {int(normal_usage_b):,} ÷ 250)</div>'
+                                    rotation_html += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ {normal_rotations_b:,}回転 ÷ ({int(normal_usage_b):,}玉 ÷ 250)</div>'
                                     # 通常時使用玉数の計算式を表示
                                     if current_val_b >= 0:
-                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時使用玉数 = 総払出球数(AI) {ai_payout:,} - 現在値 {current_val_b:,} = {int(normal_usage_b):,}</div>'
+                                        rotation_html += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 使用玉数 = 総払出(AI) {ai_payout:,} - 現在値 {current_val_b:,} = {int(normal_usage_b):,}</div>'
                                     else:
-                                        rotation_detail += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 通常時使用玉数 = 総払出球数(AI) {ai_payout:,} + |現在値 {current_val_b:,}| = {int(normal_usage_b):,}</div>'
+                                        rotation_html += f'<div style="font-size: 0.8em; color: #666; margin-left: 20px;">→ 使用玉数 = 総払出(AI) {ai_payout:,} + |{current_val_b:,}| = {int(normal_usage_b):,}</div>'
                                     b_method_calculated = True
                                     result['display_rotation_rate_2_b'] = f"{rotation_rate_b:.1f}{warning_b}"
                                     result['display_normal_balls_b'] = int(normal_usage_b)
